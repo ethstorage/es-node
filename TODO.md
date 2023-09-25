@@ -14,7 +14,6 @@
     - [Support batch put](https://github.com/ethstorage/storage-contracts-v1/issues/17) (need to clarify the fee calculation issue)
     - [Assign a valid diff when opening a new shard](https://github.com/ethstorage/storage-contracts-v1/issues/23) (DL)
   - Public repo for es-node
-    - BSL license for our own code like [Arbitrum](https://github.com/OffchainLabs/nitro/blob/master/LICENSE)
     - Readme
       - Explain all of the cmd flags in case the node operators want to customize their es-node
       - Module explanation (p2p, miner, downloader, and shard manager)
