@@ -19,6 +19,7 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethstorage/go-ethstorage/cmd/es-utils/utils"
 	es "github.com/ethstorage/go-ethstorage/ethstorage"
+	"github.com/ethstorage/go-ethstorage/ethstorage/p2p/protocol"
 	"github.com/mattn/go-colorable"
 	"github.com/mattn/go-isatty"
 	"github.com/spf13/cobra"
@@ -52,6 +53,7 @@ var (
 	blobNum      *uint64
 	rpcURL       *string
 	contractAddr *string
+	peerCount    *int
 	chainId      *string
 	privateKeys  *[]string
 )
@@ -116,6 +118,12 @@ var BlobUploadCmd = &cobra.Command{
 	Run:   runUploadBlobs,
 }
 
+var SyncBenchmarkCmd = &cobra.Command{
+	Use:   "sync_benchmark",
+	Short: "create mock peers to test sync process and run time ",
+	Run:   runSyncBenchmark,
+}
+
 func init() {
 	kvLen = CreateCmd.Flags().Uint64("kv_len", 0, "kv idx len to create")
 	chunkLen = CreateCmd.Flags().Uint64("chunk_len", 0, "Chunks idx len to create")
@@ -132,7 +140,7 @@ func init() {
 	readStart = rootCmd.PersistentFlags().Uint64("read_start", 0, "Start index for KV reading")
 	readEnd = rootCmd.PersistentFlags().Uint64("read_end", 1, "End index for KV reading")
 	kvEntries = rootCmd.PersistentFlags().Uint64("kv_entries", 0, "Number of KV entries in the shard")
-	encodeType = rootCmd.PersistentFlags().Uint64("encode_type", 0, "Encode Type, 0=no, 1=simple, 2=ethash")
+	encodeType = rootCmd.PersistentFlags().Uint64("encode_type", 0, "Encode Type, 0=no, 1=simple, 2=ethash 3=poseidon")
 	chunkSize = rootCmd.PersistentFlags().Uint64("chunk_size", 4096, "Chunk size to encode/decode")
 
 	readLen = rootCmd.PersistentFlags().Uint64("readlen", 0, "Bytes to read (only for unmasked read)")
@@ -148,6 +156,7 @@ func init() {
 	chainId = rootCmd.PersistentFlags().String("chain_id", "3151908", "L1 Chain Id")
 
 	privateKeys = rootCmd.PersistentFlags().StringArray("private_key", []string{}, "Private keys to upload the blobs")
+	peerCount = rootCmd.PersistentFlags().Int("peer_count", 2, "Number of peers provide sync data for benchmark test")
 }
 
 func setupLogger() {
@@ -297,7 +306,7 @@ func runKVRead(cmd *cobra.Command, args []string) {
 		writer.Write(b)
 
 		writer.Flush()
-		f.Close()		
+		f.Close()
 	}
 }
 
@@ -422,7 +431,7 @@ func genBlobAndDump(idx int) [][]byte {
 			f.Close()
 
 			log.Info("Generate a blob file", "fileName", fileName)
-			
+
 			_, name := filepath.Split(fileName)
 			finalPath := filepath.Join(finalDir, name)
 			finalFile, err := os.Create(finalPath)
@@ -433,12 +442,12 @@ func genBlobAndDump(idx int) [][]byte {
 			srcFile, err := os.Open(fileName)
 			if err != nil {
 				log.Crit("Error creating file:", err)
-			}			
+			}
 
 			_, err = io.Copy(finalFile, srcFile)
 			if err != nil {
 				log.Crit("Error coping file:", err)
-			}		
+			}
 
 			finalFile.Close()
 			srcFile.Close()
@@ -501,10 +510,29 @@ func runUploadBlobs(cmd *cobra.Command, args []string) {
 			}
 
 			wg.Done()
-		} (i, privateKey)
+		}(i, privateKey)
 	}
 
 	wg.Wait()
+}
+
+func runSyncBenchmark(cmd *cobra.Command, args []string) {
+	setupLogger()
+
+	if peerCount == nil {
+		log.Crit("peerCount is needed for sync benchmark test")
+	}
+
+	p := protocol.Params{
+		PeerCount:   *peerCount,
+		KVSize:      *kvSize,
+		ChunkSize:   *kvSize,
+		KVEntries:   *kvEntries,
+		LastKVIndex: *kvEntries,
+		EncodeType:  *encodeType,
+	}
+
+	protocol.TestSyncPerfTest(p)
 }
 
 // rootCmd represents the base command when called without any subcommands
@@ -524,6 +552,7 @@ func init() {
 	rootCmd.AddCommand(BlobWriteCmd)
 	rootCmd.AddCommand(BlobUploadCmd)
 	rootCmd.AddCommand(KVReadCmd)
+	rootCmd.AddCommand(SyncBenchmarkCmd)
 }
 
 func main() {
