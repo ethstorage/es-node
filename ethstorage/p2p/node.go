@@ -21,6 +21,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/host"
 	p2pmetrics "github.com/libp2p/go-libp2p/core/metrics"
 	"github.com/libp2p/go-libp2p/core/network"
+	"github.com/libp2p/go-libp2p/core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 )
 
@@ -91,20 +92,38 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 			m = protocol.NewMetrics("sync")
 		}
 		// Activate the P2P req-resp sync
-		// TODO: add mux to through out a sync done event for mining later
 		n.syncCl = protocol.NewSyncClient(log, rollupCfg, n.host.NewStream, storageManager, db, m, feed)
 		n.host.Network().Notify(&network.NotifyBundle{
 			ConnectedF: func(nw network.Network, conn network.Conn) {
-				shards := make(map[common.Address][]uint64)
-				css, err := n.Host().Peerstore().Get(conn.RemotePeer(), protocol.EthStorageENRKey)
-				if err != nil {
-					log.Warn("get shards from peer failed", "error", err.Error(), "peer", conn.RemotePeer())
-					conn.Close()
+				var (
+					shards       map[common.Address][]uint64
+					remotePeerId = conn.RemotePeer()
+				)
+				if len(n.host.Peerstore().Addrs(remotePeerId)) == 0 {
+					// As the node host enable NATService, which will create a new connection with another
+					// peer id and its Addrs will not be set to Peerstore, so if len of peer Addrs is 0,
+					// then ignore this connection.
+					log.Debug("no addresses to get shard list, return without close conn", "peer", remotePeerId)
 					return
+				}
+				css, err := n.Host().Peerstore().Get(remotePeerId, protocol.EthStorageENRKey)
+				if err != nil {
+					// for node which is new to the ethstorage network, and it dial the nodes which do not contain
+					// the new node's enr, so the nodes do not know its shard list from enr, so it needs to call
+					// n.RequestShardList to fetch the shard list of the new node.
+					remoteShardList, e := n.RequestShardList(remotePeerId)
+					if e != nil {
+						log.Info("get remote shard list fail", "peer", remotePeerId, "err", e.Error())
+						conn.Close()
+						return
+					}
+					log.Debug("get remote shard list success", "peer", remotePeerId, "shards", remoteShardList)
+					n.Host().Peerstore().Put(remotePeerId, protocol.EthStorageENRKey, remoteShardList)
+					shards = protocol.ConvertToShardList(remoteShardList)
 				} else {
 					shards = protocol.ConvertToShardList(css.([]*protocol.ContractShards))
 				}
-				added := n.syncCl.AddPeer(conn.RemotePeer(), shards)
+				added := n.syncCl.AddPeer(remotePeerId, shards)
 				if !added {
 					conn.Close()
 				}
@@ -119,7 +138,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 			shards := make(map[common.Address][]uint64)
 			css, err := n.host.Peerstore().Get(conn.RemotePeer(), protocol.EthStorageENRKey)
 			if err != nil {
-				log.Warn("get shards from peer failed", "error", err.Error(), "peer", conn.RemotePeer())
+				log.Debug("get shards from peer failed", "peer", conn.RemotePeer(), "error", err.Error())
 				continue
 			} else {
 				shards = protocol.ConvertToShardList(css.([]*protocol.ContractShards))
@@ -135,6 +154,8 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 		n.host.SetStreamHandler(protocol.GetProtocolID(protocol.RequestBlobsByRangeProtocolID, rollupCfg.L2ChainID), blobByRangeHandler)
 		blobByListHandler := protocol.MakeStreamHandler(resourcesCtx, log.New("serve", "blobs_by_list"), n.syncSrv.HandleGetBlobsByListRequest)
 		n.host.SetStreamHandler(protocol.GetProtocolID(protocol.RequestBlobsByListProtocolID, rollupCfg.L2ChainID), blobByListHandler)
+		requestShardListHandler := protocol.MakeStreamHandler(resourcesCtx, log.New("serve", "get_shard_list"), n.syncSrv.HandleRequestShardList)
+		n.host.SetStreamHandler(protocol.RequestShardList, requestShardListHandler)
 
 		// notify of any new connections/streams/etc.
 		// TODO: use metric
@@ -167,6 +188,25 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 
 func (n *NodeP2P) RequestL2Range(ctx context.Context, start, end uint64) (uint64, error) {
 	return n.syncCl.RequestL2Range(ctx, start, end)
+}
+
+// RequestShardList fetches shard list from remote peer
+func (n *NodeP2P) RequestShardList(remotePeer peer.ID) ([]*protocol.ContractShards, error) {
+	remoteShardList := make([]*protocol.ContractShards, 0)
+	s, err := n.Host().NewStream(context.Background(), remotePeer, protocol.RequestShardList)
+	if err != nil {
+		return remoteShardList, err
+	}
+
+	code, err := protocol.SendRPC(s, make([]byte, 0), &remoteShardList)
+	if err != nil {
+		return remoteShardList, err
+	}
+	if code != 0 {
+		return remoteShardList, fmt.Errorf("request shard list fail, code %d", code)
+	}
+
+	return remoteShardList, nil
 }
 
 func (n *NodeP2P) Host() host.Host {

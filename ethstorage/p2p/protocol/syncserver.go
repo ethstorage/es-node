@@ -13,6 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/ethstorage/go-ethstorage/ethstorage"
 	"github.com/ethstorage/go-ethstorage/ethstorage/rollup"
 	"github.com/hashicorp/golang-lru/v2/simplelru"
 	"github.com/libp2p/go-libp2p/core/network"
@@ -280,4 +281,19 @@ func (srv *SyncServer) BlobByIndex(idx uint64) (*BlobPayload, error) {
 		EncodeType:   encodeType,
 		EncodedBlob:  blob,
 	}, nil
+}
+
+func (srv *SyncServer) HandleRequestShardList(ctx context.Context, log log.Logger, stream network.Stream) {
+	rCode := byte(0)
+	bs, err := rlp.EncodeToBytes(ConvertToContractShards(ethstorage.Shards()))
+	if err != nil {
+		log.Warn("encode shard list fail", "err", err.Error())
+		rCode = returnCodeServerError
+	}
+
+	err = WriteMsg(stream, &Msg{rCode, bs})
+	if err != nil {
+		log.Warn("write response failed for HandleRequestShardList", "err", err.Error())
+	}
+	log.Debug("write response done for HandleRequestShardList")
 }
