@@ -155,7 +155,7 @@ func (srv *SyncServer) handleGetBlobsByRangeRequest(ctx context.Context, stream 
 		sucRead++
 		res.Blobs = append(res.Blobs, payload)
 		readBytes += uint64(len(payload.EncodedBlob))
-		if readBytes > req.Bytes || readBytes > maxMessageSize {
+		if readBytes >= req.Bytes || readBytes >= maxMessageSize {
 			break
 		}
 	}
@@ -207,7 +207,7 @@ func (srv *SyncServer) handleGetBlobsByListRequest(ctx context.Context, stream n
 		sucRead++
 		res.Blobs = append(res.Blobs, payload)
 		readBytes += uint64(len(payload.EncodedBlob))
-		if readBytes > req.Bytes || readBytes > maxMessageSize {
+		if readBytes >= req.Bytes || readBytes >= maxMessageSize {
 			break
 		}
 	}

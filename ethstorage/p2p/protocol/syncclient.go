@@ -49,8 +49,6 @@ const (
 )
 
 const (
-	maxRequestSize = uint64(512 * 1024)
-
 	maxConcurrency = 16
 
 	minSubTaskSize = 16
@@ -76,14 +74,14 @@ type requestHandlerFn func(ctx context.Context, log log.Logger, stream network.S
 
 func MakeStreamHandler(resourcesCtx context.Context, log log.Logger, fn requestHandlerFn) network.StreamHandler {
 	return func(stream network.Stream) {
-		log := log.New("peer", stream.Conn().ID(), "remote", stream.Conn().RemoteMultiaddr())
+		handleLog := log.New("peer", stream.Conn().ID(), "remote", stream.Conn().RemoteMultiaddr())
 		defer func() {
 			if err := recover(); err != nil {
-				log.Error("p2p server request handling panic", "err", err, "protocol", stream.Protocol())
+				handleLog.Error("p2p server request handling panic", "err", err, "protocol", stream.Protocol())
 			}
 		}()
 		defer stream.Close()
-		fn(resourcesCtx, log, stream)
+		fn(resourcesCtx, handleLog, stream)
 	}
 }
 
@@ -600,7 +598,7 @@ func (s *SyncClient) assignBlobRangeTasks() {
 
 	// Iterate over all the tasks and try to find a pending one
 	for _, t := range s.tasks {
-		maxRange := maxRequestSize / ethstorage.ContractToShardManager[t.Contract].MaxKvSize() * 2
+		maxRange := maxMessageSize / ethstorage.ContractToShardManager[t.Contract].MaxKvSize() * 2
 		for _, stask := range t.SubTasks {
 			st := stask
 			if st.done {
@@ -687,7 +685,7 @@ func (s *SyncClient) assignBlobHealTasks() {
 	// Iterate over all the tasks and try to find a pending one
 	for _, t := range s.tasks {
 		// All the kvs are downloading, wait for request time or success
-		batch := maxRequestSize / ethstorage.ContractToShardManager[t.Contract].MaxKvSize() * 2
+		batch := maxMessageSize / ethstorage.ContractToShardManager[t.Contract].MaxKvSize() * 2
 
 		// kvHealTask pending retrieval, try to find an idle pr. If no such pr
 		// exists, we probably assigned tasks for all (or they are stateless).
