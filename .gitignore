@@ -34,11 +34,14 @@ build/_vendor/pkg
 /cmd/es-utils/blob-utils
 *.dat
 
+*.zkey
+
 # shell
 es-data
 esnode_discovery_db/
 esnode_p2p_priv.txt
 esnode_peerstore_db/
+esnode_p2p_priv.txt
 
 # used by the Makefile
 /build/_workspace/

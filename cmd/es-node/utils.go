@@ -105,10 +105,6 @@ func getShardList(ctx context.Context, client *ethclient.Client, contract common
 	for i := 0; i < shardLen; i++ {
 		result = append(result, uint64(sortedShardIds[i]))
 	}
-	// Will create at least one data file
-	if len(result) == 0 {
-		result = []uint64{0}
-	}
 	log.Info("Get shard list", "shards", result)
 	return result, nil
 }

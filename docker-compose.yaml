@@ -1,0 +1,7 @@
+version: '3'
+services:
+  node:
+    build: .
+    volumes: ./es-data:/es-data
+    entrypoint: /es-node/run.sh
+    container_name: es
