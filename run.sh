@@ -19,13 +19,14 @@ es_node_init="init --shard_index 0"
 # start node #TODO remove --network
 es_node_start=" --network devnet \
   --miner.enabled \
-  --miner.gas-price 5000000000 \
   --storage.files $storage_file_0 \
   --signer.private-key $private_key \
   --l1.beacon http://65.108.236.27:5052 \
   --l1.beacon-based-time 1693820652 \
   --l1.beacon-based-slot 136521 \
-  --p2p.listen.udp 30305  "
+  --p2p.listen.udp 30305  \
+  --p2p.bootnodes enr:-LC4QCABjeNlNMLy2Ai7Z9b0lbZAlno64zk5kEHM7sXLFGhwaalCLCcZ7BlrpDdWQRZlcROYXo8fO2WqBIUjsBGPYB-GAYrL92ALimV0aHN0b3JhZ2XbAYDY15T4PDlcHg4mFXjWcyrCd0BO6y-Z6sGAgmlkgnY0iXNlY3AyNTZrMaEDba07XjDdaXyvIQ0DmN-cvhOY5yAZRu4frQNgtKhI9iKDdGNwgiQGg3VkcIJ2YQ id=e770b1ddfe8e9238 \
+  "
 
 # create data file for shard 0 if not yet
 if [ ! -e $storage_file_0 ]; then
