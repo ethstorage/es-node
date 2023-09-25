@@ -25,6 +25,7 @@
   - Doc website to explain the core concepts, how to run testnet, etc. (Very important to onboard newcomer)
   - Dashboard to show the activity on EthStorage
   - One demo dApp - W3Box (Mingpeng)
+      - make gateway compatible with ethstorage
   - A demo to show how OP will use EthStorage to store their tx
 - Next
   - Allow submitting a storage proof based on a recent storage state to avoid the "front-run writing attack"
