@@ -29,7 +29,6 @@ es_node_init="init --shard_index 0"
 # start node #TODO remove --network
 es_node_start=" --network devnet \
   --miner.enabled \
-  --miner.zkey ${zkey_file} \
   --miner.priority-gas-price 2000000000 \
   --miner.gas-price 3000000000 \
   --storage.files $storage_file_0 \
