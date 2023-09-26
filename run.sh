@@ -6,6 +6,7 @@ cd ../es-node
 # download blob_poseidon.zkey if not yet
 zkey_file="./ethstorage/prover/snarkjs/blob_poseidon.zkey"
 if [ ! -e  ${zkey_file} ]; then
+  echo "${zkey_file} not found. Start downloading..."
   file_id="1ZLfhYeCXMnbk6wUiBADRAn1mZ8MI_zg-"
   html=`curl -c ./cookie -s -L "https://drive.google.com/uc?export=download&id=${file_id}"`
   curl -Lb ./cookie "https://drive.google.com/uc?export=download&`echo ${html}|grep -Po '(confirm=[a-zA-Z0-9\-_]+)'`&id=${file_id}" -o ${zkey_file}
@@ -28,6 +29,7 @@ es_node_init="init --shard_index 0"
 # start node #TODO remove --network
 es_node_start=" --network devnet \
   --miner.enabled \
+  --miner.zkey ${zkey_file} \
   --miner.priority-gas-price 2000000000 \
   --miner.gas-price 3000000000 \
   --storage.files $storage_file_0 \
