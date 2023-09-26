@@ -2,7 +2,15 @@
 
 # to be compatible with docker
 cd ../es-node
- 
+
+# download blob_poseidon.zkey if not yet
+zkey_file="./ethstorage/prover/snarkjs/blob_poseidon.zkey"
+if [ ! -e  ${zkey_file} ]; then
+  file_id="1ZLfhYeCXMnbk6wUiBADRAn1mZ8MI_zg-"
+  html=`curl -c ./cookie -s -L "https://drive.google.com/uc?export=download&id=${file_id}"`
+  curl -Lb ./cookie "https://drive.google.com/uc?export=download&`echo ${html}|grep -Po '(confirm=[a-zA-Z0-9\-_]+)'`&id=${file_id}" -o ${zkey_file}
+fi
+
 private_key="95eb6ffd2ae0b115db4d1f0d58388216f9d026896696a5211d77b5f14eb5badf"
 executable="./cmd/es-node/es-node"
 data_dir="./es-data"
