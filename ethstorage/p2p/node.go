@@ -99,7 +99,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 				css, err := n.Host().Peerstore().Get(conn.RemotePeer(), protocol.EthStorageENRKey)
 				if err != nil {
 					log.Warn("get shards from peer failed", "error", err.Error(), "peer", conn.RemotePeer())
-					// conn.Close()
+					conn.Close()
 					return
 				} else {
 					shards = protocol.ConvertToShardList(css.([]*protocol.ContractShards))
