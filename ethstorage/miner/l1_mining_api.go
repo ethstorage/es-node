@@ -62,14 +62,14 @@ func (m *l1MiningAPI) GetMiningInfo(ctx context.Context, contract common.Address
 func (m *l1MiningAPI) GetDataHashes(ctx context.Context, contract common.Address, kvIdxes []uint64) ([]common.Hash, error) {
 	metas, err := m.GetKvMetas(kvIdxes, rpc.LatestBlockNumber.Int64())
 	if err != nil {
-		log.Error("Failed to get verioned hashs", "error", err)
+		m.lg.Error("Failed to get verioned hashs", "error", err)
 		return nil, err
 	}
 	var hashes []common.Hash
 	for i := 0; i < len(metas); i++ {
 		var dhash common.Hash
 		copy(dhash[:], metas[i][32-ethstorage.HashSizeInContract:32])
-		log.Info("Get data hash", "kvIndex", kvIdxes[i], "hash", dhash.Hex())
+		m.lg.Info("Get data hash", "kvIndex", kvIdxes[i], "hash", dhash.Hex())
 		hashes = append(hashes, dhash)
 	}
 	return hashes, nil
@@ -110,13 +110,15 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 		m.lg.Error("Query nonce failed", "error", err.Error())
 		return common.Hash{}, err
 	}
-	theGasPrice := cfg.GasPrice
-	if theGasPrice == nil {
-		theGasPrice, err = m.SuggestGasPrice(ctx)
+	m.lg.Debug("Query nonce done", "nonce", nonce)
+	gasPrice := cfg.GasPrice
+	if gasPrice == nil {
+		gasPrice, err = m.SuggestGasPrice(ctx)
 		if err != nil {
 			m.lg.Error("Query gas price failed", "error", err.Error())
 			return common.Hash{}, err
 		}
+		m.lg.Debug("Query gas price done", "gasPrice", gasPrice)
 	}
 	tip := cfg.PriorityGasPrice
 	if tip == nil {
@@ -125,12 +127,13 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 			m.lg.Error("Query gas tip cap failed", "error", err.Error())
 			tip = common.Big0
 		}
+		m.lg.Debug("Query gas tip cap done", "gasTipGap", tip)
 	}
-	gas, err := m.EstimateGas(ctx, ethereum.CallMsg{
+	estimatedGas, err := m.EstimateGas(ctx, ethereum.CallMsg{
 		From:      cfg.SignerAddr,
 		To:        &contract,
 		GasTipCap: tip,
-		GasFeeCap: theGasPrice,
+		GasFeeCap: gasPrice,
 		Value:     common.Big0,
 		Data:      calldata,
 	})
@@ -138,21 +141,21 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 		m.lg.Error("Estimate gas failed", "error", err.Error())
 		return common.Hash{}, fmt.Errorf("failed to estimate gas: %w", err)
 	}
-	m.lg.Info("Estimated gas done", "gas", gas)
-	estimateGas := uint64(float64(gas) * gasBufferRatio)
+	m.lg.Info("Estimated gas done", "gas", estimatedGas)
+	gas := uint64(float64(estimatedGas) * gasBufferRatio)
 	rawTx := &types.DynamicFeeTx{
 		ChainID:   chainID,
 		Nonce:     nonce,
 		GasTipCap: tip,
-		GasFeeCap: theGasPrice,
-		Gas:       estimateGas,
+		GasFeeCap: gasPrice,
+		Gas:       gas,
 		To:        &contract,
 		Value:     common.Big0,
 		Data:      calldata,
 	}
 	signedTx, err := sign(ctx, cfg.SignerAddr, types.NewTx(rawTx))
 	if err != nil {
-		log.Error("Sign tx error", "error", err)
+		m.lg.Error("Sign tx error", "error", err)
 		return common.Hash{}, err
 	}
 	err = m.SendTransaction(ctx, signedTx)

@@ -138,8 +138,8 @@ func newMiner(t *testing.T, storageMgr *es.StorageManager, client *eth.PollingCl
 		SignerAddr:       signerAddr,
 	}
 	l1api := NewL1MiningAPI(client, lg)
-	zkExecPath, _ := filepath.Abs("../prover")
-	pvr := prover.NewKZGPoseidonProver(zkExecPath, defaultConfig.ZKeyFileName, lg)
+	zkWorkingDir, _ := filepath.Abs("../prover")
+	pvr := prover.NewKZGPoseidonProver(zkWorkingDir, defaultConfig.ZKeyFileName, lg)
 	fd := new(event.Feed)
 	miner := New(defaultConfig, storageMgr, l1api, &pvr, fd, lg)
 	return miner

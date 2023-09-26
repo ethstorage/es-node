@@ -4,7 +4,10 @@
 package miner
 
 import (
+	"fmt"
 	"math/big"
+	"os"
+	"path/filepath"
 
 	"github.com/ethstorage/go-ethstorage/ethstorage/flags/types"
 	"github.com/ethstorage/go-ethstorage/ethstorage/rollup"
@@ -16,6 +19,7 @@ const (
 	GasPriceFlagName         = "miner.gas-price"
 	PriorityGasPriceFlagName = "miner.priority-gas-price"
 	ZKeyFileName             = "miner.zkey"
+	ZKWorkingDir             = "miner.zk-working-dir"
 	ThreadsPerShard          = "miner.threads-per-shard"
 )
 
@@ -41,9 +45,15 @@ func CLIFlags(envPrefix string) []cli.Flag {
 		},
 		cli.StringFlag{
 			Name:   ZKeyFileName,
-			Usage:  "Path to snarkjs zkey file",
+			Usage:  "zkey file name which should be put in the snarkjs folder",
 			Value:  DefaultConfig.ZKeyFileName,
 			EnvVar: rollup.PrefixEnvVar(envPrefix, "ZKEY_FILE"),
+		},
+		cli.StringFlag{
+			Name:   ZKWorkingDir,
+			Usage:  "Path to the snarkjs folder",
+			Value:  DefaultConfig.ZKWorkingDir,
+			EnvVar: rollup.PrefixEnvVar(envPrefix, "ZK_WORKING_DIR"),
 		},
 		cli.Uint64Flag{
 			Name:   ThreadsPerShard,
@@ -60,20 +70,36 @@ type CLIConfig struct {
 	GasPrice         *big.Int
 	PriorityGasPrice *big.Int
 	ZKeyFileName     string
+	ZKWorkingDir     string
 	ThreadsPerShard  uint64
 }
 
 func (c CLIConfig) Check() error {
+	info, err := os.Stat(filepath.Join(c.ZKWorkingDir, "snarkjs"))
+	if err != nil {
+		if os.IsNotExist(err) || !info.IsDir() {
+			return fmt.Errorf("snarkjs folder not found in ZKWorkingDir: %v\n", err)
+		}
+	}
 	return nil
 }
 
-func (c CLIConfig) ToMinerConfig() Config {
-	return Config{
-		GasPrice:         c.GasPrice,
-		PriorityGasPrice: c.PriorityGasPrice,
-		ZKeyFileName:     c.ZKeyFileName,
-		ThreadsPerShard:  c.ThreadsPerShard,
+func (c CLIConfig) ToMinerConfig() (Config, error) {
+	zkWorkingDir := c.ZKWorkingDir
+	if !filepath.IsAbs(zkWorkingDir) {
+		dir, err := filepath.Abs(zkWorkingDir)
+		if err != nil {
+			return Config{}, fmt.Errorf("check ZKWorkingDir error: %v\n", err)
+		}
+		zkWorkingDir = dir
 	}
+	cfg := DefaultConfig
+	cfg.ZKWorkingDir = zkWorkingDir
+	cfg.GasPrice = c.GasPrice
+	cfg.PriorityGasPrice = c.PriorityGasPrice
+	cfg.ZKeyFileName = c.ZKeyFileName
+	cfg.ThreadsPerShard = c.ThreadsPerShard
+	return cfg, nil
 }
 
 func ReadCLIConfig(ctx *cli.Context) CLIConfig {
@@ -82,6 +108,7 @@ func ReadCLIConfig(ctx *cli.Context) CLIConfig {
 		GasPrice:         types.GlobalBig(ctx, GasPriceFlagName),
 		PriorityGasPrice: types.GlobalBig(ctx, PriorityGasPriceFlagName),
 		ZKeyFileName:     ctx.GlobalString(ZKeyFileName),
+		ZKWorkingDir:     ctx.GlobalString(ZKWorkingDir),
 		ThreadsPerShard:  ctx.GlobalUint64(ThreadsPerShard),
 	}
 	return cfg

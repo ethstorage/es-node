@@ -21,7 +21,6 @@ import (
 
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
 	"github.com/crate-crypto/go-proto-danksharding-crypto/eth"
-	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -199,29 +198,5 @@ func verifyDecodeSample(proof ZKProof, trunkIdx uint64, encodingKey, mask common
 		return fmt.Errorf("Err: %v, args.Pack: %v", err, values)
 	}
 	calldata := append(mid, dataField...)
-
-	msg := ethereum.CallMsg{
-		To:   &contractAddr,
-		Data: calldata,
-	}
-	bs, err := client.CallContract(ctx, msg, nil)
-	if err != nil {
-		return err
-	}
-	b, _ := abi.NewType("bool", "", nil)
-	res, err := abi.Arguments{
-		{Type: b},
-	}.UnpackValues(bs)
-	if err != nil {
-		return err
-	}
-	pass, ok := res[0].(bool)
-	if !ok {
-		return fmt.Errorf("invalid result: %v", res[0])
-	}
-	if !pass {
-		return fmt.Errorf("decodeSample result=%v", pass)
-	}
-	log.Printf("On chain verify done. result: %v", pass)
-	return nil
+	return callVerify(calldata)
 }

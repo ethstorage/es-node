@@ -6,7 +6,6 @@ package node
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"time"
 
 	"github.com/ethereum/go-ethereum"
@@ -117,11 +116,6 @@ func (n *EsNode) init(ctx context.Context, cfg *Config) error {
 	// if err := n.initMetricsServer(ctx, cfg); err != nil {
 	// 	return err
 	// }
-	if &cfg.Mining != nil {
-		if err := n.initMiner(ctx, cfg); err != nil {
-			return err
-		}
-	}
 	return nil
 }
 
@@ -232,13 +226,12 @@ func (n *EsNode) initRPCServer(ctx context.Context, cfg *Config) error {
 }
 
 func (n *EsNode) initMiner(ctx context.Context, cfg *Config) error {
-	l1api := miner.NewL1MiningAPI(n.l1Source, n.log)
-	zkExecPath, err := filepath.Abs("../prover")
-	if err != nil {
-		return err
+	if cfg.Mining == nil {
+		return nil
 	}
-	pvr := prover.NewKZGPoseidonProver(zkExecPath, cfg.Mining.ZKeyFileName, n.log)
-	n.miner = miner.New(&cfg.Mining, n.storageManager, l1api, &pvr, n.feed, n.log)
+	l1api := miner.NewL1MiningAPI(n.l1Source, n.log)
+	pvr := prover.NewKZGPoseidonProver(cfg.Mining.ZKWorkingDir, cfg.Mining.ZKeyFileName, n.log)
+	n.miner = miner.New(cfg.Mining, n.storageManager, l1api, &pvr, n.feed, n.log)
 	log.Info("Initalized miner")
 	return nil
 }

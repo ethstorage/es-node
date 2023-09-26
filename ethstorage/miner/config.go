@@ -5,6 +5,7 @@ package miner
 
 import (
 	"math/big"
+	"path/filepath"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethstorage/go-ethstorage/ethstorage/signer"
@@ -20,6 +21,7 @@ type Config struct {
 	GasPrice         *big.Int
 	PriorityGasPrice *big.Int
 	ZKeyFileName     string
+	ZKWorkingDir     string
 	ThreadsPerShard  uint64
 	SignerFnFactory  signer.SignerFactory
 	SignerAddr       common.Address
@@ -35,5 +37,6 @@ var DefaultConfig = Config{
 	GasPrice:         nil,
 	PriorityGasPrice: nil,
 	ZKeyFileName:     "blob_poseidon.zkey",
+	ZKWorkingDir:     filepath.Join("ethstorage", "prover"),
 	ThreadsPerShard:  1,
 }
