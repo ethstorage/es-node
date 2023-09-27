@@ -57,6 +57,7 @@ const (
 const (
 	RequestBlobsByRangeProtocolID = "/ethstorage/dev/requestblobsbyrange/%d/1.0.0"
 	RequestBlobsByListProtocolID  = "/ethstorage/dev/requestblobsbylist/%d/1.0.0"
+	RequestShardList              = "/ethstorage/dev/shardlist/1.0.0"
 )
 
 var (
@@ -787,7 +788,7 @@ func (s *SyncClient) assignFillEmptyBlobTasks() {
 				if err != nil {
 					log.Warn("fill in empty fail", "err", err.Error())
 				} else {
-					log.Warn("fill in empty done", "time", time.Now().Sub(t).Seconds())
+					log.Debug("fill in empty done", "time", time.Now().Sub(t).Seconds())
 				}
 				filled := next - start
 				s.emptyBlobsFilled += filled
