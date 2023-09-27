@@ -2,7 +2,8 @@ version: '3'
 services:
   node:
     build: .
-    volumes: ./es-data:/es-data
+    volumes:
+      - ./es-data:/es-data
     command:
       [
         "/es-node/run.sh",
