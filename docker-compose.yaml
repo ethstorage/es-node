@@ -3,5 +3,12 @@ services:
   node:
     build: .
     volumes: ./es-data:/es-data
-    entrypoint: /es-node/run.sh
+    command:
+      [
+        "/es-node/run.sh",
+        "-m",
+        "<miner>",
+        "-p",
+        "<private_key>"
+      ]
     container_name: es
