@@ -37,7 +37,9 @@ common_flags=" --datadir $data_dir \
 # init shard 0
 es_node_init="init --shard_index 0"
 
-# start node #TODO remove --network
+# start node 
+# TODO remove --network
+# TODO remove --miner.priority-gas-price and --miner.gas-price when gas price query is available
 es_node_start=" --network devnet \
   --miner.enabled \
   --miner.priority-gas-price 2000000000 \

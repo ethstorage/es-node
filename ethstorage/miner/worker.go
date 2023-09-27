@@ -336,15 +336,12 @@ func (w *worker) resultLoop() {
 
 func (w *worker) checkTxStatus(txHash common.Hash, miner common.Address) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer func() {
-		cancel()
-		log.Warn("Checking mining transaction status timed out", "txhash", txHash)
-	}()
+	defer cancel()
 	receipt, err := w.l1API.TransactionReceipt(ctx, txHash)
 	if err == nil && receipt.Status == 1 {
-		log.Info("Mining transaction success!               \u2714", "miner", miner)
+		log.Info("Mining transaction success!           \u2714", "miner", miner)
 	} else if receipt.Status == 0 {
-		log.Warn("Mining transaction failed", "txhash", txHash)
+		log.Warn("Mining transaction failed!            \u2715", "txhash", txHash)
 	}
 }
 
