@@ -77,18 +77,6 @@ func main() {
 			},
 			Action: EsNodeInit,
 		},
-		// 	{
-		// 		Name:        "p2p",
-		// 		Subcommands: p2p.Subcommands,
-		// 	},
-		// 	{
-		// 		Name:        "genesis",
-		// 		Subcommands: genesis.Subcommands,
-		// 	},
-		// 	{
-		// 		Name:        "doc",
-		// 		Subcommands: doc.Subcommands,
-		// 	},
 	}
 
 	err := app.Run(os.Args)
@@ -150,21 +138,12 @@ func EsNodeMain(ctx *cli.Context) error {
 	return nil
 }
 
-func readRequired(ctx *cli.Context, name string) string {
-	value := ctx.String(name)
-	if value == "" {
-		log.Crit("Flag is required", "flag", name)
-	}
-	log.Info("Read flag", "name", flags.L1NodeAddr.Name, "value", value)
-	return value
-}
-
 func EsNodeInit(ctx *cli.Context) error {
 	log.Info("Will create data files for storage node")
-	l1Rpc := readRequired(ctx, flags.L1NodeAddr.Name)
-	contract := readRequired(ctx, flags.StorageL1Contract.Name)
-	miner := readRequired(ctx, flags.StorageMiner.Name)
-	datadir := readRequired(ctx, flags.DataDir.Name)
+	l1Rpc := readRequiredFlag(ctx, flags.L1NodeAddr.Name)
+	contract := readRequiredFlag(ctx, flags.StorageL1Contract.Name)
+	miner := readRequiredFlag(ctx, flags.StorageMiner.Name)
+	datadir := readRequiredFlag(ctx, flags.DataDir.Name)
 	shardIndexes := ctx.Int64Slice(shardIndexFlagName)
 	log.Info("Read flag", "name", shardIndexFlagName, "value", shardIndexes)
 	shardLen := 0

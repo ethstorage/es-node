@@ -18,7 +18,9 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/log"
 	es "github.com/ethstorage/go-ethstorage/ethstorage"
+	"github.com/ethstorage/go-ethstorage/ethstorage/flags"
 	"github.com/ethstorage/go-ethstorage/ethstorage/storage"
+	"github.com/urfave/cli"
 )
 
 const (
@@ -187,4 +189,13 @@ func sortBigIntSlice(slice []*big.Int) []int {
 		return slice[indices[i]].Cmp(slice[indices[j]]) < 0
 	})
 	return indices
+}
+
+func readRequiredFlag(ctx *cli.Context, name string) string {
+	value := ctx.String(name)
+	if value == "" {
+		log.Crit("Flag is required", "flag", name)
+	}
+	log.Info("Read flag", "name", flags.L1NodeAddr.Name, "value", value)
+	return value
 }
