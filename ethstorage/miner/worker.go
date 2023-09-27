@@ -318,6 +318,7 @@ func (w *worker) resultLoop() {
 					_, isPending, err := w.l1API.TransactionByHash(context.Background(), txHash)
 					if err == nil && !isPending {
 						log.Info("Mining transaction confirmed", "txhash", txHash)
+						w.checkTxStatus(txHash)
 						break
 					}
 					checked++
@@ -333,6 +334,17 @@ func (w *worker) resultLoop() {
 	}
 }
 
+func (w *worker) checkTxStatus(txHash common.Hash) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	receipt, err := w.l1API.TransactionReceipt(ctx, txHash)
+	if err == nil && receipt.Status == 1 {
+		log.Info("Mining success!        \u2714", "txhash", txHash)
+	} else if receipt.Status == 0 {
+		log.Warn("Mining transaction failed", "txhash", txHash)
+	}
+}
+
 // mineTask acturally executes a mining task
 func (w *worker) mineTask(t *taskItem) (bool, error) {
 	startTime := time.Now().Unix()
@@ -344,7 +356,7 @@ func (w *worker) mineTask(t *taskItem) (bool, error) {
 			break
 		}
 		if nonce >= t.nonceEnd {
-			w.lg.Info("Nonce used up", "task", t, "nonce", nonce)
+			w.lg.Info("The nonces are exhausted in this slot, waiting for the next block", "task", t, "nonce", nonce)
 			break
 		}
 		hash0 := initHash(t.miner, t.blockHash, nonce)
