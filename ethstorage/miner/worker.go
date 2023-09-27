@@ -25,7 +25,7 @@ const (
 	sampleSizeBits    = 5 // 32 bytes
 	// always use new block hash to mine for each slot
 	mineTimeOut              = 12 // seconds
-	miningTransactionTimeout = 20 // seconds
+	miningTransactionTimeout = 25 // seconds
 )
 
 type task struct {
@@ -312,13 +312,13 @@ func (w *worker) resultLoop() {
 				checked := 0
 				for range ticker.C {
 					if checked > miningTransactionTimeout {
-						log.Warn("Mining transaction timed out", "txhash", txHash)
+						log.Warn("Waiting for mining transaction confirm timed out", "txhash", txHash)
 						break
 					}
 					_, isPending, err := w.l1API.TransactionByHash(context.Background(), txHash)
 					if err == nil && !isPending {
 						log.Info("Mining transaction confirmed", "txhash", txHash)
-						w.checkTxStatus(txHash)
+						w.checkTxStatus(txHash, result.miner)
 						break
 					}
 					checked++
@@ -334,12 +334,15 @@ func (w *worker) resultLoop() {
 	}
 }
 
-func (w *worker) checkTxStatus(txHash common.Hash) {
+func (w *worker) checkTxStatus(txHash common.Hash, miner common.Address) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+	defer func() {
+		cancel()
+		log.Warn("Checking mining transaction status timed out", "txhash", txHash)
+	}()
 	receipt, err := w.l1API.TransactionReceipt(ctx, txHash)
 	if err == nil && receipt.Status == 1 {
-		log.Info("Mining success!        \u2714", "txhash", txHash)
+		log.Info("Mining transaction success!               \u2714", "miner", miner)
 	} else if receipt.Status == 0 {
 		log.Warn("Mining transaction failed", "txhash", txHash)
 	}
