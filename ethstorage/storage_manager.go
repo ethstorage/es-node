@@ -22,8 +22,10 @@ const (
 
 type Il1Source interface {
 	GetKvMetas(kvIndices []uint64, blockNumber int64) ([][32]byte, error)
+
 	GetStorageLastBlobIdx(blockNumber int64) (uint64, error)
 }
+
 type mockL1Source struct {
 	lastBlobIndex uint64
 	metaFile      *os.File
@@ -46,6 +48,7 @@ func NewMockL1Source(shardManager *ShardManager, metafile string) Il1Source {
 	}
 	return &mockL1Source{lastBlobIndex: lastBlobIndex, metaFile: file}
 }
+
 func (l1 *mockL1Source) getMetadata(idx uint64) ([32]byte, error) {
 	bs := make([]byte, 32)
 	l, err := l1.metaFile.ReadAt(bs, int64(idx*32))
@@ -57,6 +60,7 @@ func (l1 *mockL1Source) getMetadata(idx uint64) ([32]byte, error) {
 	}
 	return common.BytesToHash(bs), nil
 }
+
 func (l1 *mockL1Source) GetKvMetas(kvIndices []uint64, blockNumber int64) ([][32]byte, error) {
 	metas := make([][32]byte, 0)
 	for _, idx := range kvIndices {
@@ -69,6 +73,7 @@ func (l1 *mockL1Source) GetKvMetas(kvIndices []uint64, blockNumber int64) ([][32
 	}
 	return metas, nil
 }
+
 func (l1 *mockL1Source) GetStorageLastBlobIdx(blockNumber int64) (uint64, error) {
 	return l1.lastBlobIndex, nil
 }
