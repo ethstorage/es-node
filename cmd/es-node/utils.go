@@ -192,10 +192,10 @@ func sortBigIntSlice(slice []*big.Int) []int {
 }
 
 func readRequiredFlag(ctx *cli.Context, name string) string {
-	value := ctx.String(name)
-	if value == "" {
+	if !ctx.IsSet(name) {
 		log.Crit("Flag is required", "flag", name)
 	}
+	value := ctx.String(name)
 	log.Info("Read flag", "name", flags.L1NodeAddr.Name, "value", value)
 	return value
 }

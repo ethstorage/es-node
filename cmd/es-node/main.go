@@ -86,7 +86,7 @@ func main() {
 }
 
 func EsNodeMain(ctx *cli.Context) error {
-	log.Info("Initializing EthStorage Node")
+	log.Info("Configuring EthStorage Node")
 	logCfg := eslog.ReadCLIConfig(ctx)
 	if err := logCfg.Check(); err != nil {
 		log.Error("Unable to create the log config", "error", err)
