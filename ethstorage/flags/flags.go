@@ -88,6 +88,13 @@ var (
 		Value:  4096 * 32 * 12, // ~18 days, define in CL p2p spec: https://github.com/ethereum/consensus-specs/pull/3047
 		EnvVar: prefixEnvVar("L1_BEACON_MIN_DURATION_BLOBS_REQUEST"),
 	}
+	L1MockMetafile = cli.StringFlag{
+		Name:     "l1.mock_metafile",
+		Usage:    "file which saved the blob commits for mock l1 to read meta from, it is used by performance test",
+		Value:    "",
+		Required: false,
+		EnvVar:   prefixEnvVar("L1_MOCK_METAFILE"),
+	}
 	L2ChainId = cli.Uint64Flag{
 		Name:   "l2.chain_id",
 		Usage:  "Chain id of L2 chain endpoint to use",
@@ -193,6 +200,7 @@ var optionalFlags = []cli.Flag{
 	L1BeaconBasedSlot,
 	L1BeaconSlotTime,
 	L1MinDurationForBlobsRequest,
+	L1MockMetafile,
 	L2ChainId,
 	MetricsEnable,
 	DownloadStart,

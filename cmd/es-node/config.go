@@ -197,15 +197,31 @@ func NewRollupConfig(ctx *cli.Context) (*rollup.EsConfig, error) {
 	return &rollupConfig, nil
 }
 
-func NewStorageConfig(ctx *cli.Context, client *ethclient.Client) (*storage.StorageConfig, error) {
+func NewStorageConfig(ctx *cli.Context, client *ethclient.Client) (storageCfg *storage.StorageConfig, err error) {
+	network := ctx.GlobalString(flags.Network.Name)
 	l1Contract := common.HexToAddress(ctx.GlobalString(flags.StorageL1Contract.Name))
 	miner := common.HexToAddress(ctx.GlobalString(flags.StorageMiner.Name))
-	storageCfg, err := initStorageConfig(context.Background(), client, l1Contract, miner)
-	if err != nil {
-		log.Error("Failed to load storage config from contract", "error", err)
-		return nil, err
+	useMockL1 := false
+	switch network {
+	case "perf":
+		useMockL1 = true
+		storageCfg = &storage.StorageConfig{
+			L1Contract:        l1Contract,
+			Miner:             miner,
+			KvSize:            ctx.GlobalUint64(flags.StorageKvSize.Name),
+			ChunkSize:         ctx.GlobalUint64(flags.StorageChunkSize.Name),
+			KvEntriesPerShard: ctx.GlobalUint64(flags.StorageKvEntries.Name),
+		}
+	default:
+		storageCfg, err = initStorageConfig(context.Background(), client, l1Contract, miner)
+		if err != nil {
+			log.Error("Failed to load storage config from contract", "error", err)
+			return nil, err
+		}
 	}
 	storageCfg.Filenames = ctx.GlobalStringSlice(flags.StorageFiles.Name)
+	storageCfg.UseMockL1 = useMockL1
+	storageCfg.L1MockMetaFile = ctx.GlobalString(flags.L1MockMetafile.Name)
 	return storageCfg, nil
 }
 

@@ -214,7 +214,13 @@ func (n *EsNode) initStorageManager(ctx context.Context, cfg *Config) error {
 		"chunkSize", shardManager.ChunkSize(),
 		"kvsPerShard", shardManager.KvEntries())
 
-	n.storageManager = ethstorage.NewStorageManager(shardManager, n.l1Source)
+	if cfg.Storage.UseMockL1 {
+		mockL1 := ethstorage.NewMockL1Source(shardManager, cfg.Storage.L1MockMetaFile)
+		n.storageManager = ethstorage.NewStorageManager(shardManager, mockL1)
+	} else {
+		n.storageManager = ethstorage.NewStorageManager(shardManager, n.l1Source)
+	}
+
 	return nil
 }
 

@@ -6,12 +6,13 @@ package ethstorage
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"math/big"
+	"os"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
 )
 
 const (
@@ -19,16 +20,69 @@ const (
 	HashSizeInContract = 24
 )
 
+type Il1Source interface {
+	GetKvMetas(kvIndices []uint64, blockNumber int64) ([][32]byte, error)
+	GetStorageLastBlobIdx(blockNumber int64) (uint64, error)
+}
+type mockL1Source struct {
+	lastBlobIndex uint64
+	metaFile      *os.File
+}
+
+func NewMockL1Source(shardManager *ShardManager, metafile string) Il1Source {
+	if len(metafile) == 0 {
+		panic("metafile param is needed when using mock l1")
+	}
+	maxId := uint64(0)
+	for _, id := range shardManager.ShardIds() {
+		if maxId < id {
+			maxId = id
+		}
+	}
+	lastBlobIndex := (maxId + 1) * shardManager.kvEntries
+	file, err := os.OpenFile(metafile, os.O_RDONLY, 0600)
+	if err != nil {
+		panic(fmt.Sprintf("open metafile faiil with err %s", err.Error()))
+	}
+	return &mockL1Source{lastBlobIndex: lastBlobIndex, metaFile: file}
+}
+func (l1 *mockL1Source) getMetadata(idx uint64) ([32]byte, error) {
+	bs := make([]byte, 32)
+	l, err := l1.metaFile.ReadAt(bs, int64(idx*32))
+	if err != nil {
+		return common.Hash{}, fmt.Errorf("get metadata fail, err %s", err.Error())
+	}
+	if l != 32 {
+		return common.Hash{}, errors.New("get metadata fail, err read less than 32 bytes")
+	}
+	return common.BytesToHash(bs), nil
+}
+func (l1 *mockL1Source) GetKvMetas(kvIndices []uint64, blockNumber int64) ([][32]byte, error) {
+	metas := make([][32]byte, 0)
+	for _, idx := range kvIndices {
+		meta, err := l1.getMetadata(idx)
+		if err != nil {
+			log.Debug("read meta fail", "err", err.Error())
+			continue
+		}
+		metas = append(metas, meta)
+	}
+	return metas, nil
+}
+func (l1 *mockL1Source) GetStorageLastBlobIdx(blockNumber int64) (uint64, error) {
+	return l1.lastBlobIndex, nil
+}
+
 // StorageManager is a higher-level abstract of ShardManager which provides multi-thread safety to storage file read/write
 // and a consistent view of most-recent-finalized L1 block.
 type StorageManager struct {
 	shardManager *ShardManager
 	mu           sync.Mutex // protect localL1 and underlying blob read/write
 	localL1      int64      // local view of most-recent-finalized L1 block
-	l1Source     *eth.PollingClient
+	l1Source     Il1Source
 }
 
-func NewStorageManager(sm *ShardManager, l1Source *eth.PollingClient) *StorageManager {
+func NewStorageManager(sm *ShardManager, l1Source Il1Source) *StorageManager {
 	return &StorageManager{
 		shardManager: sm,
 		l1Source:     l1Source,
