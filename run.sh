@@ -1,14 +1,24 @@
 #!/bin/sh
 
-miner="<miner>"
-private_key="<private_key>"
+# usage:
+# ./run.sh -m "0xyour_miner_address" -k "your_private_key"
 
-if [ "$miner" = "<miner>" ]; then
-  echo "Please replace <miner> with your own"
+while getopts "m:k:" opt; do
+  case ${opt} in
+    m) miner=${OPTARG} ;;
+    k) private_key=${OPTARG} ;;
+    \?) echo "Invalid option -$OPTARG" >&2
+        exit 1 ;;
+  esac
+done
+
+if [ -z "$miner" ]; then
+  echo "Please provide miner using -m flag"
   exit 1
 fi
-if [ "$private_key" = "<private_key>" ]; then
-  echo "Please replace <private_key> with your own"
+
+if [ -z "$private_key" ]; then
+  echo "Please provide private_key using -k flag"
   exit 1
 fi
 
