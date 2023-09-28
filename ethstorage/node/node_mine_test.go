@@ -145,7 +145,6 @@ func TestMining(t *testing.T) {
 	}
 
 	if !intialized {
-		prepareData(t, n, contract)
 		// prepareData(t, n, contract)
 		fillEmpty(t, n, contract)
 	}

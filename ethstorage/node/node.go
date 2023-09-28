@@ -227,6 +227,7 @@ func (n *EsNode) initRPCServer(ctx context.Context, cfg *Config) error {
 
 func (n *EsNode) initMiner(ctx context.Context, cfg *Config) error {
 	if cfg.Mining == nil {
+		// not enabled
 		return nil
 	}
 	l1api := miner.NewL1MiningAPI(n.l1Source, n.log)

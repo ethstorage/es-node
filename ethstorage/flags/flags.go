@@ -162,6 +162,8 @@ var (
 	}
 )
 
+// Not use 'Required' field in order to avoid unnecessary check when use 'init' subcommand
+// Instead follow optimism's design to use `CheckRequired()`
 var requiredFlags = []cli.Flag{
 	DataDir,
 	StorageFiles,
