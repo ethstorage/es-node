@@ -5,6 +5,7 @@ RUN apk add --no-cache gcc musl-dev linux-headers
 
 ADD . /es-node
 RUN cd /es-node/cmd/es-node && go build
+RUN cd /es-node/cmd/es-utils && go build
 
 # Pull ES node into a second stage deploy alpine container
 FROM node:16-alpine
