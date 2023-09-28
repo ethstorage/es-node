@@ -3,7 +3,7 @@ services:
   node:
     build: .
     volumes:
-      - ./es-data:/es-data
+      - ./es-data:/es-node/es-data
     environment:
       - miner=${miner}
       - private_key=${private_key}
