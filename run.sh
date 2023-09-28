@@ -2,7 +2,7 @@
 
 # usage:
 # env miner=<miner> private_key=<private_key> ./run.sh
- 
+
 if [ -z "$miner" ]; then
   echo "Please provide 'miner' as environment variable"
   exit 1
@@ -16,7 +16,7 @@ fi
 # download blob_poseidon.zkey if not yet
 zkey_file="./ethstorage/prover/snarkjs/blob_poseidon.zkey"
 if [ ! -e  ${zkey_file} ]; then
-  echo "Start downloading zkey..."
+  echo "${zkey_file} not found. Start downloading..."
   file_id="1ZLfhYeCXMnbk6wUiBADRAn1mZ8MI_zg-"
   html=`curl -c ./cookie -s -L "https://drive.google.com/uc?export=download&id=${file_id}"`
   curl -Lb ./cookie "https://drive.google.com/uc?export=download&`echo ${html}|grep -Po '(confirm=[a-zA-Z0-9\-_]+)'`&id=${file_id}" -o ${zkey_file}
