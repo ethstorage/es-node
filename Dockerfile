@@ -14,9 +14,11 @@ RUN cd /es-node/cmd/es-node && go build
 # Pull ES node into a second stage deploy alpine container
 FROM node:16-alpine
 
+# For file download
 RUN apk add --no-cache curl grep
 
-COPY --from=builder /es-node/* /es-node/
+COPY --from=builder /es-node/ /es-node/
 RUN chmod +x /es-node/run.sh
+WORKDIR /es-node
 
 EXPOSE 9545 9222 9222/udp

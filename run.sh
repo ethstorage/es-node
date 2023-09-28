@@ -23,9 +23,6 @@ if [ ! -e  ${zkey_file} ]; then
   echo "downloaded ${zkey_file}"
 fi
 
-# to be compatible with docker
-cd ../es-node
-
 executable="./cmd/es-node/es-node"
 data_dir="./es-data"
 storage_file_0="$data_dir/shard-0.dat"
