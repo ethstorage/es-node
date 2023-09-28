@@ -153,6 +153,18 @@ func (sm *ShardManager) TryWrite(kvIdx uint64, b []byte, commit common.Hash) (bo
 	}
 }
 
+func (sm *ShardManager) TryWriteEncoded(kvIdx uint64, b []byte, commit common.Hash) (bool, error) {
+	shardIdx := kvIdx / sm.kvEntries
+	if ds, ok := sm.shardMap[shardIdx]; ok {
+		err := ds.WriteWith(kvIdx, b, commit, func(cdata []byte, chunkIdx uint64) []byte {
+			return cdata
+		})
+		return true, err
+	} else {
+		return false, nil
+	}
+}
+
 // TryRead Read the encoded KV data from storage file and decode it.
 // Return error if the read IO fails.
 // Return false if the data is not managed by the ShardManager.
@@ -161,6 +173,15 @@ func (sm *ShardManager) TryRead(kvIdx uint64, readLen int, commit common.Hash) (
 	if ds, ok := sm.shardMap[shardIdx]; ok {
 		b, err := ds.Read(kvIdx, readLen, commit)
 		return b, true, err
+	} else {
+		return nil, false, nil
+	}
+}
+
+func (sm *ShardManager) TryEncodeKV(kvIdx uint64, b []byte, hash common.Hash) ([]byte, bool, error) {
+	shardIdx := kvIdx / sm.kvEntries
+	if ds, ok := sm.shardMap[shardIdx]; ok {
+		return sm.EncodeKV(kvIdx, b, hash, ds.Miner(), ds.EncodeType())
 	} else {
 		return nil, false, nil
 	}

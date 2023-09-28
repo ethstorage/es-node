@@ -115,6 +115,10 @@ func (s *StorageManager) CommitBlobs(kvIndices []uint64, blobs [][]byte, commits
 }
 
 func (s *StorageManager) CommitBlob(kvIndex uint64, blob []byte, commit common.Hash) error {
+	encodedBlob, success, err := s.shardManager.TryEncodeKV(kvIndex, blob, commit)
+	if !success || err != nil {
+		return errors.New("blob encode failed")
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	metas, err := s.l1Source.GetKvMetas([]uint64{kvIndex}, s.localL1)
@@ -126,7 +130,7 @@ func (s *StorageManager) CommitBlob(kvIndex uint64, blob []byte, commit common.H
 	}
 
 	contractMeta := metas[0]
-	return s.commitBlob(kvIndex, blob, commit, contractMeta)
+	return s.commitBlob(kvIndex, encodedBlob, commit, contractMeta)
 }
 
 func (s *StorageManager) commitBlob(kvIndex uint64, blob []byte, commit common.Hash, contractMeta [32]byte) error {
@@ -156,9 +160,7 @@ func (s *StorageManager) commitBlob(kvIndex uint64, blob []byte, commit common.H
 
 	c := prepareCommit(commit)
 
-	// TODO: @Qiang: we may want to seperate the encoding with writing data blob, and make the encoding
-	// process parallel to improve whole performance
-	success, err = s.shardManager.TryWrite(kvIndex, blob, c)
+	success, err = s.shardManager.TryWriteEncoded(kvIndex, blob, c)
 	if !success || err != nil {
 		return errors.New("blob write failed")
 	}
