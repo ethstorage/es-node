@@ -1,34 +1,21 @@
 #!/bin/sh
 
 # usage:
-# ./run.sh -m "0xyour_miner_address" -k "your_private_key"
-
-while getopts "m:k:" opt; do
-  case ${opt} in
-    m) miner=${OPTARG} ;;
-    k) private_key=${OPTARG} ;;
-    \?) echo "Invalid option -$OPTARG" >&2
-        exit 1 ;;
-  esac
-done
-
+# env miner=<miner> private_key=<private_key> ./run.sh
+ 
 if [ -z "$miner" ]; then
-  echo "Please provide miner using -m flag"
+  echo "Please provide 'miner' as environment variable"
   exit 1
 fi
 
 if [ -z "$private_key" ]; then
-  echo "Please provide private_key using -k flag"
+  echo "Please provide 'private_key' as environment variable"
   exit 1
 fi
 
 # download blob_poseidon.zkey if not yet
 zkey_file="./ethstorage/prover/snarkjs/blob_poseidon.zkey"
 if [ ! -e  ${zkey_file} ]; then
-  if ! command -v curl &> /dev/null; then
-      echo "Installing curl"
-      apt-get -y install curl
-  fi
   echo "Start downloading zkey..."
   file_id="1ZLfhYeCXMnbk6wUiBADRAn1mZ8MI_zg-"
   html=`curl -c ./cookie -s -L "https://drive.google.com/uc?export=download&id=${file_id}"`

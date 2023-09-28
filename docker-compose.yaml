@@ -2,14 +2,14 @@ version: '3'
 services:
   node:
     build: .
+    working_dir: /es-node
     volumes:
       - ./es-data:/es-data
     command:
-      [
-        "/es-node/run.sh",
-        "-m",
-        "<miner>",
-        "-p",
-        "<private_key>"
-      ]
+      - [
+          "env",
+          "miner=${miner}",
+          "private_key=${private_key}",
+          "./run.sh"
+        ]
     container_name: es
