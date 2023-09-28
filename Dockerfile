@@ -16,7 +16,7 @@ FROM node:16-alpine
 
 # For file download
 RUN apk add --no-cache curl grep
-
+RUN npm install -g snarkjs@0.7.0
 COPY --from=builder /es-node/ /es-node/
 RUN chmod +x /es-node/run.sh
 WORKDIR /es-node
