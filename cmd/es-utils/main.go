@@ -272,13 +272,13 @@ func generateRandBytes() []byte {
 }
 func generateMetadata(idx, size uint64, hash []byte) common.Hash {
 	meta := make([]byte, 0)
-	meta = append(meta, hash[:24]...)
-	size_bs := make([]byte, 8)
-	binary.BigEndian.PutUint64(size_bs, size)
-	meta = append(meta, size_bs[5:]...)
 	idx_bs := make([]byte, 8)
 	binary.BigEndian.PutUint64(idx_bs, idx)
 	meta = append(meta, idx_bs[3:]...)
+	size_bs := make([]byte, 8)
+	binary.BigEndian.PutUint64(size_bs, size)
+	meta = append(meta, size_bs[5:]...)
+	meta = append(meta, hash[:24]...)
 	return common.BytesToHash(meta)
 }
 
@@ -594,6 +594,7 @@ func init() {
 	rootCmd.AddCommand(BlobWriteCmd)
 	rootCmd.AddCommand(BlobUploadCmd)
 	rootCmd.AddCommand(KVReadCmd)
+	rootCmd.AddCommand(FillUpShardCmd)
 }
 
 func main() {
