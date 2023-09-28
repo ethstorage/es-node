@@ -788,7 +788,7 @@ func (s *SyncClient) assignFillEmptyBlobTasks() {
 				if err != nil {
 					log.Warn("fill in empty fail", "err", err.Error())
 				} else {
-					log.Debug("fill in empty done", "time", time.Now().Sub(t).Seconds())
+					log.Info("fill in empty done", "time", time.Since(t).Seconds())
 				}
 				filled := next - start
 				s.emptyBlobsFilled += filled
@@ -987,7 +987,10 @@ func (s *SyncClient) FillFileWithEmptyBlob(start, limit uint64) (uint64, error) 
 		start = lastBlobIdx
 	}
 	for idx := start; idx <= limit; idx++ {
+		t := time.Now()
 		err = s.storageManager.CommitBlob(idx, empty, common.Hash{})
+		log.Info("storageManager.CommitBlob", "time", time.Since(t).Milliseconds())
+
 		if err != nil {
 			err = fmt.Errorf("write empty to kv file fail, index: %d; error: %s", idx, err.Error())
 			return idx, err

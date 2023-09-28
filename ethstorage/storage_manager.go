@@ -8,6 +8,7 @@ import (
 	"errors"
 	"math/big"
 	"sync"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
@@ -117,7 +118,9 @@ func (s *StorageManager) CommitBlobs(kvIndices []uint64, blobs [][]byte, commits
 func (s *StorageManager) CommitBlob(kvIndex uint64, blob []byte, commit common.Hash) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	t := time.Now()
 	metas, err := s.l1Source.GetKvMetas([]uint64{kvIndex}, s.localL1)
+	log.Info("s.l1Source.GetKvMetas", "time", time.Since(t).Milliseconds())
 	if err != nil {
 		return err
 	}
@@ -130,11 +133,14 @@ func (s *StorageManager) CommitBlob(kvIndex uint64, blob []byte, commit common.H
 }
 
 func (s *StorageManager) commitBlob(kvIndex uint64, blob []byte, commit common.Hash, contractMeta [32]byte) error {
+	t := time.Now()
 	m, success, err := s.shardManager.TryReadMeta(kvIndex)
 	if !success || err != nil {
 		return errors.New("metadata read failed")
 	}
+	log.Info("s.shardManager.TryReadMeta", "time", time.Since(t).Milliseconds())
 
+	t = time.Now()
 	contractKvIdx := new(big.Int).SetBytes(contractMeta[0:5]).Uint64()
 	if contractKvIdx != kvIndex {
 		return errors.New("kvIdx from contract and input is not matched")
@@ -155,13 +161,16 @@ func (s *StorageManager) commitBlob(kvIndex uint64, blob []byte, commit common.H
 	}
 
 	c := prepareCommit(commit)
+	log.Info("prepareCommit", "time", time.Since(t).Milliseconds())
 
+	t = time.Now()
 	// TODO: @Qiang: we may want to seperate the encoding with writing data blob, and make the encoding
 	// process parallel to improve whole performance
 	success, err = s.shardManager.TryWrite(kvIndex, blob, c)
 	if !success || err != nil {
 		return errors.New("blob write failed")
 	}
+	log.Info("TryWrite", "time", time.Since(t).Milliseconds())
 	return nil
 }
 
