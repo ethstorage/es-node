@@ -6,9 +6,11 @@ package ethstorage
 import (
 	"fmt"
 	"math/big"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethstorage/go-ethstorage/ethstorage/encoder"
 	"github.com/ethstorage/go-ethstorage/ethstorage/pora"
 )
@@ -328,11 +330,15 @@ func (ds *DataShard) Write(kvIdx uint64, b []byte, commit common.Hash) error {
 	cb := make([]byte, ds.kvSize)
 	copy(cb, b)
 	for i := uint64(0); i < ds.chunksPerKv; i++ {
+		t := time.Now()
 		chunkIdx := kvIdx*ds.chunksPerKv + i
 		encodeKey := calcEncodeKey(commit, chunkIdx, ds.Miner())
 		encodedChunk := encodeChunk(ds.chunkSize, cb[int(i*ds.chunkSize):int((i+1)*ds.chunkSize)], ds.EncodeType(), encodeKey)
+		log.Info("zhuqiang - encodeChunk", "time", time.Since(t).Milliseconds())
+		
+		t = time.Now()
 		err := ds.writeChunk(chunkIdx, encodedChunk)
-
+		log.Info("zhuqiang - writeChunk", "time", time.Since(t).Milliseconds())
 		if err != nil {
 			return err
 		}
