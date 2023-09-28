@@ -5,11 +5,5 @@ services:
     working_dir: /es-node
     volumes:
       - ./es-data:/es-data
-    command:
-      - [
-          "env",
-          "miner=${miner}",
-          "private_key=${private_key}",
-          "./run.sh"
-        ]
+    command: [ "env miner=${miner} private_key=${private_key} ./run.sh" ]
     container_name: es
