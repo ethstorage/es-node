@@ -18,7 +18,6 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/log"
 	es "github.com/ethstorage/go-ethstorage/ethstorage"
-	"github.com/ethstorage/go-ethstorage/ethstorage/flags"
 	"github.com/ethstorage/go-ethstorage/ethstorage/storage"
 	"github.com/urfave/cli"
 )
@@ -196,6 +195,6 @@ func readRequiredFlag(ctx *cli.Context, name string) string {
 		log.Crit("Flag is required", "flag", name)
 	}
 	value := ctx.String(name)
-	log.Info("Read flag", "name", flags.L1NodeAddr.Name, "value", value)
+	log.Info("Read flag", "name", name, "value", value)
 	return value
 }
