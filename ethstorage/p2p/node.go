@@ -130,7 +130,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 			},
 			DisconnectedF: func(nw network.Network, conn network.Conn) {
 				if len(n.host.Peerstore().Addrs(conn.RemotePeer())) == 0 {
-					log.Debug("no addresses to get shard list, return without close conn", "peer", conn.RemotePeer())
+					log.Debug("no addresses in peer store, return without remove peer", "peer", conn.RemotePeer())
 					return
 				}
 				n.syncCl.RemovePeer(conn.RemotePeer())
