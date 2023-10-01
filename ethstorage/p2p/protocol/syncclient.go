@@ -429,10 +429,9 @@ func (s *SyncClient) cleanTasks() {
 	if allDone {
 		s.setSyncDone()
 		log.Info("storage sync done", "subTask count", len(s.tasks))
-
-		// Push the final sync report
-		s.report()
 	}
+	
+	s.report()
 }
 
 func (s *SyncClient) Start() {
