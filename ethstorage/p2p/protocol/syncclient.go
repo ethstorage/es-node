@@ -171,6 +171,7 @@ type SyncClient struct {
 
 	prover         prv.IProver
 	startTime      time.Time // Time instance when sstorage sync started
+	logTime        time.Time // Time instance when status was last reported
 	storageManager StorageManager
 
 	blobsSynced      uint64
@@ -429,9 +430,9 @@ func (s *SyncClient) cleanTasks() {
 	if allDone {
 		s.setSyncDone()
 		log.Info("storage sync done", "subTask count", len(s.tasks))
+
+		s.report(true)
 	}
-	
-	s.report()
 }
 
 func (s *SyncClient) Start() {
@@ -503,7 +504,7 @@ func (s *SyncClient) Close() error {
 	s.wg.Wait()
 	s.cleanTasks()
 	s.saveSyncStatus()
-	s.report()
+	s.report(true)
 	return nil
 }
 
@@ -570,6 +571,8 @@ func (s *SyncClient) mainLoop() {
 			s.log.Info("stopped P2P req-resp L2 block sync client")
 			return
 		}
+		// Report stats if something meaningful happened
+		s.report(false)
 	}
 }
 
@@ -1079,7 +1082,13 @@ func (s *SyncClient) commitBlob(decodedBlob []byte, payload *BlobPayload) bool {
 }
 
 // report calculates various status reports and provides it to the user.
-func (s *SyncClient) report() {
+func (s *SyncClient) report(force bool) {
+	// Don't report all the events, just occasionally
+	if !force && time.Since(s.logTime) < 8*time.Second {
+		return
+	}
+	s.logTime = time.Now()
+
 	// Don't report anything until we have a meaningful progress
 	synced := s.blobsSynced
 	if synced == 0 {
