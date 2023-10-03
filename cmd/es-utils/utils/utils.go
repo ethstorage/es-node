@@ -12,9 +12,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/crypto/kzg4844"
@@ -46,17 +48,42 @@ func SendBlobTx(
 	chainID string,
 	calldata string,
 ) *types.Transaction {
-	value256, err := uint256.FromHex(value)
-	if err != nil {
-		log.Crit("invalid value param", "error", err)
-	}
-
 	chainId, _ := new(big.Int).SetString(chainID, 0)
 
 	ctx := context.Background()
 	client, err := ethclient.DialContext(ctx, addr)
 	if err != nil {
 		log.Crit("Failed to connect to the Ethereum client", "error", err)
+	}
+
+	h := crypto.Keccak256Hash([]byte(`upfrontPayment()`))
+	callMsg := ethereum.CallMsg{
+		To: &to,
+		Data: h[:],
+	}
+	bs, err := client.CallContract(context.Background(), callMsg, new(big.Int).SetInt64(-2))
+	if err != nil {
+		log.Crit("Failed to get upfront fee", "error", err)
+	}
+
+	uint256Type, _ := abi.NewType("uint256", "", nil)
+	res, err := abi.Arguments{{Type: uint256Type}}.UnpackValues(bs)
+	if err != nil {
+		log.Crit("Failed to unpack values", "error", err)
+	}
+
+	val, success := new(big.Int).SetString(value, 0)
+	if !success {
+		log.Crit("invalid value param")
+	}
+
+	if res[0].(* big.Int).Cmp(val) == 1 {
+		value = hexutil.Encode(res[0].(* big.Int).Bytes())
+	}
+
+	value256, err := uint256.FromHex(value)
+	if err != nil {
+		log.Crit("invalid value param", "error", err)
 	}
 
 	key, err := crypto.HexToECDSA(prv)
