@@ -159,9 +159,9 @@ func CollectProcessMetrics(refresh time.Duration) {
 			rm.diskWriteBytes.addValue((diskStats[now].WriteBytes - diskStats[prev].WriteBytes) / 1024 / 1024)
 		}
 
-		log.Debug("runtime metrics", "cpu", int64((cpuStats[now].GlobalTime-cpuStats[prev].GlobalTime)/float64(cpuCount)/secondsSinceLastCollect*100),
-			"memory", int64((rStats[now].MemTotal)/1024/1024), "disk read", (diskStats[now].ReadBytes-diskStats[prev].ReadBytes)/1024/1024, "disk write",
-			(diskStats[now].WriteBytes-diskStats[prev].WriteBytes)/1024/1024)
+		log.Info("runtime metrics", "cpu (%)", int64((cpuStats[now].GlobalTime-cpuStats[prev].GlobalTime)/float64(cpuCount)/secondsSinceLastCollect*100),
+			"memory (MB)", int64((rStats[now].MemTotal)/1024/1024), "disk read (KB)", (diskStats[now].ReadBytes-diskStats[prev].ReadBytes)/1024, "disk write (KB)",
+			(diskStats[now].WriteBytes-diskStats[prev].WriteBytes)/1024)
 		time.Sleep(refresh)
 	}
 }
