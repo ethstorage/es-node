@@ -16,6 +16,7 @@ var rm *runtimeMetrics
 
 type metric struct {
 	name      string
+	unit      string
 	latestVal int64
 	maxVal    int64
 	count     int64
@@ -36,7 +37,7 @@ func (m *metric) String() string {
 	if m.count > 0 {
 		avg = m.totalVal / m.count
 	}
-	return fmt.Sprintf("metric %s: max value %d; avg value %d;", m.name, m.maxVal, avg)
+	return fmt.Sprintf("metric %s: max value %d %s; avg value %d %s;", m.name, m.maxVal, m.unit, avg, m.unit)
 }
 
 type runtimeMetrics struct {
@@ -47,18 +48,17 @@ type runtimeMetrics struct {
 	heapUsed       *metric
 	diskReadBytes  *metric
 	diskWriteBytes *metric
-	loger          log.Logger
 }
 
-func NewRuntimeMetrics() *runtimeMetrics {
+func newRuntimeMetrics() *runtimeMetrics {
 	return &runtimeMetrics{
-		cpuSysLoad:     &metric{name: "cpuSysLoad"},
-		cpuProcLoad:    &metric{name: "cpuProcLoad"},
-		memAllocs:      &metric{name: "memAllocs"},
-		memTotal:       &metric{name: "memTotal"},
-		heapUsed:       &metric{name: "heapUsed"},
-		diskReadBytes:  &metric{name: "diskReadBytes"},
-		diskWriteBytes: &metric{name: "diskWriteBytes"},
+		cpuSysLoad:     &metric{name: "cpuSysLoad", unit: "%"},
+		cpuProcLoad:    &metric{name: "cpuProcLoad", unit: "%"},
+		memAllocs:      &metric{name: "memAllocs", unit: "MB"},
+		memTotal:       &metric{name: "memTotal", unit: "MB"},
+		heapUsed:       &metric{name: "heapUsed", unit: "MB"},
+		diskReadBytes:  &metric{name: "diskReadBytes", unit: "KB"},
+		diskWriteBytes: &metric{name: "diskWriteBytes", unit: "KB"},
 	}
 }
 
@@ -120,7 +120,7 @@ func CollectProcessMetrics(refresh time.Duration) {
 	}
 
 	if rm == nil {
-		rm = NewRuntimeMetrics()
+		rm = newRuntimeMetrics()
 	}
 
 	// Create the various data collectors
@@ -155,8 +155,8 @@ func CollectProcessMetrics(refresh time.Duration) {
 
 		// Disk
 		if metrics.ReadDiskStats(&diskStats[now]) == nil {
-			rm.diskReadBytes.addValue((diskStats[now].ReadBytes - diskStats[prev].ReadBytes) / 1024 / 1024)
-			rm.diskWriteBytes.addValue((diskStats[now].WriteBytes - diskStats[prev].WriteBytes) / 1024 / 1024)
+			rm.diskReadBytes.addValue((diskStats[now].ReadBytes - diskStats[prev].ReadBytes) / 1024)
+			rm.diskWriteBytes.addValue((diskStats[now].WriteBytes - diskStats[prev].WriteBytes) / 1024)
 		}
 
 		log.Info("runtime metrics", "cpu (%)", int64((cpuStats[now].GlobalTime-cpuStats[prev].GlobalTime)/float64(cpuCount)/secondsSinceLastCollect*100),
@@ -168,6 +168,6 @@ func CollectProcessMetrics(refresh time.Duration) {
 
 func PrintRuntimeMetrics() {
 	if Enabled && rm != nil {
-		rm.loger.Info("runtime metrics", "summary", rm.String())
+		log.Info("runtime metrics", "summary", rm.String())
 	}
 }
