@@ -38,7 +38,6 @@ func TestSyncPerfTest(arg Params) {
 		mux         = new(event.Feed)
 		shards      = []uint64{0}
 		shardMap    = make(map[common.Address][]uint64)
-		rm          = metrics.NewRuntimeMetrics()
 		rollupCfg   = &rollup.EsConfig{
 			L2ChainID: new(big.Int).SetUint64(3333),
 		}
@@ -78,7 +77,8 @@ func TestSyncPerfTest(arg Params) {
 		connect(t, localHost, remoteHost, shardMap, shardMap)
 	}
 
-	go metrics.CollectProcessMetrics(time.Second, rm)
+	metrics.Enabled = true
+	go metrics.CollectProcessMetrics(time.Second)
 
 	checkStall(t, 3600, mux, cancel)
 
@@ -86,5 +86,5 @@ func TestSyncPerfTest(arg Params) {
 		testLog.Error("sync state %v is not match with expected state %v, peer count %d", syncCl.syncDone, false, len(syncCl.peers))
 	}
 	testLog.Info("Test done", "time", time.Since(start))
-	testLog.Info(rm.String())
+	metrics.PrintRuntimeMetrics()
 }
