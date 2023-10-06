@@ -264,7 +264,7 @@ func (n *EsNode) Start(ctx context.Context, cfg *Config) error {
 
 	n.p2pNode.Start()
 
-	metrics.CollectProcessMetrics(3 * time.Second)
+	go metrics.CollectProcessMetrics(3 * time.Second)
 	return nil
 }
 
@@ -306,6 +306,7 @@ func (n *EsNode) Close() error {
 
 	metrics.PrintRuntimeMetrics()
 
+	log.Warn("stop node")
 	if n.server != nil {
 		n.server.Stop()
 	}

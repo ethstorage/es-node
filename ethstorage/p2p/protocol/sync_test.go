@@ -31,7 +31,7 @@ import (
 
 const (
 	defaultChunkSize     = uint64(1) << 17
-	defaultEncodeType    = ethstorage.NO_ENCODE
+	defaultEncodeType    = ethstorage.ENCODE_BLOB_POSEIDON
 	blobEmptyFillingMask = byte(0b10000000)
 )
 

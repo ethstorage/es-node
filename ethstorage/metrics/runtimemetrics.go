@@ -171,3 +171,10 @@ func PrintRuntimeMetrics() {
 		log.Info("runtime metrics", "summary", rm.String())
 	}
 }
+
+func RuntimeMetricsSummary() string {
+	if Enabled && rm != nil {
+		return rm.String()
+	}
+	return ""
+}
