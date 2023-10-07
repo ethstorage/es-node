@@ -5,12 +5,14 @@
 
 container_name="es"
 image_name="es-node"
-
+# start container if exists
 if docker ps -a --format "{{.Names}}" | grep -q "^$container_name$"; then
     docker start $container_name  
 else
-    if ! docker images | grep -q "^$image_name$"; then
+    # build an image if not exist
+    if ! docker images --format "{{.Repository}}" | grep -q "^$image_name$"; then
         docker build -t $image_name .
     fi
+    # run container in the background
     docker run --name $container_name -v ./es-data:/es-node/es-data -e ES_NODE_STORAGE_MINER=$ES_NODE_STORAGE_MINER -e ES_NODE_PRIVATE_KEY=$ES_NODE_PRIVATE_KEY -d --entrypoint /es-node/run.sh $image_name 
 fi
