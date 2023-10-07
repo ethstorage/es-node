@@ -58,5 +58,3 @@ fi
 
 # start es-node
 $executable $es_node_start $common_flags
-
-exec "$@"
