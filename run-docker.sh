@@ -6,8 +6,11 @@
 container_name="es"
 image_name="es-node"
 
-if docker container inspect -f '{{.State.Running}}' $container_name; then 
-    echo "docker already started"
+# if docker container inspect -f '{{.State.Running}}' $container_name; then 
+is_running=$(docker inspect -f '{{.State.Running}}' "$container_name") 
+
+if  "$is_running" == "true" ; then
+    echo "$container_name already started"
 else 
     # start container if exists
     if docker ps -a --format "{{.Names}}" | grep -q "^$container_name$"; then
