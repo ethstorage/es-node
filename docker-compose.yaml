@@ -5,7 +5,7 @@ services:
     volumes:
       - ./es-data:/es-node/es-data
     environment:
-      - miner=${miner}
-      - private_key=${private_key}
+      - miner=${ES_NODE_STORAGE_MINER}
+      - private_key=${ES_NODE_PRIVATE_KEY}
     command: /es-node/run.sh
     container_name: es
