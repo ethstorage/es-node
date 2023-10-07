@@ -1,15 +1,15 @@
 #!/bin/sh
 
 # usage:
-# env miner=<miner> private_key=<private_key> ./run.sh
+# env ES_NODE_STORAGE_MINER=<miner> ES_NODE_PRIVATE_KEY=<private_key> ./run.sh
 
-if [ -z "$miner" ]; then
-  echo "Please provide 'miner' as environment variable"
+if [ -z "$ES_NODE_STORAGE_MINER" ]; then
+  echo "Please provide 'ES_NODE_STORAGE_MINER' as environment variable"
   exit 1
 fi
 
-if [ -z "$private_key" ]; then
-  echo "Please provide 'private_key' as environment variable"
+if [ -z "$ES_NODE_PRIVATE_KEY" ]; then
+  echo "Please provide 'ES_NODE_PRIVATE_KEY' as environment variable"
   exit 1
 fi
 
@@ -30,7 +30,7 @@ storage_file_0="$data_dir/shard-0.dat"
 common_flags=" --datadir $data_dir \
   --l1.rpc http://65.108.236.27:8545 \
   --storage.l1contract 0xC5af49F2aD56eC383a7948B16D9b7F48A9898aC9 \
-  --storage.miner $miner"
+  --storage.miner $ES_NODE_STORAGE_MINER"
 
 # init shard 0
 es_node_init="init --shard_index 0"
@@ -43,7 +43,7 @@ es_node_start=" --network devnet \
   --miner.priority-gas-price 2000000000 \
   --miner.gas-price 3000000000 \
   --storage.files $storage_file_0 \
-  --signer.private-key $private_key \
+  --signer.private-key $ES_NODE_PRIVATE_KEY \
   --l1.beacon http://65.108.236.27:5052 \
   --l1.beacon-based-time 1693820652 \
   --l1.beacon-based-slot 136521 \
