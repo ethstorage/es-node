@@ -84,9 +84,7 @@ func (s *StorageManager) Reset(newL1 int64) {
 	s.localL1 = newL1
 }
 
-// This function will be called when p2p sync received blobs. It will commit the blobs that match local L1 view
-// and return the unmatched ones.
-// Note that the caller must make sure the blobs data and the corresponding commit are matched.
+// This function is only called by test right now.
 func (s *StorageManager) CommitBlobs(kvIndices []uint64, blobs [][]byte, commits []common.Hash) ([]uint64, error) {
 	if len(kvIndices) != len(blobs) || len(blobs) != len(commits) {
 		return nil, errors.New("invalid params lens")
@@ -114,6 +112,8 @@ func (s *StorageManager) CommitBlobs(kvIndices []uint64, blobs [][]byte, commits
 	return failedCommited, nil
 }
 
+// This function will be called when p2p sync received a blob. 
+// Return err if the passed commit and the one queried from contract are not matched.
 func (s *StorageManager) CommitBlob(kvIndex uint64, blob []byte, commit common.Hash) error {
 	encodedBlob, success, err := s.shardManager.TryEncodeKV(kvIndex, blob, commit)
 	if !success || err != nil {
