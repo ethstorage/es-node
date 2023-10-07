@@ -316,6 +316,7 @@ func decodeChunk(chunkSize uint64, bs []byte, encodeType uint64, encodeKey commo
 	}
 }
 
+// Write a value of the KV to the store using a customized encoder. 
 func (ds *DataShard) WriteWith(kvIdx uint64, b []byte, commit common.Hash, encoder func([]byte, uint64) []byte) error {
 	if !ds.Contains(kvIdx) {
 		return fmt.Errorf("kv not found")

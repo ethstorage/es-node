@@ -153,6 +153,9 @@ func (sm *ShardManager) TryWrite(kvIdx uint64, b []byte, commit common.Hash) (bo
 	}
 }
 
+// TryWriteEncoded write the encoded data to the underly storage file directly.
+// Return error if the write IO fails.
+// Return false if the data is not managed by the ShardManager.
 func (sm *ShardManager) TryWriteEncoded(kvIdx uint64, b []byte, commit common.Hash) (bool, error) {
 	shardIdx := kvIdx / sm.kvEntries
 	if ds, ok := sm.shardMap[shardIdx]; ok {
@@ -178,6 +181,8 @@ func (sm *ShardManager) TryRead(kvIdx uint64, readLen int, commit common.Hash) (
 	}
 }
 
+// TryEncodeKV encode the KV data using the miner and encodeType specfied by the data shard.
+// Return false if the data is not managed by the ShardManager.
 func (sm *ShardManager) TryEncodeKV(kvIdx uint64, b []byte, hash common.Hash) ([]byte, bool, error) {
 	shardIdx := kvIdx / sm.kvEntries
 	if ds, ok := sm.shardMap[shardIdx]; ok {
