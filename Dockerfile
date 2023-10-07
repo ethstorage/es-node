@@ -17,4 +17,4 @@ COPY --from=builder /es-node/ /es-node/
 RUN chmod +x /es-node/run.sh
 WORKDIR /es-node
 
-EXPOSE 9545 9222 9222/udp
+EXPOSE 9545 9222 30305/udp

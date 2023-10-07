@@ -5,7 +5,7 @@ services:
     ports:
       - '9545:9545'
       - 0.0.0.0:${EL_P2P_PORT:-9222}:${EL_P2P_PORT:-9222}/tcp
-      - 0.0.0.0:${EL_P2P_PORT:-9222}:${EL_P2P_PORT:-9222}/udp
+      - 0.0.0.0:${EL_P2P_PORT:-30305}:${EL_P2P_PORT:-30305}/udp
     volumes:
       - ./es-data:/es-node/es-data
     environment:

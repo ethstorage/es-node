@@ -24,7 +24,7 @@ To start es-node in a Docker container without docker-compose, pull es-node sour
 # build image
 docker build -t es-node .
 # start container
-docker run -v ./es-data:/es-node/es-data -e ES_NODE_STORAGE_MINER=<miner> -e ES_NODE_PRIVATE_KEY=<private_key> -it --entrypoint /es-node/run.sh es-node
+docker run -v ./es-data:/es-node/es-data -e ES_NODE_STORAGE_MINER=<miner> -e ES_NODE_PRIVATE_KEY=<private_key> -p 9545:9545 -p 9222:9222 -p 30305:30305/udp -it --entrypoint /es-node/run.sh es-node
 ```
 Where `es-node` is the name of the es-node image.
 
