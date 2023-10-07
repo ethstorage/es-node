@@ -2,6 +2,10 @@ version: '3'
 services:
   node:
     build: .
+    ports:
+      - '9545:9545'
+      - 0.0.0.0:${EL_P2P_PORT:-9222}:${EL_P2P_PORT:-9222}/tcp
+      - 0.0.0.0:${EL_P2P_PORT:-9222}:${EL_P2P_PORT:-9222}/udp
     volumes:
       - ./es-data:/es-node/es-data
     environment:

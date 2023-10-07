@@ -20,6 +20,6 @@ else
             docker build -t $image_name .
         fi
         # run container in the background
-        docker run --name $container_name -v ./es-data:/es-node/es-data -e ES_NODE_STORAGE_MINER=$ES_NODE_STORAGE_MINER -e ES_NODE_PRIVATE_KEY=$ES_NODE_PRIVATE_KEY -d --entrypoint /es-node/run.sh $image_name 
+        docker run --name $container_name -v ./es-data:/es-node/es-data -e ES_NODE_STORAGE_MINER=$ES_NODE_STORAGE_MINER -e ES_NODE_PRIVATE_KEY=$ES_NODE_PRIVATE_KEY -p 9545:9545 -p 9222:9222 -p 9222:9222/udp -d --entrypoint /es-node/run.sh $image_name 
     fi
 fi
