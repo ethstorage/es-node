@@ -6,7 +6,6 @@
 container_name="es"
 image_name="es-node"
 
-# if docker container inspect -f '{{.State.Running}}' $container_name; then 
 is_running=$(docker inspect -f '{{.State.Running}}' "$container_name") 
 
 if  "$is_running" == "true" ; then
