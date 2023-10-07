@@ -8,7 +8,7 @@ container_name="es"
 image_name="es-node"
 
 if docker ps -a --format "{{.Names}}" | grep -q "^$container_name$"; then
-    docker -e ES_NODE_STORAGE_MINER=$ES_NODE_STORAGE_MINER -e ES_NODE_PRIVATE_KEY=$ES_NODE_PRIVATE_KEY start $container_name >> $log_name
+    docker start $container_name -e ES_NODE_STORAGE_MINER=$ES_NODE_STORAGE_MINER -e ES_NODE_PRIVATE_KEY=$ES_NODE_PRIVATE_KEY  >> $log_name
 else
     if ! docker images | grep -q "^$image_name$"; then
         docker build -t $image_name .
