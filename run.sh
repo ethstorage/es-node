@@ -48,7 +48,7 @@ es_node_start=" --network devnet \
   --l1.beacon-based-time 1695981612 \
   --l1.beacon-based-slot 1 \
   --p2p.listen.udp 30305  \
-  --p2p.bootnodes enr:-LC4QJUxpagNZvSX8Z5yC2bM5L6F2EDaSh2MqaIxQ5iHii0jXNmeGFEa5g_XjTAkWqq1LNI9IasKQ9nzxgVu6oi3qCOGAYsIW9ndimV0aHN0b3JhZ2XbAYDY15SIK8KQ_CLDMFkoGZd8SJaKYq4l9MGAgmlkgnY0iXNlY3AyNTZrMaEDeZSMboVXsR8S6-8DKAgtE6790OL0wINq556mmz90jSeDdGNwgiQGg3VkcIJ2YQ \
+  --p2p.bootnodes enr:-Li4QFZ__pnyNgjrM9caHjHX2XeIqMagojYqAf-ienMJd2PUXvrpWoubZesDIHDo_HgvAclsFHyrlm_zHfydfJp7DE2GAYsJmGD9imV0aHN0b3JhZ2XbAYDY15SIK8KQ_CLDMFkoGZd8SJaKYq4l9MGAgmlkgnY0gmlwhEFs7BuJc2VjcDI1NmsxoQLyqlWSuD-dswZfum2ZuFTSwsIbjAIl2-vPHZec-vS4-IN0Y3CCJAaDdWRwgnZh \
   "
 # create data file for shard 0 if not yet
 if [ ! -e $storage_file_0 ]; then
