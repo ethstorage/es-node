@@ -186,7 +186,9 @@ func (sm *ShardManager) TryRead(kvIdx uint64, readLen int, commit common.Hash) (
 func (sm *ShardManager) TryEncodeKV(kvIdx uint64, b []byte, hash common.Hash) ([]byte, bool, error) {
 	shardIdx := kvIdx / sm.kvEntries
 	if ds, ok := sm.shardMap[shardIdx]; ok {
-		return sm.EncodeKV(kvIdx, b, hash, ds.Miner(), ds.EncodeType())
+		cb := make([]byte, ds.kvSize)
+		copy(cb, b)
+		return sm.EncodeKV(kvIdx, cb, hash, ds.Miner(), ds.EncodeType())
 	} else {
 		return nil, false, nil
 	}
