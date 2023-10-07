@@ -34,6 +34,8 @@ build/_vendor/pkg
 /cmd/es-utils/blob-utils
 *.dat
 
+*.zkey
+
 # shell
 es-data
 esnode_discovery_db/

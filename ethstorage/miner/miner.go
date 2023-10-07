@@ -20,6 +20,7 @@ import (
 
 type L1API interface {
 	TransactionByHash(ctx context.Context, txHash common.Hash) (*types.Transaction, bool, error)
+	TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error)
 	GetMiningInfo(ctx context.Context, contract common.Address, shardIdx uint64) (*miningInfo, error)
 	SubmitMinedResult(ctx context.Context, contract common.Address, rst result, config Config) (common.Hash, error)
 	GetDataHashes(ctx context.Context, contract common.Address, kvIdxes []uint64) ([]common.Hash, error)

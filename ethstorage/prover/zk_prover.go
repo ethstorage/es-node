@@ -49,7 +49,7 @@ func newZKProver(workingDir, zkeyFile string, cleanup bool, lg log.Logger) *ZKPr
 	}
 	libDir := filepath.Join(path, snarkLibDir)
 	if _, err := os.Stat(libDir); errors.Is(err, os.ErrNotExist) {
-		lg.Crit("Init ZK prover failed: %v does not exist", libDir)
+		lg.Crit("Init ZK prover failed", "error", "snark lib does not exist", "dir", libDir)
 	}
 	return &ZKProver{
 		dir:      path,
