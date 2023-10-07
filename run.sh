@@ -45,8 +45,8 @@ es_node_start=" --network devnet \
   --storage.files $storage_file_0 \
   --signer.private-key $ES_NODE_PRIVATE_KEY \
   --l1.beacon http://65.108.236.27:5052 \
-  --l1.beacon-based-time 1693820652 \
-  --l1.beacon-based-slot 136521 \
+  --l1.beacon-based-time 1695981612 \
+  --l1.beacon-based-slot 1 \
   --p2p.listen.udp 30305  \
   --p2p.bootnodes enr:-LC4QJUxpagNZvSX8Z5yC2bM5L6F2EDaSh2MqaIxQ5iHii0jXNmeGFEa5g_XjTAkWqq1LNI9IasKQ9nzxgVu6oi3qCOGAYsIW9ndimV0aHN0b3JhZ2XbAYDY15SIK8KQ_CLDMFkoGZd8SJaKYq4l9MGAgmlkgnY0iXNlY3AyNTZrMaEDeZSMboVXsR8S6-8DKAgtE6790OL0wINq556mmz90jSeDdGNwgiQGg3VkcIJ2YQ \
   "
