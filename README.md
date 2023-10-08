@@ -29,6 +29,20 @@ cd es-node/cmd/es-node && go build && cd ../..
 chmod +x run.sh
 env ES_NODE_STORAGE_MINER=<miner> ES_NODE_PRIVATE_KEY=<private_key> ./run.sh
 ```
+#### Launch an es-node bootnode
+
+To launch a bootnode for the es-node network, you need to modify the `run.sh` file by adding the `--p2p.advertise.ip` flag: 
+```sh
+# replace <your_ip_address> with your ip address the other nodes can access.
+--p2p.advertise.ip <your_ip_address> \
+``` 
+to replace the line with the `--p2p.bootnodes` flag:
+```sh
+--p2p.bootnodes enr:... \
+```
+Then, soon after the bootnode is started up, you can find the base64 encoded enr value prefixed with `enr:` in the log. 
+
+Next, you will need to replace the enr value of `--p2p.bootnodes` flag in other nodes with the new one to connect to the bootnode. 
 
 ### How to launch an es-node with Docker
 
