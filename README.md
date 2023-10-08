@@ -4,12 +4,11 @@ Golang implementation of the EthStorage node.
 
 ## Getting started
 
-In order to prepare for storage mining, you need to prepare a miner account as the recipient of mining rewards. 
-
-You must also provide a private key as a signer for the mining result transactions.
-Note that you need to have some ETH balance in the account of the private key as the gas fee to submit transactions.
+In order to get ready for storage mining, you need to prepare a miner account as the recipient of mining rewards and a private key as a signer for the mining result transactions. 
 
 It is recommended to use different accounts for the signer and the miner.
+
+Note that you need to have some ETH balance in the account of the private key as the gas fee to submit transactions.
 
 ### How to launch an es-node with binary
 
