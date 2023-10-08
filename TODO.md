@@ -3,9 +3,8 @@
 - Public testnet for EthStorage in Cancun testnet (Should be Goerli)
   - es-node
     - [P2P performance test](https://github.com/ethstorage/go-ethstorage/pull/66) (Ping)
-    - [P2P issue 72](https://github.com/ethstorage/go-ethstorage/pull/91) (Ping)
-    - [P2P issue 95](https://github.com/ethstorage/go-ethstorage/issues/95) (Ping)
     - Use EIP-4788 to read the beacon block hash and query BLOB data from the CL (Qiang) (Low Priority)
+    - [Improve encoding performance to decrease the time of filling empty data](https://github.com/ethstorage/es-node/issues/6)
   - es-geth
     - Increase the gas limit of es-geth to support more BLOB reading and concatenation in the users' contract (Qiang)
     - Support different encode/decode algorithms for DA BLOB data (31/32, raw) (Qiang) (Low Priority)
@@ -17,7 +16,6 @@
     - Readme
       - Explain all of the cmd flags in case the node operators want to customize their es-node
       - Module explanation (p2p, miner, downloader, and shard manager)
-  - Docker tool for es-node that can make es-node tester dumber, something like [4844 devnet setup tool](https://github.com/jimmygchen/eip4844-devnet/) (DL)
   - Testnet setup
     - 3 es-nodes: one for boot node, the 2nd is for encoding type 3 and the 3rd is for encoding type 0
     - A full node for Ethereum testnet and replace the geth with es-geth

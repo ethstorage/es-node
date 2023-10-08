@@ -84,9 +84,7 @@ func (s *StorageManager) Reset(newL1 int64) {
 	s.localL1 = newL1
 }
 
-// This function will be called when p2p sync received blobs. It will commit the blobs that match local L1 view
-// and return the unmatched ones.
-// Note that the caller must make sure the blobs data and the corresponding commit are matched.
+// This function is only called by test right now.
 func (s *StorageManager) CommitBlobs(kvIndices []uint64, blobs [][]byte, commits []common.Hash) ([]uint64, error) {
 	if len(kvIndices) != len(blobs) || len(blobs) != len(commits) {
 		return nil, errors.New("invalid params lens")
@@ -114,7 +112,13 @@ func (s *StorageManager) CommitBlobs(kvIndices []uint64, blobs [][]byte, commits
 	return failedCommited, nil
 }
 
+// This function will be called when p2p sync received a blob. 
+// Return err if the passed commit and the one queried from contract are not matched.
 func (s *StorageManager) CommitBlob(kvIndex uint64, blob []byte, commit common.Hash) error {
+	encodedBlob, success, err := s.shardManager.TryEncodeKV(kvIndex, blob, commit)
+	if !success || err != nil {
+		return errors.New("blob encode failed")
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	metas, err := s.l1Source.GetKvMetas([]uint64{kvIndex}, s.localL1)
@@ -126,7 +130,7 @@ func (s *StorageManager) CommitBlob(kvIndex uint64, blob []byte, commit common.H
 	}
 
 	contractMeta := metas[0]
-	return s.commitBlob(kvIndex, blob, commit, contractMeta)
+	return s.commitBlob(kvIndex, encodedBlob, commit, contractMeta)
 }
 
 func (s *StorageManager) commitBlob(kvIndex uint64, blob []byte, commit common.Hash, contractMeta [32]byte) error {
@@ -156,9 +160,7 @@ func (s *StorageManager) commitBlob(kvIndex uint64, blob []byte, commit common.H
 
 	c := prepareCommit(commit)
 
-	// TODO: @Qiang: we may want to seperate the encoding with writing data blob, and make the encoding
-	// process parallel to improve whole performance
-	success, err = s.shardManager.TryWrite(kvIndex, blob, c)
+	success, err = s.shardManager.TryWriteEncoded(kvIndex, blob, c)
 	if !success || err != nil {
 		return errors.New("blob write failed")
 	}
