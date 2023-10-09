@@ -25,7 +25,7 @@ const (
 	sampleSizeBits    = 5 // 32 bytes
 	// always use new block hash to mine for each slot
 	mineTimeOut              = 12 // seconds
-	miningTransactionTimeout = 20 // seconds
+	miningTransactionTimeout = 25 // seconds
 )
 
 type task struct {
@@ -306,29 +306,42 @@ func (w *worker) resultLoop() {
 			if err != nil {
 				w.lg.Error("Failed to submit mined result", "shard", result.startShardId, "block", result.blockNumber, "error", err.Error())
 			}
-			// waiting for tx confirmation or timeout
-			ticker := time.NewTicker(1 * time.Second)
-			checked := 0
-			for range ticker.C {
-				if checked > miningTransactionTimeout {
-					log.Warn("Mining transaction timed out", "txhash", txHash)
-					break
+			if txHash != (common.Hash{}) {
+				// waiting for tx confirmation or timeout
+				ticker := time.NewTicker(1 * time.Second)
+				checked := 0
+				for range ticker.C {
+					if checked > miningTransactionTimeout {
+						log.Warn("Waiting for mining transaction confirm timed out", "txhash", txHash)
+						break
+					}
+					_, isPending, err := w.l1API.TransactionByHash(context.Background(), txHash)
+					if err == nil && !isPending {
+						log.Info("Mining transaction confirmed", "txhash", txHash)
+						w.checkTxStatus(txHash, result.miner)
+						break
+					}
+					checked++
 				}
-				_, isPending, err := w.l1API.TransactionByHash(context.Background(), txHash)
-				if err == nil && !isPending {
-					log.Info("Mining transaction confirmed", "txhash", txHash)
-					break
-				}
-				checked++
+				ticker.Stop()
 			}
-			ticker.Stop()
-
 			// optimistically check next result if exists
 			w.notifyResultLoop()
 		case <-w.exitCh:
 			w.lg.Warn("Worker: exiting from result loop...")
 			return
 		}
+	}
+}
+
+func (w *worker) checkTxStatus(txHash common.Hash, miner common.Address) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	receipt, err := w.l1API.TransactionReceipt(ctx, txHash)
+	if err == nil && receipt.Status == 1 {
+		log.Info("Mining transaction success!           \u2714", "miner", miner)
+	} else if receipt.Status == 0 {
+		log.Warn("Mining transaction failed!            \u2715", "txhash", txHash)
 	}
 }
 
@@ -343,7 +356,7 @@ func (w *worker) mineTask(t *taskItem) (bool, error) {
 			break
 		}
 		if nonce >= t.nonceEnd {
-			w.lg.Info("Nonce too big", "task", t, "nonce", nonce)
+			w.lg.Info("The nonces are exhausted in this slot, waiting for the next block", "task", t, "nonce", nonce)
 			break
 		}
 		hash0 := initHash(t.miner, t.blockHash, nonce)

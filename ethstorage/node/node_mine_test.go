@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"testing"
@@ -113,8 +114,9 @@ func TestMining(t *testing.T) {
 	storConfig.Filenames = files
 
 	signerCfg := signer.CLIConfig{
-		Endpoint: "http://65.108.236.27:8550",
-		Address:  "0x13259366de990b0431e2c97cea949362bb68df12",
+		// Endpoint: "http://65.108.236.27:8550",
+		// Address:  "0x13259366de990b0431e2c97cea949362bb68df12",
+		PrivateKey: private,
 	}
 	factory, addrFrom, err := signer.SignerFactoryFromConfig(signerCfg)
 	if err != nil {
@@ -123,7 +125,11 @@ func TestMining(t *testing.T) {
 	miningConfig := &miner.DefaultConfig
 	miningConfig.SignerFnFactory = factory
 	miningConfig.SignerAddr = addrFrom
-
+	zkWorkingDir, err := filepath.Abs("../prover")
+	if err != nil {
+		t.Fatalf("Get zkWorkingDir error: %v", err)
+	}
+	miningConfig.ZKWorkingDir = zkWorkingDir
 	l1 := &eth.L1EndpointConfig{
 		L1NodeAddr: rpcUrl,
 	}
@@ -131,7 +137,7 @@ func TestMining(t *testing.T) {
 		Storage:             storConfig,
 		L1:                  *l1,
 		L1EpochPollInterval: time.Second * 10,
-		Mining:              *miningConfig,
+		Mining:              miningConfig,
 	}
 	n, err := New(context.Background(), cfg, l, "")
 	if err != nil {
@@ -139,7 +145,8 @@ func TestMining(t *testing.T) {
 	}
 
 	if !intialized {
-		prepareData(t, n, contract)
+		// prepareData(t, n, contract)
+		fillEmpty(t, n, contract)
 	}
 	n.startL1(cfg)
 	n.miner.Start()
@@ -169,6 +176,26 @@ func getArg(paramName string) string {
 		}
 	}
 	return ""
+}
+
+func fillEmpty(t *testing.T, n *EsNode, contract common.Address) {
+	empty := make([]byte, 0)
+	block, err := n.l1Source.BlockNumber(context.Background())
+	if err != nil {
+		t.Fatalf("Failed to get block number %v", err)
+	}
+	n.storageManager.Reset(int64(block))
+	lastBlobIdx, err := n.storageManager.LastKvIndex()
+	if err != nil {
+		t.Fatalf("get lastBlobIdx for FillEmptyKV fail, err: %s", err.Error())
+	}
+	limit := n.storageManager.KvEntries() * uint64(len(shardIds))
+	for idx := lastBlobIdx; idx < limit; idx++ {
+		err = n.storageManager.CommitBlob(idx, empty, common.Hash{})
+		if err != nil {
+			t.Fatalf("write empty to kv file fail, index: %d; error: %s", idx, err.Error())
+		}
+	}
 }
 
 func prepareData(t *testing.T, n *EsNode, contract common.Address) {
@@ -223,7 +250,6 @@ func prepareData(t *testing.T, n *EsNode, contract common.Address) {
 }
 
 func CreateDataFiles(cfg *storage.StorageConfig) ([]string, error) {
-	// Will create at least one data file
 	var files []string
 	for _, shardIdx := range shardIds {
 		fileName := fmt.Sprintf(dataFileName, shardIdx)

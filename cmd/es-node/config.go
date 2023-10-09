@@ -108,9 +108,7 @@ func NewConfig(ctx *cli.Context, log log.Logger) (*node.Config, error) {
 		// 		URL:     ctx.GlobalString(flags.HeartbeatURLFlag.Name),
 		// 	},
 		Storage: *storageConfig,
-	}
-	if minerConfig != nil {
-		cfg.Mining = *minerConfig
+		Mining:  minerConfig,
 	}
 	if err := cfg.Check(); err != nil {
 		return nil, err
@@ -123,7 +121,14 @@ func NewMinerConfig(ctx *cli.Context, client *ethclient.Client, l1Contract commo
 	if !cliConfig.Enabled {
 		return nil, nil
 	}
-	minerConfig := cliConfig.ToMinerConfig()
+	err := cliConfig.Check()
+	if err != nil {
+		return nil, fmt.Errorf("invalid miner flags: %w", err)
+	}
+	minerConfig, err := cliConfig.ToMinerConfig()
+	if err != nil {
+		return nil, err
+	}
 	cctx := context.Background()
 	randomChecks, err := readUintFromContract(cctx, client, l1Contract, "randomChecks")
 	if err != nil {

@@ -50,7 +50,7 @@ type Config struct {
 	// // Optional
 	// Tracer    Tracer
 	// Heartbeat HeartbeatConfig
-	Mining miner.Config
+	Mining *miner.Config
 }
 
 type RPCConfig struct {

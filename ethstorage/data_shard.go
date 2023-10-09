@@ -316,8 +316,8 @@ func decodeChunk(chunkSize uint64, bs []byte, encodeType uint64, encodeKey commo
 	}
 }
 
-// Write a value of the KV to the store.  The value will be encoded with kvIdx and SP address.
-func (ds *DataShard) Write(kvIdx uint64, b []byte, commit common.Hash) error {
+// Write a value of the KV to the store using a customized encoder. 
+func (ds *DataShard) WriteWith(kvIdx uint64, b []byte, commit common.Hash, encoder func([]byte, uint64) []byte) error {
 	if !ds.Contains(kvIdx) {
 		return fmt.Errorf("kv not found")
 	}
@@ -329,8 +329,7 @@ func (ds *DataShard) Write(kvIdx uint64, b []byte, commit common.Hash) error {
 	copy(cb, b)
 	for i := uint64(0); i < ds.chunksPerKv; i++ {
 		chunkIdx := kvIdx*ds.chunksPerKv + i
-		encodeKey := calcEncodeKey(commit, chunkIdx, ds.Miner())
-		encodedChunk := encodeChunk(ds.chunkSize, cb[int(i*ds.chunkSize):int((i+1)*ds.chunkSize)], ds.EncodeType(), encodeKey)
+		encodedChunk := encoder(cb[int(i*ds.chunkSize):int((i+1)*ds.chunkSize)], chunkIdx)
 		err := ds.writeChunk(chunkIdx, encodedChunk)
 
 		if err != nil {
@@ -339,6 +338,15 @@ func (ds *DataShard) Write(kvIdx uint64, b []byte, commit common.Hash) error {
 	}
 	// This is not atomic, but we should get error since we already pre-allocate the space
 	return ds.WriteMeta(kvIdx, commit[:])
+}
+
+// Write a value of the KV to the store.  The value will be encoded with kvIdx and SP address.
+func (ds *DataShard) Write(kvIdx uint64, b []byte, commit common.Hash) error {
+	return ds.WriteWith(kvIdx, b, commit, func(cdata []byte, chunkIdx uint64) []byte {
+		encodeKey := calcEncodeKey(commit, chunkIdx, ds.Miner())
+		encodedChunk := encodeChunk(ds.chunkSize, cdata, ds.EncodeType(), encodeKey)
+		return encodedChunk
+	})
 }
 
 func (ds *DataShard) readChunk(chunkIdx uint64, readLen int) ([]byte, error) {
