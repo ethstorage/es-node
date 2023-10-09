@@ -1,0 +1,15 @@
+version: '3'
+services:
+  node:
+    build: .
+    ports:
+      - '9545:9545'
+      - '9222:9222'
+      - '30305:30305/udp'
+    volumes:
+      - ./es-data:/es-node/es-data
+    environment:
+      - ES_NODE_STORAGE_MINER=${ES_NODE_STORAGE_MINER}
+      - ES_NODE_PRIVATE_KEY=${ES_NODE_PRIVATE_KEY}
+    command: /es-node/run.sh
+    container_name: es

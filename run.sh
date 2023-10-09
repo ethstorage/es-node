@@ -23,16 +23,13 @@ if [ ! -e  ${zkey_file} ]; then
   echo "downloaded ${zkey_file}"
 fi
 
-# to be compatible with docker
-cd ../es-node
-
 executable="./cmd/es-node/es-node"
 data_dir="./es-data"
 storage_file_0="$data_dir/shard-0.dat"
 
 common_flags=" --datadir $data_dir \
   --l1.rpc http://65.108.236.27:8545 \
-  --storage.l1contract 0xC5af49F2aD56eC383a7948B16D9b7F48A9898aC9 \
+  --storage.l1contract 0x882BC290fc22C330592819977c48968a62AE25f4 \
   --storage.miner $ES_NODE_STORAGE_MINER"
 
 # init shard 0
@@ -48,10 +45,10 @@ es_node_start=" --network devnet \
   --storage.files $storage_file_0 \
   --signer.private-key $ES_NODE_PRIVATE_KEY \
   --l1.beacon http://65.108.236.27:5052 \
-  --l1.beacon-based-time 1693820652 \
-  --l1.beacon-based-slot 136521 \
+  --l1.beacon-based-time 1695981612 \
+  --l1.beacon-based-slot 1 \
   --p2p.listen.udp 30305  \
-  --p2p.bootnodes enr:-Li4QLQ6gZVvsu-4m8zmeBCheAWCpQ7PZu2TsyRKKTNAVooRRIa2F9jT0z-MS4WV0BD3mx00FJKWryPWC4PPFQhcvNaGAYrWFtG0imV0aHN0b3JhZ2XbAYDY15TFr0nyrVbsODp5SLFtm39IqYmKycGAgmlkgnY0gmlwhEFtMpGJc2VjcDI1NmsxoQO9fpE3o5lJUiCRGS_7--JCi_-rpzmoWbeBPWkRo4wlpYN0Y3CCJAaDdWRwgnZh \
+  --p2p.bootnodes enr:-Li4QHQvcHarzRmSnf9ShVwoYPEJPucFrhpgjc9T8YApAjucA2VFFAG8FMdr6ImWPatiaLeGg8iqyMjzYapMH1vSrryGAYsJyozvimV0aHN0b3JhZ2XbAYDY15SIK8KQ_CLDMFkoGZd8SJaKYq4l9MGAgmlkgnY0gmlwhEFs7BuJc2VjcDI1NmsxoQIbZFtq5ZiFBmfxgmI3i6hYdQKAN_NDoFDOHUozCBpEfYN0Y3CCJAaDdWRwgnZh \
   "
 # create data file for shard 0 if not yet
 if [ ! -e $storage_file_0 ]; then
@@ -61,5 +58,3 @@ fi
 
 # start es-node
 $executable $es_node_start $common_flags
-
-exec "$@"
