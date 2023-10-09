@@ -83,7 +83,7 @@ Where `es-node` is the name of the es-node image.
 
 ## Configuration
 The full list of options that you can use to configure an es-node are as follows:
-|Name|<div style="width:180px">Description</div>|Default|Required|
+|Name|Description|Default|Required|
 |---|---|---|---|
 |`--datadir`|Data directory for the storage files, databases and keystore||✓|
 |`--download.dump`|Where to dump the downloaded blobs|||
