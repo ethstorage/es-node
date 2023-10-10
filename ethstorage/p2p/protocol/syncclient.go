@@ -1091,7 +1091,7 @@ func (s *SyncClient) report(force bool) {
 
 	// Don't report anything until we have a meaningful progress
 	synced := s.blobsSynced
-	if synced == 0 {
+	if synced == 0 && s.emptyBlobsFilled == 0 {
 		return
 	}
 	kvsToSync := uint64(0)
