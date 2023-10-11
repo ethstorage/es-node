@@ -9,8 +9,10 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/crypto/kzg4844"
 	"github.com/ethstorage/go-ethstorage/ethstorage/encoder"
 	"github.com/ethstorage/go-ethstorage/ethstorage/pora"
+	"github.com/protolambda/go-kzg/eth"
 )
 
 // A DataShard is a logical shard that manages multiple DataFiles.
@@ -152,7 +154,12 @@ func (ds *DataShard) Read(kvIdx uint64, readLen int, commit common.Hash) ([]byte
 	return ds.readWith(kvIdx, readLen, func(cdata []byte, chunkIdx uint64) []byte {
 		// TODO: do integration check with commit
 		encodeKey := calcEncodeKey(commit, chunkIdx, ds.dataFiles[0].miner)
-		return decodeChunk(ds.chunkSize, cdata, ds.dataFiles[0].encodeType, encodeKey)
+		blob := decodeChunk(ds.chunkSize, cdata, ds.dataFiles[0].encodeType, encodeKey)
+		err := checkCommit(commit, blob)
+		if err != nil {
+			panic(err)
+		}
+		return blob
 	})
 }
 
@@ -165,7 +172,12 @@ func (ds *DataShard) ReadWithMeta(kvIdx uint64, readLen int) ([]byte, []byte, er
 	bs, err := ds.readWith(kvIdx, readLen, func(cdata []byte, chunkIdx uint64) []byte {
 		// TODO: do integration check with commit
 		encodeKey := calcEncodeKey(common.BytesToHash(commit), chunkIdx, ds.dataFiles[0].miner)
-		return decodeChunk(ds.chunkSize, cdata, ds.dataFiles[0].encodeType, encodeKey)
+		blob := decodeChunk(ds.chunkSize, cdata, ds.dataFiles[0].encodeType, encodeKey)
+		err := checkCommit(common.BytesToHash(commit), blob)
+		if err != nil {
+			panic(err)
+		}
+		return blob
 	})
 	return bs, commit, err
 }
@@ -316,7 +328,24 @@ func decodeChunk(chunkSize uint64, bs []byte, encodeType uint64, encodeKey commo
 	}
 }
 
-// Write a value of the KV to the store using a customized encoder. 
+func checkCommit(commit common.Hash, blobData []byte) error {
+	blob := kzg4844.Blob{}
+	copy(blob[0:], blobData[:])
+
+	commitment, err := kzg4844.BlobToCommitment(blob)
+	if err != nil {
+		return fmt.Errorf("could not convert blob to commitment: %v", err)
+	}
+	versionedHash := eth.KZGToVersionedHash(eth.KZGCommitment(commitment))
+	localCommit := common.BytesToHash(versionedHash[:])
+
+	if localCommit != commit {
+		return fmt.Errorf("commit does not match")
+	}
+	return nil
+}
+
+// Write a value of the KV to the store using a customized encoder.
 func (ds *DataShard) WriteWith(kvIdx uint64, b []byte, commit common.Hash, encoder func([]byte, uint64) []byte) error {
 	if !ds.Contains(kvIdx) {
 		return fmt.Errorf("kv not found")
