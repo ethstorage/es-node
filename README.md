@@ -2,10 +2,10 @@
 
 Golang implementation of the EthStorage node.
 
-EthStorage is a decentralized storage network that reuses Ethereum security to extends Ethereum storage capabilities via Layer 2 and Data Availability.
+EthStorage is a decentralized storage network that reuses Ethereum security to extend Ethereum storage capabilities via Layer 2 and Data Availability.
 
 ## Getting started
-To start an es-node, you have the options to run a binary executable, with Docker managed by `docker compose`, with Docker managed by `run-docker.sh`, or with manualy built Docker. 
+To start an es-node, you have the option to run a manually built binary, with Docker managed by `docker compose`, with Docker managed by `run-docker.sh`, or with manually built Docker. 
 
 A shell script named `run.sh` is executed in all the above options as an entry point. The script is used to initialize the data file, prepare for Proof of Storage, and launch es-node with pre-defined parameters.
 
@@ -46,7 +46,7 @@ cd es-node/cmd/es-node && go build && cd ../..
 chmod +x run.sh
 env ES_NODE_STORAGE_MINER=<miner> ES_NODE_PRIVATE_KEY=<private_key> ./run.sh
 ```
-#### Launch an es-node bootnode
+#### Launch an es-node as bootnode
 
 To launch a bootnode for the es-node network, you need to modify the `run.sh` file by adding the `--p2p.advertise.ip` flag: 
 ```sh
@@ -69,12 +69,12 @@ _Note: Currently, you will need to build the Docker image locally from es-node s
 - Docker version 24.0.5 or above
 
 #### Docker compose
-To start es-node with docker compose, pull es-node source code and execute the following command in the repo:
+To start es-node with `docker compose`, pull es-node source code and execute the following command in the repo:
 ```sh
 env ES_NODE_STORAGE_MINER=<miner> ES_NODE_PRIVATE_KEY=<private_key> docker compose up 
 ```
 #### Docker as a background process
-Or you can use `run-docker.sh` that build an es-node Docker image and launch a container in the background:
+Or you can use `run-docker.sh` that builds an es-node Docker image and launch a container in the background:
 ```sh
 env ES_NODE_STORAGE_MINER=<miner> ES_NODE_PRIVATE_KEY=<private_key> ./run-docker.sh
 ```
@@ -160,7 +160,7 @@ The full list of options that you can use to configure an es-node are as follows
 |`--signer.address`|Address the signer is signing transactions for|||
 |`--signer.endpoint`|Signer endpoint the client will connect to|||
 |`--signer.hdpath`|HDPath is the derivation path used to obtain the private key for mining transactions|||
-|`--signer.mnemonic`|The HD seed used to derive the wallet private keys for mining. Must be used in conjunction with HDPath.|||
+|`--signer.mnemonic`|The HD seed used to derive the wallet's private keys for mining. Must be used in conjunction with HDPath.|||
 |`--signer.private-key`|The private key to sign a mining transaction|||
 |`--storage.files`|File paths where the data are stored||✓|
 |`--storage.l1contract`|Storage contract address on l1||✓|
