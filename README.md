@@ -5,17 +5,20 @@ Golang implementation of the EthStorage node.
 EthStorage is a decentralized storage network that reuses Ethereum security to extend Ethereum storage capabilities via Layer 2 and Data Availability.
 
 ## Getting started
-To start an es-node, you have the option to run a manually built binary, with Docker managed by `docker compose`, with Docker managed by `run-docker.sh`, or with manually built Docker. 
+To start an es-node, you have the option to run [a manually built binary](#build-and-run-es-node), with [Docker managed by docker compose](#docker-compose), with [Docker managed by `run-docker.sh` and run in the background](#docker-as-a-background-process), or with [manually built Docker](#docker). 
 
-A shell script named `run.sh` is executed in all the above options as an entry point. The script is used to initialize the data file, prepare for Proof of Storage, and launch es-node with pre-defined parameters.
+The `run.sh` script is used as an entry point in all the above options. The main function of the script is to initialize the data file, prepare for [Proof of Storage](#about-proof-of-storage), and launch es-node with preset parameters.
 
-Proof of Storage is enabled by default in all the options by the `--miner.enabled` flag in `run.sh`.
+[Proof of Storage](#about-proof-of-storage) is enabled by default by the `--miner.enabled` flag in `run.sh`, which means you become storage provider when you start an es-node with default settings.
+
+_Note: Some of the flags/parameters used in `run.sh` is supposed to change over time._
 
 ### About Proof of Storage
+
 In order to check if a replica of data is indeed physically stored, the storage providers need to randomly sample the encoded BLOBs with unique storage provider ID (miner address) and submit the proofs to the L1 storage contract for verification over time.
 That is how storage providers collect their storage fees.
 
-To get ready to generate and submit the proof of storage, you need to prepare a miner account as your unique storage provider ID and the recipient of storage fees, as well as a private key to sign the transactions that submit the storage proofs.
+To get ready to generate and submit the proof of storage, you need to prepare a miner address to generate unique physical  replicas and receive storage fees, as well as a private key to sign the transactions that submit the storage proofs.
 
 It is recommended to use different accounts for the signer and the miner.
 
