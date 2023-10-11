@@ -1105,7 +1105,7 @@ func (s *SyncClient) report(force bool) {
 	}
 
 	elapsed := time.Since(s.startTime)
-	estTime := elapsed / time.Duration(synced) * time.Duration(kvsToSync+synced)
+	estTime := elapsed / time.Duration(synced+s.emptyBlobsFilled) * time.Duration(kvsToSync+synced+s.emptyBlobsFilled+s.emptyBlobsToFill)
 
 	// Create a mega progress report
 	var (
