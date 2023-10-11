@@ -4,7 +4,10 @@ Golang implementation of the EthStorage node.
 
 ## Getting started
 
-In order to get ready for storage mining, you need to prepare a miner account as the recipient of mining rewards and a private key as a signer for the mining result transactions. 
+In order to check if the data is indeed physically stored, the storage providers need to randomly sample the encoded BLOBs with unique storage provider ID (miner address) and submit the proofs to the L1 storage contract for verification over time.
+That is how storage providers collect their storage fees.
+
+To get ready to generate and submit the proof of storage, you need to prepare a miner account as your unique storage provider ID and the recipient of storage fees, as well as a private key to sign the transactions that submit the storage proofs.
 
 It is recommended to use different accounts for the signer and the miner.
 
