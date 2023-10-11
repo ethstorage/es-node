@@ -57,4 +57,4 @@ if [ ! -e $storage_file_0 ]; then
 fi
 
 # start es-node
-$executable $es_node_start $common_flags
+exec $executable $es_node_start $common_flags
