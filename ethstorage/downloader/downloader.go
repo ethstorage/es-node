@@ -116,11 +116,11 @@ func (s *Downloader) Start() error {
 				return err
 			} else {
 				s.lastDownloadBlock = header.Number.Int64()
-				s.log.Info("downloader will use the latest finialized block to start for the first time", "block", s.lastDownloadBlock)
+				s.log.Info("Downloader will use the latest finialized block to start for the first time", "block", s.lastDownloadBlock)
 			}
 		} else {
 			s.lastDownloadBlock = int64(binary.LittleEndian.Uint64(bs))
-			s.log.Info("downloader will use the last download block to start", "block", s.lastDownloadBlock)
+			s.log.Info("Downloader will use the last download block to start", "block", s.lastDownloadBlock)
 		}
 	} else if s.lastDownloadBlock < 0 {
 		if s.lastDownloadBlock == rpc.FinalizedBlockNumber.Int64() {
@@ -151,7 +151,7 @@ func (s *Downloader) Close() error {
 func (s *Downloader) OnL1Finalized(finalized uint64) {
 	s.mu.Lock()
 	if s.finalizedHead > int64(finalized) {
-		s.log.Warn("The tracking head is greater than new finalized", "Tracking", s.finalizedHead, "New", finalized)
+		s.log.Warn("The tracking head is greater than new finalized", "tracking", s.finalizedHead, "new", finalized)
 	}
 	s.finalizedHead = int64(finalized)
 	s.mu.Unlock()
@@ -168,7 +168,7 @@ func (s *Downloader) OnL1Finalized(finalized uint64) {
 func (s *Downloader) OnNewL1Head(head eth.L1BlockRef) {
 	s.mu.Lock()	
 	if s.latestHead > int64(head.Number) {
-		s.log.Info("The tracking head is greater than new one, a reorg may happen", "Tracking", s.latestHead, "New", head)
+		s.log.Info("The tracking head is greater than new one, a reorg may happen", "tracking", s.latestHead, "new", head)
 	}
 	s.latestHead = int64(head.Number)
 	s.mu.Unlock()
@@ -219,7 +219,7 @@ func (s *Downloader) downloadToCache() {
 	if err == nil {
 		s.lastCacheBlock = end
 	} else {
-		s.log.Info("downloadRange failed", "err", err)
+		s.log.Info("DownloadRange failed", "err", err)
 	}
 }
 
@@ -250,7 +250,7 @@ func (s *Downloader) download() {
 			dataBlobs := make([][]byte, len(blobs))
 			metas := make([]common.Hash, len(blobs))
 			for i, blob := range blobs {
-				s.log.Info("blob will be saved into disk", "kvIndex", blob.kvIndex.Uint64(), "hash", hex.EncodeToString(blob.hash[:]))
+				s.log.Info("Blob will be saved into disk", "kvIndex", blob.kvIndex.Uint64(), "hash", hex.EncodeToString(blob.hash[:]))
 				kvIndices[i] = blob.kvIndex.Uint64()
 				dataBlobs[i] = blob.data
 				copy(metas[i][0:ethstorage.HashSizeInContract], blob.hash[0:ethstorage.HashSizeInContract])
@@ -258,7 +258,7 @@ func (s *Downloader) download() {
 
 			err := s.sm.DownloadFinished(end, kvIndices, dataBlobs, metas)
 			if err != nil {
-				s.log.Error("save blobs error", "err", err)
+				s.log.Error("Save blobs error", "err", err)
 				return
 			}
 
@@ -268,10 +268,10 @@ func (s *Downloader) download() {
 		
 			err = s.db.Put(append(downloaderPrefix, lastDownloadKey...), bs)
 			if err != nil {
-				s.log.Error("save lastDownloadedBlock into db error", "err", err)
+				s.log.Error("Save lastDownloadedBlock into db error", "err", err)
 				return
 			}
-			s.log.Info("lastDownloadedBlock saved into db", "lastDownloadedBlock", end)
+			s.log.Info("LastDownloadedBlock saved into db", "lastDownloadedBlock", end)
 		
 			s.dumpBlobsIfNeeded(blobs)
 
@@ -306,12 +306,12 @@ func (s *Downloader) downloadRange(start int64, end int64, toCache bool) ([]blob
 		res := s.Cache.Blobs(elBlock.hash)
 		if res != nil {
 			blobs = append(blobs, res...)
-			s.log.Info("blob found in the cache, continue to the next block", "block number", elBlock.number)
+			s.log.Info("Blob found in the cache, continue to the next block", "blockNumber", elBlock.number)
 			continue
 		} else {
 			s.log.Info(
-				"don't find blob in the cache, will try to download directly", 
-				"block number", elBlock.number, 
+				"Don't find blob in the cache, will try to download directly", 
+				"blockNumber", elBlock.number, 
 				"start", start, 
 				"end", end,
 				"toCache", toCache,
@@ -320,14 +320,14 @@ func (s *Downloader) downloadRange(start int64, end int64, toCache bool) ([]blob
 		
 		clBlobs, err := s.l1Beacon.DownloadBlobs(s.l1Beacon.Timestamp2Slot(elBlock.timestamp))
 		if err != nil {
-			s.log.Error("l1 beacon download blob error", "err", err)
+			s.log.Error("L1 beacon download blob error", "err", err)
 			return nil, err
 		}
 		
 		for hash, elBlob := range elBlock.blobs {
 			clBlob, exists := clBlobs[hash]; 
 			if !exists {
-				s.log.Error("did not find the event specified blob in the CL")
+				s.log.Error("Did not find the event specified blob in the CL")
 
 			}
 			elBlob.data = clBlob.Data
@@ -338,7 +338,7 @@ func (s *Downloader) downloadRange(start int64, end int64, toCache bool) ([]blob
 		}
 	}
 	
-	s.log.Info("download range", "cache", toCache, "start", start, "end", end, "blob number", len(blobs))
+	s.log.Info("Download range", "cache", toCache, "start", start, "end", end, "blobNumber", len(blobs))
 
 	return blobs, nil
 }

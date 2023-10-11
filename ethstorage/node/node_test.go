@@ -26,7 +26,7 @@ func createSstorage(shardIdxList []uint64, cfg storage.StorageConfig) {
 		_, err := ethstorage.Create(fileName, startChunkId, chunkPerfile*cfg.KvEntriesPerShard, 0, cfg.KvSize,
 			ethstorage.ENCODE_ETHASH, cfg.Miner, cfg.ChunkSize)
 		if err != nil {
-			log.Crit("open failed", "error", err)
+			log.Crit("Open failed", "error", err)
 		}
 	}
 	cfg.Filenames = files

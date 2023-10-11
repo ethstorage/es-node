@@ -16,7 +16,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/crypto/kzg4844"
@@ -74,21 +73,21 @@ func SendBlobTx(
 
 	val, success := new(big.Int).SetString(value, 0)
 	if !success {
-		log.Crit("invalid value param")
+		log.Crit("Invalid value param")
 	}
 
 	if res[0].(* big.Int).Cmp(val) == 1 {
-		value = hexutil.Encode(res[0].(* big.Int).Bytes())
+		val = res[0].(* big.Int)
 	}
 
-	value256, err := uint256.FromHex(value)
-	if err != nil {
-		log.Crit("invalid value param", "error", err)
+	value256, overflow := uint256.FromBig(val)
+	if overflow {
+		log.Crit("Invalid value param", "error", err)
 	}
 
 	key, err := crypto.HexToECDSA(prv)
 	if err != nil {
-		log.Crit("invalid private key", "error", err)
+		log.Crit("Invalid private key", "error", err)
 	}
 
 	if nonce == -1 {
@@ -108,12 +107,12 @@ func SendBlobTx(
 		var nok bool
 		gasPrice256, nok = uint256.FromBig(val)
 		if nok {
-			log.Crit("gas price is too high!", "value", val.String())
+			log.Crit("Gas price is too high!", "value", val.String())
 		}
 	} else {
 		gasPrice256, err = DecodeUint256String(gasPrice)
 		if err != nil {
-			log.Crit("invalid gas price", "error", err)
+			log.Crit("Invalid gas price", "error", err)
 		}
 	}
 
@@ -121,13 +120,13 @@ func SendBlobTx(
 	if priorityGasPrice != "" {
 		priorityGasPrice256, err = DecodeUint256String(priorityGasPrice)
 		if err != nil {
-			log.Crit("invalid priority gas price", "error", err)
+			log.Crit("Invalid priority gas price", "error", err)
 		}
 	}
 
 	maxFeePerDataGas256, err := DecodeUint256String(maxFeePerDataGas)
 	if err != nil {
-		log.Crit("invalid max_fee_per_data_gas", "error", err)
+		log.Crit("Invalid max_fee_per_data_gas", "error", err)
 	}
 	var blobs []kzg4844.Blob
 	if needEncoding {
@@ -137,12 +136,12 @@ func SendBlobTx(
 	}
 	commitments, proofs, versionedHashes, err := ComputeBlobs(blobs)
 	if err != nil {
-		log.Crit("failed to compute commitments", "error", err)
+		log.Crit("Failed to compute commitments", "error", err)
 	}
 
 	calldataBytes, err := common.ParseHexOrString(calldata)
 	if err != nil {
-		log.Crit("failed to parse calldata", "error", err)
+		log.Crit("Failed to parse calldata", "error", err)
 	}
 	sideCar := &types.BlobTxSidecar{
 		Blobs:       blobs,
@@ -165,7 +164,7 @@ func SendBlobTx(
 	tx := types.MustSignNewTx(key, types.NewCancunSigner(chainId), blobtx)
 	err = client.SendTransaction(context.Background(), tx)
 	if err != nil {
-		log.Crit("unable to send transaction", "error", err)
+		log.Crit("Unable to send transaction", "error", err)
 	}
 
 	for {
@@ -254,7 +253,7 @@ func EncodeBlobs(data []byte) []kzg4844.Blob {
 
 func DecodeBlob(blob []byte) []byte {
 	if len(blob) != params.BlobTxFieldElementsPerBlob*32 {
-		panic("invalid blob encoding")
+		panic("Invalid blob encoding")
 	}
 	var data []byte
 
@@ -336,7 +335,7 @@ func UploadBlobs(
 		chainID,
 		calldata,
 	)
-	log.Info("SendBlobTx done.", "txhash", tx.Hash())
+	log.Info("SendBlobTx done.", "txHash", tx.Hash())
 	resultCh := make(chan *types.Receipt, 1)
 	errorCh := make(chan error, 1)
 	revert := fmt.Errorf("revert")
@@ -351,7 +350,7 @@ func UploadBlobs(
 			errorCh <- revert
 			return
 		}
-		log.Info("Blob transaction confirmed successfully", "txhash", tx.Hash())
+		log.Info("Blob transaction confirmed successfully", "txHash", tx.Hash())
 		resultCh <- receipt
 	}()
 

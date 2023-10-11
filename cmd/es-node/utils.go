@@ -142,7 +142,7 @@ func getDifficulty(ctx context.Context, client *ethclient.Client, contract commo
 }
 
 func createDataFile(cfg *storage.StorageConfig, shardIdxList []uint64, datadir string) ([]string, error) {
-	log.Info("Creating data files", "shardIdxList", shardIdxList, "datadir", datadir)
+	log.Info("Creating data files", "shardIdxList", shardIdxList, "dataDir", datadir)
 	if _, err := os.Stat(datadir); os.IsNotExist(err) {
 		if err := os.Mkdir(datadir, 0755); err != nil {
 			log.Error("Creating data directory", "error", err)
@@ -173,7 +173,7 @@ func createDataFile(cfg *storage.StorageConfig, shardIdxList []uint64, datadir s
 			return nil, err
 		}
 
-		log.Info("Data file created", "shard", shardIdx, "file", dataFile, "datafile", fmt.Sprintf("%+v", df))
+		log.Info("Data file created", "shard", shardIdx, "file", dataFile, "dataFile", fmt.Sprintf("%+v", df))
 		files = append(files, dataFile)
 	}
 	return files, nil

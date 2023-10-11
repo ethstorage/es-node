@@ -204,7 +204,7 @@ func prepareData(t *testing.T, n *EsNode, contract common.Address) {
 		t.Fatalf("Get source data failed %v", err)
 	}
 	blobs := utils.EncodeBlobs(data)
-	t.Logf("blobs len %d \n", len(blobs))
+	t.Logf("Blobs len %d \n", len(blobs))
 	var hashs []common.Hash
 	var ids []uint64
 
