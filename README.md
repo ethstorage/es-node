@@ -2,26 +2,40 @@
 
 Golang implementation of the EthStorage node.
 
-## Getting started
+EthStorage is a decentralized storage network that reuses Ethereum security to extends Ethereum storage capabilities via Layer 2 and Data Availability.
 
-In order to check if the data is indeed physically stored, the storage providers need to randomly sample the encoded BLOBs with unique storage provider ID (miner address) and submit the proofs to the L1 storage contract for verification over time.
+## Getting started
+To start an es-node, you have the options to run a binary executable, with Docker managed by `docker compose`, with Docker managed by `run-docker.sh`, or with manualy built Docker. 
+
+A shell script named `run.sh` is executed in all the above options as an entry point. The script is used to initialize the data file, prepare for Proof of Storage, and launch es-node with pre-defined parameters.
+
+Proof of Storage is enabled by default in all the options by the `--miner.enabled` flag in `run.sh`.
+
+### About Proof of Storage
+In order to check if a replica of data is indeed physically stored, the storage providers need to randomly sample the encoded BLOBs with unique storage provider ID (miner address) and submit the proofs to the L1 storage contract for verification over time.
 That is how storage providers collect their storage fees.
 
 To get ready to generate and submit the proof of storage, you need to prepare a miner account as your unique storage provider ID and the recipient of storage fees, as well as a private key to sign the transactions that submit the storage proofs.
 
 It is recommended to use different accounts for the signer and the miner.
 
-Note that you need to have some ETH balance in the account of the private key as the gas fee to submit transactions.
+_Note: You need to have some ETH balance in the account of the private key as the gas fee to submit transactions._
+
+_Note: It is assumed that you are using the `root` user in the following operations. Please add `sudo` before the commands if you are using a non-root user._
 
 ### How to launch an es-node with binary
 
 #### Environment
+Please make sure that the following packages are pre-installed.
 
 * go 1.20 or above
 * node 16 or above
 
-#### Build and run es-node 
-
+Also, you will need to install `snarkjs` for the generation of zk proof.
+```sh
+npm install -g snarkjs@0.7.0
+```
+#### Build and run es-node
 ```sh
 git clone git@github.com:ethstorage/es-node.git
 
@@ -49,23 +63,18 @@ Next, you will need to replace the enr value of `--p2p.bootnodes` flag in other 
 
 ### How to launch an es-node with Docker
 
+_Note: Currently, you will need to build the Docker image locally from es-node source code. So please download the source code and execute the following commands in the top folder of es-node repository._
 #### Environment
 
-- Docker-compose version 1.29.2 or above
 - Docker version 24.0.5 or above
 
 #### Docker compose
-To start es-node with docker-compose, pull es-node source code and execute:
+To start es-node with docker compose, pull es-node source code and execute the following command in the repo:
 ```sh
 env ES_NODE_STORAGE_MINER=<miner> ES_NODE_PRIVATE_KEY=<private_key> docker compose up 
 ```
-or
-```sh 
-env ES_NODE_STORAGE_MINER=<miner> ES_NODE_PRIVATE_KEY=<private_key> docker-compose up
-```
-
 #### Docker as a background process
-Or you can "build and run" a container in a single line of command which runs an es-node Docker container in the background:
+Or you can use `run-docker.sh` that build an es-node Docker image and launch a container in the background:
 ```sh
 env ES_NODE_STORAGE_MINER=<miner> ES_NODE_PRIVATE_KEY=<private_key> ./run-docker.sh
 ```
@@ -74,8 +83,17 @@ Then check logs by
 docker logs -f es 
 ```
 Where `es` is the name of the es-node container.
+
+Optionally, if you prefer a colorful log displayed, try the following:
+```sh
+# install grc if not yet
+apt-get install grc
+# show colorful log
+docker logs -f es | grcat conf.log
+```
+
 #### Docker
-To start es-node in a Docker container without docker-compose, pull es-node source code and execute:
+To build Docker image and launch a container manually, execute:
 ```sh
 # build image
 docker build -t es-node .
