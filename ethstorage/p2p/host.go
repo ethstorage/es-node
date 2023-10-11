@@ -69,14 +69,14 @@ func (e *extraHost) initStaticPeers() {
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 			defer cancel()
 			if err := e.dialStaticPeer(ctx, addr); err != nil {
-				e.log.Warn("error dialing static peer", "peer", addr.ID, "err", err)
+				e.log.Warn("Error dialing static peer", "peer", addr.ID, "err", err)
 			}
 		}(addr)
 	}
 }
 
 func (e *extraHost) dialStaticPeer(ctx context.Context, addr *peer.AddrInfo) error {
-	e.log.Info("dialing static peer", "peer", addr.ID, "addrs", addr.Addrs)
+	e.log.Info("Dialing static peer", "peer", addr.ID, "addrs", addr.Addrs)
 	if _, err := e.Network().DialPeer(ctx, addr.ID); err != nil {
 		return err
 	}
@@ -93,10 +93,10 @@ func (e *extraHost) monitorStaticPeers() {
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 			var wg sync.WaitGroup
 
-			e.log.Debug("polling static peers", "peers", len(e.staticPeers))
+			e.log.Debug("Polling static peers", "peers", len(e.staticPeers))
 			for _, addr := range e.staticPeers {
 				connectedness := e.Network().Connectedness(addr.ID)
-				e.log.Trace("static peer connectedness", "peer", addr.ID, "connectedness", connectedness)
+				e.log.Trace("Static peer connectedness", "peer", addr.ID, "connectedness", connectedness)
 
 				if connectedness == network.Connected {
 					continue
@@ -104,9 +104,9 @@ func (e *extraHost) monitorStaticPeers() {
 
 				wg.Add(1)
 				go func(addr *peer.AddrInfo) {
-					e.log.Warn("static peer disconnected, reconnecting", "peer", addr.ID)
+					e.log.Warn("Static peer disconnected, reconnecting", "peer", addr.ID)
 					if err := e.dialStaticPeer(ctx, addr); err != nil {
-						e.log.Warn("error reconnecting to static peer", "peer", addr.ID, "err", err)
+						e.log.Warn("Error reconnecting to static peer", "peer", addr.ID, "err", err)
 					}
 					wg.Done()
 				}(addr)
@@ -183,7 +183,7 @@ func (conf *Config) Host(log log.Logger, reporter metrics.Reporter) (host.Host, 
 		libp2p.ListenAddrs(listenAddr),
 		libp2p.ConnectionGater(connGtr),
 		libp2p.ConnectionManager(connMngr),
-		//libp2p.ResourceManager(nil), // TODO use resource manager interface to manage resources per peer better.
+		// libp2p.ResourceManager(nil), // TODO use resource manager interface to manage resources per peer better.
 		libp2p.NATManager(nat),
 		libp2p.Peerstore(ps),
 		libp2p.BandwidthReporter(reporter), // may be nil if disabled

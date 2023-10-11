@@ -1012,7 +1012,7 @@ func TestCloseSyncWhileFillEmpty(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 	syncCl.Close()
 
-	t.Log("fill empty status", "filled", syncCl.emptyBlobsFilled, "to fill", syncCl.emptyBlobsToFill)
+	t.Log("Fill empty status", "filled", syncCl.emptyBlobsFilled, "toFill", syncCl.emptyBlobsToFill)
 	if syncCl.syncDone {
 		t.Fatalf("fill empty shoud be cancel")
 	}
