@@ -100,7 +100,7 @@ func (srv *SyncServer) HandleGetBlobsByRangeRequest(ctx context.Context, log log
 	cancel()
 
 	if err != nil {
-		log.Warn("failed to serve p2p sync request", "err", err)
+		log.Warn("Failed to serve p2p sync request", "err", err)
 	}
 	WriteMsg(stream, &Msg{returnCode, data})
 }
@@ -115,7 +115,7 @@ func (srv *SyncServer) HandleGetBlobsByListRequest(ctx context.Context, log log.
 	cancel()
 
 	if err != nil {
-		log.Warn("failed to serve p2p sync request", "err", err)
+		log.Warn("Failed to serve p2p sync request", "err", err)
 	}
 	WriteMsg(stream, &Msg{returnCode, data})
 }
@@ -287,13 +287,13 @@ func (srv *SyncServer) HandleRequestShardList(ctx context.Context, log log.Logge
 	rCode := byte(0)
 	bs, err := rlp.EncodeToBytes(ConvertToContractShards(ethstorage.Shards()))
 	if err != nil {
-		log.Warn("encode shard list fail", "err", err.Error())
+		log.Warn("Encode shard list fail", "err", err.Error())
 		rCode = returnCodeServerError
 	}
 
 	err = WriteMsg(stream, &Msg{rCode, bs})
 	if err != nil {
-		log.Warn("write response failed for HandleRequestShardList", "err", err.Error())
+		log.Warn("Write response failed for HandleRequestShardList", "err", err.Error())
 	}
-	log.Debug("write response done for HandleRequestShardList")
+	log.Debug("Write response done for HandleRequestShardList")
 }

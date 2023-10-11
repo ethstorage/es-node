@@ -55,10 +55,10 @@ func (s *gater) Update(id peer.ID, score float64) {
 	// If so, we need to block the peer
 	isAlreadyBlocked := s.IsBlocked(id)
 	if score < PeerScoreThreshold && s.banEnabled && !isAlreadyBlocked {
-		s.log.Warn("peer blocking enabled, blocking peer", "id", id.String(), "score", score)
+		s.log.Warn("Peer blocking enabled, blocking peer", "id", id.String(), "score", score)
 		err := s.connGater.BlockPeer(id)
 		if err != nil {
-			s.log.Warn("connection gater failed to block peer", "id", id.String(), "err", err)
+			s.log.Warn("Connection gater failed to block peer", "id", id.String(), "err", err)
 		}
 		// Set the peer as blocked in the blocked map
 		s.setBlocked(id, true)
@@ -67,7 +67,7 @@ func (s *gater) Update(id peer.ID, score float64) {
 	if (score > PeerScoreThreshold) && isAlreadyBlocked {
 		err := s.connGater.UnblockPeer(id)
 		if err != nil {
-			s.log.Warn("connection gater failed to unblock peer", "id", id.String(), "err", err)
+			s.log.Warn("Connection gater failed to unblock peer", "id", id.String(), "err", err)
 		}
 		// Set the peer as unblocked in the blocked map
 		s.setBlocked(id, false)
