@@ -16,7 +16,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/crypto/kzg4844"
@@ -78,11 +77,11 @@ func SendBlobTx(
 	}
 
 	if res[0].(* big.Int).Cmp(val) == 1 {
-		value = hexutil.Encode(res[0].(* big.Int).Bytes())
+		val = res[0].(* big.Int)
 	}
 
-	value256, err := uint256.FromHex(value)
-	if err != nil {
+	value256, overflow := uint256.FromBig(val)
+	if overflow {
 		log.Crit("invalid value param", "error", err)
 	}
 
