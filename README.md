@@ -9,9 +9,9 @@ To start an es-node, you have the option to run [a manually built binary](#build
 
 The `run.sh` script is used as an entry point in all the above options. The main function of the script is to initialize the data file, prepare for [Proof of Storage](#about-proof-of-storage), and launch es-node with preset parameters.
 
-[Proof of Storage](#about-proof-of-storage) is enabled by default by the `--miner.enabled` flag in `run.sh`, which means you become storage provider when you start an es-node with default settings.
+[Proof of Storage](#about-proof-of-storage) is enabled by default by the `--miner.enabled` flag in `run.sh`, which means you become a storage provider when you start an es-node with default settings.
 
-_Note: Some of the flags/parameters used in `run.sh` is supposed to change over time._
+_Note: Some of the flags/parameters used in `run.sh` are supposed to change over time._
 
 ### About Proof of Storage
 
