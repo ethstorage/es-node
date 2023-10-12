@@ -15,10 +15,11 @@ _Note: Some of the flags/parameters used in `run.sh` are supposed to change over
 
 ### About Proof of Storage
 
-In order to check if a replica of data is indeed physically stored, the storage providers need to randomly sample the encoded BLOBs with unique storage provider ID (miner address) and submit the proofs to the L1 storage contract for verification over time.
-That is how storage providers collect their storage fees.
+To check if a replica of data is indeed physically stored, the storage providers need to randomly sample the encoded BLOBs with unique storage provider ID (miner address) and submit the proofs to the L1 storage contract for verification over time. That is how storage providers collect their storage fees.
 
-To get ready to generate and submit the proof of storage, you need to prepare a miner address to generate unique physical  replicas and receive storage fees, as well as a private key to sign the transactions that submit the storage proofs.
+The continuous random sampling needs to satisfy a difficulty parameter that will be adjusted on-chain similarly to Ethash difficulty adjustment algorithm. So the Proof of Storage process sometimes is referred to as _`mining`_.
+
+To get ready to generate and submit the proof of storage, you need to prepare a miner address to generate unique physical replicas and receive storage fees, as well as a private key to sign the transactions that submit the storage proofs.
 
 It is recommended to use different accounts for the signer and the miner.
 
