@@ -1097,7 +1097,7 @@ func (s *SyncClient) report(force bool) {
 		return
 	}
 	blobsToSync := uint64(0)
-	taskRemain, subTaskRemain := 0, 0
+	taskRemain, subTaskRemain, subFillTaskRemain := 0, 0, 0
 	for _, t := range s.tasks {
 		for _, st := range t.SubTasks {
 			blobsToSync = blobsToSync + (st.Last - st.next)
@@ -1107,6 +1107,7 @@ func (s *SyncClient) report(force bool) {
 		if !t.done {
 			taskRemain++
 		}
+		subFillTaskRemain = subFillTaskRemain + len(t.SubEmptyTasks)
 	}
 
 	elapsed := time.Since(s.startTime)
@@ -1120,7 +1121,7 @@ func (s *SyncClient) report(force bool) {
 		blobsFilled     = fmt.Sprintf("%v@%v", log.FormatLogfmtUint64(emptyFilled), filledBytes.TerminalString())
 	)
 	log.Info("Storage sync in progress", "progress", progress, "syncTasksRemain", syncTasksRemain,
-		"blobsSynced", blobsSynced, "blobsToSync", blobsToSync,
+		"blobsSynced", blobsSynced, "blobsToSync", blobsToSync, "fillTasksRemain", subFillTaskRemain,
 		"emptyFilled", blobsFilled, "emptyToFill", emptyToFill, "eta", common.PrettyDuration(estTime-elapsed))
 }
 
