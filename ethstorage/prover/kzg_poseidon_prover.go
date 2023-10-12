@@ -56,14 +56,14 @@ func (p *KZGPoseidonProver) GetStorageProof(data []byte, encodingKey common.Hash
 // The test result shows no performance gain vs sequential processing so it is currently not used by miner
 func (p *KZGPoseidonProver) GenerateZKProofs(encodingKeys []common.Hash, sampleIdxes []uint64) ([]ZKProof, []common.Hash, error) {
 	if len(encodingKeys) != len(sampleIdxes) {
-		return nil, nil, fmt.Errorf("same length of encoding key and chunc index is required")
+		return nil, nil, fmt.Errorf("same length of encoding key and sample index is required")
 	}
 	proofSize := len(sampleIdxes)
 	var wg sync.WaitGroup
 	start := time.Now()
 	defer func(start time.Time) {
 		dur := time.Since(start)
-		p.lg.Info("Generate zk proofs done", "proof size", proofSize, "took", dur.Seconds())
+		p.lg.Info("Generate zk proofs done", "proofSize", proofSize, "took(sec)", dur.Seconds())
 	}(start)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -98,7 +98,7 @@ func (p *KZGPoseidonProver) GenerateZKProofs(encodingKeys []common.Hash, sampleI
 		masks[index] = temp[2].(common.Hash)
 		p.lg.Debug("Generate zk proofs", "index", index, "encodingKey", encodingKeys[index], "sampleIdx", sampleIdxes[index], "mask", masks[index])
 		proofB, _ := json.MarshalIndent(zkps[index], "", " ")
-		p.lg.Debug("Generate zk proofs", "index", index, "Proof", proofB)
+		p.lg.Debug("Generate zk proofs", "index", index, "proof", proofB)
 	}
 	return zkps, masks, nil
 }

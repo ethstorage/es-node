@@ -70,7 +70,7 @@ func (p *ZKProver) GenerateZKProof(encodingKey common.Hash, sampleIdx uint64) (Z
 	start := time.Now()
 	defer func(start time.Time) {
 		dur := time.Since(start)
-		p.lg.Info("Generate zk proof", "sampleIdx", sampleIdx, "took", dur.Seconds())
+		p.lg.Info("Generate zk proof", "sampleIdx", sampleIdx, "took(sec)", dur.Seconds())
 	}(start)
 	buildDir := filepath.Join(p.dir, snarkBuildDir, strings.Join([]string{
 		encodingKey.Hex(),
@@ -81,7 +81,7 @@ func (p *ZKProver) GenerateZKProof(encodingKey common.Hash, sampleIdx uint64) (Z
 	}
 	err := os.Mkdir(buildDir, os.ModePerm)
 	if err != nil {
-		p.lg.Crit("Generate zk proof failed", "cannot create folder", buildDir, "error", err)
+		p.lg.Crit("Generate zk proof failed", "mkdir", buildDir, "error", err)
 	}
 	defer func() {
 		if p.cleanup {
