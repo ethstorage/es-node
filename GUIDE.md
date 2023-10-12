@@ -2,12 +2,9 @@
 This is a practical tutorial to start an es-node instance. For a detailed explanation please refer to the [README](https://github.com/ethstorage/es-node/tree/doc#es-node). 
 ## Minimum Hardware Requirements 
  - CPU with 2+ cores
-- 4GB RAM
-- 2GB free storage space for the runtime and sync of one data shard
-- 8 MBit/sec download Internet service
-
-(referred to [`geth`](https://github.com/ethereum/go-ethereum#hardware-requirements))
-
+ - 4GB RAM
+ - 2GB **free** storage space for the runtime and sync of one data shard
+ - 8 MBit/sec download Internet service
 
 ## System Environment
  - Ubuntu 20.04+ (has been tested with)
