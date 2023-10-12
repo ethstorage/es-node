@@ -339,9 +339,9 @@ func (w *worker) checkTxStatus(txHash common.Hash, miner common.Address) {
 	defer cancel()
 	receipt, err := w.l1API.TransactionReceipt(ctx, txHash)
 	if err == nil && receipt.Status == 1 {
-		log.Info("Mining transaction success!        ✔", "miner", miner)
+		log.Info("Mining transaction success!      √", "miner", miner)
 	} else if receipt.Status == 0 {
-		log.Warn("Mining transaction failed!        ✘", "txHash", txHash)
+		log.Warn("Mining transaction failed!      ×", "txHash", txHash)
 	}
 }
 
