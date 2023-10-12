@@ -15,6 +15,8 @@ The `run.sh` script is used as an entry point in all the above options. The main
 
 _Note: Some of the flags/parameters used in `run.sh` are supposed to change over time._
 
+_Note: It is assumed that you are using the `root` user in the following operations. Please add `sudo` before the commands if you are using a non-root user._
+
 ### About Proof of Storage
 
 To check if a replica of data is indeed physically stored, the storage providers need to randomly sample the encoded BLOBs with unique storage provider ID (miner address) and submit the proofs to the L1 storage contract for verification over time. That is how storage providers collect their storage fees.
@@ -26,8 +28,6 @@ To get ready to generate and submit the proof of storage, you need to prepare a 
 It is recommended to use different accounts for the signer and the miner.
 
 _Note: You need to have some ETH balance in the account of the private key as the gas fee to submit transactions._
-
-_Note: It is assumed that you are using the `root` user in the following operations. Please add `sudo` before the commands if you are using a non-root user._
 
 ### How to launch an es-node with binary
 
@@ -52,21 +52,6 @@ cd es-node/cmd/es-node && go build && cd ../..
 chmod +x run.sh
 env ES_NODE_STORAGE_MINER=<miner> ES_NODE_PRIVATE_KEY=<private_key> ./run.sh
 ```
-#### Launch an es-node as bootnode
-
-To launch a bootnode for the es-node network, you need to modify the `run.sh` file by adding the `--p2p.advertise.ip` flag: 
-```sh
-# replace <your_ip_address> with your ip address the other nodes can access.
---p2p.advertise.ip <your_ip_address> \
-``` 
-to replace the line with the `--p2p.bootnodes` flag:
-```sh
---p2p.bootnodes enr:... \
-```
-Then, soon after the bootnode is started up, you can find the base64 encoded enr value prefixed with `enr:` in the log. 
-
-Next, you will need to replace the enr value of `--p2p.bootnodes` flag in other nodes with the new one to connect to the bootnode. 
-
 ### How to launch an es-node with Docker
 
 _Note: Currently, you will need to build the Docker image locally from es-node source code. So please download the source code and execute the following commands in the top folder of es-node repository._
@@ -107,6 +92,21 @@ docker build -t es-node .
 docker run -v ./es-data:/es-node/es-data -e ES_NODE_STORAGE_MINER=<miner> -e ES_NODE_PRIVATE_KEY=<private_key> -p 9545:9545 -p 9222:9222 -p 30305:30305/udp -it --entrypoint /es-node/run.sh es-node
 ```
 Where `es-node` is the name of the es-node image.
+
+### Launch an es-node as bootnode
+
+To launch a bootnode for the es-node network, you need to modify the `run.sh` file by adding the `--p2p.advertise.ip` flag: 
+```sh
+# replace <your_ip_address> with your ip address the other nodes can access.
+--p2p.advertise.ip <your_ip_address> \
+``` 
+to replace the line with the `--p2p.bootnodes` flag:
+```sh
+--p2p.bootnodes enr:... \
+```
+Then, soon after the bootnode is started up, you can find the base64 encoded enr value prefixed with `enr:` in the log. 
+
+Next, you will need to replace the enr value of `--p2p.bootnodes` flag in other nodes with the new one to connect to the bootnode. 
 
 ## Configuration
 The full list of options that you can use to configure an es-node are as follows:
