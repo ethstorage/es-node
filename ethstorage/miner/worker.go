@@ -150,7 +150,7 @@ func (w *worker) newWorkLoop() {
 				taskCh := make(chan *taskItem, taskQueueSize)
 				taskChs = append(taskChs, taskCh)
 				w.wg.Add(1)
-				w.lg.Info("Worker: starting task loop", "shard", shardIdx, "thread", i)
+				w.lg.Info("Worker is starting task loop", "shard", shardIdx, "thread", i)
 				go w.taskLoop(taskCh)
 			}
 			task := task{
@@ -163,7 +163,7 @@ func (w *worker) newWorkLoop() {
 			if !w.isRunning() {
 				break
 			}
-			w.lg.Info("Updating tasks with L1 new head", "BlockNumber", block.Number, "blockTime", block.Time, "now", uint64(time.Now().Unix()))
+			w.lg.Info("Updating tasks with L1 new head", "blockNumber", block.Number, "blockTime", block.Time, "now", uint64(time.Now().Unix()))
 			// TODO suspend mining if:
 			// 1) a mining tx is already submitted; or
 			// 2) if the last mining time is too close (the reward is not enough).
@@ -175,7 +175,7 @@ func (w *worker) newWorkLoop() {
 				w.assignTasks(task, block, reqDiff)
 			}
 		case <-w.exitCh:
-			w.lg.Warn("Worker: exiting from work loop...")
+			w.lg.Warn("Worker is exiting from work loop...")
 			return
 		}
 	}
@@ -204,9 +204,9 @@ func (w *worker) assignTasks(task task, block eth.L1BlockRef, reqDiff *big.Int) 
 		ch := task.taskChs[i]
 		select {
 		case ch <- ti:
-			w.lg.Debug("Mining task queued", "task", ti, "blockTime", block.Time, "now", uint64(time.Now().Unix()))
+			w.lg.Debug("Mining task queued", "shard", ti.shardIdx, "thread", ti.thread, "block", ti.blockNumber, "blockTime", block.Time, "now", uint64(time.Now().Unix()))
 		case <-w.exitCh:
-			w.lg.Warn("Worker: exiting from thread loop...")
+			w.lg.Warn("Worker is exiting from thread loop...")
 			return
 		default:
 			// try to remove the item in the queue to make sure the task is executed with the latest block number
@@ -218,7 +218,7 @@ func (w *worker) assignTasks(task task, block eth.L1BlockRef, reqDiff *big.Int) 
 
 			// note: it is SPSC so we don't need to be worry about the blocking issue here.
 			ch <- ti
-			w.lg.Debug("Mining task queued", "task", ti, "blockTime", block.Time, "now", uint64(time.Now().Unix()))
+			w.lg.Debug("Mining task queued", "shard", ti.shardIdx, "thread", ti.thread, "block", ti.blockNumber, "blockTime", block.Time, "now", uint64(time.Now().Unix()))
 		}
 	}
 }
@@ -230,14 +230,14 @@ func (w *worker) updateDifficulty(shardIdx, blockTime uint64) (*big.Int, error) 
 		shardIdx,
 	)
 	if err != nil {
-		w.lg.Warn("failed to get es mining info", "error", err.Error())
+		w.lg.Warn("Failed to get es mining info", "error", err.Error())
 		return nil, err
 	}
-	w.lg.Info("Mining info retrieved", "shard", shardIdx, "info", info)
+	w.lg.Info("Mining info retrieved", "shard", shardIdx, "lastMineTime", info.lastMineTime, "difficulty", info.difficulty, "proofsSubmitted", info.blockMined)
 	reqDiff := new(big.Int).Div(maxUint256, expectedDiff(
 		info.lastMineTime,
-		info.difficulty,
 		blockTime,
+		info.difficulty,
 		w.config.Cutoff,
 		w.config.DiffAdjDivisor,
 		w.config.MinimumDiff,
@@ -253,13 +253,13 @@ func (w *worker) taskLoop(taskCh chan *taskItem) {
 		case ti := <-taskCh:
 			success, err := w.mineTask(ti)
 			if err != nil {
-				w.lg.Warn("Mine task fail", "task", ti, "err", err.Error())
+				w.lg.Warn("Mine task fail", "shard", ti.shardIdx, "thread", ti.thread, "block", ti.blockNumber, "err", err.Error())
 			}
 			if success {
-				w.lg.Info("Mine task success", "task", ti)
+				w.lg.Info("Mine task success", "shard", ti.shardIdx, "thread", ti.thread, "block", ti.blockNumber)
 			}
 		case <-w.exitCh:
-			w.lg.Warn("Worker: exiting from task loop...")
+			w.lg.Warn("Worker is exiting from task loop...")
 			return
 		}
 	}
@@ -312,12 +312,12 @@ func (w *worker) resultLoop() {
 				checked := 0
 				for range ticker.C {
 					if checked > miningTransactionTimeout {
-						log.Warn("Waiting for mining transaction confirm timed out", "txhash", txHash)
+						log.Warn("Waiting for mining transaction confirm timed out", "txHash", txHash)
 						break
 					}
 					_, isPending, err := w.l1API.TransactionByHash(context.Background(), txHash)
 					if err == nil && !isPending {
-						log.Info("Mining transaction confirmed", "txhash", txHash)
+						log.Info("Mining transaction confirmed", "txHash", txHash)
 						w.checkTxStatus(txHash, result.miner)
 						break
 					}
@@ -328,7 +328,7 @@ func (w *worker) resultLoop() {
 			// optimistically check next result if exists
 			w.notifyResultLoop()
 		case <-w.exitCh:
-			w.lg.Warn("Worker: exiting from result loop...")
+			w.lg.Warn("Worker is exiting from result loop...")
 			return
 		}
 	}
@@ -339,9 +339,9 @@ func (w *worker) checkTxStatus(txHash common.Hash, miner common.Address) {
 	defer cancel()
 	receipt, err := w.l1API.TransactionReceipt(ctx, txHash)
 	if err == nil && receipt.Status == 1 {
-		log.Info("Mining transaction success!           \u2714", "miner", miner)
+		log.Info("Mining transaction success!      √", "miner", miner)
 	} else if receipt.Status == 0 {
-		log.Warn("Mining transaction failed!            \u2715", "txhash", txHash)
+		log.Warn("Mining transaction failed!      ×", "txHash", txHash)
 	}
 }
 
@@ -349,30 +349,30 @@ func (w *worker) checkTxStatus(txHash common.Hash, miner common.Address) {
 func (w *worker) mineTask(t *taskItem) (bool, error) {
 	startTime := time.Now().Unix()
 	nonce := t.nonceStart
-	w.lg.Info("Mining task started", "task", t, "nonce", fmt.Sprintf("%d~%d", t.nonceStart, t.nonceEnd))
+	w.lg.Info("Mining task started", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonce", fmt.Sprintf("%d~%d", t.nonceStart, t.nonceEnd))
 	for w.isRunning() {
 		if startTime+mineTimeOut <= time.Now().Unix() {
-			w.lg.Debug("Mining task timed out", "task", t)
+			w.lg.Debug("Mining task timed out", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber)
 			break
 		}
 		if nonce >= t.nonceEnd {
-			w.lg.Info("The nonces are exhausted in this slot, waiting for the next block", "task", t, "nonce", nonce)
+			w.lg.Info("The nonces are exhausted in this slot, waiting for the next block", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonce", nonce)
 			break
 		}
 		hash0 := initHash(t.miner, t.blockHash, nonce)
 		hash1, sampleIdxs, err := w.computeHash(t.task, hash0)
 		if err != nil {
-			w.lg.Error("Calculate hash error", "task", t, "err", err.Error())
+			w.lg.Error("Calculate hash error", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "err", err.Error())
 			return false, err
 		}
 		if t.requiredDiff.Cmp(new(big.Int).SetBytes(hash1.Bytes())) >= 0 {
-			w.lg.Info("Calculated a valid hash", "task", t, "nonce", nonce)
+			w.lg.Info("Calculated a valid hash", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonce", nonce)
 			dataSet, kvIdxs, sampleIdxsInKv, encodingKeys, encodedSamples, err := w.getMiningData(t.task, sampleIdxs)
 			if err != nil {
-				w.lg.Error("Get mining data failed", "kvIdxs", kvIdxs, "sampleIdxsInKv", sampleIdxsInKv, "err", err.Error())
+				w.lg.Error("Get sample data failed", "kvIdxs", kvIdxs, "sampleIdxsInKv", sampleIdxsInKv, "err", err.Error())
 				return false, err
 			}
-			w.lg.Info("Got mining data", "task", t, "kvIdxs", kvIdxs, "sampleIdxsInKv", sampleIdxsInKv)
+			w.lg.Info("Got sample data", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "kvIdxs", kvIdxs, "sampleIdxsInKv", sampleIdxsInKv)
 			proofs := make([][]byte, len(kvIdxs))
 			for i := 0; i < len(dataSet); i++ {
 				ps, err := w.prover.GetStorageProof(dataSet[i], encodingKeys[i], sampleIdxsInKv[i])
@@ -380,7 +380,7 @@ func (w *worker) mineTask(t *taskItem) (bool, error) {
 					w.lg.Error("Get storage proof error", "kvIdx", kvIdxs[i], "sampleIdxsInKv", sampleIdxsInKv[i], "error", err.Error())
 					return false, fmt.Errorf("get proof err: %v", err)
 				}
-				w.lg.Info("Got storage proof", "task", t, "kvIdx", kvIdxs[i], "sampleIdxsInKv", sampleIdxsInKv[i])
+				w.lg.Info("Got storage proof", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "kvIdx", kvIdxs[i], "sampleIdxsInKv", sampleIdxsInKv[i])
 				proofs[i] = ps
 			}
 			newResult := &result{
@@ -396,7 +396,7 @@ func (w *worker) mineTask(t *taskItem) (bool, error) {
 			// override the existing result if not nil
 			w.resultMap[t.shardIdx] = newResult
 			w.resultLock.Unlock()
-			w.lg.Info("Mining set result", "shard", t.shardIdx, "block", t.blockNumber, "nonce", nonce)
+			w.lg.Info("Set mining result", "shard", t.shardIdx, "block", t.blockNumber, "nonce", nonce)
 
 			// notify the result worker to wake up
 			w.notifyResultLoop()
