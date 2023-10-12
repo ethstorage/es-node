@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/log"
 
+	"github.com/ethstorage/go-ethstorage/cmd/es-utils/utils"
 	"github.com/ethstorage/go-ethstorage/ethstorage"
 	"github.com/ethstorage/go-ethstorage/ethstorage/downloader"
 )
@@ -58,9 +59,11 @@ func (api *esAPI) GetBlob(kvIndex uint64, blobHash common.Hash, off, size uint64
 		}
 	}
 
-	if len(blob) < int(off + size) {
+	decoded := utils.DecodeBlob(blob)
+
+	if len(decoded) < int(off + size) {
 		return nil, errors.New("beyond the range of blob size")
 	}
 
-	return blob[off:off+size], nil
+	return decoded[off:off+size], nil
 }
