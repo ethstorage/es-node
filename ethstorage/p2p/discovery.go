@@ -167,17 +167,17 @@ func FilterEnodes(log log.Logger, l1ChainID uint64) func(node *enode.Node) bool 
 		err := node.Load(&dat)
 		// if the entry does not exist, or if it is invalid, then ignore the node
 		if err != nil {
-			log.Trace("discovered node record has no ethstorage info", "node", node.ID(), "err", err)
+			log.Trace("Discovered node record has no ethstorage info", "node", node.ID(), "err", err)
 			return false
 		}
 		// check chain ID matches
 		if l1ChainID != dat.ChainID {
-			log.Trace("discovered node record has no matching chain ID", "node", node.ID(), "got", dat.ChainID, "expected", l1ChainID)
+			log.Trace("Discovered node record has no matching chain ID", "node", node.ID(), "got", dat.ChainID, "expected", l1ChainID)
 			return false
 		}
 		// check Version matches
 		if dat.Version != p2pVersion {
-			log.Trace("discovered node record has no matching Version", "node", node.ID(), "got", dat.Version, "expected", p2pVersion)
+			log.Trace("Discovered node record has no matching Version", "node", node.ID(), "got", dat.Version, "expected", p2pVersion)
 			return false
 		}
 		shards := ethstorage.Shards()
@@ -204,7 +204,7 @@ func FilterEnodes(log log.Logger, l1ChainID uint64) func(node *enode.Node) bool 
 // and only nodes with addresses (under TTL) will be connected to.
 func (n *NodeP2P) DiscoveryProcess(ctx context.Context, log log.Logger, l1ChainID uint64, connectGoal uint) {
 	if n.dv5Udp == nil {
-		log.Warn("peer discovery is disabled")
+		log.Warn("Peer discovery is disabled")
 		return
 	}
 	filter := FilterEnodes(log, l1ChainID)
@@ -268,7 +268,7 @@ func (n *NodeP2P) DiscoveryProcess(ctx context.Context, log log.Logger, l1ChainI
 			select {
 			case <-discoverTicker.C:
 				if !randomNodeIter.Next() {
-					log.Info("discv5 DHT iteration stopped, closing peer discovery now...")
+					log.Info("Discv5 DHT iteration stopped, closing peer discovery now...")
 					return
 				}
 				found := randomNodeIter.Node()
@@ -325,7 +325,7 @@ func (n *NodeP2P) DiscoveryProcess(ctx context.Context, log log.Logger, l1ChainI
 			pstore.AddAddrs(info.ID, info.Addrs, discoveredAddrTTL)
 			err = pstore.Put(info.ID, protocol.EthStorageENRKey, dat.Shards)
 			if err != nil {
-				log.Warn("pstore put EthStorageENRKey error", "err", err.Error())
+				log.Warn("Peerstore put EthStorageENRKey error", "err", err.Error())
 				continue
 			}
 			_ = pstore.AddPubKey(info.ID, pub)
@@ -336,10 +336,10 @@ func (n *NodeP2P) DiscoveryProcess(ctx context.Context, log log.Logger, l1ChainI
 			log.Debug("Discovered peer", "peer", info.ID, "nodeID", found.ID(), "addr", info.Addrs[0])
 		case <-connectTicker.C:
 			connected := n.Host().Network().Peers()
-			log.Debug("peering tick", "connected", len(connected),
-				"advertised_udp", n.dv5Local.Node().UDP(),
-				"advertised_tcp", n.dv5Local.Node().TCP(),
-				"advertised_ip", n.dv5Local.Node().IP())
+			log.Debug("Peering tick", "connected", len(connected),
+				"advertisedUdp", n.dv5Local.Node().UDP(),
+				"advertisedTcp", n.dv5Local.Node().TCP(),
+				"advertisedIP", n.dv5Local.Node().IP())
 			if uint(len(connected)) < connectGoal {
 				// Start looking for more peers more actively again
 				faster()

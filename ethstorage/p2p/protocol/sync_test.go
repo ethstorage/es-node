@@ -313,7 +313,7 @@ func createLocalHostAndSyncClient(t *testing.T, testLog log.Logger, rollupCfg *r
 			shards := make(map[common.Address][]uint64)
 			css, err := localHost.Peerstore().Get(conn.RemotePeer(), EthStorageENRKey)
 			if err != nil {
-				log.Warn("get shards from peer failed", "error", err.Error())
+				log.Warn("Get shards from peer failed", "error", err.Error())
 			} else {
 				shards = ConvertToShardList(css.([]*ContractShards))
 			}
@@ -332,7 +332,7 @@ func createLocalHostAndSyncClient(t *testing.T, testLog log.Logger, rollupCfg *r
 		shards := make(map[common.Address][]uint64)
 		css, err := localHost.Peerstore().Get(conn.RemotePeer(), EthStorageENRKey)
 		if err != nil {
-			log.Warn("get shards from peer failed", "error", err.Error())
+			log.Warn("Get shards from peer failed", "error", err.Error())
 		} else {
 			shards = ConvertToShardList(css.([]*ContractShards))
 		}
@@ -1012,7 +1012,7 @@ func TestCloseSyncWhileFillEmpty(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 	syncCl.Close()
 
-	t.Log("fill empty status", "filled", syncCl.emptyBlobsFilled, "to fill", syncCl.emptyBlobsToFill)
+	t.Log("Fill empty status", "filled", syncCl.emptyBlobsFilled, "toFill", syncCl.emptyBlobsToFill)
 	if syncCl.syncDone {
 		t.Fatalf("fill empty shoud be cancel")
 	}
