@@ -4,6 +4,9 @@
 package ethstorage
 
 import (
+	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"math/big"
 
@@ -152,7 +155,6 @@ func (ds *DataShard) ReadEncoded(kvIdx uint64, readLen int) ([]byte, error) {
 // Read the encoded data from storage and decode it.
 func (ds *DataShard) Read(kvIdx uint64, readLen int, commit common.Hash) ([]byte, error) {
 	return ds.readWith(kvIdx, readLen, func(cdata []byte, chunkIdx uint64) []byte {
-		// TODO: do integration check with commit
 		encodeKey := calcEncodeKey(commit, chunkIdx, ds.dataFiles[0].miner)
 		blob := decodeChunk(ds.chunkSize, cdata, ds.dataFiles[0].encodeType, encodeKey)
 		err := checkCommit(commit, blob)
@@ -170,7 +172,6 @@ func (ds *DataShard) ReadWithMeta(kvIdx uint64, readLen int) ([]byte, []byte, er
 		return nil, nil, err
 	}
 	bs, err := ds.readWith(kvIdx, readLen, func(cdata []byte, chunkIdx uint64) []byte {
-		// TODO: do integration check with commit
 		encodeKey := calcEncodeKey(common.BytesToHash(commit), chunkIdx, ds.dataFiles[0].miner)
 		blob := decodeChunk(ds.chunkSize, cdata, ds.dataFiles[0].encodeType, encodeKey)
 		err := checkCommit(common.BytesToHash(commit), blob)
@@ -328,18 +329,28 @@ func decodeChunk(chunkSize uint64, bs []byte, encodeType uint64, encodeKey commo
 	}
 }
 
-func checkCommit(commit common.Hash, blobData []byte) error {
-	blob := kzg4844.Blob{}
-	copy(blob[0:], blobData[:])
+var EmptyBlobHash, _ = hex.DecodeString("fa43239bcee7b97ca62f007cc68487560a39e19f74f3dde7486db3f98df8e471")
 
+func checkCommit(commit common.Hash, blobData []byte) error {
+	dataHash := sha256.Sum256(blobData)
+	if bytes.Equal(dataHash[:], EmptyBlobHash) {
+		// Blob is null
+		return nil
+	}
+
+	// kzg blob
+	blob := kzg4844.Blob{}
+	copy(blob[0:], blobData[0:])
+
+	// Generate VersionedHash
 	commitment, err := kzg4844.BlobToCommitment(blob)
 	if err != nil {
 		return fmt.Errorf("could not convert blob to commitment: %v", err)
 	}
 	versionedHash := eth.KZGToVersionedHash(eth.KZGCommitment(commitment))
-	localCommit := common.BytesToHash(versionedHash[:])
 
-	if localCommit != commit {
+	// Get the hash and only take 24 bits
+	if !bytes.Equal(versionedHash[0:HashSizeInContract], commit[0:HashSizeInContract]) {
 		return fmt.Errorf("commit does not match")
 	}
 	return nil
