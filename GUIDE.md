@@ -1,5 +1,5 @@
 # Es-node Quick Start
-This is a practical tutorial to start an es-node instance. For a detailed explanation please refer to the [README](https://github.com/ethstorage/es-node/tree/doc#es-node). 
+This is a practical tutorial to start an es-node instance. For a detailed explanation please refer to the [README](/README.md). 
 ## Minimum Hardware Requirements 
  - CPU with 2+ cores
  - 4GB RAM
