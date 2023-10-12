@@ -2,7 +2,9 @@
 
 Golang implementation of the EthStorage node.
 
-EthStorage is a decentralized storage network that reuses Ethereum security to extend Ethereum storage capabilities via Layer 2 and Data Availability.
+EthStorage is a storage-specific L2 network that reuses Ethereum security to extend Ethereum storage capabilities via data availability technology.
+
+Storage providers can join the L2 network permissionlessly by running an es-node. They need to download the replica of the L2 data into their local node, submit [proof of storage](#about-proof-of-storage) to the L1 EthStorage contract, and get the corresponding reward once the proof is accepted by the contract.
 
 ## Getting started
 To start an es-node, you have the option to run [a manually built binary](#build-and-run-es-node), with [Docker managed by docker compose](#docker-compose), with [Docker managed by `run-docker.sh` and run in the background](#docker-as-a-background-process), or with [manually built Docker](#docker). 
