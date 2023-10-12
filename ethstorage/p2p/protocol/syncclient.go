@@ -1090,8 +1090,9 @@ func (s *SyncClient) report(force bool) {
 	s.logTime = time.Now()
 
 	// Don't report anything until we have a meaningful progress
-	synced := s.blobsSynced
-	if synced == 0 && s.emptyBlobsFilled == 0 {
+	synced, syncedBytes := s.blobsSynced, s.syncedBytes
+	emptyBlobsFilled, emptyBlobsToFill := s.emptyBlobsFilled, s.emptyBlobsToFill
+	if synced == 0 && emptyBlobsFilled == 0 {
 		return
 	}
 	kvsToSync := uint64(0)
@@ -1105,16 +1106,16 @@ func (s *SyncClient) report(force bool) {
 	}
 
 	elapsed := time.Since(s.startTime)
-	estTime := elapsed / time.Duration(synced+s.emptyBlobsFilled) * time.Duration(kvsToSync+synced+s.emptyBlobsFilled+s.emptyBlobsToFill)
+	estTime := elapsed / time.Duration(synced+emptyBlobsFilled) * time.Duration(kvsToSync+synced+emptyBlobsFilled+emptyBlobsToFill)
 
 	// Create a mega progress report
 	var (
 		progress = fmt.Sprintf("%.2f%%", float64(synced)*100/float64(kvsToSync+synced))
-		kv       = fmt.Sprintf("%v@%v", log.FormatLogfmtUint64(s.blobsSynced), s.syncedBytes.TerminalString())
+		kv       = fmt.Sprintf("%v@%v", log.FormatLogfmtUint64(synced), syncedBytes.TerminalString())
 	)
 	log.Info("Storage sync in progress", "synced", progress, "state", synced, "kvsToSync", kvsToSync,
 		"subTaskRemain", subTaskRemain, "kv", kv, "eta", common.PrettyDuration(estTime-elapsed),
-		"emptyKVFilled", s.emptyBlobsFilled, "emptyKVToFill", s.emptyBlobsToFill)
+		"emptyKVFilled", emptyBlobsFilled, "emptyKVToFill", emptyBlobsToFill)
 }
 
 func (s *SyncClient) needThisPeer(contractShards map[common.Address][]uint64) bool {
