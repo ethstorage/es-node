@@ -1,5 +1,6 @@
 # Es-node Quick Start
 This is a practical tutorial to start an es-node instance. For a detailed explanation please refer to the [README](/README.md). 
+
 ## Minimum Hardware Requirements 
  - CPU with 2+ cores
  - 4GB RAM
@@ -43,6 +44,7 @@ env ES_NODE_STORAGE_MINER=<miner> ES_NODE_PRIVATE_KEY=<private_key> ./run-docker
 docker logs -f es 
 ```
 ### Option 3: Without Docker
+
 #### 1. Install go 1.20+ (e.g. v1.21.3)
 
 Download a stable go release
