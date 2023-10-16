@@ -134,7 +134,6 @@ func createEthStorage(contract common.Address, shardIdxList []uint64, chunkSize,
 			log.Crit("open failed", "error", err)
 		}
 		sm.AddDataFile(df)
-
 	}
 
 	return sm, files
@@ -698,10 +697,10 @@ func testSync(t *testing.T, chunkSize, kvSize, kvEntries uint64, localShards []u
 
 	l1 := ethstorage.NewMockL1Source(lastKvIndex, metafileName)
 	sm := ethstorage.NewStorageManager(shardManager, l1)
+	data := makeKVStorage(contract, localShards, chunkSize, kvSize, kvEntries, lastKvIndex, common.Address{}, encodeType, metafile)
 	localHost, syncCl := createLocalHostAndSyncClient(t, testLog, rollupCfg, db, sm, metrics, mux)
 	syncCl.Start()
 
-	data := makeKVStorage(contract, localShards, chunkSize, kvSize, kvEntries, lastKvIndex, common.Address{}, encodeType, metafile)
 	finalExcludedList := remotePeers[0].excludedList
 	for _, rPeer := range remotePeers {
 		// fill empty to excludedList for verify KVs
@@ -799,7 +798,7 @@ func TestSyncWithFewerResult(t *testing.T) {
 		},
 	}
 
-	testSync(t, defaultChunkSize, kvSize, kvEntries, []uint64{0}, lastKvIndex, defaultEncodeType, 2, remotePeers, true)
+	testSync(t, defaultChunkSize, kvSize, kvEntries, []uint64{0}, lastKvIndex, defaultEncodeType, 4, remotePeers, true)
 }
 
 // TestSyncWithPeerShardsOverlay test sync process with local node support multi shards and sync from multi remote peers,
@@ -821,7 +820,7 @@ func TestSyncWithPeerShardsOverlay(t *testing.T) {
 		},
 	}
 
-	testSync(t, defaultChunkSize, kvSize, kvEntries, []uint64{0, 1, 2, 3}, lastKvIndex, defaultEncodeType, 4, remotePeers, true)
+	testSync(t, defaultChunkSize, kvSize, kvEntries, []uint64{0, 1, 2, 3}, lastKvIndex, defaultEncodeType, 6, remotePeers, true)
 }
 
 // TestSyncWithExcludedDataOverlay test sync process with local node support multi shards and sync from multi remote peers,
