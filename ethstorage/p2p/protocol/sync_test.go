@@ -878,7 +878,6 @@ func TestSyncDiffEncodeType(t *testing.T) {
 	}}
 
 	testSync(t, defaultChunkSize, kvSize, kvEntries, []uint64{0}, lastKvIndex, ethstorage.ENCODE_KECCAK_256, 4, remotePeers, true)
-	//	testSync(t, defaultChunkSize, kvSize, kvEntries, []uint64{0}, lastKvIndex, ethstorage.ENCODE_ETHASH, 120, remotePeers, true)
 	testSync(t, defaultChunkSize, kvSize, kvEntries, []uint64{0}, lastKvIndex, ethstorage.ENCODE_BLOB_POSEIDON, 4, remotePeers, true)
 }
 
