@@ -1,16 +1,16 @@
 # Setup a Private EthStorage Network
-In this tutorial you will deploy your storage contract on EIP-4844 devnet, and setup a private network composed by es-node instances.
+In this tutorial, you will deploy your storage contract on EIP-4844 devnet, and set up a private network composed of es-node instances.
 
-Optionally, you can also setup a private EIP-4844 testnet using [Kurtosis](https://docs.kurtosis.com/).
+Optionally, you can also set up a private EIP-4844 testnet using [Kurtosis](https://docs.kurtosis.com/).
 
 ## Setup a private EIP-4844 testnet 
-This section is a quick guide to setup a private testnet with EIP-4844 enabled. Refer to [this document](https://notes.ethereum.org/@parithosh/kurtosis-example) for more detailed description.
+This section is a quick guide to setting up a private testnet with EIP-4844 enabled. For a more detailed description, please take a look at [this document](https://notes.ethereum.org/@parithosh/kurtosis-example)
 
 ### Environment
 * Docker version 24.0.5+
 * Kurtosis ([installation](https://docs.kurtosis.com/install/#ii-install-the-cli))
 
-_Note: Currenly the latet version of built Docker images available is devnet-8, but it will not affect the tests._
+_Note: Currently the latest version of built Docker images available is devnet-8, but it will not affect the tests._
 
 ### Step 1: Configuration
 Save the below JSON in a file called `eth.json`
@@ -37,14 +37,14 @@ Save the below JSON in a file called `eth.json`
 }
 ```
 
-### Step 2: Start up
+### Step 2: Startup
 Start the module with the following command:
 ```sh
 kurtosis run --enclave eth github.com/kurtosis-tech/ethereum-package  "$(cat ./eth.json)"
 ```
 
 ### Step 3: Check status
-Testnet will start in the background. You can use the following command to get more information:
+The testnet will start in the background. You can use the following command to get more information:
 ```sh
 kurtosis enclave inspect eth
 ```
@@ -117,7 +117,7 @@ bba05b580b20   prelaunch-data-generator-cl-genesis-data         <none>          
 d3d57353402f   task-d5e52baf-f0e0-4fd9-90c1-d4bfb0dca4a8        <none>                                        RUNNING
 ```
 
-_Note: In the above example, the avaliable EL RPC ports are `32773`, `32778`, and `32783`; and the CL RPC ports are `32787`, `32793`, and `32799`.  The ports could be different in your environment, so please confirm the correct ports (and IP address) are used to make configurations in next steps._
+_Note: In the above example, the available EL RPC ports are `32773`, `32778`, and `32783`; and the CL RPC ports are `32787`, `32793`, and `32799`.  The ports could be different in your environment, so please confirm the correct ports (and IP address) are used to make configurations in the next steps._
 
 ### Step 4: Update the `run.sh` file
 Some flags need to be changed to launch es-node according to the operations done above. Edit the `run.sh` file with following updates:
@@ -138,7 +138,7 @@ Execute the following command to get the timestamp of the first slot:
 ```sh
 curl -s http://127.0.0.1:32787/eth/v1/beacon/blocks/1 | jq -r '.data.message.body.execution_payload.timestamp'
 ```
-And you will get a integer representing the timestamp of the first slot. Replace the old value of the `--l1.beacon-based-time` flag in the `run.sh` with this value:
+And you will get an integer representing the timestamp of the first slot. Replace the old value of the `--l1.beacon-based-time` flag in the `run.sh` with this value:
 ```sh
 --l1.beacon-based-time <timestamp> \
 ``` 
@@ -149,7 +149,7 @@ And you will get a integer representing the timestamp of the first slot. Replace
 * Node 16+
 * Hardhat 2.13.1+
 
-### Step 1: Get source code
+### Step 1: Get the source code
 ```sh
 git clone git@github.com:ethstorage/storage-contracts-v1.git
 ```
@@ -160,14 +160,14 @@ In the top folder of `storage-contracts-v1` repo, create a `.env` file with the 
 PRIVATE_KEY=<private_key>
 EIP4844_DEVNET_URL=<l1_el_rpc>
 ```
-Where `<private_key>` is the private key of a prefund Ethereum account of the EIP-4844 devnet, and `<l1_el_rpc>` is the execution layer RPC URL of the EIP-4844 devnet.
+Where `<private_key>` is the private key of a pre-funded Ethereum account of the EIP-4844 devnet, and `<l1_el_rpc>` is the execution layer RPC URL of the EIP-4844 devnet.
 
 ### Step 3: Deploy contract
-Execute the following command to deploy contract:
+Execute the following command to deploy the contract:
 ```node
 npx hardhat run scripts/deploy.js --network devnet
 ```
-And you will see the deployed storage contract address on the console with 1 ether prefunded.
+And you will see the deployed storage contract address on the console with 1 ether pre-funded.
 
 ### Step 4: Update contract address
 Find the flag `--storage.l1contract` in `run.sh`, and replace the old value with the newly deployed one.
@@ -177,20 +177,20 @@ Find the flag `--storage.l1contract` in `run.sh`, and replace the old value with
 
 ## Start up a private EthStorage network
 
-To set up your own EthStorage network, you'll need to first launch a bootnode, and configure other es-node instance to connect to it. 
+To set up your own EthStorage network, you'll need first to launch a boot node and configure other es-node instances to connect to it. 
 
-### Step 1: Launch an es-node as bootnode
+### Step 1: Launch an es-node as a boot node
 
 Suppose you have created an es-node according to [the quick start guide](/GUIDE.md#option-3-without-docker). 
 \
 _Note: Currently to run a bootnode you need to set up an es-node instance using binary instead of using Docker._
 
 
-To make it a bootnode, open `run.sh` for editing, and add `--p2p.advertise.ip` flag as a new line under the definition of `es_node_start`: 
+To make it a boot node, open `run.sh` for editing, and add `--p2p.advertise.ip` flag as a new line under the definition of `es_node_start`: 
 ```sh
 --p2p.advertise.ip <your_ip_address> \
 ```
-Where `<your_ip_address>` need to be replaced with your ip address that the other nodes can access. 
+Where `<your_ip_address>` needs to be replaced with your IP address that the other nodes can access. 
 
 And remove the line with the `--p2p.bootnodes` flag:
 ```sh
@@ -198,7 +198,7 @@ And remove the line with the `--p2p.bootnodes` flag:
 ```
 
 ### Step 2: Launch common es-nodes
-Then, soon after the bootnode is started up, you can find the base64 encoded enr value prefixed with `enr:` in the log. 
+Then, soon after the boot node is started up, you can find the base64 encoded enr value prefixed with `enr:` in the log. 
 
 Next, you will need to replace the value of `--p2p.bootnodes` flag in other nodes' `run.sh` with the new one. 
 
