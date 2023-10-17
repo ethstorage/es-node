@@ -33,7 +33,7 @@ func NewESAPI(config *RPCConfig, sm *ethstorage.StorageManager, dl *downloader.D
 	}
 }
 
-func (api *esAPI) GetBlob(kvIndex uint64, blobHash common.Hash, off, size uint64) (hexutil.Bytes, error) {
+func (api *esAPI) GetBlob(kvIndex uint64, blobHash common.Hash, needDecode bool, off, size uint64) (hexutil.Bytes, error) {
 	blob := api.dl.Cache.GetKeyValueByIndex(kvIndex, blobHash)
 	
 	if blob == nil {
@@ -59,11 +59,15 @@ func (api *esAPI) GetBlob(kvIndex uint64, blobHash common.Hash, off, size uint64
 		}
 	}
 
-	decoded := utils.DecodeBlob(blob)
+	ret := blob
 
-	if len(decoded) < int(off + size) {
+	if needDecode {
+		ret = utils.DecodeBlob(blob)
+	}
+
+	if len(ret) < int(off + size) {
 		return nil, errors.New("beyond the range of blob size")
 	}
 
-	return decoded[off:off+size], nil
+	return ret[off:off+size], nil
 }
