@@ -397,6 +397,7 @@ func (s *SyncClient) saveSyncStatus(force bool) {
 	if err := s.db.Put(syncStatusKey, status); err != nil {
 		log.Error("Failed to store sync status", "err", err)
 	}
+	log.Debug("Save sync state to DB")
 }
 
 // cleanTasks removes kv range retrieval tasks that have already been completed.
