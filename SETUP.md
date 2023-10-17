@@ -4,16 +4,23 @@ In this tutorial, you will deploy your storage contract on EIP-4844 devnet, and 
 Optionally, you can also set up a private EIP-4844 testnet using [Kurtosis](https://docs.kurtosis.com/).
 
 ## Setup a private EIP-4844 testnet 
-This section is a quick guide to setting up a private testnet with EIP-4844 enabled. For a more detailed description, please take a look at [this document](https://notes.ethereum.org/@parithosh/kurtosis-example)
+This section is a quick guide to setting up a private testnet with EIP-4844 enabled. For a more detailed description, please take a look at [this document](https://notes.ethereum.org/@parithosh/kurtosis-example).
 
 ### Environment
 * Docker version 24.0.5+
-* Kurtosis ([installation](https://docs.kurtosis.com/install/#ii-install-the-cli))
+* Kurtosis (for EIP-4844 testnet)
+
+#### Install Kurtosis
+The following command will install the latest version of Kurtosis. 
+```sh
+echo "deb [trusted=yes] https://apt.fury.io/kurtosis-tech/ /" | tee /etc/apt/sources.list.d/kurtosis.list
+apt update
+apt install kurtosis-cli
+```
+### Step 1: Configuration
+Save the below JSON in a file called `eth.json`.
 
 _Note: Currently the latest version of built Docker images available is devnet-8, but it will not affect the tests._
-
-### Step 1: Configuration
-Save the below JSON in a file called `eth.json`
 ```json
 {
   "participants": [
