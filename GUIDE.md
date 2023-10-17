@@ -1,6 +1,11 @@
 # Es-node Quick Start
 This is a practical tutorial to start an es-node instance. For a detailed explanation please refer to the [README](/README.md). 
 
+## Testnet spec
+- Layer 1: [dencun-devnet-9](https://dencun-devnet-9.ethpandaops.io/)
+- storage-contracts-v1: v0.1.0
+- es-node: v0.1.0
+
 ## Minimum Hardware Requirements 
  - CPU with 2+ cores
  - 4GB RAM

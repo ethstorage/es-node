@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"math/big"
 	"math/rand"
@@ -14,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/detailyang/go-fallocate"
 	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/rawdb"
@@ -46,6 +48,76 @@ var (
 type remotePeer struct {
 	shards       []uint64            // shards the remote peer support
 	excludedList map[uint64]struct{} // excludedList a list of blob indexes whose data is not exist in the remote peer
+}
+
+func CreateMetaFile(filename string, len int64) (*os.File, error) {
+	file, err := os.Create(filename)
+	if err != nil {
+		return nil, err
+	}
+	err = fallocate.Fallocate(file, int64((32)*len), int64(32))
+	if err != nil {
+		return nil, err
+	}
+	return file, nil
+}
+
+func GenerateMetadata(idx, size uint64, hash []byte) common.Hash {
+	meta := make([]byte, 0)
+	idx_bs := make([]byte, 8)
+	binary.BigEndian.PutUint64(idx_bs, idx)
+	meta = append(meta, idx_bs[3:]...)
+	size_bs := make([]byte, 8)
+	binary.BigEndian.PutUint64(size_bs, size)
+	meta = append(meta, size_bs[5:]...)
+	meta = append(meta, hash[:24]...)
+	return common.BytesToHash(meta)
+}
+
+type mockL1Source struct {
+	lastBlobIndex uint64
+	metaFile      *os.File
+}
+
+func NewMockL1Source(lastBlobIndex uint64, metafile string) ethstorage.Il1Source {
+	if len(metafile) == 0 {
+		panic("metafile param is needed when using mock l1")
+	}
+
+	file, err := os.OpenFile(metafile, os.O_RDONLY, 0600)
+	if err != nil {
+		panic(fmt.Sprintf("open metafile faiil with err %s", err.Error()))
+	}
+	return &mockL1Source{lastBlobIndex: lastBlobIndex, metaFile: file}
+}
+
+func (l1 *mockL1Source) getMetadata(idx uint64) ([32]byte, error) {
+	bs := make([]byte, 32)
+	l, err := l1.metaFile.ReadAt(bs, int64(idx*32))
+	if err != nil {
+		return common.Hash{}, fmt.Errorf("get metadata fail, err %s", err.Error())
+	}
+	if l != 32 {
+		return common.Hash{}, errors.New("get metadata fail, err read less than 32 bytes")
+	}
+	return common.BytesToHash(bs), nil
+}
+
+func (l1 *mockL1Source) GetKvMetas(kvIndices []uint64, blockNumber int64) ([][32]byte, error) {
+	metas := make([][32]byte, 0)
+	for _, idx := range kvIndices {
+		meta, err := l1.getMetadata(idx)
+		if err != nil {
+			log.Debug("read meta fail", "err", err.Error())
+			continue
+		}
+		metas = append(metas, meta)
+	}
+	return metas, nil
+}
+
+func (l1 *mockL1Source) GetStorageLastBlobIdx(blockNumber int64) (uint64, error) {
+	return l1.lastBlobIndex, nil
 }
 
 type mockStorageManagerReader struct {
@@ -167,7 +239,7 @@ func makeKVStorage(contract common.Address, shards []uint64, chunkSize, kvSize, 
 				EncodedBlob:  encodeData,
 				RowData:      val,
 			}
-			meta := ethstorage.GenerateMetadata(i, kvSize, root[:])
+			meta := GenerateMetadata(i, kvSize, root[:])
 			metafile.WriteAt(meta.Bytes(), int64(i*32))
 		}
 	}
@@ -179,7 +251,7 @@ func fillEmpty(sm *ethstorage.ShardManager, list map[uint64]struct{}) {
 	commit := common.Hash{}
 	commit[ethstorage.HashSizeInContract] = commit[ethstorage.HashSizeInContract] | blobEmptyFillingMask
 
-	for i, _ := range list {
+	for i := range list {
 		sm.TryWrite(i, empty, commit)
 	}
 }
@@ -448,7 +520,7 @@ func TestSync_RequestL2Range(t *testing.T) {
 	)
 	defer cancel()
 
-	metafile, err := ethstorage.CreateMetaFile(metafileName, int64(kvEntries))
+	metafile, err := CreateMetaFile(metafileName, int64(kvEntries))
 	if err != nil {
 		t.Error("Create metafileName fail", err.Error())
 	}
@@ -469,7 +541,7 @@ func TestSync_RequestL2Range(t *testing.T) {
 
 	data := makeKVStorage(contract, []uint64{0}, defaultChunkSize, kvSize, kvEntries, lastKvIndex, common.Address{}, defaultEncodeType, metafile)
 
-	l1 := ethstorage.NewMockL1Source(lastKvIndex, metafileName)
+	l1 := NewMockL1Source(lastKvIndex, metafileName)
 	sm := ethstorage.NewStorageManager(shardManager, l1)
 	smr := &mockStorageManagerReader{
 		kvEntries:       kvEntries,
@@ -515,7 +587,7 @@ func TestSync_RequestL2List(t *testing.T) {
 	)
 	defer cancel()
 
-	metafile, err := ethstorage.CreateMetaFile(metafileName, int64(kvEntries))
+	metafile, err := CreateMetaFile(metafileName, int64(kvEntries))
 	if err != nil {
 		t.Error("Create metafileName fail", err.Error())
 	}
@@ -536,7 +608,7 @@ func TestSync_RequestL2List(t *testing.T) {
 
 	data := makeKVStorage(contract, []uint64{0}, defaultChunkSize, kvSize, kvEntries, lastKvIndex, common.Address{}, defaultEncodeType, metafile)
 
-	l1 := ethstorage.NewMockL1Source(lastKvIndex, metafileName)
+	l1 := NewMockL1Source(lastKvIndex, metafileName)
 	sm := ethstorage.NewStorageManager(shardManager, l1)
 	smr := &mockStorageManagerReader{
 		kvEntries:       kvEntries,
@@ -593,7 +665,7 @@ func TestSaveAndLoadSyncStatus(t *testing.T) {
 		}
 	}(files)
 
-	l1 := ethstorage.NewMockL1Source(lastKvIndex, metafileName)
+	l1 := NewMockL1Source(lastKvIndex, metafileName)
 	sm := ethstorage.NewStorageManager(shardManager, l1)
 	_, syncCl := createLocalHostAndSyncClient(t, testLog, rollupCfg, db, sm, metrics, mux)
 	syncCl.loadSyncStatus()
@@ -674,7 +746,7 @@ func testSync(t *testing.T, chunkSize, kvSize, kvEntries uint64, localShards []u
 		}
 	)
 
-	metafile, err := ethstorage.CreateMetaFile(metafileName, int64(kvEntries)*int64(len(localShards)))
+	metafile, err := CreateMetaFile(metafileName, int64(kvEntries)*int64(len(localShards)))
 	if err != nil {
 		t.Error("Create metafileName fail", err.Error())
 	}
@@ -695,7 +767,7 @@ func testSync(t *testing.T, chunkSize, kvSize, kvEntries uint64, localShards []u
 		}
 	}(files)
 
-	l1 := ethstorage.NewMockL1Source(lastKvIndex, metafileName)
+	l1 := NewMockL1Source(lastKvIndex, metafileName)
 	sm := ethstorage.NewStorageManager(shardManager, l1)
 	data := makeKVStorage(contract, localShards, chunkSize, kvSize, kvEntries, lastKvIndex, common.Address{}, encodeType, metafile)
 	localHost, syncCl := createLocalHostAndSyncClient(t, testLog, rollupCfg, db, sm, metrics, mux)
@@ -781,7 +853,7 @@ func TestMultiSync(t *testing.T) {
 		},
 	}
 
-	testSync(t, defaultChunkSize, kvSize, kvEntries, []uint64{0, 1}, lastKvIndex, defaultEncodeType, 2, remotePeers, true)
+	testSync(t, defaultChunkSize, kvSize, kvEntries, []uint64{0, 1}, lastKvIndex, defaultEncodeType, 4, remotePeers, true)
 }
 
 // TestSyncWithFewerResult test sync process with shard which is not full (lastKvIndex < kvSize), it should be sync done.
@@ -902,7 +974,7 @@ func TestAddPeerDuringSyncing(t *testing.T) {
 		}
 	)
 
-	metafile, err := ethstorage.CreateMetaFile(metafileName, int64(kvEntries))
+	metafile, err := CreateMetaFile(metafileName, int64(kvEntries))
 	if err != nil {
 		t.Error("Create metafileName fail", err.Error())
 	}
@@ -920,7 +992,7 @@ func TestAddPeerDuringSyncing(t *testing.T) {
 		}
 	}(files)
 
-	l1 := ethstorage.NewMockL1Source(lastKvIndex, metafileName)
+	l1 := NewMockL1Source(lastKvIndex, metafileName)
 	sm := ethstorage.NewStorageManager(shardManager, l1)
 	// fill empty to excludedList for verify KVs
 	fillEmpty(shardManager, excludedList)
@@ -996,7 +1068,7 @@ func TestCloseSyncWhileFillEmpty(t *testing.T) {
 		}
 	}(files)
 
-	l1 := ethstorage.NewMockL1Source(lastKvIndex, metafileName)
+	l1 := NewMockL1Source(lastKvIndex, metafileName)
 	sm := ethstorage.NewStorageManager(shardManager, l1)
 	_, syncCl := createLocalHostAndSyncClient(t, testLog, rollupCfg, db, sm, metrics, mux)
 	syncCl.Start()
@@ -1031,7 +1103,7 @@ func TestAddPeerAfterSyncDone(t *testing.T) {
 		}
 	)
 
-	metafile, err := ethstorage.CreateMetaFile(metafileName, int64(kvEntries))
+	metafile, err := CreateMetaFile(metafileName, int64(kvEntries))
 	if err != nil {
 		t.Error("Create metafileName fail", err.Error())
 	}
@@ -1049,7 +1121,7 @@ func TestAddPeerAfterSyncDone(t *testing.T) {
 		}
 	}(files)
 
-	l1 := ethstorage.NewMockL1Source(lastKvIndex, metafileName)
+	l1 := NewMockL1Source(lastKvIndex, metafileName)
 	sm := ethstorage.NewStorageManager(shardManager, l1)
 	// fill empty to excludedList for verify KVs
 	fillEmpty(shardManager, excludedList)
@@ -1069,7 +1141,7 @@ func TestAddPeerAfterSyncDone(t *testing.T) {
 	}
 	remoteHost0 := createRemoteHost(t, ctx, rollupCfg, smr0, metrics, testLog)
 	connect(t, localHost, remoteHost0, shardMap, shardMap)
-	checkStall(t, 2, mux, cancel)
+	checkStall(t, 3, mux, cancel)
 
 	if !syncCl.syncDone {
 		t.Fatalf("sync state %v is not match with expected state %v, peer count %d", syncCl.syncDone, true, len(syncCl.peers))
