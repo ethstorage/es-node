@@ -5,12 +5,8 @@ package ethstorage
 
 import (
 	"bytes"
-	"encoding/binary"
 	"errors"
-	"fmt"
-	"github.com/detailyang/go-fallocate"
 	"math/big"
-	"os"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -26,76 +22,6 @@ type Il1Source interface {
 	GetKvMetas(kvIndices []uint64, blockNumber int64) ([][32]byte, error)
 
 	GetStorageLastBlobIdx(blockNumber int64) (uint64, error)
-}
-
-func CreateMetaFile(filename string, len int64) (*os.File, error) {
-	file, err := os.Create(filename)
-	if err != nil {
-		return nil, err
-	}
-	err = fallocate.Fallocate(file, int64((32)*len), int64(32))
-	if err != nil {
-		return nil, err
-	}
-	return file, nil
-}
-
-func GenerateMetadata(idx, size uint64, hash []byte) common.Hash {
-	meta := make([]byte, 0)
-	idx_bs := make([]byte, 8)
-	binary.BigEndian.PutUint64(idx_bs, idx)
-	meta = append(meta, idx_bs[3:]...)
-	size_bs := make([]byte, 8)
-	binary.BigEndian.PutUint64(size_bs, size)
-	meta = append(meta, size_bs[5:]...)
-	meta = append(meta, hash[:24]...)
-	return common.BytesToHash(meta)
-}
-
-type mockL1Source struct {
-	lastBlobIndex uint64
-	metaFile      *os.File
-}
-
-func NewMockL1Source(lastBlobIndex uint64, metafile string) Il1Source {
-	if len(metafile) == 0 {
-		panic("metafile param is needed when using mock l1")
-	}
-
-	file, err := os.OpenFile(metafile, os.O_RDONLY, 0600)
-	if err != nil {
-		panic(fmt.Sprintf("open metafile faiil with err %s", err.Error()))
-	}
-	return &mockL1Source{lastBlobIndex: lastBlobIndex, metaFile: file}
-}
-
-func (l1 *mockL1Source) getMetadata(idx uint64) ([32]byte, error) {
-	bs := make([]byte, 32)
-	l, err := l1.metaFile.ReadAt(bs, int64(idx*32))
-	if err != nil {
-		return common.Hash{}, fmt.Errorf("get metadata fail, err %s", err.Error())
-	}
-	if l != 32 {
-		return common.Hash{}, errors.New("get metadata fail, err read less than 32 bytes")
-	}
-	return common.BytesToHash(bs), nil
-}
-
-func (l1 *mockL1Source) GetKvMetas(kvIndices []uint64, blockNumber int64) ([][32]byte, error) {
-	metas := make([][32]byte, 0)
-	for _, idx := range kvIndices {
-		meta, err := l1.getMetadata(idx)
-		if err != nil {
-			log.Debug("read meta fail", "err", err.Error())
-			continue
-		}
-		metas = append(metas, meta)
-	}
-	return metas, nil
-}
-
-func (l1 *mockL1Source) GetStorageLastBlobIdx(blockNumber int64) (uint64, error) {
-	return l1.lastBlobIndex, nil
 }
 
 // StorageManager is a higher-level abstract of ShardManager which provides multi-thread safety to storage file read/write
