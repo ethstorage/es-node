@@ -4,7 +4,7 @@ In this tutorial, you will deploy your storage contract on EIP-4844 devnet, and 
 Optionally, you can also set up a private EIP-4844 testnet using [Kurtosis](https://docs.kurtosis.com/).
 
 ## Testnet spec
-- Layer 1: [dencun-devnet-9](https://dencun-devnet-9.ethpandaops.io/)
+- Layer 1: dencun-devnet-8 ([dencun-devnet-9](https://dencun-devnet-9.ethpandaops.io/) compatible)
 - storage-contracts-v1: v0.1.0
 - es-node: v0.1.0
 
