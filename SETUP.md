@@ -3,6 +3,11 @@ In this tutorial, you will deploy your storage contract on EIP-4844 devnet, and 
 
 Optionally, you can also set up a private EIP-4844 testnet using [Kurtosis](https://docs.kurtosis.com/).
 
+## Testnet spec
+- Layer 1: [dencun-devnet-9](https://dencun-devnet-9.ethpandaops.io/)
+- storage-contracts-v1: v0.1.0
+- es-node: v0.1.0
+
 ## Setup a private EIP-4844 testnet 
 This section is a quick guide to setting up a private testnet with EIP-4844 enabled. For a more detailed description, please take a look at [this document](https://notes.ethereum.org/@parithosh/kurtosis-example).
 
@@ -17,6 +22,7 @@ echo "deb [trusted=yes] https://apt.fury.io/kurtosis-tech/ /" | tee /etc/apt/sou
 apt update
 apt install kurtosis-cli
 ```
+
 ### Step 1: Configuration
 Save the below JSON in a file called `eth.json`.
 
@@ -149,6 +155,9 @@ And you will get an integer representing the timestamp of the first slot. Replac
 ```sh
 --l1.beacon-based-time <timestamp> \
 ``` 
+### Step 5: Get pre-funded accounts
+You will need a pre-funded account of the deployed testnet to sign transactions and fund storage contract. Access the following 
+[link](https://github.com/kurtosis-tech/eth-network-package/blob/9295b3997aef6678f670d5d99c5ca7e6ff64d281/src/prelaunch_data_generator/genesis_constants/genesis_constants.star#L4) for private keys and corresponding addresses with pre-funded ETH.
 
 ## Deploy storage contract
 
