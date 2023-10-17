@@ -854,7 +854,7 @@ func TestMultiSync(t *testing.T) {
 		},
 	}
 
-	testSync(t, defaultChunkSize, kvSize, kvEntries, []uint64{0, 1}, lastKvIndex, defaultEncodeType, 2, remotePeers, true)
+	testSync(t, defaultChunkSize, kvSize, kvEntries, []uint64{0, 1}, lastKvIndex, defaultEncodeType, 4, remotePeers, true)
 }
 
 // TestSyncWithFewerResult test sync process with shard which is not full (lastKvIndex < kvSize), it should be sync done.
@@ -1142,7 +1142,7 @@ func TestAddPeerAfterSyncDone(t *testing.T) {
 	}
 	remoteHost0 := createRemoteHost(t, ctx, rollupCfg, smr0, metrics, testLog)
 	connect(t, localHost, remoteHost0, shardMap, shardMap)
-	checkStall(t, 2, mux, cancel)
+	checkStall(t, 3, mux, cancel)
 
 	if !syncCl.syncDone {
 		t.Fatalf("sync state %v is not match with expected state %v, peer count %d", syncCl.syncDone, true, len(syncCl.peers))
