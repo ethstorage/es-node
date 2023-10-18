@@ -1,5 +1,9 @@
 # Es-node Quick Start
-This is a practical tutorial to start an es-node instance. For a detailed explanation please refer to the [README](/README.md). 
+This is a practical tutorial to start an es-node instance to connect to the existing EthStorage devnet. 
+
+To setup a new private EthStorage testnet, please refer to this [guide](/SETUP.md). 
+
+For a detailed explanation for es-node please refer to the [README](/README.md). 
 
 ## Testnet spec
 - Layer 1: [dencun-devnet-9](https://dencun-devnet-9.ethpandaops.io/)
@@ -50,15 +54,15 @@ docker logs -f es
 ```
 ### Option 3: Without Docker
 
-#### 1. Install go 1.20+ (e.g. v1.21.3)
+#### 1. Install go 1.20+ (e.g. v1.20.10)
 
 Download a stable go release
 ```sh
-curl -OL https://golang.org/dl/go1.21.3.linux-amd64.tar.gz
+curl -OL https://golang.org/dl/go1.20.10.linux-amd64.tar.gz
 ```
 Extract and install
 ```sh
-tar -C /usr/local -xvf go1.21.3.linux-amd64.tar.gz
+tar -C /usr/local -xf go1.20.10.linux-amd64.tar.gz
 ```
 Edit `~/.profile` and add the following line to the end of it.
 ```
@@ -73,6 +77,12 @@ source ~/.profile
 Install Node Version Manager
 ```sh
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
+```
+Close and reopen your terminal to start using nvm or run the following to use it now:
+```sh
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
 ```
 Install node using nvm
 ```sh

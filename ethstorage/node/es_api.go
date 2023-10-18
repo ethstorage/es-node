@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/log"
 
+	"github.com/ethstorage/go-ethstorage/cmd/es-utils/utils"
 	"github.com/ethstorage/go-ethstorage/ethstorage"
 	"github.com/ethstorage/go-ethstorage/ethstorage/downloader"
 )
@@ -32,7 +33,7 @@ func NewESAPI(config *RPCConfig, sm *ethstorage.StorageManager, dl *downloader.D
 	}
 }
 
-func (api *esAPI) GetBlob(kvIndex uint64, blobHash common.Hash, off, size uint64) (hexutil.Bytes, error) {
+func (api *esAPI) GetBlob(kvIndex uint64, blobHash common.Hash, needDecode bool, off, size uint64) (hexutil.Bytes, error) {
 	blob := api.dl.Cache.GetKeyValueByIndex(kvIndex, blobHash)
 	
 	if blob == nil {
@@ -58,9 +59,15 @@ func (api *esAPI) GetBlob(kvIndex uint64, blobHash common.Hash, off, size uint64
 		}
 	}
 
-	if len(blob) < int(off + size) {
+	ret := blob
+
+	if needDecode {
+		ret = utils.DecodeBlob(blob)
+	}
+
+	if len(ret) < int(off + size) {
 		return nil, errors.New("beyond the range of blob size")
 	}
 
-	return blob[off:off+size], nil
+	return ret[off:off+size], nil
 }
