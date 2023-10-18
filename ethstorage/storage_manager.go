@@ -11,7 +11,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
 )
 
 const (
@@ -19,16 +18,22 @@ const (
 	HashSizeInContract = 24
 )
 
+type Il1Source interface {
+	GetKvMetas(kvIndices []uint64, blockNumber int64) ([][32]byte, error)
+
+	GetStorageLastBlobIdx(blockNumber int64) (uint64, error)
+}
+
 // StorageManager is a higher-level abstract of ShardManager which provides multi-thread safety to storage file read/write
 // and a consistent view of most-recent-finalized L1 block.
 type StorageManager struct {
 	shardManager *ShardManager
 	mu           sync.Mutex // protect localL1 and underlying blob read/write
 	localL1      int64      // local view of most-recent-finalized L1 block
-	l1Source     *eth.PollingClient
+	l1Source     Il1Source
 }
 
-func NewStorageManager(sm *ShardManager, l1Source *eth.PollingClient) *StorageManager {
+func NewStorageManager(sm *ShardManager, l1Source Il1Source) *StorageManager {
 	return &StorageManager{
 		shardManager: sm,
 		l1Source:     l1Source,
@@ -112,7 +117,7 @@ func (s *StorageManager) CommitBlobs(kvIndices []uint64, blobs [][]byte, commits
 	return failedCommited, nil
 }
 
-// This function will be called when p2p sync received a blob. 
+// This function will be called when p2p sync received a blob.
 // Return err if the passed commit and the one queried from contract are not matched.
 func (s *StorageManager) CommitBlob(kvIndex uint64, blob []byte, commit common.Hash) error {
 	encodedBlob, success, err := s.shardManager.TryEncodeKV(kvIndex, blob, commit)
