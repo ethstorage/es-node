@@ -1,7 +1,9 @@
 # Setup a Private EthStorage Network
 In this tutorial, you will deploy your storage contract on EIP-4844 devnet, and set up a private network composed of es-node instances.
 
-Optionally, you can also set up a private EIP-4844 testnet using [Kurtosis](https://docs.kurtosis.com/).
+Optionally, you can also set up a private EIP-4844 testnet in case there is a network issue with the public devnet.
+
+If you want to simply launch an es-node instance to connect to the existing EthStorage devnet, please refer to this [guide](/GUIDE.md). 
 
 ## Testnet spec
 - Layer 1: dencun-devnet-8 ([dencun-devnet-9](https://dencun-devnet-9.ethpandaops.io/) compatible)
@@ -16,7 +18,7 @@ This section is a quick guide to setting up a private testnet with EIP-4844 enab
 * Kurtosis (for EIP-4844 testnet)
 
 #### Install Kurtosis
-The following command will install the latest version of Kurtosis. 
+The following command will install the latest version of [Kurtosis](https://docs.kurtosis.com/). 
 ```sh
 echo "deb [trusted=yes] https://apt.fury.io/kurtosis-tech/ /" | tee /etc/apt/sources.list.d/kurtosis.list
 apt update
@@ -183,13 +185,14 @@ Execute the following command to deploy the contract:
 ```node
 npx hardhat run scripts/deploy.js --network devnet
 ```
-And you will see the deployed storage contract address on the console with 1 ether pre-funded.
+And you will see the deployed storage contract address on the console with 10 ethers pre-funded.
 
 ### Step 4: Update contract address
 Find the flag `--storage.l1contract` in `run.sh`, and replace the old value with the newly deployed one.
 ```sh
   --storage.l1contract <contract_address> \
 ```
+_Note: The newly deployed contract will take effect after the block containing the deploy transaction is finalized, which means you should start the first es-node in the network after at least 2 epochs (about 15 minutes)._
 
 ## Start up a private EthStorage network
 
