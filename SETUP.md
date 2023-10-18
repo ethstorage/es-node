@@ -196,16 +196,16 @@ _Note: The newly deployed contract will take effect after the block containing t
 
 ## Start up a private EthStorage network
 
-To set up your own EthStorage network, you'll need first to launch a boot node and configure other es-node instances to connect to it. 
+To set up your own EthStorage network, you'll need first to launch a bootnode and configure other es-node instances to connect to it. 
 
-### Step 1: Launch an es-node as a boot node
+### Step 1: Launch an es-node as a bootnode
 
 Suppose you have created an es-node according to [the quick start guide](/GUIDE.md#option-3-without-docker). 
 \
 _Note: Currently to run a bootnode you need to set up an es-node instance using binary instead of using Docker._
 
 
-To make it a boot node, open `run.sh` for editing, and add `--p2p.advertise.ip` flag as a new line under the definition of `es_node_start`: 
+To make it a bootnode, open `run.sh` for editing, and add `--p2p.advertise.ip` flag as a new line under the definition of `es_node_start`: 
 ```sh
 --p2p.advertise.ip <your_ip_address> \
 ```
@@ -217,7 +217,7 @@ And remove the line with the `--p2p.bootnodes` flag:
 ```
 
 ### Step 2: Launch common es-nodes
-Then, soon after the boot node is started up, you can find the base64 encoded enr value prefixed with `enr:` in the log. 
+Then, soon after the bootnode is started up, you can find the base64 encoded enr value prefixed with `enr:` in the log. 
 
 Next, you will need to replace the value of `--p2p.bootnodes` flag in other nodes' `run.sh` with the new one. 
 
