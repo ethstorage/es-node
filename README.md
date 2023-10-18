@@ -72,7 +72,7 @@ To start es-node with `docker compose`, pull es-node source code and execute the
 env ES_NODE_STORAGE_MINER=<miner> ES_NODE_PRIVATE_KEY=<private_key> docker compose up 
 ```
 #### Docker as a background process
-Or you can use `run-docker.sh` that builds an es-node Docker image and launch a container in the background:
+Or you can use `run-docker.sh` that builds an es-node Docker image and launches a container in the background:
 ```sh
 env ES_NODE_STORAGE_MINER=<miner> ES_NODE_PRIVATE_KEY=<private_key> ./run-docker.sh
 ```
@@ -164,7 +164,7 @@ The full list of options that you can use to configure an es-node are as follows
 |`--p2p.scoring.topics`|Sets the topic scoring strategy. Can be one of: none or light.Custom scoring strategies can be defined in the config file.|`none`||
 |`--p2p.sequencer.key`|Hex-encoded private key for signing off on p2p application messages as sequencer.|||
 |`--p2p.static`|Comma-separated multiaddr-format peer list. Static connections to make and maintain, these peers will be regarded as trusted.|||
-|`--p2p.test.simple-sync.end`|Start of simple sync|`0`||
+|`--p2p.test.simple-sync.end`|End of simple sync|`0`||
 |`--p2p.test.simple-sync.start`|Start of simple sync|`0`||
 |`--rollup.config`|Rollup chain parameters|||
 |`--rpc.addr`|RPC listening address|`127.0.0.1`||
