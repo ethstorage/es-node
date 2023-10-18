@@ -327,10 +327,11 @@ func decodeChunk(chunkSize uint64, bs []byte, encodeType uint64, encodeKey commo
 }
 
 var EmptyBlobHash, _ = hex.DecodeString("fa43239bcee7b97ca62f007cc68487560a39e19f74f3dde7486db3f98df8e471")
+var EmptyBlobCommit = common.Hash{}
 
 func checkCommit(commit common.Hash, blobData []byte) error {
 	dataHash := sha256.Sum256(blobData)
-	if bytes.Equal(dataHash[:], EmptyBlobHash) {
+	if bytes.Equal(dataHash[:], EmptyBlobHash) && commit == EmptyBlobCommit {
 		// Blob is null
 		return nil
 	}
