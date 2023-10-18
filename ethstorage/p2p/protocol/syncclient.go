@@ -382,6 +382,8 @@ func (s *SyncClient) saveSyncStatus(force bool) {
 	}
 	s.saveTime = time.Now()
 
+	s.lock.Lock()
+	defer s.lock.Unlock()
 	// Store the actual progress markers
 	progress := &SyncProgress{
 		Tasks:            s.tasks,
@@ -438,7 +440,6 @@ func (s *SyncClient) cleanTasks() {
 		s.setSyncDone()
 		log.Info("Storage sync done", "subTaskCount", len(s.tasks))
 
-		s.saveSyncStatus(true)
 		s.report(true)
 	}
 }
@@ -560,6 +561,7 @@ func (s *SyncClient) mainLoop() {
 		// Remove all completed tasks and terminate sync if everything's done
 		s.cleanTasks()
 		if s.syncDone {
+			s.saveSyncStatus(true)
 			return
 		}
 		s.assignBlobRangeTasks()
