@@ -331,9 +331,12 @@ var EmptyBlobCommit = common.Hash{}
 
 func checkCommit(commit common.Hash, blobData []byte) error {
 	dataHash := sha256.Sum256(blobData)
-	if bytes.Equal(dataHash[:], EmptyBlobHash) && commit == EmptyBlobCommit {
+	if bytes.Equal(dataHash[:], EmptyBlobHash) {
 		// Blob is null
-		return nil
+		if commit == EmptyBlobCommit {
+			return nil
+		}
+		return fmt.Errorf("commit does not match")
 	}
 
 	// kzg blob
