@@ -285,7 +285,7 @@ var (
 	}
 	TestSimpleSyncEndFlag = cli.Uint64Flag{
 		Name:     "p2p.test.simple-sync.end",
-		Usage:    "Start of simple sync",
+		Usage:    "End of simple sync",
 		Required: false,
 		Value:    0,
 		EnvVar:   p2pEnv("TEST_SIMPLE_SYNC_END"),

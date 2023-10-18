@@ -24,7 +24,7 @@ import (
 var (
 	GitCommit = ""
 	GitDate   = ""
-	Version   = "v0.0.1"
+	Version   = "v0.1.1"
 	Meta      = "dev"
 )
 
@@ -139,6 +139,12 @@ func EsNodeMain(ctx *cli.Context) error {
 }
 
 func EsNodeInit(ctx *cli.Context) error {
+	logCfg := eslog.ReadCLIConfig(ctx)
+	if err := logCfg.Check(); err != nil {
+		log.Error("Unable to create the log config", "error", err)
+		return err
+	}
+	log := eslog.NewLogger(logCfg)
 	log.Info("Will create data files for storage node")
 	l1Rpc := readRequiredFlag(ctx, flags.L1NodeAddr.Name)
 	contract := readRequiredFlag(ctx, flags.StorageL1Contract.Name)
