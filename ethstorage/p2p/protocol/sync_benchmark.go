@@ -14,6 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethstorage/go-ethstorage/ethstorage"
 	"github.com/ethstorage/go-ethstorage/ethstorage/metrics"
 	"github.com/ethstorage/go-ethstorage/ethstorage/rollup"
 )
@@ -43,6 +44,12 @@ func TestSyncPerfTest(arg Params) {
 		}
 	)
 
+	metafile, err := CreateMetaFile(metafileName, int64(arg.KVEntries))
+	if err != nil {
+		t.Error("Create metafileName fail", err.Error())
+	}
+	defer metafile.Close()
+
 	shardMap[contract] = shards
 	shardManager, files := createEthStorage(contract, shards, arg.ChunkSize, arg.KVSize, arg.KVEntries, common.Address{}, encodeType)
 	if shardManager == nil {
@@ -55,8 +62,10 @@ func TestSyncPerfTest(arg Params) {
 		}
 	}(files)
 
-	data := makeKVStorage(contract, shards, arg.ChunkSize, arg.KVSize, arg.KVEntries, arg.LastKVIndex, common.Address{}, encodeType)
-	sm := &mockStorageManager{shardManager: shardManager, lastKvIdx: arg.LastKVIndex}
+	data := makeKVStorage(contract, shards, arg.ChunkSize, arg.KVSize, arg.KVEntries, arg.LastKVIndex, common.Address{}, encodeType, metafile)
+
+	l1 := NewMockL1Source(arg.LastKVIndex, metafileName)
+	sm := ethstorage.NewStorageManager(shardManager, l1)
 	testLog.Info("Test prepared", "time", time.Since(start))
 	start = time.Now()
 
