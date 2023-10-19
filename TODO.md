@@ -33,3 +33,6 @@
   - Replace Snark.js with Gnark for better performance (Not a high priority because we may change to a new ZK prover)
   - Docs for dApps developers who want to use EthStorage
   - Portal network integration with ES
+  - OP batch inbox contract demo
+  - ES build on Celestia / EigenDA
+  - KYVE / Mantle

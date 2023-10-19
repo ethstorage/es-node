@@ -35,12 +35,6 @@ var (
 		Usage:  "Rollup chain parameters",
 		EnvVar: prefixEnvVar("ROLLUP_CONFIG"),
 	}
-	// TODO: move storage flag to storage folder
-	StorageFiles = cli.StringSliceFlag{
-		Name:   "storage.files",
-		Usage:  "Storage files parameter",
-		EnvVar: prefixEnvVar("STORAGE_FILES"),
-	}
 	L1ChainId = cli.Uint64Flag{
 		Name:   "l1.chain_id",
 		Usage:  "Chain id of L1 chain endpoint to use",
@@ -60,19 +54,19 @@ var (
 	// TODO: @Qiang everytime devnet changed, we may need to change it
 	L1BeaconBasedTime = cli.Uint64Flag{
 		Name:   "l1.beacon-based-time",
-		Usage:  "A pair of timestamp and slot number in the past time",
+		Usage:  "Timestamp of a slot specified by l1.beacon-based-slot",
 		EnvVar: prefixEnvVar("L1_BEACON_BASED_TIME"),
 	}
 	// TODO: @Qiang everytime devnet changed, we may need to change it
 	L1BeaconBasedSlot = cli.Uint64Flag{
 		Name:   "l1.beacon-based-slot",
-		Usage:  "A pair of timestamp and slot number in the past time",
+		Usage:  "A slot number in the past time specified by l1.beacon-based-time",
 		EnvVar: prefixEnvVar("L1_BEACON_BASED_SLOT"),
 	}
 	// TODO: @Qiang everytime devnet changed, we may need to change it if the slot time changed
 	L1BeaconSlotTime = cli.Uint64Flag{
 		Name:   "l1.beacon-slot-time",
-		Usage:  "Address of L1 beacon chain endpoint to use",
+		Usage:  "Slot time of the L1 beacon chain",
 		Value:  12,
 		EnvVar: prefixEnvVar("L1_BEACON_SLOT_TIME"),
 	}
@@ -105,19 +99,25 @@ var (
 		Value:  "",
 		EnvVar: prefixEnvVar("DOWNLOAD_DUMP"),
 	}
+	// TODO: move storage flag to storage folder
+	StorageFiles = cli.StringSliceFlag{
+		Name:   "storage.files",
+		Usage:  "File paths where the data are stored",
+		EnvVar: prefixEnvVar("STORAGE_FILES"),
+	}
 	StorageMiner = cli.StringFlag{
 		Name:   "storage.miner",
-		Usage:  "Storage miner address parameter",
+		Usage:  "Miner's address to encode data and receive mining rewards",
 		EnvVar: prefixEnvVar("STORAGE_MINER"),
 	}
 	StorageL1Contract = cli.StringFlag{
 		Name:   "storage.l1contract",
-		Usage:  "Storage contract on l1 address parameter",
+		Usage:  "Storage contract address on l1",
 		EnvVar: prefixEnvVar("STORAGE_L1CONTRACT"),
 	}
 	StorageKvSize = cli.Uint64Flag{
 		Name:   "storage.kv-size",
-		Usage:  "Storage kv size paramaeter",
+		Usage:  "Storage kv size parameter",
 		Hidden: true,
 		Value:  0,
 		EnvVar: prefixEnvVar("STORAGE_KV_SIZE"),
@@ -148,7 +148,7 @@ var (
 		EnvVar: prefixEnvVar("RPC_ADDR"),
 		Value:  "127.0.0.1",
 	}
-	RPCListenPort = &cli.IntFlag{
+	RPCListenPort = cli.IntFlag{
 		Name:   "rpc.port",
 		Usage:  "RPC listening port",
 		EnvVar: prefixEnvVar("RPC_PORT"),

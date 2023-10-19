@@ -86,7 +86,7 @@ func (s *rpcServer) Start() error {
 	s.httpServer = ophttp.NewHttpServer(mux)
 	go func() {
 		if err := s.httpServer.Serve(listener); err != nil && !errors.Is(err, http.ErrServerClosed) { // todo improve error handling
-			s.log.Error("http server failed", "err", err)
+			s.log.Error("Http server failed", "err", err)
 		}
 	}()
 	return nil

@@ -40,7 +40,7 @@ func initHash(miner common.Address, blockHash common.Hash, nonce uint64) common.
 	)
 }
 
-func expectedDiff(lastMineTime uint64, difficulty *big.Int, minedTime uint64, cutoff, diffAdjDivisor, minDiff *big.Int) *big.Int {
+func expectedDiff(lastMineTime, minedTime uint64, difficulty, cutoff, diffAdjDivisor, minDiff *big.Int) *big.Int {
 	interval := new(big.Int).SetUint64(minedTime - lastMineTime)
 	diff := difficulty
 	if interval.Cmp(cutoff) < 0 {

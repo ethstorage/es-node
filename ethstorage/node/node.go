@@ -148,7 +148,7 @@ func (n *EsNode) startL1(cfg *Config) {
 	// Keep subscribed to the L1 heads, which keeps the L1 maintainer pointing to the best headers to sync
 	n.l1HeadsSub = event.ResubscribeErr(time.Second*10, func(ctx context.Context, err error) (event.Subscription, error) {
 		if err != nil {
-			n.log.Warn("resubscribing after failed L1 subscription", "err", err)
+			n.log.Warn("Resubscribing after failed L1 subscription", "err", err)
 		}
 		return eth.WatchHeadChanges(n.resourcesCtx, n.l1Source, n.OnNewL1Head)
 	})
@@ -157,7 +157,7 @@ func (n *EsNode) startL1(cfg *Config) {
 		if !ok {
 			return
 		}
-		n.log.Error("l1 heads subscription error", "err", err)
+		n.log.Error("L1 heads subscription error", "err", err)
 	}()
 
 	// Poll for the safe L1 block and finalized block,
@@ -233,7 +233,7 @@ func (n *EsNode) initMiner(ctx context.Context, cfg *Config) error {
 	l1api := miner.NewL1MiningAPI(n.l1Source, n.log)
 	pvr := prover.NewKZGPoseidonProver(cfg.Mining.ZKWorkingDir, cfg.Mining.ZKeyFileName, n.log)
 	n.miner = miner.New(cfg.Mining, n.storageManager, l1api, &pvr, n.feed, n.log)
-	log.Info("Initalized miner")
+	log.Info("Initialized miner")
 	return nil
 }
 
@@ -255,7 +255,7 @@ func (n *EsNode) Start(ctx context.Context, cfg *Config) error {
 }
 
 func (n *EsNode) OnNewL1Head(ctx context.Context, sig eth.L1BlockRef) {
-	log.Debug("OnNewL1Head", "BlockNumber", sig.Number)
+	log.Debug("OnNewL1Head", "blockNumber", sig.Number)
 	if n.downloader != nil {
 		n.downloader.OnNewL1Head(sig)
 	}
@@ -269,11 +269,11 @@ func (n *EsNode) OnNewL1Head(ctx context.Context, sig eth.L1BlockRef) {
 }
 
 func (n *EsNode) OnNewL1Safe(ctx context.Context, sig eth.L1BlockRef) {
-	log.Debug("OnNewL1Safe", "BlockNumber", sig.Number)
+	log.Debug("OnNewL1Safe", "blockNumber", sig.Number)
 }
 
 func (n *EsNode) OnNewL1Finalized(ctx context.Context, sig eth.L1BlockRef) {
-	log.Debug("OnNewL1Finalized", "BlockNumber", sig.Number)
+	log.Debug("OnNewL1Finalized", "blockNumber", sig.Number)
 	if n.downloader != nil {
 		n.downloader.OnL1Finalized(sig.Number)
 	}
@@ -283,7 +283,7 @@ func (n *EsNode) RequestL2Range(ctx context.Context, start, end uint64) (uint64,
 	if n.p2pNode != nil {
 		return n.p2pNode.RequestL2Range(ctx, start, end)
 	}
-	n.log.Debug("ignoring request to sync L2 range, no sync method available", "start", start, "end", end)
+	n.log.Debug("Ignoring request to sync L2 range, no sync method available", "start", start, "end", end)
 	return 0, nil
 }
 
