@@ -356,7 +356,8 @@ func (w *worker) mineTask(t *taskItem) (bool, error) {
 			break
 		}
 		if nonce >= t.nonceEnd {
-			w.lg.Info("The nonces are exhausted in this slot, waiting for the next block", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonce", nonce)
+			w.lg.Info("The nonces are exhausted in this slot, waiting for the next block", "samplingTime", time.Now().Unix()-startTime,
+				"shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonce", nonce)
 			break
 		}
 		hash0 := initHash(t.miner, t.blockHash, nonce)
