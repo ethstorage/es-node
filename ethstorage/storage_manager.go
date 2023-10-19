@@ -18,6 +18,10 @@ const (
 	HashSizeInContract = 24
 )
 
+var (
+	errCommitMismatch = errors.New("commit from contract and input is not matched")
+)
+
 type Il1Source interface {
 	GetKvMetas(kvIndices []uint64, blockNumber int64) ([][32]byte, error)
 
@@ -110,6 +114,7 @@ func (s *StorageManager) CommitBlobs(kvIndices []uint64, blobs [][]byte, commits
 		encodedBlobs[i] = encodedBlob
 		encoded[i] = true
 	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	metas, err := s.l1Source.GetKvMetas(kvIndices, s.localL1)
@@ -117,14 +122,14 @@ func (s *StorageManager) CommitBlobs(kvIndices []uint64, blobs [][]byte, commits
 		return nil, err
 	}
 	if len(metas) != len(kvIndices) {
-		return nil, errors.New("invalid params lens")
+		return nil, errors.New("invalid return from GetKvMetas")
 	}
 	inserted := []uint64{}
 	for i, contractMeta := range metas {
 		if !encoded[i] {
 			continue
 		}
-		err := s.commitEncodedBlob(kvIndices[i], encodedBlobs[i], commits[i], contractMeta)
+		err = s.commitEncodedBlob(kvIndices[i], encodedBlobs[i], commits[i], contractMeta)
 		if err != nil {
 			log.Info("commit blobs fail", "kvIndex", kvIndices[i], "err", err.Error())
 			continue
@@ -164,26 +169,22 @@ func (s *StorageManager) CommitEmptyBlobs(start, limit uint64) (uint64, uint64, 
 	if len(metas) != len(kvIndices) {
 		return inserted, next, errors.New("invalid return from GetKvMetas")
 	}
-
 	for i, index := range kvIndices {
-		if !bytes.Equal(metas[i][32-HashSizeInContract:32], hash[0:HashSizeInContract]) {
-			// if meta is not equal to empty hash, that mean the blob is not empty,
-			// so cancel the fill empty for that index.
-			next++
-			continue
-		}
-		err := s.commitEncodedBlob(index, encodedBlobs[i], hash, metas[i])
-		if err != nil {
+		err = s.commitEncodedBlob(index, encodedBlobs[i], hash, metas[i])
+		if err == nil {
+			inserted++
+		} else if err != errCommitMismatch {
 			log.Info("commit blobs fail", "kvIndex", kvIndices[i], "err", err.Error())
 			break
 		}
+		// if meta is not equal to empty hash, that mean the blob is not empty,
+		// so cancel the fill empty for that index and continue the rest.
 		next++
-		inserted++
 	}
 	return inserted, next, nil
 }
 
-// This function will be called when p2p sync received a blob.
+// CommitBlob This function will be called when p2p sync received a blob.
 // Return err if the passed commit and the one queried from contract are not matched.
 func (s *StorageManager) CommitBlob(kvIndex uint64, blob []byte, commit common.Hash) error {
 	encodedBlob, success, err := s.shardManager.TryEncodeKV(kvIndex, blob, commit)
@@ -205,6 +206,11 @@ func (s *StorageManager) CommitBlob(kvIndex uint64, blob []byte, commit common.H
 }
 
 func (s *StorageManager) commitEncodedBlob(kvIndex uint64, encodedBlob []byte, commit common.Hash, contractMeta [32]byte) error {
+	// the commit is different with what we got from the contract, so should not commit
+	if !bytes.Equal(contractMeta[32-HashSizeInContract:32], commit[0:HashSizeInContract]) {
+		return errCommitMismatch
+	}
+
 	m, success, err := s.shardManager.TryReadMeta(kvIndex)
 	if !success || err != nil {
 		return errors.New("metadata read failed")
@@ -213,11 +219,6 @@ func (s *StorageManager) commitEncodedBlob(kvIndex uint64, encodedBlob []byte, c
 	contractKvIdx := new(big.Int).SetBytes(contractMeta[0:5]).Uint64()
 	if contractKvIdx != kvIndex {
 		return errors.New("kvIdx from contract and input is not matched")
-	}
-
-	// the commit is different with what we got from the contract, so should not commit
-	if !bytes.Equal(contractMeta[32-HashSizeInContract:32], commit[0:HashSizeInContract]) {
-		return errors.New("commit from contract and input is not matched")
 	}
 
 	localMeta := common.Hash{}
@@ -259,7 +260,7 @@ func (s *StorageManager) syncCheck(kvIdx uint64) error {
 	return nil
 }
 
-// This function will read the encoded data from the local storage file. It also check whether the blob is empty or not synced,
+// TryReadEncoded This function will read the encoded data from the local storage file. It also check whether the blob is empty or not synced,
 // if they are these two cases, it will return err.
 func (s *StorageManager) TryReadEncoded(kvIdx uint64, readLen int) ([]byte, bool, error) {
 	s.mu.Lock()
