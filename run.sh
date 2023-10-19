@@ -29,7 +29,7 @@ storage_file_0="$data_dir/shard-0.dat"
 
 common_flags=" --datadir $data_dir \
   --l1.rpc http://65.108.236.27:8545 \
-  --storage.l1contract 0x882BC290fc22C330592819977c48968a62AE25f4 \
+  --storage.l1contract 0x937388dD6B59095b2Fc33Ff7CBC8742A4aaF92f7 \
   --storage.miner $ES_NODE_STORAGE_MINER"
 
 # init shard 0
