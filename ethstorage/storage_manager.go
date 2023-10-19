@@ -121,9 +121,6 @@ func (s *StorageManager) CommitBlobs(kvIndices []uint64, blobs [][]byte, commits
 	if err != nil {
 		return nil, err
 	}
-	if len(metas) != len(kvIndices) {
-		return nil, errors.New("invalid return from GetKvMetas")
-	}
 	inserted := []uint64{}
 	for i, contractMeta := range metas {
 		if !encoded[i] {
@@ -165,9 +162,6 @@ func (s *StorageManager) CommitEmptyBlobs(start, limit uint64) (uint64, uint64, 
 	metas, err := s.l1Source.GetKvMetas(kvIndices, s.localL1)
 	if err != nil {
 		return inserted, next, err
-	}
-	if len(metas) != len(kvIndices) {
-		return inserted, next, errors.New("invalid return from GetKvMetas")
 	}
 	for i, index := range kvIndices {
 		err = s.commitEncodedBlob(index, encodedBlobs[i], hash, metas[i])
