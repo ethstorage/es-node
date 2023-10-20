@@ -10,7 +10,7 @@ services:
       - ./es-data:/es-node/es-data
     environment:
       - ES_NODE_STORAGE_MINER=${ES_NODE_STORAGE_MINER}
-      - ES_NODE_PRIVATE_KEY=${ES_NODE_PRIVATE_KEY}
+      - ES_NODE_SIGNER_PRIVATE_KEY=${ES_NODE_SIGNER_PRIVATE_KEY}
     command: /es-node/run.sh
     container_name: es
     tty: true

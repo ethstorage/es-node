@@ -1,15 +1,15 @@
 #!/bin/sh
 
 # usage:
-# env ES_NODE_STORAGE_MINER=<miner> ES_NODE_PRIVATE_KEY=<private_key> ./run.sh
+# env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> ./run.sh
 
 if [ -z "$ES_NODE_STORAGE_MINER" ]; then
   echo "Please provide 'ES_NODE_STORAGE_MINER' as environment variable"
   exit 1
 fi
 
-if [ -z "$ES_NODE_PRIVATE_KEY" ]; then
-  echo "Please provide 'ES_NODE_PRIVATE_KEY' as environment variable"
+if [ -z "$ES_NODE_SIGNER_PRIVATE_KEY" ]; then
+  echo "Please provide 'ES_NODE_SIGNER_PRIVATE_KEY' as environment variable"
   exit 1
 fi
 
@@ -43,7 +43,7 @@ es_node_start=" --network devnet \
   --miner.priority-gas-price 2000000000 \
   --miner.gas-price 3000000000 \
   --storage.files $storage_file_0 \
-  --signer.private-key $ES_NODE_PRIVATE_KEY \
+  --signer.private-key $ES_NODE_SIGNER_PRIVATE_KEY \
   --l1.beacon http://65.108.236.27:5052 \
   --l1.beacon-based-time 1695981612 \
   --l1.beacon-based-slot 1 \
