@@ -456,6 +456,7 @@ func (w *worker) getMiningData(t *task, sampleIdx []uint64) ([][]byte, []uint64,
 	return dataSet, kvIdxs, sampleIdxsInKv, encodingKeys, encodedSamples, nil
 }
 
+// read sample directly from the shard manager to get better performance than from the storage manager where there is a lock
 func (w *worker) readSample(shardIdx uint64, sampleIdx uint64) (common.Hash, error) {
 	if ds, ok := w.storageMgr.GetShardManager().ShardMap()[shardIdx]; ok {
 		return ds.ReadSample(sampleIdx)
