@@ -5,7 +5,6 @@ package miner
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"math/big"
 	"sync"
@@ -358,7 +357,7 @@ func (w *worker) mineTask(t *taskItem) (bool, error) {
 		}
 		if nonce >= t.nonceEnd {
 			w.lg.Info("The nonces are exhausted in this slot, waiting for the next block",
-				"samplingTime(sec)", fmt.Sprintf("%.1f", time.Since(startTime).Seconds()),
+				"samplingTime", fmt.Sprintf("%.1fs", time.Since(startTime).Seconds()),
 				"shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonce", nonce)
 			break
 		}
@@ -461,5 +460,5 @@ func (w *worker) readSample(shardIdx uint64, sampleIdx uint64) (common.Hash, err
 	if ds, ok := w.storageMgr.GetShardManager().ShardMap()[shardIdx]; ok {
 		return ds.ReadSample(sampleIdx)
 	}
-	return common.Hash{}, errors.New("shard not found")
+	return common.Hash{}, fmt.Errorf("shard not found: shardIdx=%d", shardIdx)
 }
