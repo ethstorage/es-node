@@ -5,6 +5,7 @@ package miner
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/big"
 	"sync"
@@ -347,16 +348,16 @@ func (w *worker) checkTxStatus(txHash common.Hash, miner common.Address) {
 
 // mineTask acturally executes a mining task
 func (w *worker) mineTask(t *taskItem) (bool, error) {
-	startTime := time.Now().Unix()
+	startTime := time.Now().UnixMicro()
 	nonce := t.nonceStart
 	w.lg.Info("Mining task started", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonce", fmt.Sprintf("%d~%d", t.nonceStart, t.nonceEnd))
 	for w.isRunning() {
-		if startTime+mineTimeOut <= time.Now().Unix() {
+		if startTime+mineTimeOut <= time.Now().UnixMicro() {
 			w.lg.Info("Mining task timed out", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "noncesTried", nonce-t.nonceStart)
 			break
 		}
 		if nonce >= t.nonceEnd {
-			w.lg.Info("The nonces are exhausted in this slot, waiting for the next block", "samplingTime", time.Now().Unix()-startTime,
+			w.lg.Info("The nonces are exhausted in this slot, waiting for the next block", "samplingTime", time.Now().UnixMicro()-startTime,
 				"shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonce", nonce)
 			break
 		}
@@ -415,7 +416,7 @@ func (w *worker) computeHash(t *task, hash0 common.Hash) (common.Hash, []uint64,
 		w.storageMgr.MaxKvSizeBits(), sampleSizeBits,
 		t.shardIdx,
 		w.config.RandomChecks,
-		w.storageMgr.ReadSample,
+		w.readSample,
 		hash0,
 	)
 }
@@ -440,7 +441,7 @@ func (w *worker) getMiningData(t *task, sampleIdx []uint64) ([][]byte, []uint64,
 			dataSet[i] = kvData
 			sampleIdxsInKv[i] = sampleIdx[i] % (1 << sampleLenBits)
 			encodingKeys[i] = es.CalcEncodeKey(kvHashes[i], kvIdxs[i], t.miner)
-			encodedSample, err := w.storageMgr.ReadSample(t.shardIdx, sampleIdx[i])
+			encodedSample, err := w.readSample(t.shardIdx, sampleIdx[i])
 			if err != nil {
 				return nil, nil, nil, nil, nil, err
 			}
@@ -453,4 +454,11 @@ func (w *worker) getMiningData(t *task, sampleIdx []uint64) ([][]byte, []uint64,
 		}
 	}
 	return dataSet, kvIdxs, sampleIdxsInKv, encodingKeys, encodedSamples, nil
+}
+
+func (w *worker) readSample(shardIdx uint64, sampleIdx uint64) (common.Hash, error) {
+	if ds, ok := w.storageMgr.GetShardManager().ShardMap()[shardIdx]; ok {
+		return ds.ReadSample(sampleIdx)
+	}
+	return common.Hash{}, errors.New("shard not found")
 }

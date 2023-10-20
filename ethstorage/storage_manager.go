@@ -246,15 +246,6 @@ func (s *StorageManager) Shards() []uint64 {
 	return shards
 }
 
-func (s *StorageManager) ReadSample(shardIdx, sampleIdx uint64) (common.Hash, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if ds, ok := s.shardManager.shardMap[shardIdx]; ok {
-		return ds.ReadSample(sampleIdx)
-	}
-	return common.Hash{}, errors.New("shard not found")
-}
-
 func (s *StorageManager) GetShardMiner(shardIdx uint64) (common.Address, bool) {
 	return s.shardManager.GetShardMiner(shardIdx)
 }
@@ -276,6 +267,9 @@ func (s *StorageManager) ChunksPerKvBits() uint64 {
 
 func (s *StorageManager) KvEntriesBits() uint64 {
 	return s.shardManager.kvEntriesBits
+}
+func (s *StorageManager) GetShardManager() *ShardManager {
+	return s.shardManager
 }
 
 func (s *StorageManager) Close() error {
