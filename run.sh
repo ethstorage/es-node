@@ -29,7 +29,7 @@ storage_file_0="$data_dir/shard-0.dat"
 
 common_flags=" --datadir $data_dir \
   --l1.rpc http://65.108.236.27:8545 \
-  --storage.l1contract 0x937388dD6B59095b2Fc33Ff7CBC8742A4aaF92f7 \
+  --storage.l1contract 0x882BC290fc22C330592819977c48968a62AE25f4 \
   --storage.miner $ES_NODE_STORAGE_MINER"
 
 # init shard 0
@@ -48,6 +48,7 @@ es_node_start=" --network devnet \
   --l1.beacon-based-time 1695981612 \
   --l1.beacon-based-slot 1 \
   --p2p.listen.udp 30305  \
+  --p2p.bootnodes enr:-Li4QPWz6DaLXwZ3vgUfx5i0M6ysMAhjlFrkLlzaKdvbMykrIzdncYXQG0rjF8anZfv65LpEuYVdOZPbjzwvthqUIq-GAYsoHnk0imV0aHN0b3JhZ2XbAYDY15SIK8KQ_CLDMFkoGZd8SJaKYq4l9MGAgmlkgnY0gmlwhEFs7BuJc2VjcDI1NmsxoQI2rSdv0CGNPia7uQgvYdt4XuW2Nkp062a0jsr-H-SJ4IN0Y3CCJAaDdWRwgnZh \
   "
 # create data file for shard 0 if not yet
 if [ ! -e $storage_file_0 ]; then
