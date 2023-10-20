@@ -463,7 +463,7 @@ func (s *SyncClient) Start() {
 func (s *SyncClient) AddPeer(id peer.ID, shards map[common.Address][]uint64) bool {
 	s.lock.Lock()
 	if _, ok := s.peers[id]; ok {
-		s.log.Warn("Cannot register pr for sync duties, pr was already registered", "pr", id)
+		s.log.Warn("Cannot register peer for sync duties, peer was already registered", "peer", id)
 		s.lock.Unlock()
 		return true
 	}
@@ -494,7 +494,7 @@ func (s *SyncClient) RemovePeer(id peer.ID) {
 	defer s.lock.Unlock()
 	pr, ok := s.peers[id]
 	if !ok {
-		s.log.Warn("Cannot remove pr from sync duties, pr was not registered", "pr", id)
+		s.log.Warn("Cannot remove peer from sync duties, peer was not registered", "peer", id)
 		return
 	}
 	pr.resCancel() // once loop exits
@@ -535,7 +535,7 @@ func (s *SyncClient) RequestL2Range(ctx context.Context, start, end uint64) (uin
 		}
 		return id, nil
 	}
-	return 0, fmt.Errorf("no pr can be used to send requests")
+	return 0, fmt.Errorf("no peer can be used to send requests")
 }
 
 func (s *SyncClient) RequestL2List(indexes []uint64) (uint64, error) {
@@ -555,7 +555,7 @@ func (s *SyncClient) RequestL2List(indexes []uint64) (uint64, error) {
 		}
 		return id, nil
 	}
-	return 0, fmt.Errorf("no pr can be used to send requests")
+	return 0, fmt.Errorf("no peer can be used to send requests")
 }
 
 func (s *SyncClient) mainLoop() {
@@ -705,7 +705,7 @@ func (s *SyncClient) assignBlobHealTasks() {
 		// All the kvs are downloading, wait for request time or success
 		batch := maxMessageSize / ethstorage.ContractToShardManager[t.Contract].MaxKvSize() * 2
 
-		// kvHealTask pending retrieval, try to find an idle pr. If no such pr
+		// kvHealTask pending retrieval, try to find an idle peer. If no such peer
 		// exists, we probably assigned tasks for all (or they are stateless).
 		// Abort the entire assignment mechanism.
 		if len(s.idlerPeers) == 0 {
@@ -892,7 +892,7 @@ func (s *SyncClient) OnBlobsByRange(res *blobsByRangeResponse) {
 	s.blobsSynced += synced
 	s.syncedBytes += common.StorageSize(syncedBytes)
 	s.metrics.ClientOnBlobsByRange(req.peer.String(), reqCount, uint64(len(res.Blobs)), synced, time.Since(start))
-	log.Info("Persisted set of kvs", "count", synced, "bytes", syncedBytes)
+	log.Debug("Persisted set of kvs", "count", synced, "bytes", syncedBytes)
 
 	// set peer to stateless peer if fail too much
 	if len(inserted) == 0 {
@@ -976,7 +976,7 @@ func (s *SyncClient) OnBlobsByList(res *blobsByListResponse) {
 	s.syncedBytes += common.StorageSize(syncedBytes)
 	s.metrics.ClientOnBlobsByList(req.peer.String(), uint64(len(req.indexes)), uint64(len(res.Blobs)),
 		synced, time.Since(start))
-	log.Trace("Persisted set of kvs", "count", synced, "bytes", syncedBytes)
+	log.Debug("Persisted set of kvs", "count", synced, "bytes", syncedBytes)
 
 	s.lock.Lock()
 	// set peer to stateless peer if fail too much
