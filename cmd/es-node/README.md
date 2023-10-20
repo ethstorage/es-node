@@ -14,7 +14,7 @@
 ```sh
  ./es-node init --l1.rpc http://65.108.236.27:8545 --storage.l1contract 0x43d6A8d89E99A6AfDe21E6778518394D8ba5aEc1 --storage.miner 0x0000000000000000000000000000000000001234 --shard_index 0 --shard_index 1 --datadir /root/es-data
 ```
-# Run a boot node
+# Run a bootnode
 
 To config a bootnode, we need to find the ENR of the node via
 

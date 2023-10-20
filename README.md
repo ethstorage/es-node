@@ -12,6 +12,8 @@ Refer to [here](/GUIDE.md) for a quick start to run an es-node.
 
 Alternatively, refer to [here](/SETUP.md) for a quick start to set up your own EIP-4844 devnet and EthStorage devnet.
 
+_Note: It is assumed that you are using the `root` user in the all the command line operations. You may need to add `sudo` before some of the commands if you are using a non-root user._
+
 ## Getting started
 To start an es-node, you have the option to run [a manually built binary](#build-and-run-es-node), with [Docker managed by docker compose](#docker-compose), with [Docker managed by `run-docker.sh` and run in the background](#docker-as-a-background-process), or with [manually built Docker](#docker).
 
@@ -20,8 +22,6 @@ The `run.sh` script is used as an entry point in all the above options. The main
 [Proof of Storage](#about-proof-of-storage) is enabled by default by the `--miner.enabled` flag in `run.sh`, which means you become a storage provider when you start an es-node with default settings.
 
 _Note: Some of the flags/parameters used in `run.sh` are supposed to change over time._
-
-_Note: It is assumed that you are using the `root` user in the following operations. Please add `sudo` before the commands if you are using a non-root user._
 
 ### About Proof of Storage
 
@@ -72,7 +72,7 @@ To start es-node with `docker compose`, pull es-node source code and execute the
 env ES_NODE_STORAGE_MINER=<miner> ES_NODE_PRIVATE_KEY=<private_key> docker compose up 
 ```
 #### Docker as a background process
-Or you can use `run-docker.sh` that builds an es-node Docker image and launch a container in the background:
+Or you can use `run-docker.sh` that builds an es-node Docker image and launches a container in the background:
 ```sh
 env ES_NODE_STORAGE_MINER=<miner> ES_NODE_PRIVATE_KEY=<private_key> ./run-docker.sh
 ```
@@ -164,7 +164,7 @@ The full list of options that you can use to configure an es-node are as follows
 |`--p2p.scoring.topics`|Sets the topic scoring strategy. Can be one of: none or light.Custom scoring strategies can be defined in the config file.|`none`||
 |`--p2p.sequencer.key`|Hex-encoded private key for signing off on p2p application messages as sequencer.|||
 |`--p2p.static`|Comma-separated multiaddr-format peer list. Static connections to make and maintain, these peers will be regarded as trusted.|||
-|`--p2p.test.simple-sync.end`|Start of simple sync|`0`||
+|`--p2p.test.simple-sync.end`|End of simple sync|`0`||
 |`--p2p.test.simple-sync.start`|Start of simple sync|`0`||
 |`--rollup.config`|Rollup chain parameters|||
 |`--rpc.addr`|RPC listening address|`127.0.0.1`||
