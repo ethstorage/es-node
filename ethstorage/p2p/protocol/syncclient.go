@@ -264,7 +264,7 @@ func (s *SyncClient) loadSyncStatus() {
 				}
 				for _, sEmptyTask := range task.SubEmptyTasks {
 					sEmptyTask.task = task
-					s.emptyBlobsToFill += (sEmptyTask.Last - sEmptyTask.First)
+					s.emptyBlobsToFill += sEmptyTask.Last - sEmptyTask.First
 				}
 			}
 			s.blobsSynced, s.syncedBytes = progress.BlobsSynced, progress.SyncedBytes
@@ -450,7 +450,7 @@ func (s *SyncClient) Start() {
 func (s *SyncClient) AddPeer(id peer.ID, shards map[common.Address][]uint64) bool {
 	s.lock.Lock()
 	if _, ok := s.peers[id]; ok {
-		s.log.Warn("Cannot register peer for sync duties, peer was already registered", "peer", id)
+		s.log.Warn("Cannot register pr for sync duties, pr was already registered", "pr", id)
 		s.lock.Unlock()
 		return true
 	}
@@ -463,9 +463,9 @@ func (s *SyncClient) AddPeer(id peer.ID, shards map[common.Address][]uint64) boo
 		s.lock.Unlock()
 		return false
 	}
-	// add new peer routine
-	peer := NewPeer(0, s.cfg.L2ChainID, id, s.newStreamFn, shards)
-	s.peers[id] = peer
+	// add new pr routine
+	pr := NewPeer(0, s.cfg.L2ChainID, id, s.newStreamFn, shards)
+	s.peers[id] = pr
 
 	s.idlerPeers[id] = struct{}{}
 	s.addPeerToTask(id, shards)
@@ -479,14 +479,14 @@ func (s *SyncClient) AddPeer(id peer.ID, shards map[common.Address][]uint64) boo
 func (s *SyncClient) RemovePeer(id peer.ID) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	peer, ok := s.peers[id]
+	pr, ok := s.peers[id]
 	if !ok {
-		s.log.Warn("Cannot remove peer from sync duties, peer was not registered", "peer", id)
+		s.log.Warn("Cannot remove pr from sync duties, pr was not registered", "pr", id)
 		return
 	}
-	peer.resCancel() // once loop exits
+	pr.resCancel() // once loop exits
 	delete(s.peers, id)
-	s.removePeerFromTask(id, peer.shards)
+	s.removePeerFromTask(id, pr.shards)
 	s.metrics.DecPeerCount()
 	delete(s.idlerPeers, id)
 	for _, t := range s.tasks {
@@ -509,10 +509,10 @@ func (s *SyncClient) Close() error {
 }
 
 func (s *SyncClient) RequestL2Range(ctx context.Context, start, end uint64) (uint64, error) {
-	for _, peer := range s.peers {
+	for _, pr := range s.peers {
 		id := rand.Uint64()
 		var packet BlobsByRangePacket
-		_, err := peer.RequestBlobsByRange(id, s.storageManager.ContractAddress(), start/s.storageManager.KvEntries(), start, end, &packet)
+		_, err := pr.RequestBlobsByRange(id, s.storageManager.ContractAddress(), start/s.storageManager.KvEntries(), start, end, &packet)
 		if err != nil {
 			return 0, err
 		}
@@ -522,17 +522,17 @@ func (s *SyncClient) RequestL2Range(ctx context.Context, start, end uint64) (uin
 		}
 		return id, nil
 	}
-	return 0, fmt.Errorf("no peer can be used to send requests")
+	return 0, fmt.Errorf("no pr can be used to send requests")
 }
 
 func (s *SyncClient) RequestL2List(indexes []uint64) (uint64, error) {
 	if len(indexes) == 0 {
 		return 0, nil
 	}
-	for _, peer := range s.peers {
+	for _, pr := range s.peers {
 		id := rand.Uint64()
 		var packet BlobsByListPacket
-		_, err := peer.RequestBlobsByList(id, s.storageManager.ContractAddress(), indexes[0]/s.storageManager.KvEntries(), indexes, &packet)
+		_, err := pr.RequestBlobsByList(id, s.storageManager.ContractAddress(), indexes[0]/s.storageManager.KvEntries(), indexes, &packet)
 		if err != nil {
 			return 0, err
 		}
@@ -542,7 +542,7 @@ func (s *SyncClient) RequestL2List(indexes []uint64) (uint64, error) {
 		}
 		return id, nil
 	}
-	return 0, fmt.Errorf("no peer can be used to send requests")
+	return 0, fmt.Errorf("no pr can be used to send requests")
 }
 
 func (s *SyncClient) mainLoop() {
@@ -812,7 +812,7 @@ func (s *SyncClient) assignFillEmptyBlobTasks() {
 }
 
 func (s *SyncClient) getIdlePeerForTask(t *task) *Peer {
-	for id, _ := range s.idlerPeers {
+	for id := range s.idlerPeers {
 		if _, ok := t.statelessPeers[id]; ok {
 			continue
 		}

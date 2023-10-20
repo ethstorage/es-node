@@ -35,8 +35,8 @@ func NewStorageManager(sm *ShardManager, l1Source *eth.PollingClient) *StorageMa
 	}
 }
 
-// This function will be called when the node found new block are finalized, and it will update the local L1 view and commit
-// new blobs into local storage file.
+// DownloadFinished This function will be called when the node found new block are finalized, and it will update the
+// local L1 view and commit new blobs into local storage file.
 func (s *StorageManager) DownloadFinished(newL1 int64, kvIndices []uint64, blobs [][]byte, commits []common.Hash) error {
 	if len(kvIndices) != len(blobs) || len(blobs) != len(commits) {
 		return errors.New("invalid params lens")
@@ -76,7 +76,7 @@ func prepareCommit(commit common.Hash) common.Hash {
 	return c
 }
 
-// This function must be called before calling any other funcs, it will setup a local L1 view for the node.
+// Reset This function must be called before calling any other funcs, it will setup a local L1 view for the node.
 func (s *StorageManager) Reset(newL1 int64) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -84,7 +84,7 @@ func (s *StorageManager) Reset(newL1 int64) {
 	s.localL1 = newL1
 }
 
-// This function is only called by test right now.
+// CommitBlobs This function is only called by test right now.
 func (s *StorageManager) CommitBlobs(kvIndices []uint64, blobs [][]byte, commits []common.Hash) ([]uint64, error) {
 	if len(kvIndices) != len(blobs) || len(blobs) != len(commits) {
 		return nil, errors.New("invalid params lens")
@@ -112,7 +112,7 @@ func (s *StorageManager) CommitBlobs(kvIndices []uint64, blobs [][]byte, commits
 	return failedCommited, nil
 }
 
-// This function will be called when p2p sync received a blob. 
+// CommitBlob This function will be called when p2p sync received a blob.
 // Return err if the passed commit and the one queried from contract are not matched.
 func (s *StorageManager) CommitBlob(kvIndex uint64, blob []byte, commit common.Hash) error {
 	encodedBlob, success, err := s.shardManager.TryEncodeKV(kvIndex, blob, commit)
@@ -188,7 +188,7 @@ func (s *StorageManager) syncCheck(kvIdx uint64) error {
 	return nil
 }
 
-// This function will read the encoded data from the local storage file. It also check whether the blob is empty or not synced,
+// TryReadEncoded This function will read the encoded data from the local storage file. It also check whether the blob is empty or not synced,
 // if they are these two cases, it will return err.
 func (s *StorageManager) TryReadEncoded(kvIdx uint64, readLen int) ([]byte, bool, error) {
 	s.mu.Lock()
@@ -235,7 +235,7 @@ func (s *StorageManager) ContractAddress() common.Address {
 
 func (s *StorageManager) Shards() []uint64 {
 	shards := make([]uint64, 0)
-	for idx, _ := range s.shardManager.ShardMap() {
+	for idx := range s.shardManager.ShardMap() {
 		shards = append(shards, idx)
 	}
 	return shards

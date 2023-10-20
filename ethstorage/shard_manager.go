@@ -275,7 +275,7 @@ func (sm *ShardManager) TryReadEncoded(kvIdx uint64, readLen int) ([]byte, bool,
 	}
 }
 
-// TryReadEncoded Read the KV meta data from storage file and return it.
+// TryReadMeta Read the KV meta data from storage file and return it.
 // Return error if the read IO fails.
 // Return false if the data is not managed by the ShardManager.
 func (sm *ShardManager) TryReadMeta(kvIdx uint64) ([]byte, bool, error) {

@@ -104,7 +104,7 @@ func (srv *SyncServer) HandleGetBlobsByRangeRequest(ctx context.Context, log log
 	}
 	err = WriteMsg(stream, &Msg{returnCode, data})
 	if err != nil {
-		log.Warn("write message fail", "err", err.Error())
+		log.Debug("write message fail", "err", err.Error())
 	} else {
 		log.Debug("Sent response for func HandleGetBlobsByRangeRequest", "returnCode", returnCode, "len(Bytes)", len(data), "peer", stream.Conn().RemotePeer().String())
 	}
@@ -124,7 +124,7 @@ func (srv *SyncServer) HandleGetBlobsByListRequest(ctx context.Context, log log.
 	}
 	err = WriteMsg(stream, &Msg{returnCode, data})
 	if err != nil {
-		log.Warn("write message fail", "err", err.Error())
+		log.Debug("write message fail", "err", err.Error())
 	} else {
 		log.Debug("Sent response for func HandleGetBlobsByListRequest", "returnCode", returnCode, "len(Bytes)", len(data), "peer", stream.Conn().RemotePeer().String())
 	}

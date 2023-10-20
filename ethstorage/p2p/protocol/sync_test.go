@@ -749,7 +749,7 @@ func testSync(t *testing.T, chunkSize, kvSize, kvEntries uint64, localShards []u
 	verifyKVs(data, finalExcludedList, t)
 }
 
-// TestSync test sync process with local node support a single small (its task contains only 1 subTask) shard
+// TestSimpleSync test sync process with local node support a single small (its task contains only 1 subTask) shard
 // and sync data from 1 remote peer, it should be sync done.
 func TestSimpleSync(t *testing.T) {
 	var (
