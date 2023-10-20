@@ -192,6 +192,7 @@ func (n *EsNode) initStorageManager(ctx context.Context, cfg *Config) error {
 			return fmt.Errorf("open failed: %w", err)
 		}
 		if df.Miner() != cfg.Storage.Miner {
+			log.Error("Miners mismatch", "fromDataFile", df.Miner(), "fromConfig", cfg.Storage.Miner)
 			return fmt.Errorf("miner mismatches datafile")
 		}
 		shardManager.AddDataFileAndShard(df)
