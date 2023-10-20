@@ -476,7 +476,7 @@ func (s *SyncClient) AddPeer(id peer.ID, shards map[common.Address][]uint64) boo
 		s.lock.Unlock()
 		return false
 	}
-	// add new pr routine
+	// add new peer routine
 	pr := NewPeer(0, s.cfg.L2ChainID, id, s.newStreamFn, shards)
 	s.peers[id] = pr
 
