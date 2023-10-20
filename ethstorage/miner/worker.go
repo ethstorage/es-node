@@ -348,16 +348,16 @@ func (w *worker) checkTxStatus(txHash common.Hash, miner common.Address) {
 
 // mineTask acturally executes a mining task
 func (w *worker) mineTask(t *taskItem) (bool, error) {
-	startTime := time.Now().UnixMicro()
+	startTime := time.Now().UnixMilli()
 	nonce := t.nonceStart
 	w.lg.Info("Mining task started", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonce", fmt.Sprintf("%d~%d", t.nonceStart, t.nonceEnd))
 	for w.isRunning() {
-		if startTime+mineTimeOut <= time.Now().UnixMicro() {
+		if startTime+mineTimeOut*1000 <= time.Now().UnixMilli() {
 			w.lg.Info("Mining task timed out", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "noncesTried", nonce-t.nonceStart)
 			break
 		}
 		if nonce >= t.nonceEnd {
-			w.lg.Info("The nonces are exhausted in this slot, waiting for the next block", "samplingTime", time.Now().UnixMicro()-startTime,
+			w.lg.Info("The nonces are exhausted in this slot, waiting for the next block", "samplingTime", time.Now().UnixMilli()-startTime,
 				"shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonce", nonce)
 			break
 		}
