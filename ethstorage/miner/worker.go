@@ -357,7 +357,8 @@ func (w *worker) mineTask(t *taskItem) (bool, error) {
 			break
 		}
 		if nonce >= t.nonceEnd {
-			w.lg.Info("The nonces are exhausted in this slot, waiting for the next block", "samplingTime(sec)", time.Since(startTime),
+			w.lg.Info("The nonces are exhausted in this slot, waiting for the next block",
+				"samplingTime(sec)", fmt.Sprintf("%.1f", time.Since(startTime).Seconds()),
 				"shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonce", nonce)
 			break
 		}
