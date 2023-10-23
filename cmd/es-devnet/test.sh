@@ -26,7 +26,8 @@ fi
 # init shard 0
 init_shard=" --datadir $data_dir \
   --l1.rpc http://65.108.236.27:8545 \
-  --storage.l1contract 0x882BC290fc22C330592819977c48968a62AE25f4 \
+  --l1.chainId 7011893059 \
+  --storage.privateKey $ES_NODE_PRIVATE_KEY \
   --storage.miner $ES_NODE_STORAGE_MINER \
   --shardLength 1
   "
