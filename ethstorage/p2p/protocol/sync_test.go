@@ -39,10 +39,11 @@ const (
 )
 
 var (
-	contract = common.HexToAddress("0x0000000000000000000000000000000003330001")
-	empty    = make([]byte, 0)
-	testLog  = log.New("TestSync")
-	prover   = prv.NewKZGProver(testLog)
+	contract       = common.HexToAddress("0x0000000000000000000000000000000003330001")
+	empty          = make([]byte, 0)
+	maxRequestSize = uint64(4 * 1024 * 1024)
+	testLog        = log.New("TestSync")
+	prover         = prv.NewKZGProver(testLog)
 )
 
 type remotePeer struct {
@@ -331,7 +332,7 @@ func createLocalHostAndSyncClient(t *testing.T, testLog log.Logger, rollupCfg *r
 	storageManager StorageManager, metrics SyncClientMetrics, mux *event.Feed) (host.Host, *SyncClient) {
 	localHost := getNetHost(t)
 
-	syncCl := NewSyncClient(testLog, rollupCfg, localHost.NewStream, storageManager, db, metrics, mux)
+	syncCl := NewSyncClient(testLog, rollupCfg, localHost.NewStream, storageManager, maxRequestSize, db, metrics, mux)
 	localHost.Network().Notify(&network.NotifyBundle{
 		ConnectedF: func(nw network.Network, conn network.Conn) {
 			shards := make(map[common.Address][]uint64)
@@ -1056,17 +1057,24 @@ func TestCloseSyncWhileFillEmpty(t *testing.T) {
 		}
 	)
 
+	metafile, err := CreateMetaFile(metafileName, int64(kvEntries))
+	if err != nil {
+		t.Error("Create metafileName fail", err.Error())
+	}
+	defer metafile.Close()
+
 	shardMap[contract] = shards
 	shardManager, files := createEthStorage(contract, shards, defaultChunkSize, kvSize, kvEntries, common.Address{}, defaultEncodeType)
 	if shardManager == nil {
 		t.Fatalf("createEthStorage failed")
 	}
-
 	defer func(files []string) {
 		for _, file := range files {
 			os.Remove(file)
 		}
 	}(files)
+
+	makeKVStorage(contract, shards, defaultChunkSize, kvSize, kvEntries, lastKvIndex, common.Address{}, defaultEncodeType, metafile)
 
 	l1 := NewMockL1Source(lastKvIndex, metafileName)
 	sm := ethstorage.NewStorageManager(shardManager, l1)
