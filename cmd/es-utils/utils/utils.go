@@ -257,20 +257,12 @@ func DecodeBlob(blob []byte) []byte {
 	}
 	var data []byte
 
-	// XXX: the following removes trailing 0s in each field element (see EncodeBlobs), which could be unexpected for certain blobs
 	j := 0
 	for i := 0; i < params.BlobTxFieldElementsPerBlob; i++ {
 		data = append(data, blob[j+1:j+32]...)
 		j += 32
 	}
 
-	i := len(data) - 1
-	for ; i >= 0; i-- {
-		if data[i] != 0x00 {
-			break
-		}
-	}
-	data = data[:i+1]
 	return data
 }
 

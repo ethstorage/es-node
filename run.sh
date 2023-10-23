@@ -48,7 +48,7 @@ es_node_start=" --network devnet \
   --l1.beacon-based-time 1695981612 \
   --l1.beacon-based-slot 1 \
   --p2p.listen.udp 30305  \
-  --p2p.bootnodes enr:-Li4QHQvcHarzRmSnf9ShVwoYPEJPucFrhpgjc9T8YApAjucA2VFFAG8FMdr6ImWPatiaLeGg8iqyMjzYapMH1vSrryGAYsJyozvimV0aHN0b3JhZ2XbAYDY15SIK8KQ_CLDMFkoGZd8SJaKYq4l9MGAgmlkgnY0gmlwhEFs7BuJc2VjcDI1NmsxoQIbZFtq5ZiFBmfxgmI3i6hYdQKAN_NDoFDOHUozCBpEfYN0Y3CCJAaDdWRwgnZh \
+  --p2p.bootnodes enr:-Li4QPWz6DaLXwZ3vgUfx5i0M6ysMAhjlFrkLlzaKdvbMykrIzdncYXQG0rjF8anZfv65LpEuYVdOZPbjzwvthqUIq-GAYsoHnk0imV0aHN0b3JhZ2XbAYDY15SIK8KQ_CLDMFkoGZd8SJaKYq4l9MGAgmlkgnY0gmlwhEFs7BuJc2VjcDI1NmsxoQI2rSdv0CGNPia7uQgvYdt4XuW2Nkp062a0jsr-H-SJ4IN0Y3CCJAaDdWRwgnZh \
   "
 # create data file for shard 0 if not yet
 if [ ! -e $storage_file_0 ]; then
@@ -57,4 +57,4 @@ if [ ! -e $storage_file_0 ]; then
 fi
 
 # start es-node
-$executable $es_node_start $common_flags
+exec $executable $es_node_start $common_flags

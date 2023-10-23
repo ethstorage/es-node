@@ -170,8 +170,9 @@ type SyncClient struct {
 	lock sync.Mutex
 
 	prover         prv.IProver
-	startTime      time.Time // Time instance when sstorage sync started
+	startTime      time.Time // Time instance when storage sync started
 	logTime        time.Time // Time instance when status was last reported
+	saveTime       time.Time // Time instance when state was last saved to DB
 	storageManager StorageManager
 
 	blobsSynced      uint64
@@ -375,7 +376,14 @@ func (s *SyncClient) createTask(sid uint64, lastKvIndex uint64) *task {
 }
 
 // saveSyncStatus marshals the remaining sync tasks into leveldb.
-func (s *SyncClient) saveSyncStatus() {
+func (s *SyncClient) saveSyncStatus(force bool) {
+	if !force && time.Since(s.saveTime) < 10*time.Minute {
+		return
+	}
+	s.saveTime = time.Now()
+
+	s.lock.Lock()
+	defer s.lock.Unlock()
 	// Store the actual progress markers
 	progress := &SyncProgress{
 		Tasks:            s.tasks,
@@ -389,8 +397,9 @@ func (s *SyncClient) saveSyncStatus() {
 		panic(err) // This can only fail during implementation
 	}
 	if err := s.db.Put(syncStatusKey, status); err != nil {
-		log.Crit("Failed to store sync status", "err", err)
+		log.Error("Failed to store sync status", "err", err)
 	}
+	log.Debug("Save sync state to DB")
 }
 
 // cleanTasks removes kv range retrieval tasks that have already been completed.
@@ -503,7 +512,7 @@ func (s *SyncClient) Close() error {
 	s.resCancel()
 	s.wg.Wait()
 	s.cleanTasks()
-	s.saveSyncStatus()
+	s.saveSyncStatus(true)
 	s.report(true)
 	return nil
 }
@@ -552,6 +561,7 @@ func (s *SyncClient) mainLoop() {
 		// Remove all completed tasks and terminate sync if everything's done
 		s.cleanTasks()
 		if s.syncDone {
+			s.saveSyncStatus(true)
 			return
 		}
 		s.assignBlobRangeTasks()
@@ -571,7 +581,8 @@ func (s *SyncClient) mainLoop() {
 			s.log.Info("Stopped P2P req-resp L2 block sync client")
 			return
 		}
-		// Report stats if something meaningful happened
+		// Report and save stats if something meaningful happened
+		s.saveSyncStatus(false)
 		s.report(false)
 	}
 }
@@ -1090,31 +1101,39 @@ func (s *SyncClient) report(force bool) {
 	s.logTime = time.Now()
 
 	// Don't report anything until we have a meaningful progress
-	synced := s.blobsSynced
-	if synced == 0 && s.emptyBlobsFilled == 0 {
+	synced, syncedBytes := s.blobsSynced, s.syncedBytes
+	emptyFilled, emptyToFill := s.emptyBlobsFilled, s.emptyBlobsToFill
+	filledBytes := common.StorageSize(emptyFilled * s.storageManager.MaxKvSize())
+	if synced == 0 && emptyFilled == 0 {
 		return
 	}
-	kvsToSync := uint64(0)
-	subTaskRemain := 0
-	for _, task := range s.tasks {
-		for _, subTask := range task.SubTasks {
-			kvsToSync = kvsToSync + (subTask.Last - subTask.next)
+	blobsToSync := uint64(0)
+	taskRemain, subTaskRemain, subFillTaskRemain := 0, 0, 0
+	for _, t := range s.tasks {
+		for _, st := range t.SubTasks {
+			blobsToSync = blobsToSync + (st.Last - st.next)
 			subTaskRemain++
 		}
-		kvsToSync = kvsToSync + uint64(task.healTask.count())
+		blobsToSync = blobsToSync + uint64(t.healTask.count())
+		if !t.done {
+			taskRemain++
+		}
+		subFillTaskRemain = subFillTaskRemain + len(t.SubEmptyTasks)
 	}
 
 	elapsed := time.Since(s.startTime)
-	estTime := elapsed / time.Duration(synced) * time.Duration(kvsToSync+synced)
+	estTime := elapsed / time.Duration(synced+emptyFilled) * time.Duration(blobsToSync+synced+emptyFilled+emptyToFill)
 
 	// Create a mega progress report
 	var (
-		progress = fmt.Sprintf("%.2f%%", float64(synced)*100/float64(kvsToSync+synced))
-		kv       = fmt.Sprintf("%v@%v", log.FormatLogfmtUint64(s.blobsSynced), s.syncedBytes.TerminalString())
+		progress        = fmt.Sprintf("%.2f%%", float64(synced+emptyFilled)*100/float64(blobsToSync+synced+emptyFilled+emptyToFill))
+		syncTasksRemain = fmt.Sprintf("%d@%d", taskRemain, subTaskRemain)
+		blobsSynced     = fmt.Sprintf("%v@%v", log.FormatLogfmtUint64(synced), syncedBytes.TerminalString())
+		blobsFilled     = fmt.Sprintf("%v@%v", log.FormatLogfmtUint64(emptyFilled), filledBytes.TerminalString())
 	)
-	log.Info("Storage sync in progress", "synced", progress, "state", synced, "kvsToSync", kvsToSync,
-		"subTaskRemain", subTaskRemain, "kv", kv, "eta", common.PrettyDuration(estTime-elapsed),
-		"emptyKVFilled", s.emptyBlobsFilled, "emptyKVToFill", s.emptyBlobsToFill)
+	log.Info("Storage sync in progress", "progress", progress, "syncTasksRemain", syncTasksRemain,
+		"blobsSynced", blobsSynced, "blobsToSync", blobsToSync, "fillTasksRemain", subFillTaskRemain,
+		"emptyFilled", blobsFilled, "emptyToFill", emptyToFill, "eta", common.PrettyDuration(estTime-elapsed))
 }
 
 func (s *SyncClient) needThisPeer(contractShards map[common.Address][]uint64) bool {
