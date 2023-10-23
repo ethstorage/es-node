@@ -416,7 +416,7 @@ func (w *worker) computeHash(t *task, hash0 common.Hash) (common.Hash, []uint64,
 		w.storageMgr.MaxKvSizeBits(), sampleSizeBits,
 		t.shardIdx,
 		w.config.RandomChecks,
-		w.readSample,
+		w.storageMgr.ReadSampleUnlocked,
 		hash0,
 	)
 }
@@ -441,7 +441,7 @@ func (w *worker) getMiningData(t *task, sampleIdx []uint64) ([][]byte, []uint64,
 			dataSet[i] = kvData
 			sampleIdxsInKv[i] = sampleIdx[i] % (1 << sampleLenBits)
 			encodingKeys[i] = es.CalcEncodeKey(kvHashes[i], kvIdxs[i], t.miner)
-			encodedSample, err := w.readSample(t.shardIdx, sampleIdx[i])
+			encodedSample, err := w.storageMgr.ReadSampleUnlocked(t.shardIdx, sampleIdx[i])
 			if err != nil {
 				return nil, nil, nil, nil, nil, err
 			}
@@ -454,12 +454,4 @@ func (w *worker) getMiningData(t *task, sampleIdx []uint64) ([][]byte, []uint64,
 		}
 	}
 	return dataSet, kvIdxs, sampleIdxsInKv, encodingKeys, encodedSamples, nil
-}
-
-// read sample directly from the shard manager to get better performance than from the storage manager where there is a lock
-func (w *worker) readSample(shardIdx uint64, sampleIdx uint64) (common.Hash, error) {
-	if ds, ok := w.storageMgr.GetShardManager().ShardMap()[shardIdx]; ok {
-		return ds.ReadSample(sampleIdx)
-	}
-	return common.Hash{}, fmt.Errorf("shard not found: shardIdx=%d", shardIdx)
 }
