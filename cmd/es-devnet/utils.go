@@ -155,7 +155,7 @@ func writeBlob(kvIdx uint64, blob kzg4844.Blob, ds *es.DataShard) common.Hash {
 	return versionedHashes[0]
 }
 
-func UploadHashes(client *ethclient.Client, keys []common.Hash, hashes []common.Hash) error {
+func UploadHashes(client *ethclient.Client, hashes []common.Hash) error {
 
 	to := common.HexToAddress(contract)
 
@@ -174,19 +174,22 @@ func UploadHashes(client *ethclient.Client, keys []common.Hash, hashes []common.
 	if err != nil {
 		log.Crit("Failed to unpack values", "error", err)
 	}
-	value256 := new(big.Int).Add(res[0].(*big.Int), big.NewInt(1000000))
-	//value256 := new(big.Int).Mul(price, big.NewInt(count))
+	value256 := res[0].(*big.Int)
+	if firstBlob {
+		value256 = new(big.Int).Add(value256, big.NewInt(100000000))
+		firstBlob = false
+	}
 
 	// create calldata
 	bytes32Array, _ := abi.NewType("bytes32[]", "", nil)
-	dataField, _ := abi.Arguments{{Type: bytes32Array}, {Type: bytes32Array}}.Pack(keys, hashes)
-	h = crypto.Keccak256Hash([]byte("putHashes(bytes32[],bytes32[])"))
+	dataField, _ := abi.Arguments{{Type: bytes32Array}}.Pack(hashes)
+	h = crypto.Keccak256Hash([]byte("putHashes(bytes32[])"))
 	calldata := "0x" + common.Bytes2Hex(append(h[0:4], dataField...))
 
 	tx := SendTx(
 		client,
 		value256,
-		20000000,
+		30000000,
 		calldata,
 	)
 
@@ -210,7 +213,7 @@ func UploadHashes(client *ethclient.Client, keys []common.Hash, hashes []common.
 	select {
 	// try to get data hash from events first
 	case receipt := <-resultCh:
-		log.Info("receipt returned", "gasUsed", receipt.GasUsed)
+		log.Info("Receipt returned", "gasUsed", receipt.GasUsed)
 		var dataHashs []common.Hash
 		var kvIndexes []uint64
 		for i := range receipt.Logs {
@@ -272,8 +275,8 @@ func SendTx(
 		Value:     value,
 		Data:      calldataBytes,
 	}
-	log.Info("", "", unSignTx)
 	tx := types.MustSignNewTx(key, types.NewLondonSigner(big.NewInt(int64(chainId))), unSignTx)
+	log.Info("Start Send Transaction")
 	err = client.SendTransaction(context.Background(), tx)
 	if err != nil {
 		log.Crit("Unable to send transaction", "error", err)
@@ -290,12 +293,4 @@ func SendTx(
 	}
 	log.Info("Transaction submitted.", "nonce", pendingNonce, "hash", tx.Hash())
 	return tx
-}
-
-func genKey(addr common.Address, blobIndex int, data []byte) common.Hash {
-	keySource := addr.Bytes()
-	keySource = append(keySource, big.NewInt(time.Now().UnixNano()).Bytes()...)
-	keySource = append(keySource, data...)
-	keySource = append(keySource, byte(blobIndex))
-	return crypto.Keccak256Hash(keySource)
 }

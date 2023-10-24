@@ -8,7 +8,6 @@ import (
 	"os"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethstorage/go-ethstorage/cmd/es-utils/utils"
 	esLog "github.com/ethstorage/go-ethstorage/ethstorage/log"
@@ -33,7 +32,8 @@ var (
 	shardLength int
 	chainId     int
 
-	kvIdx uint64
+	kvIdx     uint64
+	firstBlob = true
 )
 
 var flags = []cli.Flag{
@@ -112,38 +112,40 @@ func randomData(dataSize uint64) []byte {
 }
 
 func generateDataAndWrite(cli *ethclient.Client, files []string, storageCfg *storage.StorageConfig) error {
-	key, err := crypto.HexToECDSA(privateKey)
-	if err != nil {
-		log.Crit("Invalid private key", "err", err)
-	}
-	from := crypto.PubkeyToAddress(key.PublicKey)
 
 	for shardIdx, file := range files {
 		ds := initDataShard(uint64(shardIdx), file, storageCfg)
 
-		// generate data
-		data := randomData(1 * 4096 * 31)
 		// generate blob and write
-		var hashes []common.Hash
-		var keys []common.Hash
-		blobs := utils.EncodeBlobs(data)
-		for index, blob := range blobs {
-			versionedHash := writeBlob(kvIdx, blob, ds)
-			hash := common.Hash{}
-			copy(hash[0:], versionedHash[0:HashSizeInContract])
-			hashes = append(hashes, hash)
+		tranLen := [...]uint64{580, 580, 580, 192} // 2664+2664+2664+192=8192 blobs
+		for _, length := range tranLen {
+			var hashes []common.Hash
+			// generate data
+			var data []byte
+			if length == 200 {
+				data = make([]byte, length*4096*31)
+			} else {
+				data = randomData(length * 4096 * 31)
+			}
+			blobs := utils.EncodeBlobs(data)
 
-			keys = append(keys, genKey(from, index, blob[:]))
-			kvIdx += 1
-		}
-		log.Info("Write Data Success", "key", keys, "hash", hashes)
+			// write
+			for _, blob := range blobs {
+				versionedHash := writeBlob(kvIdx, blob, ds)
+				hash := common.Hash{}
+				copy(hash[0:], versionedHash[0:HashSizeInContract])
+				hashes = append(hashes, hash)
+				kvIdx += 1
+			}
 
-		// update to contract
-		err := UploadHashes(cli, keys, hashes)
-		if err != nil {
-			return err
+			// update to contract
+			err := UploadHashes(cli, hashes)
+			if err != nil {
+				return err
+			}
+			log.Info("Upload Success", "hashes", hashes)
 		}
-		log.Info("Write One File Success \n")
+		log.Info("Write File Success \n")
 	}
 
 	return nil
