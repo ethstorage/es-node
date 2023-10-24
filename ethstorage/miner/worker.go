@@ -347,16 +347,18 @@ func (w *worker) checkTxStatus(txHash common.Hash, miner common.Address) {
 
 // mineTask acturally executes a mining task
 func (w *worker) mineTask(t *taskItem) (bool, error) {
-	startTime := time.Now().Unix()
+	startTime := time.Now()
 	nonce := t.nonceStart
 	w.lg.Info("Mining task started", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonce", fmt.Sprintf("%d~%d", t.nonceStart, t.nonceEnd))
 	for w.isRunning() {
-		if startTime+mineTimeOut <= time.Now().Unix() {
-			w.lg.Debug("Mining task timed out", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber)
+		if time.Since(startTime).Seconds() > mineTimeOut {
+			w.lg.Info("Mining task timed out", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "noncesTried", nonce-t.nonceStart)
 			break
 		}
 		if nonce >= t.nonceEnd {
-			w.lg.Info("The nonces are exhausted in this slot, waiting for the next block", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonce", nonce)
+			w.lg.Info("The nonces are exhausted in this slot, waiting for the next block",
+				"samplingTime", fmt.Sprintf("%.1fs", time.Since(startTime).Seconds()),
+				"shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonce", nonce)
 			break
 		}
 		hash0 := initHash(t.miner, t.blockHash, nonce)
@@ -414,7 +416,7 @@ func (w *worker) computeHash(t *task, hash0 common.Hash) (common.Hash, []uint64,
 		w.storageMgr.MaxKvSizeBits(), sampleSizeBits,
 		t.shardIdx,
 		w.config.RandomChecks,
-		w.storageMgr.ReadSample,
+		w.storageMgr.ReadSampleUnlocked,
 		hash0,
 	)
 }
@@ -439,7 +441,7 @@ func (w *worker) getMiningData(t *task, sampleIdx []uint64) ([][]byte, []uint64,
 			dataSet[i] = kvData
 			sampleIdxsInKv[i] = sampleIdx[i] % (1 << sampleLenBits)
 			encodingKeys[i] = es.CalcEncodeKey(kvHashes[i], kvIdxs[i], t.miner)
-			encodedSample, err := w.storageMgr.ReadSample(t.shardIdx, sampleIdx[i])
+			encodedSample, err := w.storageMgr.ReadSampleUnlocked(t.shardIdx, sampleIdx[i])
 			if err != nil {
 				return nil, nil, nil, nil, nil, err
 			}

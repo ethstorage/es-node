@@ -307,9 +307,7 @@ func (s *StorageManager) Shards() []uint64 {
 	return shards
 }
 
-func (s *StorageManager) ReadSample(shardIdx, sampleIdx uint64) (common.Hash, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+func (s *StorageManager) ReadSampleUnlocked(shardIdx, sampleIdx uint64) (common.Hash, error) {
 	if ds, ok := s.shardManager.shardMap[shardIdx]; ok {
 		return ds.ReadSample(sampleIdx)
 	}

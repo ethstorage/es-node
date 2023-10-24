@@ -24,6 +24,13 @@ type esAPI struct {
 	dl     *downloader.Downloader
 }
 
+type DecodeType uint64
+
+const (
+	RawData DecodeType = iota
+	PaddingPer31Bytes
+)
+
 func NewESAPI(config *RPCConfig, sm *ethstorage.StorageManager, dl *downloader.Downloader, log log.Logger) *esAPI {
 	return &esAPI{
 		rpcCfg: config,
@@ -33,7 +40,7 @@ func NewESAPI(config *RPCConfig, sm *ethstorage.StorageManager, dl *downloader.D
 	}
 }
 
-func (api *esAPI) GetBlob(kvIndex uint64, blobHash common.Hash, needDecode bool, off, size uint64) (hexutil.Bytes, error) {
+func (api *esAPI) GetBlob(kvIndex uint64, blobHash common.Hash, decodeType DecodeType, off, size uint64) (hexutil.Bytes, error) {
 	blob := api.dl.Cache.GetKeyValueByIndex(kvIndex, blobHash)
 	
 	if blob == nil {
@@ -61,7 +68,7 @@ func (api *esAPI) GetBlob(kvIndex uint64, blobHash common.Hash, needDecode bool,
 
 	ret := blob
 
-	if needDecode {
+	if decodeType == PaddingPer31Bytes {
 		ret = utils.DecodeBlob(blob)
 	}
 
