@@ -102,8 +102,12 @@ func (srv *SyncServer) HandleGetBlobsByRangeRequest(ctx context.Context, log log
 	if err != nil {
 		log.Warn("Failed to serve p2p sync request", "err", err)
 	}
-	WriteMsg(stream, &Msg{returnCode, data})
-	log.Debug("Sent response for func HandleGetBlobsByRangeRequest", "returnCode", returnCode, "len(Bytes)", len(data), "peer", stream.Conn().RemotePeer().String())
+	err = WriteMsg(stream, &Msg{returnCode, data})
+	if err != nil {
+		log.Debug("write message fail", "err", err.Error())
+	} else {
+		log.Debug("Sent response for func HandleGetBlobsByRangeRequest", "returnCode", returnCode, "len(Bytes)", len(data), "peer", stream.Conn().RemotePeer().String())
+	}
 }
 
 func (srv *SyncServer) HandleGetBlobsByListRequest(ctx context.Context, log log.Logger, stream network.Stream) {
@@ -118,8 +122,12 @@ func (srv *SyncServer) HandleGetBlobsByListRequest(ctx context.Context, log log.
 	if err != nil {
 		log.Warn("Failed to serve p2p sync request", "err", err)
 	}
-	WriteMsg(stream, &Msg{returnCode, data})
-	log.Debug("Sent response for func HandleGetBlobsByListRequest", "returnCode", returnCode, "len(Bytes)", len(data), "peer", stream.Conn().RemotePeer().String())
+	err = WriteMsg(stream, &Msg{returnCode, data})
+	if err != nil {
+		log.Debug("write message fail", "err", err.Error())
+	} else {
+		log.Debug("Sent response for func HandleGetBlobsByListRequest", "returnCode", returnCode, "len(Bytes)", len(data), "peer", stream.Conn().RemotePeer().String())
+	}
 }
 
 func (srv *SyncServer) handleGetBlobsByRangeRequest(ctx context.Context, stream network.Stream) (byte, []byte, error) {

@@ -66,7 +66,7 @@ var msgBufPool = sync.Pool{New: func() any {
 //go:generate mockery --name GossipMetricer
 type GossipMetricer interface {
 	RecordGossipEvent(evType int32)
-	// Peer Scoring Metric Funcs
+	// SetPeerScores Peer Scoring Metric Funcs
 	SetPeerScores(map[string]float64)
 }
 
@@ -109,19 +109,19 @@ func BuildMsgIdFn(cfg *rollup.EsConfig) pubsub.MsgIdFunction {
 	}
 }
 
-func (p *Config) ConfigureGossip(rollupCfg *rollup.EsConfig) []pubsub.Option {
+func (c *Config) ConfigureGossip(rollupCfg *rollup.EsConfig) []pubsub.Option {
 	params := BuildGlobalGossipParams(rollupCfg)
 
 	// override with CLI changes
-	params.D = p.MeshD
-	params.Dlo = p.MeshDLo
-	params.Dhi = p.MeshDHi
-	params.Dlazy = p.MeshDLazy
+	params.D = c.MeshD
+	params.Dlo = c.MeshDLo
+	params.Dhi = c.MeshDHi
+	params.Dlazy = c.MeshDLazy
 
 	// in the future we may add more advanced options like scoring and PX / direct-mesh / episub
 	return []pubsub.Option{
 		pubsub.WithGossipSubParams(params),
-		pubsub.WithFloodPublish(p.FloodPublish),
+		pubsub.WithFloodPublish(c.FloodPublish),
 	}
 }
 

@@ -269,7 +269,7 @@ func (s *SyncClient) loadSyncStatus() {
 				}
 				for _, sEmptyTask := range task.SubEmptyTasks {
 					sEmptyTask.task = task
-					s.emptyBlobsToFill += (sEmptyTask.Last - sEmptyTask.First)
+					s.emptyBlobsToFill += sEmptyTask.Last - sEmptyTask.First
 				}
 			}
 			s.blobsSynced, s.syncedBytes = progress.BlobsSynced, progress.SyncedBytes
@@ -477,8 +477,8 @@ func (s *SyncClient) AddPeer(id peer.ID, shards map[common.Address][]uint64) boo
 		return false
 	}
 	// add new peer routine
-	peer := NewPeer(0, s.cfg.L2ChainID, id, s.newStreamFn, shards)
-	s.peers[id] = peer
+	pr := NewPeer(0, s.cfg.L2ChainID, id, s.newStreamFn, shards)
+	s.peers[id] = pr
 
 	s.idlerPeers[id] = struct{}{}
 	s.addPeerToTask(id, shards)
@@ -492,14 +492,14 @@ func (s *SyncClient) AddPeer(id peer.ID, shards map[common.Address][]uint64) boo
 func (s *SyncClient) RemovePeer(id peer.ID) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	peer, ok := s.peers[id]
+	pr, ok := s.peers[id]
 	if !ok {
 		s.log.Warn("Cannot remove peer from sync duties, peer was not registered", "peer", id)
 		return
 	}
-	peer.resCancel() // once loop exits
+	pr.resCancel() // once loop exits
 	delete(s.peers, id)
-	s.removePeerFromTask(id, peer.shards)
+	s.removePeerFromTask(id, pr.shards)
 	s.metrics.DecPeerCount()
 	delete(s.idlerPeers, id)
 	for _, t := range s.tasks {
@@ -522,10 +522,10 @@ func (s *SyncClient) Close() error {
 }
 
 func (s *SyncClient) RequestL2Range(ctx context.Context, start, end uint64) (uint64, error) {
-	for _, peer := range s.peers {
+	for _, pr := range s.peers {
 		id := rand.Uint64()
 		var packet BlobsByRangePacket
-		_, err := peer.RequestBlobsByRange(id, s.storageManager.ContractAddress(), start/s.storageManager.KvEntries(), start, end, &packet)
+		_, err := pr.RequestBlobsByRange(id, s.storageManager.ContractAddress(), start/s.storageManager.KvEntries(), start, end, &packet)
 		if err != nil {
 			return 0, err
 		}
@@ -542,10 +542,10 @@ func (s *SyncClient) RequestL2List(indexes []uint64) (uint64, error) {
 	if len(indexes) == 0 {
 		return 0, nil
 	}
-	for _, peer := range s.peers {
+	for _, pr := range s.peers {
 		id := rand.Uint64()
 		var packet BlobsByListPacket
-		_, err := peer.RequestBlobsByList(id, s.storageManager.ContractAddress(), indexes[0]/s.storageManager.KvEntries(), indexes, &packet)
+		_, err := pr.RequestBlobsByList(id, s.storageManager.ContractAddress(), indexes[0]/s.storageManager.KvEntries(), indexes, &packet)
 		if err != nil {
 			return 0, err
 		}
@@ -705,7 +705,7 @@ func (s *SyncClient) assignBlobHealTasks() {
 		// All the kvs are downloading, wait for request time or success
 		batch := maxMessageSize / ethstorage.ContractToShardManager[t.Contract].MaxKvSize() * 2
 
-		// kvHealTask pending retrieval, try to find an idle pr. If no such pr
+		// kvHealTask pending retrieval, try to find an idle peer. If no such peer
 		// exists, we probably assigned tasks for all (or they are stateless).
 		// Abort the entire assignment mechanism.
 		if len(s.idlerPeers) == 0 {
@@ -827,7 +827,7 @@ func (s *SyncClient) assignFillEmptyBlobTasks() {
 }
 
 func (s *SyncClient) getIdlePeerForTask(t *task) *Peer {
-	for id, _ := range s.idlerPeers {
+	for id := range s.idlerPeers {
 		if _, ok := t.statelessPeers[id]; ok {
 			continue
 		}
@@ -892,7 +892,7 @@ func (s *SyncClient) OnBlobsByRange(res *blobsByRangeResponse) {
 	s.blobsSynced += synced
 	s.syncedBytes += common.StorageSize(syncedBytes)
 	s.metrics.ClientOnBlobsByRange(req.peer.String(), reqCount, uint64(len(res.Blobs)), synced, time.Since(start))
-	log.Info("Persisted set of kvs", "count", synced, "bytes", syncedBytes)
+	log.Debug("Persisted set of kvs", "count", synced, "bytes", syncedBytes)
 
 	// set peer to stateless peer if fail too much
 	if len(inserted) == 0 {
@@ -976,7 +976,7 @@ func (s *SyncClient) OnBlobsByList(res *blobsByListResponse) {
 	s.syncedBytes += common.StorageSize(syncedBytes)
 	s.metrics.ClientOnBlobsByList(req.peer.String(), uint64(len(req.indexes)), uint64(len(res.Blobs)),
 		synced, time.Since(start))
-	log.Trace("Persisted set of kvs", "count", synced, "bytes", syncedBytes)
+	log.Debug("Persisted set of kvs", "count", synced, "bytes", syncedBytes)
 
 	s.lock.Lock()
 	// set peer to stateless peer if fail too much

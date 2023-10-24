@@ -44,8 +44,8 @@ func NewStorageManager(sm *ShardManager, l1Source Il1Source) *StorageManager {
 	}
 }
 
-// This function will be called when the node found new block are finalized, and it will update the local L1 view and commit
-// new blobs into local storage file.
+// DownloadFinished This function will be called when the node found new block are finalized, and it will update the
+// local L1 view and commit new blobs into local storage file.
 func (s *StorageManager) DownloadFinished(newL1 int64, kvIndices []uint64, blobs [][]byte, commits []common.Hash) error {
 	if len(kvIndices) != len(blobs) || len(blobs) != len(commits) {
 		return errors.New("invalid params lens")
@@ -85,7 +85,7 @@ func prepareCommit(commit common.Hash) common.Hash {
 	return c
 }
 
-// This function must be called before calling any other funcs, it will setup a local L1 view for the node.
+// Reset This function must be called before calling any other funcs, it will setup a local L1 view for the node.
 func (s *StorageManager) Reset(newL1 int64) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -301,7 +301,7 @@ func (s *StorageManager) ContractAddress() common.Address {
 
 func (s *StorageManager) Shards() []uint64 {
 	shards := make([]uint64, 0)
-	for idx, _ := range s.shardManager.ShardMap() {
+	for idx := range s.shardManager.ShardMap() {
 		shards = append(shards, idx)
 	}
 	return shards
