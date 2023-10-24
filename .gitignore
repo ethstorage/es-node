@@ -68,3 +68,4 @@ profile.cov
 
 **/yarn-error.log
 logs/
+/cmd/es-devnet/es-devnet

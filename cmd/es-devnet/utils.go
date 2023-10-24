@@ -8,7 +8,10 @@ import (
 	crand "crypto/rand"
 	"fmt"
 	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/crypto/kzg4844"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -18,6 +21,7 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 const fileName = "shard-%d.dat"
@@ -30,7 +34,7 @@ func readSlotFromContract(ctx context.Context, client *ethclient.Client, l1Contr
 	}
 	bs, err := client.CallContract(ctx, msg, nil)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to get %s from contract: %v", fieldName, err)
+		return nil, fmt.Errorf("failed to get %s from contract: %v", fieldName, err)
 	}
 	return bs, nil
 }
@@ -149,4 +153,149 @@ func writeBlob(kvIdx uint64, blob kzg4844.Blob, ds *es.DataShard) common.Hash {
 	}
 	log.Info("Write value", "kvIdx", kvIdx, "bytes", len(blob[:]))
 	return versionedHashes[0]
+}
+
+func UploadHashes(client *ethclient.Client, keys []common.Hash, hashes []common.Hash) error {
+
+	to := common.HexToAddress(contract)
+
+	// query price
+	h := crypto.Keccak256Hash([]byte(`upfrontPayment()`))
+	callMsg := ethereum.CallMsg{
+		To:   &to,
+		Data: h[:],
+	}
+	bs, err := client.CallContract(context.Background(), callMsg, new(big.Int).SetInt64(-2))
+	if err != nil {
+		log.Crit("Failed to get upfront fee", "error", err)
+	}
+	uint256Type, _ := abi.NewType("uint256", "", nil)
+	res, err := abi.Arguments{{Type: uint256Type}}.UnpackValues(bs)
+	if err != nil {
+		log.Crit("Failed to unpack values", "error", err)
+	}
+	value256 := new(big.Int).Add(res[0].(*big.Int), big.NewInt(1000000))
+	//value256 := new(big.Int).Mul(price, big.NewInt(count))
+
+	// create calldata
+	bytes32Array, _ := abi.NewType("bytes32[]", "", nil)
+	dataField, _ := abi.Arguments{{Type: bytes32Array}, {Type: bytes32Array}}.Pack(keys, hashes)
+	h = crypto.Keccak256Hash([]byte("putHashes(bytes32[],bytes32[])"))
+	calldata := "0x" + common.Bytes2Hex(append(h[0:4], dataField...))
+
+	tx := SendTx(
+		client,
+		value256,
+		20000000,
+		calldata,
+	)
+
+	resultCh := make(chan *types.Receipt, 1)
+	errorCh := make(chan error, 1)
+	revert := fmt.Errorf("revert")
+	go func() {
+		receipt, err := bind.WaitMined(context.Background(), client, tx)
+		if err != nil {
+			log.Error("Get transaction receipt err", "error", err)
+			errorCh <- err
+		}
+		if receipt.Status == 0 {
+			log.Error("Transaction reverted")
+			errorCh <- revert
+			return
+		}
+		log.Info("Transaction confirmed successfully", "txHash", tx.Hash())
+		resultCh <- receipt
+	}()
+	select {
+	// try to get data hash from events first
+	case receipt := <-resultCh:
+		log.Info("receipt returned", "gasUsed", receipt.GasUsed)
+		var dataHashs []common.Hash
+		var kvIndexes []uint64
+		for i := range receipt.Logs {
+			eventTopics := receipt.Logs[i].Topics
+			kvIndex := new(big.Int).SetBytes(eventTopics[1][:]).Uint64()
+			dataHash := eventTopics[3]
+			dataHashs = append(dataHashs, dataHash)
+			kvIndexes = append(kvIndexes, kvIndex)
+		}
+		return nil
+	case err := <-errorCh:
+		log.Error("Get transaction receipt err", "error", err)
+		if err == revert {
+			return err
+		}
+	case <-time.After(5 * time.Second):
+		log.Info("Timed out for receipt, query contract for data hash...")
+	}
+	return nil
+}
+
+func SendTx(
+	client *ethclient.Client,
+	value *big.Int,
+	gasLimit uint64,
+	calldata string,
+) *types.Transaction {
+	ctx := context.Background()
+
+	to := common.HexToAddress(contract)
+
+	key, err := crypto.HexToECDSA(privateKey)
+	if err != nil {
+		log.Crit("Invalid private key", "err", err)
+	}
+
+	pendingNonce, err := client.PendingNonceAt(ctx, crypto.PubkeyToAddress(key.PublicKey))
+	if err != nil {
+		log.Crit("Error getting nonce", "error", err)
+	}
+
+	gasPrice256, err := client.SuggestGasPrice(ctx)
+	if err != nil {
+		log.Crit("Error getting suggested gas price", "error", err)
+	}
+	priorityGasPrice256 := gasPrice256
+
+	calldataBytes, err := common.ParseHexOrString(calldata)
+	if err != nil {
+		log.Crit("Failed to parse calldata", "error", err)
+	}
+	unSignTx := &types.DynamicFeeTx{
+		ChainID:   big.NewInt(int64(chainId)),
+		Nonce:     pendingNonce,
+		GasTipCap: priorityGasPrice256,
+		GasFeeCap: gasPrice256,
+		Gas:       gasLimit,
+		To:        &to,
+		Value:     value,
+		Data:      calldataBytes,
+	}
+	log.Info("", "", unSignTx)
+	tx := types.MustSignNewTx(key, types.NewLondonSigner(big.NewInt(int64(chainId))), unSignTx)
+	err = client.SendTransaction(context.Background(), tx)
+	if err != nil {
+		log.Crit("Unable to send transaction", "error", err)
+	}
+
+	for {
+		txn, isPending, err := client.TransactionByHash(context.Background(), tx.Hash())
+		if err != nil || isPending {
+			time.Sleep(1 * time.Second)
+		} else {
+			tx = txn
+			break
+		}
+	}
+	log.Info("Transaction submitted.", "nonce", pendingNonce, "hash", tx.Hash())
+	return tx
+}
+
+func genKey(addr common.Address, blobIndex int, data []byte) common.Hash {
+	keySource := addr.Bytes()
+	keySource = append(keySource, big.NewInt(time.Now().UnixNano()).Bytes()...)
+	keySource = append(keySource, data...)
+	keySource = append(keySource, byte(blobIndex))
+	return crypto.Keccak256Hash(keySource)
 }
