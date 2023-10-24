@@ -41,9 +41,6 @@ const (
 	// after the rate-limit reservation hits the max throttle delay, give up on serving a request and just close the stream
 	maxThrottleDelay = time.Second * 20
 
-	// maxMessageSize is the target maximum size of replies to data retrievals.
-	maxMessageSize = 8 * 1024 * 1024
-
 	defaultMaxPeerCount = 30
 
 	defaultMinPeersPerShard = 5
