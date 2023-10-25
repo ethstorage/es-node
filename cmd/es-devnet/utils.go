@@ -159,18 +159,44 @@ func UploadHashes(client *ethclient.Client, hashes []common.Hash) error {
 
 	to := common.HexToAddress(contract)
 
-	// query price
-	h := crypto.Keccak256Hash([]byte(`upfrontPayment()`))
+	// query exits
+	hash := hashes[0]
+	bytes32, _ := abi.NewType("bytes32", "", nil)
+	dataField, _ := abi.Arguments{{Type: bytes32}}.Pack(hash)
+	h := crypto.Keccak256Hash([]byte(`exist(bytes32)`))
+	data := append(h[0:4], dataField...)
 	callMsg := ethereum.CallMsg{
+		From: fromAddress,
+		To:   &to,
+		Data: data,
+	}
+	bs, err := client.CallContract(context.Background(), callMsg, nil)
+	if err != nil {
+		log.Crit("Failed to get exist", "error", err)
+	}
+	boolType, _ := abi.NewType("bool", "", nil)
+	res, err := abi.Arguments{{Type: boolType}}.UnpackValues(bs)
+	if err != nil {
+		log.Crit("Failed to unpack values", "error", err)
+	}
+	exist := res[0].(bool)
+	if exist {
+		log.Info("This hash is exist", "hash", hash)
+		return nil
+	}
+
+	// query price
+	h = crypto.Keccak256Hash([]byte(`upfrontPayment()`))
+	callMsg = ethereum.CallMsg{
 		To:   &to,
 		Data: h[:],
 	}
-	bs, err := client.CallContract(context.Background(), callMsg, new(big.Int).SetInt64(-2))
+	bs, err = client.CallContract(context.Background(), callMsg, new(big.Int).SetInt64(-2))
 	if err != nil {
 		log.Crit("Failed to get upfront fee", "error", err)
 	}
 	uint256Type, _ := abi.NewType("uint256", "", nil)
-	res, err := abi.Arguments{{Type: uint256Type}}.UnpackValues(bs)
+	res, err = abi.Arguments{{Type: uint256Type}}.UnpackValues(bs)
 	if err != nil {
 		log.Crit("Failed to unpack values", "error", err)
 	}
@@ -182,7 +208,7 @@ func UploadHashes(client *ethclient.Client, hashes []common.Hash) error {
 
 	// create calldata
 	bytes32Array, _ := abi.NewType("bytes32[]", "", nil)
-	dataField, _ := abi.Arguments{{Type: bytes32Array}}.Pack(hashes)
+	dataField, _ = abi.Arguments{{Type: bytes32Array}}.Pack(hashes)
 	h = crypto.Keccak256Hash([]byte("putHashes(bytes32[])"))
 	calldata := "0x" + common.Bytes2Hex(append(h[0:4], dataField...))
 
@@ -250,7 +276,7 @@ func SendTx(
 		log.Crit("Invalid private key", "err", err)
 	}
 
-	pendingNonce, err := client.PendingNonceAt(ctx, crypto.PubkeyToAddress(key.PublicKey))
+	pendingNonce, err := client.PendingNonceAt(ctx, fromAddress)
 	if err != nil {
 		log.Crit("Error getting nonce", "error", err)
 	}

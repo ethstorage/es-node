@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/crypto/kzg4844"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethstorage/go-ethstorage/cmd/es-utils/utils"
@@ -33,8 +34,9 @@ var (
 	shardLength int
 	chainId     int
 
-	kvIdx     uint64
-	firstBlob = true
+	fromAddress common.Address
+	firstBlob   = true
+	kvIdx       uint64
 )
 
 var flags = []cli.Flag{
@@ -154,8 +156,8 @@ func generateDataAndWrite(files []string, storageCfg *storage.StorageConfig) []c
 }
 
 func uploadBlobHashes(cli *ethclient.Client, hashes []common.Hash) error {
-	// Submitting 560 blob hashes costs 30 million gas
-	submitCount := 560
+	// Submitting 580 blob hashes costs 30 million gas
+	submitCount := 580
 	for i, length := 0, len(hashes); i < length; i += submitCount {
 		max := i + submitCount
 		if max > length {
@@ -182,7 +184,6 @@ func GenerateTestData(ctx *cli.Context) error {
 		return err
 	}
 	defer client.Close()
-
 	// init config
 	l1Contract := common.HexToAddress(contract)
 	storageCfg, err := initStorageConfig(cctx, client, l1Contract, common.HexToAddress(miner))
@@ -191,6 +192,12 @@ func GenerateTestData(ctx *cli.Context) error {
 		return err
 	}
 	log.Info("Storage config loaded", "storageCfg", storageCfg)
+	// generate from address
+	key, err := crypto.HexToECDSA(privateKey)
+	if err != nil {
+		log.Crit("Invalid private key", "err", err)
+	}
+	fromAddress = crypto.PubkeyToAddress(key.PublicKey)
 
 	// create files
 	files, err := initFiles(storageCfg)
