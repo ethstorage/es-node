@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto/kzg4844"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethstorage/go-ethstorage/cmd/es-utils/utils"
 	esLog "github.com/ethstorage/go-ethstorage/ethstorage/log"
@@ -111,43 +112,64 @@ func randomData(dataSize uint64) []byte {
 	return data
 }
 
-func generateDataAndWrite(cli *ethclient.Client, files []string, storageCfg *storage.StorageConfig) error {
+func generateDataAndWrite(files []string, storageCfg *storage.StorageConfig) []common.Hash {
+	log.Info("Start write files...")
 
+	var hashes []common.Hash
 	for shardIdx, file := range files {
 		ds := initDataShard(uint64(shardIdx), file, storageCfg)
 
-		// generate blob and write
-		tranLen := [...]uint64{580, 580, 580, 192} // 2664+2664+2664+192=8192 blobs
-		for _, length := range tranLen {
-			var hashes []common.Hash
-			// generate data
-			var data []byte
-			if length == 200 {
-				data = make([]byte, length*4096*31)
-			} else {
-				data = randomData(length * 4096 * 31)
-			}
-			blobs := utils.EncodeBlobs(data)
+		// set blob size
+		maxBlobSize := 8192
+		if shardIdx == len(files)-1 {
+			// last file, set 192 empty blob
+			maxBlobSize = 8000
+		}
 
-			// write
-			for _, blob := range blobs {
-				versionedHash := writeBlob(kvIdx, blob, ds)
-				hash := common.Hash{}
-				copy(hash[0:], versionedHash[0:HashSizeInContract])
-				hashes = append(hashes, hash)
+		// write
+		for i := 0; i < maxBlobSize; i++ {
+			// generate data
+			data := randomData(4096 * 31)
+			// generate blob
+			blobs := utils.EncodeBlobs(data)
+			// write blob
+			versionedHash := writeBlob(kvIdx, blobs[0], ds)
+			hash := common.Hash{}
+			copy(hash[0:], versionedHash[0:HashSizeInContract])
+			hashes = append(hashes, hash)
+			kvIdx += 1
+		}
+
+		// last file, write 192 empty blob
+		if shardIdx == len(files)-1 {
+			blob := kzg4844.Blob{}
+			for j := 0; j < 192; j++ {
+				writeBlob(kvIdx, blob, ds)
 				kvIdx += 1
 			}
-
-			// update to contract
-			err := UploadHashes(cli, hashes)
-			if err != nil {
-				return err
-			}
-			log.Info("Upload Success", "hashes", hashes)
 		}
 		log.Info("Write File Success \n")
 	}
+	return hashes
+}
 
+func uploadBlobHashes(cli *ethclient.Client, hashes []common.Hash) error {
+	// Submitting 560 blob hashes costs 30 million gas
+	submitCount := 560
+	for i, length := 0, len(hashes); i < length; i += submitCount {
+		max := i + submitCount
+		if max > length {
+			max = length
+		}
+		submitHashes := hashes[i:max]
+		log.Info("Transaction submitted start", "from", i, "to", max)
+		// update to contract
+		err := UploadHashes(cli, submitHashes)
+		if err != nil {
+			return err
+		}
+		log.Info("Upload Success \n")
+	}
 	return nil
 }
 
@@ -180,5 +202,8 @@ func GenerateTestData(ctx *cli.Context) error {
 	}
 
 	// generate data
-	return generateDataAndWrite(client, files, storageCfg)
+	hashes := generateDataAndWrite(files, storageCfg)
+
+	// upload
+	return uploadBlobHashes(client, hashes)
 }
