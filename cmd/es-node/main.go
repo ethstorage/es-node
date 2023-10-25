@@ -15,6 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethstorage/go-ethstorage/ethstorage"
 	"github.com/ethstorage/go-ethstorage/ethstorage/flags"
 	eslog "github.com/ethstorage/go-ethstorage/ethstorage/log"
 	"github.com/ethstorage/go-ethstorage/ethstorage/node"
@@ -65,6 +66,11 @@ func main() {
 				cli.Uint64Flag{
 					Name:  shardLenFlagName,
 					Usage: "Number of shards to mine. Will create one data file per shard.",
+				},
+				cli.Uint64Flag{
+					Name:  encodingTypeFlagName,
+					Value: ethstorage.ENCODE_BLOB_POSEIDON,
+					Usage: "Encoding type of the shards. 0: no encoding, 1: keccak256, 2: ethash, 3: blob poseidon. Default: 3",
 				},
 				cli.Int64SliceFlag{
 					Name:  shardIndexFlagName,
@@ -150,6 +156,14 @@ func EsNodeInit(ctx *cli.Context) error {
 	contract := readRequiredFlag(ctx, flags.StorageL1Contract.Name)
 	miner := readRequiredFlag(ctx, flags.StorageMiner.Name)
 	datadir := readRequiredFlag(ctx, flags.DataDir.Name)
+	encodingType := ethstorage.ENCODE_BLOB_POSEIDON
+	if ctx.IsSet(encodingTypeFlagName) {
+		encodingType := ctx.Uint64(encodingTypeFlagName)
+		log.Info("Read flag", "name", encodingTypeFlagName, "value", encodingType)
+		if encodingType > 3 {
+			return fmt.Errorf("encoding_type must be an integer between 0 and 3")
+		}
+	}
 	shardIndexes := ctx.Int64Slice(shardIndexFlagName)
 	log.Info("Read flag", "name", shardIndexFlagName, "value", shardIndexes)
 	shardLen := 0
@@ -205,7 +219,7 @@ func EsNodeInit(ctx *cli.Context) error {
 		}
 		shardIdxList = shardList
 	}
-	files, err := createDataFile(storageCfg, shardIdxList, datadir)
+	files, err := createDataFile(storageCfg, shardIdxList, datadir, encodingType)
 	if err != nil {
 		log.Error("Failed to create data file", "error", err)
 		return err

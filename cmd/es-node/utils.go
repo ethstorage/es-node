@@ -23,9 +23,10 @@ import (
 )
 
 const (
-	fileName           = "shard-%d.dat"
-	shardLenFlagName   = "shard_len"
-	shardIndexFlagName = "shard_index"
+	fileName             = "shard-%d.dat"
+	shardLenFlagName     = "shard_len"
+	shardIndexFlagName   = "shard_index"
+	encodingTypeFlagName = "encoding_type"
 )
 
 func initStorageConfig(ctx context.Context, client *ethclient.Client, l1Contract, miner common.Address) (*storage.StorageConfig, error) {
@@ -141,7 +142,7 @@ func getDifficulty(ctx context.Context, client *ethclient.Client, contract commo
 	return res[1].(*big.Int), nil
 }
 
-func createDataFile(cfg *storage.StorageConfig, shardIdxList []uint64, datadir string) ([]string, error) {
+func createDataFile(cfg *storage.StorageConfig, shardIdxList []uint64, datadir string, encodingType int) ([]string, error) {
 	log.Info("Creating data files", "shardIdxList", shardIdxList, "dataDir", datadir)
 	if _, err := os.Stat(datadir); os.IsNotExist(err) {
 		if err := os.Mkdir(datadir, 0755); err != nil {
@@ -165,9 +166,9 @@ func createDataFile(cfg *storage.StorageConfig, shardIdxList []uint64, datadir s
 		chunkPerKv := cfg.KvSize / cfg.ChunkSize
 		startChunkId := shardIdx * cfg.KvEntriesPerShard * chunkPerKv
 		chunkIdxLen := chunkPerKv * cfg.KvEntriesPerShard
-		log.Info("Creating data file", "chunkIdxStart", startChunkId, "chunkIdxLen", chunkIdxLen, "chunkSize", cfg.ChunkSize, "miner", cfg.Miner, "encodeType", es.ENCODE_BLOB_POSEIDON)
+		log.Info("Creating data file", "chunkIdxStart", startChunkId, "chunkIdxLen", chunkIdxLen, "chunkSize", cfg.ChunkSize, "miner", cfg.Miner, "encodeType", encodingType)
 
-		df, err := es.Create(dataFile, startChunkId, chunkPerKv*cfg.KvEntriesPerShard, 0, cfg.KvSize, es.ENCODE_BLOB_POSEIDON, cfg.Miner, cfg.ChunkSize)
+		df, err := es.Create(dataFile, startChunkId, chunkPerKv*cfg.KvEntriesPerShard, 0, cfg.KvSize, uint64(encodingType), cfg.Miner, cfg.ChunkSize)
 		if err != nil {
 			log.Error("Creating data file", "error", err)
 			return nil, err
