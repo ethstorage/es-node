@@ -42,12 +42,12 @@ cd es-node
 ### Option 1: With Docker compose
 If you have Docker version 24.0.5 or above installed, simply run:
 ```sh
-env ES_NODE_STORAGE_MINER=<miner> ES_NODE_PRIVATE_KEY=<private_key> docker compose up 
+env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> docker compose up 
 ```
 ### Option 2: With Docker in the background
 If you want to keep all the logs:
 ```sh
-env ES_NODE_STORAGE_MINER=<miner> ES_NODE_PRIVATE_KEY=<private_key> ./run-docker.sh
+env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> ./run-docker.sh
 
 # check logs
 docker logs -f es 
@@ -102,5 +102,5 @@ cd cmd/es-node && go build && cd ../..
 ```
 #### 5. Start es-node
 ```sh
-chmod +x run.sh && env ES_NODE_STORAGE_MINER=<miner> ES_NODE_PRIVATE_KEY=<private_key> ./run.sh
+chmod +x run.sh && env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> ./run.sh
 ```

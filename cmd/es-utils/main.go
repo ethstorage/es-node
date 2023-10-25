@@ -287,7 +287,7 @@ func runKVRead(cmd *cobra.Command, args []string) {
 		if err != nil {
 			log.Crit("Read failed", "error", err)
 		}
-		fileName := fmt.Sprintf("%s/%s.dat", *dumpFolder, hex.EncodeToString((b[0:5])))
+		fileName := fmt.Sprintf("%s/%s.dat", *dumpFolder, hex.EncodeToString(b[0:5]))
 		f, err := os.Create(fileName)
 		if err != nil {
 			log.Crit("Error creating file:", err)
@@ -297,7 +297,7 @@ func runKVRead(cmd *cobra.Command, args []string) {
 		writer.Write(b)
 
 		writer.Flush()
-		f.Close()		
+		f.Close()
 	}
 }
 
@@ -409,7 +409,7 @@ func genBlobAndDump(idx int) [][]byte {
 			copy(data[j:(j+32)], scalar[:])
 		}
 		for j := uint64(0); j < *blobNum; j++ {
-			fileName := fmt.Sprintf("%s/%s.txt", saveDir, hex.EncodeToString((data[(j * fileSize) : (j*fileSize)+5])))
+			fileName := fmt.Sprintf("%s/%s.txt", saveDir, hex.EncodeToString(data[(j*fileSize):(j*fileSize)+5]))
 			f, err := os.Create(fileName)
 			if err != nil {
 				log.Crit("Error creating file:", err)
@@ -422,7 +422,7 @@ func genBlobAndDump(idx int) [][]byte {
 			f.Close()
 
 			log.Info("Generate a blob file", "fileName", fileName)
-			
+
 			_, name := filepath.Split(fileName)
 			finalPath := filepath.Join(finalDir, name)
 			finalFile, err := os.Create(finalPath)
@@ -433,12 +433,12 @@ func genBlobAndDump(idx int) [][]byte {
 			srcFile, err := os.Open(fileName)
 			if err != nil {
 				log.Crit("Error creating file:", err)
-			}			
+			}
 
 			_, err = io.Copy(finalFile, srcFile)
 			if err != nil {
 				log.Crit("Error coping file:", err)
-			}		
+			}
 
 			finalFile.Close()
 			srcFile.Close()
@@ -501,7 +501,7 @@ func runUploadBlobs(cmd *cobra.Command, args []string) {
 			}
 
 			wg.Done()
-		} (i, privateKey)
+		}(i, privateKey)
 	}
 
 	wg.Wait()

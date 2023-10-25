@@ -41,7 +41,7 @@ type NodeP2P struct {
 
 type Metricer interface {
 	RecordGossipEvent(evType int32)
-	// Peer Scoring Metric Funcs
+	// SetPeerScores Peer Scoring Metric Funcs
 	SetPeerScores(map[string]float64)
 }
 
@@ -170,7 +170,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 			return fmt.Errorf("failed to start gossipsub router: %w", err)
 		}
 
-		log.Info("Started p2p host", "addrs", n.host.Addrs(), "peerID", n.host.ID().Pretty(), "targetPeers", setup.TargetPeers())
+		log.Info("Started p2p host", "addrs", n.host.Addrs(), "peerID", n.host.ID().String(), "targetPeers", setup.TargetPeers())
 
 		tcpPort, err := FindActiveTCPPort(n.host)
 		if err != nil {

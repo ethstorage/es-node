@@ -94,7 +94,7 @@ func (h *healTask) refresh(list []uint64) {
 
 func (h *healTask) hasIndexInRange(first, next uint64) (bool, uint64) {
 	min, exist := next, false
-	for idx, _ := range h.Indexes {
+	for idx := range h.Indexes {
 		if idx < next && idx >= first {
 			exist = true
 			if min > idx {
