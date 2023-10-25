@@ -350,6 +350,7 @@ func SendTx(
 		Data:      calldataBytes,
 	}
 	tx := types.MustSignNewTx(key, types.NewLondonSigner(big.NewInt(int64(chainId))), unSignTx)
+
 	log.Info("Start Send Transaction")
 	err = client.SendTransaction(context.Background(), tx)
 	if err != nil {
@@ -365,6 +366,6 @@ func SendTx(
 			break
 		}
 	}
-	log.Info("Transaction submitted.", "nonce", pendingNonce, "hash", tx.Hash())
+	log.Info("Transaction submitted", "nonce", pendingNonce, "hash", tx.Hash())
 	return tx
 }

@@ -198,7 +198,7 @@ func uploadBlobHashes(cli *ethclient.Client, hashes []common.Hash) error {
 		if err != nil {
 			return err
 		}
-		log.Debug("Upload Success \n")
+		log.Info("Upload Success \n")
 	}
 	return nil
 }
@@ -223,7 +223,8 @@ func GenerateTestData(ctx *cli.Context) error {
 	// generate from address
 	key, err := crypto.HexToECDSA(privateKey)
 	if err != nil {
-		log.Crit("Invalid private key", "err", err)
+		log.Error("Invalid private key", "err", err)
+		return err
 	}
 	fromAddress = crypto.PubkeyToAddress(key.PublicKey)
 
@@ -235,7 +236,7 @@ func GenerateTestData(ctx *cli.Context) error {
 			log.Error("Failed to create data file", "error", err)
 			return err
 		} else {
-			log.Info("File create success \n")
+			log.Info("File Create Success \n")
 		}
 
 		// generate data
@@ -243,11 +244,10 @@ func GenerateTestData(ctx *cli.Context) error {
 	} else {
 		hashes, err = readHashFile()
 		if err != nil {
-			log.Error("Failed to load hash file", "error", err)
+			log.Error("Failed to load hash", "error", err)
 			return err
 		} else {
-			log.Info("\n")
-			log.Info("Load hash success")
+			log.Info("Load Hash Success \n")
 		}
 	}
 
