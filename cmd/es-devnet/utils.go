@@ -25,6 +25,7 @@ import (
 )
 
 const fileName = "shard-%d.dat"
+const fileHashName = "blob-hash.txt"
 
 func readSlotFromContract(ctx context.Context, client *ethclient.Client, l1Contract common.Address, fieldName string) ([]byte, error) {
 	h := crypto.Keccak256Hash([]byte(fieldName + "()"))
@@ -104,6 +105,15 @@ func createDataFile(cfg *storage.StorageConfig, shardIdxList []uint64, datadir s
 		files = append(files, dataFile)
 	}
 	return files, nil
+}
+
+func createHashFile() (*os.File, error) {
+	dataFile := filepath.Join(datadir, fileHashName)
+	if _, err := os.Stat(dataFile); err == nil {
+		log.Error("Creating hash file", "error", "file already exists, will not overwrite", "file", dataFile)
+		return nil, err
+	}
+	return os.Create(dataFile)
 }
 
 func initDataShard(shardIdx uint64, filename string, storageCfg *storage.StorageConfig) *es.DataShard {

@@ -4,7 +4,9 @@
 package main
 
 import (
+	"bufio"
 	"context"
+	"encoding/hex"
 	"os"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -117,6 +119,14 @@ func randomData(dataSize uint64) []byte {
 func generateDataAndWrite(files []string, storageCfg *storage.StorageConfig) []common.Hash {
 	log.Info("Start write files...")
 
+	hashFile, err := createHashFile()
+	defer hashFile.Close()
+
+	if err != nil {
+		log.Crit("Create hash file failed", "error", err)
+	}
+	writer := bufio.NewWriter(hashFile)
+
 	var hashes []common.Hash
 	for shardIdx, file := range files {
 		ds := initDataShard(uint64(shardIdx), file, storageCfg)
@@ -140,6 +150,13 @@ func generateDataAndWrite(files []string, storageCfg *storage.StorageConfig) []c
 			copy(hash[0:], versionedHash[0:HashSizeInContract])
 			hashes = append(hashes, hash)
 			kvIdx += 1
+
+			// write to file
+			content := hex.EncodeToString(hash[:])
+			_, err = writer.WriteString(content + "\n")
+			if err != nil {
+				log.Crit("Write file failed", "error", err)
+			}
 		}
 
 		// last file, write 192 empty blob
@@ -151,6 +168,11 @@ func generateDataAndWrite(files []string, storageCfg *storage.StorageConfig) []c
 			}
 		}
 		log.Info("Write File Success \n")
+	}
+
+	err = writer.Flush()
+	if err != nil {
+		log.Crit("Save file failed", "error", err)
 	}
 	return hashes
 }
