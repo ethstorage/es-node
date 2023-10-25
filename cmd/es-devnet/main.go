@@ -28,13 +28,14 @@ var (
 )
 
 var (
-	l1Rpc       string
-	contract    string
-	privateKey  string
-	miner       string
-	datadir     string
-	shardLength int
-	chainId     int
+	l1Rpc        string
+	contract     string
+	privateKey   string
+	miner        string
+	datadir      string
+	generateData string
+	shardLength  int
+	chainId      int
 
 	fromAddress common.Address
 	firstBlob   = true
@@ -79,6 +80,11 @@ var flags = []cli.Flag{
 		Usage:       "File counts",
 		Destination: &shardLength,
 	},
+	cli.StringFlag{
+		Name:        "generateData",
+		Usage:       "need to Generate Data",
+		Destination: &generateData,
+	},
 }
 
 func main() {
@@ -120,11 +126,11 @@ func generateDataAndWrite(files []string, storageCfg *storage.StorageConfig) []c
 	log.Info("Start write files...")
 
 	hashFile, err := createHashFile()
-	defer hashFile.Close()
-
 	if err != nil {
 		log.Crit("Create hash file failed", "error", err)
 	}
+	defer hashFile.Close()
+
 	writer := bufio.NewWriter(hashFile)
 
 	var hashes []common.Hash
@@ -192,7 +198,7 @@ func uploadBlobHashes(cli *ethclient.Client, hashes []common.Hash) error {
 		if err != nil {
 			return err
 		}
-		log.Info("Upload Success \n")
+		log.Debug("Upload Success \n")
 	}
 	return nil
 }
@@ -222,16 +228,28 @@ func GenerateTestData(ctx *cli.Context) error {
 	fromAddress = crypto.PubkeyToAddress(key.PublicKey)
 
 	// create files
-	files, err := initFiles(storageCfg)
-	if err != nil {
-		log.Error("Failed to create data file", "error", err)
-		return err
-	} else {
-		log.Info("File create success \n")
-	}
+	var hashes []common.Hash
+	if generateData == "true" {
+		files, err := initFiles(storageCfg)
+		if err != nil {
+			log.Error("Failed to create data file", "error", err)
+			return err
+		} else {
+			log.Info("File create success \n")
+		}
 
-	// generate data
-	hashes := generateDataAndWrite(files, storageCfg)
+		// generate data
+		hashes = generateDataAndWrite(files, storageCfg)
+	} else {
+		hashes, err = readHashFile()
+		if err != nil {
+			log.Error("Failed to load hash file", "error", err)
+			return err
+		} else {
+			log.Info("\n")
+			log.Info("Load hash success")
+		}
+	}
 
 	// upload
 	return uploadBlobHashes(client, hashes)

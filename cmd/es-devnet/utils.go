@@ -4,8 +4,10 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	crand "crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -21,6 +23,7 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -114,6 +117,41 @@ func createHashFile() (*os.File, error) {
 		return nil, err
 	}
 	return os.Create(dataFile)
+}
+
+func readHashFile() ([]common.Hash, error) {
+	dataFile := filepath.Join(datadir, fileHashName)
+	file, err := os.Open(dataFile)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	var hashes []common.Hash
+	var e error
+	reader := bufio.NewReader(file)
+	for {
+		line, err := reader.ReadString('\n')
+		line = strings.Replace(line, "\n", "", -1)
+		if err != nil {
+			if err.Error() == "EOF" {
+				// read finish, nothing
+			} else {
+				e = err
+			}
+			break
+		}
+
+		hash := common.Hash{}
+		hashData, err := hex.DecodeString(line)
+		if err != nil {
+			e = err
+			break
+		}
+		copy(hash[:], hashData[:])
+		hashes = append(hashes, hash)
+	}
+	return hashes, e
 }
 
 func initDataShard(shardIdx uint64, filename string, storageCfg *storage.StorageConfig) *es.DataShard {
