@@ -187,6 +187,15 @@ func genRandomCanonicalScalar() [32]byte {
 	return res
 }
 
+func generateBlob() kzg4844.Blob {
+	blob := kzg4844.Blob{}
+	for i := 0; i < 4096; i++ {
+		data := genRandomCanonicalScalar()
+		copy(blob[i*32+1:], data[1:])
+	}
+	return blob
+}
+
 func writeBlob(kvIdx uint64, blob kzg4844.Blob, ds *es.DataShard) common.Hash {
 	commitments, _, versionedHashes, err := utils.ComputeBlobs([]kzg4844.Blob{blob})
 	if err != nil {

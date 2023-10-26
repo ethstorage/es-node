@@ -13,7 +13,6 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/crypto/kzg4844"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethstorage/go-ethstorage/cmd/es-utils/utils"
 	esLog "github.com/ethstorage/go-ethstorage/ethstorage/log"
 	"github.com/ethstorage/go-ethstorage/ethstorage/storage"
 	"github.com/urfave/cli"
@@ -108,20 +107,6 @@ func initFiles(storageCfg *storage.StorageConfig) ([]string, error) {
 	return createDataFile(storageCfg, shardIdxList, datadir)
 }
 
-func randomData(dataSize uint64) []byte {
-	//fileSize := uint64(5 * 4096 * 31)
-	data := make([]byte, dataSize)
-	for j := uint64(0); j < dataSize; j += 32 {
-		scalar := genRandomCanonicalScalar()
-		max := j + 32
-		if max > dataSize {
-			max = dataSize
-		}
-		copy(data[j:max], scalar[:max-j])
-	}
-	return data
-}
-
 func generateDataAndWrite(files []string, storageCfg *storage.StorageConfig) []common.Hash {
 	log.Info("Start write files...")
 
@@ -138,20 +123,20 @@ func generateDataAndWrite(files []string, storageCfg *storage.StorageConfig) []c
 		ds := initDataShard(uint64(shardIdx), file, storageCfg)
 
 		// set blob size
+		//maxBlobSize := 1024 * 8192
 		maxBlobSize := 8192
 		if shardIdx == len(files)-1 {
 			// last file, set 192 empty blob
+			//maxBlobSize = 1023*8192 + 8000
 			maxBlobSize = 8000
 		}
 
 		// write
 		for i := 0; i < maxBlobSize; i++ {
-			// generate data
-			data := randomData(4096 * 31)
 			// generate blob
-			blobs := utils.EncodeBlobs(data)
+			blob := generateBlob()
 			// write blob
-			versionedHash := writeBlob(kvIdx, blobs[0], ds)
+			versionedHash := writeBlob(kvIdx, blob, ds)
 			hash := common.Hash{}
 			copy(hash[0:], versionedHash[0:HashSizeInContract])
 			hashes = append(hashes, hash)
