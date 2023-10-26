@@ -7,7 +7,6 @@ import (
 	"bufio"
 	"context"
 	"encoding/hex"
-	"github.com/ethstorage/go-ethstorage/cmd/es-utils/utils"
 	"os"
 	"time"
 
@@ -149,23 +148,16 @@ func generateDataAndWrite(files []string, storageCfg *storage.StorageConfig) []c
 
 		// write
 		for i := 0; i < maxBlobSize; i++ {
-			// generate data
-			data := randomData(4096 * 31)
 			// generate blob
-			blobs := utils.EncodeBlobs(data)
-			blob := blobs[0]
-			//// generate blob
-			//blob := generateBlob()
+			blob := generateBlob()
 
 			// write blob
 			versionedHash := writeBlob(kvIdx, blob, ds)
-			hash := common.Hash{}
-			copy(hash[0:], versionedHash[0:HashSizeInContract])
-			hashes = append(hashes, hash)
+			hashes = append(hashes, versionedHash)
 			kvIdx += 1
 
 			// write to file
-			content := hex.EncodeToString(hash[:])
+			content := hex.EncodeToString(versionedHash[:])
 			_, err = writer.WriteString(content + "\n")
 			if err != nil {
 				log.Crit("Write file failed", "error", err)

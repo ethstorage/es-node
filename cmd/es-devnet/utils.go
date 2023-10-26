@@ -7,8 +7,15 @@ import (
 	"bufio"
 	"context"
 	crand "crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"math/big"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
+
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -18,18 +25,13 @@ import (
 	"github.com/ethereum/go-ethereum/crypto/kzg4844"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethstorage/go-ethstorage/cmd/es-utils/utils"
 	es "github.com/ethstorage/go-ethstorage/ethstorage"
 	"github.com/ethstorage/go-ethstorage/ethstorage/storage"
-	"math/big"
-	"os"
-	"path/filepath"
-	"strings"
-	"time"
 )
 
 const fileName = "shard-%d.dat"
 const fileHashName = "blob-hash.txt"
+const blobCommitmentVersionKZG uint8 = 0x01
 
 func readSlotFromContract(ctx context.Context, client *ethclient.Client, l1Contract common.Address, fieldName string) ([]byte, error) {
 	h := crypto.Keccak256Hash([]byte(fieldName + "()"))
@@ -173,6 +175,7 @@ func initDataShard(shardIdx uint64, filename string, storageCfg *storage.Storage
 	return ds
 }
 
+// random data
 func genRandomCanonicalScalar() [32]byte {
 	maxCanonical := new(big.Int)
 	_, success := maxCanonical.SetString("73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000000", 16)
@@ -198,19 +201,23 @@ func generateBlob() kzg4844.Blob {
 }
 
 func writeBlob(kvIdx uint64, blob kzg4844.Blob, ds *es.DataShard) common.Hash {
-	commitments, _, versionedHashes, err := utils.ComputeBlobs([]kzg4844.Blob{blob})
+	commit, err := kzg4844.BlobToCommitment(blob)
 	if err != nil {
-		log.Crit("Compute versioned hash failed", "error", err)
-	} else {
-		log.Info(fmt.Sprintf("Versioned hash is %x and commitment is %x", versionedHashes[0][:], commitments[0][:]))
+		log.Crit("Compute commit failed", "error", err)
 	}
 
-	err = ds.Write(kvIdx, blob[:], versionedHashes[0])
+	versionHash := sha256.Sum256(commit[:])
+	versionHash[0] = blobCommitmentVersionKZG
+
+	err = ds.Write(kvIdx, blob[:], versionHash)
 	if err != nil {
 		log.Crit("Write failed", "error", err)
 	}
-	log.Info("Write value", "kvIdx", kvIdx, "bytes", len(blob[:]))
-	return versionedHashes[0]
+	log.Info("Write value", "kvIdx", kvIdx)
+
+	hash := common.Hash{}
+	copy(hash[0:], versionHash[0:HashSizeInContract])
+	return hash
 }
 
 func UploadHashes(client *ethclient.Client, hashes []common.Hash) error {
