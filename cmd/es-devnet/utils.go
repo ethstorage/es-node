@@ -17,6 +17,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/crypto/kzg4844"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethstorage/go-ethstorage/cmd/es-utils/utils"
 	es "github.com/ethstorage/go-ethstorage/ethstorage"
 	"github.com/ethstorage/go-ethstorage/ethstorage/storage"
@@ -189,9 +190,9 @@ func genRandomCanonicalScalar() [32]byte {
 
 func generateBlob() kzg4844.Blob {
 	blob := kzg4844.Blob{}
-	for i := 0; i < 4096; i++ {
+	for i := 0; i < params.BlobTxFieldElementsPerBlob; i++ {
 		data := genRandomCanonicalScalar()
-		copy(blob[i*32+1:], data[1:])
+		copy(blob[i*32+1:], data[:31])
 	}
 	return blob
 }

@@ -7,7 +7,9 @@ import (
 	"bufio"
 	"context"
 	"encoding/hex"
+	"github.com/ethstorage/go-ethstorage/cmd/es-utils/utils"
 	"os"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -107,6 +109,19 @@ func initFiles(storageCfg *storage.StorageConfig) ([]string, error) {
 	return createDataFile(storageCfg, shardIdxList, datadir)
 }
 
+func randomData(dataSize uint64) []byte {
+	data := make([]byte, dataSize)
+	for j := uint64(0); j < dataSize; j += 32 {
+		scalar := genRandomCanonicalScalar()
+		max := j + 32
+		if max > dataSize {
+			max = dataSize
+		}
+		copy(data[j:max], scalar[:max-j])
+	}
+	return data
+}
+
 func generateDataAndWrite(files []string, storageCfg *storage.StorageConfig) []common.Hash {
 	log.Info("Start write files...")
 
@@ -118,6 +133,7 @@ func generateDataAndWrite(files []string, storageCfg *storage.StorageConfig) []c
 
 	writer := bufio.NewWriter(hashFile)
 
+	startTime := time.Now()
 	var hashes []common.Hash
 	for shardIdx, file := range files {
 		ds := initDataShard(uint64(shardIdx), file, storageCfg)
@@ -133,8 +149,14 @@ func generateDataAndWrite(files []string, storageCfg *storage.StorageConfig) []c
 
 		// write
 		for i := 0; i < maxBlobSize; i++ {
+			// generate data
+			data := randomData(4096 * 31)
 			// generate blob
-			blob := generateBlob()
+			blobs := utils.EncodeBlobs(data)
+			blob := blobs[0]
+			//// generate blob
+			//blob := generateBlob()
+
 			// write blob
 			versionedHash := writeBlob(kvIdx, blob, ds)
 			hash := common.Hash{}
@@ -165,6 +187,10 @@ func generateDataAndWrite(files []string, storageCfg *storage.StorageConfig) []c
 	if err != nil {
 		log.Crit("Save file failed", "error", err)
 	}
+
+	endTime := time.Now()
+	elapsedTime := endTime.Sub(startTime)
+	log.Info("Create file time", "time", elapsedTime)
 	return hashes
 }
 
