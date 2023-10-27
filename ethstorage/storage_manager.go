@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"errors"
 	"math/big"
+	"runtime"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -61,14 +62,52 @@ func (s *StorageManager) DownloadFinished(newL1 int64, kvIndices []uint64, blobs
 		return errors.New("new L1 is older than local L1")
 	}
 
-	for i, kvIndex := range kvIndices {
-		c := prepareCommit(commits[i])
-		// if return false, just ignore because we are not intersted in it
-		_, err := s.shardManager.TryWrite(kvIndex, blobs[i], c)
-		if err != nil {
-			return err
+	taskNum := runtime.NumCPU()
+	sizePerTask := (len(kvIndices) + taskNum - 1) / taskNum
+	taskNum = (len(kvIndices) + sizePerTask - 1) / sizePerTask
+	var wg sync.WaitGroup
+	chanRes := make(chan int, taskNum)
+	defer close(chanRes)
+
+	i := 0
+	for i < len(kvIndices) {
+		wg.Add(1)
+		last := i + sizePerTask
+		if last > len(kvIndices) {
+			last = len(kvIndices)
 		}
+		go func(kvIndices []uint64, out chan<- int) {
+			defer wg.Done()
+
+			var err error = nil
+			for i, kvIndex := range kvIndices {
+				c := prepareCommit(commits[i])
+				// if return false, just ignore because we are not intersted in it
+				_, err = s.shardManager.TryWrite(kvIndex, blobs[i], c)
+				if err != nil {
+					break
+				} 
+			}
+
+			if err == nil {
+				chanRes <- 0
+			} else {
+				chanRes <- 1
+			}
+		}(kvIndices[i:last], chanRes)
+		
+		i = last
 	}
+
+	wg.Wait()
+	for i < taskNum {
+		res := <- chanRes
+		if (res == 1) {
+			return errors.New("blob write failed")
+		}
+		i++
+	}
+
 	s.localL1 = newL1
 
 	return nil
