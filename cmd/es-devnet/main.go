@@ -24,6 +24,7 @@ import (
 )
 
 const (
+	blobFillingMask    = byte(0b10000000)
 	HashSizeInContract = 24
 )
 
@@ -151,11 +152,13 @@ func generateDataAndWrite(files []string, storageCfg *storage.StorageConfig) err
 	// data hash
 	versionHash := sha256.Sum256(commit[:])
 	versionHash[0] = blobCommitmentVersionKZG
+	versionHash = prepareCommit(versionHash)
 
 	startTime := time.Now()
 	// set blob size, set 192 empty blob
 	//maxBlobSize := 1023*8192 + 8000
-	maxBlobSize := 3200
+	maxBlobSize := 6400
+	emptyBlobSize := 1792 // 192
 	numGoroutines := 32
 	goroutineBlobLength := maxBlobSize / numGoroutines
 
@@ -198,8 +201,9 @@ func generateDataAndWrite(files []string, storageCfg *storage.StorageConfig) err
 	startTime = time.Now()
 	blob = kzg4844.Blob{}
 	versionHash = common.Hash{}
+	versionHash = prepareCommit(versionHash)
 	kvIdx := maxBlobSize
-	for j := 0; j < 4992; j++ {
+	for j := 0; j < emptyBlobSize; j++ {
 		err = ds.Write(uint64(kvIdx), blob[:], versionHash)
 		if err != nil {
 			return err

@@ -158,6 +158,17 @@ func sortHashInfos(hashInfos []HashInfo) {
 	})
 }
 
+func prepareCommit(commit common.Hash) common.Hash {
+	c := common.Hash{}
+	copy(c[0:HashSizeInContract], commit[0:HashSizeInContract])
+
+	// The first bit after data hash in the meta indicate whether this blob has been filled. 0 stands for NOT filled yet.
+	// We want to make sure this bit to be 1 when filling data
+	c[HashSizeInContract] = c[HashSizeInContract] | blobFillingMask
+
+	return c
+}
+
 func initDataShard(shardIdx uint64, filename string, storageCfg *storage.StorageConfig) *es.DataShard {
 	ds := es.NewDataShard(shardIdx, storageCfg.KvSize, storageCfg.KvEntriesPerShard, storageCfg.ChunkSize)
 	var err error

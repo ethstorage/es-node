@@ -30,7 +30,7 @@ fi
 generate_test_data=" --datadir $data_dir \
   --l1.rpc http://65.108.236.27:8545 \
   --l1.chainId 7011893059 \
-  --storage.l1contract 0xAc1d1c38dE236326a8136Af316F1F1A0c2667bc2 \
+  --storage.l1contract 0xF9581b99C73852547B8d8d4A7d1C505048653f72 \
   --storage.privateKey $ES_NODE_PRIVATE_KEY \
   --storage.miner $ES_NODE_STORAGE_MINER \
   --generateData $generate_data \
