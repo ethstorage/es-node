@@ -155,7 +155,7 @@ func generateDataAndWrite(files []string, storageCfg *storage.StorageConfig) err
 	startTime := time.Now()
 	// set blob size, set 192 empty blob
 	//maxBlobSize := 1023*8192 + 8000
-	maxBlobSize := 581
+	maxBlobSize := 3200
 	numGoroutines := 32
 	goroutineBlobLength := maxBlobSize / numGoroutines
 
@@ -199,7 +199,7 @@ func generateDataAndWrite(files []string, storageCfg *storage.StorageConfig) err
 	blob = kzg4844.Blob{}
 	versionHash = common.Hash{}
 	kvIdx := maxBlobSize
-	for j := 0; j < 192; j++ {
+	for j := 0; j < 4992; j++ {
 		err = ds.Write(uint64(kvIdx), blob[:], versionHash)
 		if err != nil {
 			return err
