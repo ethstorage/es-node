@@ -4,11 +4,10 @@
 package main
 
 import (
-	"bufio"
 	"context"
-	"encoding/hex"
+	"crypto/sha256"
+	"github.com/ethstorage/go-ethstorage/cmd/es-utils/utils"
 	"os"
-	"strconv"
 	"sync"
 	"time"
 
@@ -16,7 +15,6 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/crypto/kzg4844"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethstorage/go-ethstorage/cmd/es-utils/utils"
 	esLog "github.com/ethstorage/go-ethstorage/ethstorage/log"
 	"github.com/ethstorage/go-ethstorage/ethstorage/storage"
 	"github.com/urfave/cli"
@@ -139,7 +137,17 @@ func generateDataAndWrite(files []string, storageCfg *storage.StorageConfig) err
 	defer hashFile.Close()
 
 	ds := initDataShard(0, files[0], storageCfg)
-	writer := bufio.NewWriter(hashFile)
+	// generate data
+	data := randomData(4096 * 31)
+	blob := utils.EncodeBlobs(data)[0]
+	commit, err := kzg4844.BlobToCommitment(blob)
+	if err != nil {
+		log.Crit("Compute commit failed", "error", err)
+	}
+	versionHash := sha256.Sum256(commit[:])
+	versionHash[0] = blobCommitmentVersionKZG
+
+	//writer := bufio.NewWriter(hashFile)
 	startTime := time.Now()
 
 	// set blob size, set 192 empty blob
@@ -156,36 +164,64 @@ func generateDataAndWrite(files []string, storageCfg *storage.StorageConfig) err
 
 			kvIdx := goroutineBlobLength * index
 			for j := 0; j < goroutineBlobLength; j++ {
-				// generate data
-				data := randomData(4096 * 31)
-				// generate blob
-				blob := utils.EncodeBlobs(data)[0]
-				// write blob
-				versionedHash := writeBlob(uint64(kvIdx), blob, ds)
-				// write hash to file
-				content := hex.EncodeToString(versionedHash[:])
-				_, err = writer.WriteString(strconv.Itoa(kvIdx) + ":" + content + "\n")
+				err = ds.Write(uint64(kvIdx), blob[:], versionHash)
 				if err != nil {
-					log.Crit("Write file failed", "error", err)
+					log.Crit("Write failed", "error", err)
 				}
+
+				//start := time.Now()
+				//// generate data
+				////data := randomData(4096 * 31)
+				//data := randomData(4096 * 32)
+				//log.Info("Write file time", "kvIdx 990", kvIdx, "time", time.Now().Sub(start))
+				//end := time.Now()
+				//// generate blob
+				////blob := utils.EncodeBlobs(data)[0]
+				//blob := kzg4844.Blob{}
+				//copy(blob[:], data)
+				// write blob
+				//versionedHash := writeBlob(uint64(kvIdx), blob, ds)
+				//log.Info("Write file time", "kvIdx 991", kvIdx, "time", time.Now().Sub(end))
+				// write hash to file
+				//content := hex.EncodeToString(versionedHash[:])
+				//_, err = writer.WriteString(strconv.Itoa(kvIdx) + ":" + content + "\n")
+				//if err != nil {
+				//	log.Crit("Write file failed", "error", err)
+				//}
 				kvIdx += 1
+				log.Info("Write file time", "kvIdx", kvIdx)
 			}
 		}(i)
 	}
 	wg.Wait()
 
-	err = writer.Flush()
-	if err != nil {
-		log.Error("Save file failed", "error", err)
-		return err
-	}
-	log.Info("Write File Success \n")
+	//meta, commit, err := ds.ReadWithMeta(500, 4096*32)
+	//if err != nil {
+	//	return err
+	//}
+	//versionHash := sha256.Sum256(commit[:])
+	//versionHash[0] = blobCommitmentVersionKZG
+	//content := hex.EncodeToString(versionHash[:])
+	//log.Info("Write file time", "blob", meta[:33], "versionHash", content)
+
+	//err = writer.Flush()
+	//if err != nil {
+	//	log.Error("Save file failed", "error", err)
+	//	return err
+	//}
+	//log.Info("Write File Success \n")
 
 	// write 192 empty blob
-	blob := kzg4844.Blob{}
+	log.Info("Write file time", "time", time.Now().Sub(startTime))
+	startTime = time.Now()
+	blob = kzg4844.Blob{}
+	versionHash = common.Hash{}
 	kvIdx := maxBlobSize
 	for j := 0; j < 192; j++ {
-		writeBlob(uint64(kvIdx), blob, ds)
+		err = ds.Write(uint64(kvIdx), blob[:], versionHash)
+		if err != nil {
+			return err
+		}
 		kvIdx += 1
 	}
 	log.Info("Write Empty File Success \n")
