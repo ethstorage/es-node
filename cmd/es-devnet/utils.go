@@ -123,56 +123,33 @@ func createHashFile() (*os.File, error) {
 	return os.Create(dataFile)
 }
 
-func readHashFile() ([]common.Hash, error) {
+func readHashFile() []common.Hash {
 	dataFile := filepath.Join(datadir, fileHashName)
 	file, err := os.Open(dataFile)
 	if err != nil {
-		return nil, err
+		return nil
 	}
 	defer file.Close()
 
-	var hashInfos []HashInfo
-	var e error
+	var hash = common.Hash{}
+	var count int64
 	reader := bufio.NewReader(file)
 	for {
-		line, err := reader.ReadString('\n')
-		if err != nil {
-			if err.Error() == "EOF" {
-				// read finish, nothing
-			} else {
-				e = err
-			}
-			break
-		}
-
+		line, _ := reader.ReadString('\n')
 		line = strings.Replace(line, "\n", "", -1)
 		val := strings.Split(line, ":")
 
-		num := val[0]
-		index, err := strconv.ParseInt(num, 10, 0)
-		if err != nil {
-			e = err
-			break
-		}
-		hash := common.Hash{}
-		hashData, err := hex.DecodeString(val[1])
-		if err != nil {
-			e = err
-			break
-		}
+		count, _ = strconv.ParseInt(val[0], 10, 0)
+		hashData, _ := hex.DecodeString(val[1])
 		copy(hash[:], hashData[:])
-
-		info := HashInfo{int(index), hash}
-		hashInfos = append(hashInfos, info)
+		break
 	}
-
-	sortHashInfos(hashInfos)
 
 	var hashes []common.Hash
-	for _, hashInfo := range hashInfos {
-		hashes = append(hashes, hashInfo.hash)
+	for i := int64(0); i < count; i++ {
+		hashes = append(hashes, hash)
 	}
-	return hashes, e
+	return hashes
 }
 
 func sortHashInfos(hashInfos []HashInfo) {
@@ -240,43 +217,43 @@ func UploadHashes(client *ethclient.Client, hashes []common.Hash) error {
 	to := common.HexToAddress(contract)
 
 	// query exits
-	hash := hashes[0]
-	bytes32, _ := abi.NewType("bytes32", "", nil)
-	dataField, _ := abi.Arguments{{Type: bytes32}}.Pack(hash)
-	h := crypto.Keccak256Hash([]byte(`exist(bytes32)`))
-	data := append(h[0:4], dataField...)
-	callMsg := ethereum.CallMsg{
-		From: fromAddress,
-		To:   &to,
-		Data: data,
-	}
-	bs, err := client.CallContract(context.Background(), callMsg, nil)
-	if err != nil {
-		log.Crit("Failed to get exist", "error", err)
-	}
-	boolType, _ := abi.NewType("bool", "", nil)
-	res, err := abi.Arguments{{Type: boolType}}.UnpackValues(bs)
-	if err != nil {
-		log.Crit("Failed to unpack values", "error", err)
-	}
-	exist := res[0].(bool)
-	if exist {
-		log.Info("This hash is exist", "hash", hash)
-		return nil
-	}
+	//hash := hashes[0]
+	//bytes32, _ := abi.NewType("bytes32", "", nil)
+	//dataField, _ := abi.Arguments{{Type: bytes32}}.Pack(hash)
+	//h := crypto.Keccak256Hash([]byte(`exist(bytes32)`))
+	//data := append(h[0:4], dataField...)
+	//callMsg := ethereum.CallMsg{
+	//	From: fromAddress,
+	//	To:   &to,
+	//	Data: data,
+	//}
+	//bs, err := client.CallContract(context.Background(), callMsg, nil)
+	//if err != nil {
+	//	log.Crit("Failed to get exist", "error", err)
+	//}
+	//boolType, _ := abi.NewType("bool", "", nil)
+	//res, err := abi.Arguments{{Type: boolType}}.UnpackValues(bs)
+	//if err != nil {
+	//	log.Crit("Failed to unpack values", "error", err)
+	//}
+	//exist := res[0].(bool)
+	//if exist {
+	//	log.Info("This hash is exist", "hash", hash)
+	//	return nil
+	//}
 
 	// query price
-	h = crypto.Keccak256Hash([]byte(`upfrontPayment()`))
-	callMsg = ethereum.CallMsg{
+	h := crypto.Keccak256Hash([]byte(`upfrontPayment()`))
+	callMsg := ethereum.CallMsg{
 		To:   &to,
 		Data: h[:],
 	}
-	bs, err = client.CallContract(context.Background(), callMsg, new(big.Int).SetInt64(-2))
+	bs, err := client.CallContract(context.Background(), callMsg, new(big.Int).SetInt64(-2))
 	if err != nil {
 		log.Crit("Failed to get upfront fee", "error", err)
 	}
 	uint256Type, _ := abi.NewType("uint256", "", nil)
-	res, err = abi.Arguments{{Type: uint256Type}}.UnpackValues(bs)
+	res, err := abi.Arguments{{Type: uint256Type}}.UnpackValues(bs)
 	if err != nil {
 		log.Crit("Failed to unpack values", "error", err)
 	}
@@ -288,7 +265,7 @@ func UploadHashes(client *ethclient.Client, hashes []common.Hash) error {
 
 	// create calldata
 	bytes32Array, _ := abi.NewType("bytes32[]", "", nil)
-	dataField, _ = abi.Arguments{{Type: bytes32Array}}.Pack(hashes)
+	dataField, _ := abi.Arguments{{Type: bytes32Array}}.Pack(hashes)
 	h = crypto.Keccak256Hash([]byte("putHashes(bytes32[])"))
 	calldata := "0x" + common.Bytes2Hex(append(h[0:4], dataField...))
 
