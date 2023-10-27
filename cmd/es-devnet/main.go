@@ -8,12 +8,15 @@ import (
 	"context"
 	"encoding/hex"
 	"os"
+	"strconv"
+	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/crypto/kzg4844"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethstorage/go-ethstorage/cmd/es-utils/utils"
 	esLog "github.com/ethstorage/go-ethstorage/ethstorage/log"
 	"github.com/ethstorage/go-ethstorage/ethstorage/storage"
 	"github.com/urfave/cli"
@@ -39,7 +42,6 @@ var (
 
 	fromAddress common.Address
 	firstBlob   = true
-	kvIdx       uint64
 )
 
 var flags = []cli.Flag{
@@ -87,6 +89,11 @@ var flags = []cli.Flag{
 	},
 }
 
+type HashInfo struct {
+	index int
+	hash  common.Hash
+}
+
 func main() {
 	app := cli.NewApp()
 	app.Version = "1.0.0"
@@ -121,69 +128,70 @@ func randomData(dataSize uint64) []byte {
 	return data
 }
 
-func generateDataAndWrite(files []string, storageCfg *storage.StorageConfig) []common.Hash {
+func generateDataAndWrite(files []string, storageCfg *storage.StorageConfig) error {
 	log.Info("Start write files...")
 
 	hashFile, err := createHashFile()
 	if err != nil {
-		log.Crit("Create hash file failed", "error", err)
+		log.Error("Create hash file failed", "error", err)
+		return err
 	}
 	defer hashFile.Close()
 
+	ds := initDataShard(0, files[0], storageCfg)
 	writer := bufio.NewWriter(hashFile)
-
 	startTime := time.Now()
-	var hashes []common.Hash
-	for shardIdx, file := range files {
-		ds := initDataShard(uint64(shardIdx), file, storageCfg)
 
-		// set blob size
-		//maxBlobSize := 1024 * 8192
-		maxBlobSize := 8192
-		if shardIdx == len(files)-1 {
-			// last file, set 192 empty blob
-			//maxBlobSize = 1023*8192 + 8000
-			maxBlobSize = 8000
-		}
+	// set blob size, set 192 empty blob
+	//maxBlobSize := 1023*8192 + 8000
+	maxBlobSize := 8000
+	numGoroutines := 32
+	goroutineBlobLength := maxBlobSize / numGoroutines
 
-		// write
-		for i := 0; i < maxBlobSize; i++ {
-			// generate blob
-			blob := generateBlob()
+	var wg sync.WaitGroup
+	for i := 0; i < numGoroutines; i++ {
+		wg.Add(1)
+		go func(index int) {
+			defer wg.Done()
 
-			// write blob
-			versionedHash := writeBlob(kvIdx, blob, ds)
-			hashes = append(hashes, versionedHash)
-			kvIdx += 1
-
-			// write to file
-			content := hex.EncodeToString(versionedHash[:])
-			_, err = writer.WriteString(content + "\n")
-			if err != nil {
-				log.Crit("Write file failed", "error", err)
-			}
-		}
-
-		// last file, write 192 empty blob
-		if shardIdx == len(files)-1 {
-			blob := kzg4844.Blob{}
-			for j := 0; j < 192; j++ {
-				writeBlob(kvIdx, blob, ds)
+			kvIdx := goroutineBlobLength * index
+			for j := 0; j < goroutineBlobLength; j++ {
+				// generate data
+				data := randomData(4096 * 31)
+				// generate blob
+				blob := utils.EncodeBlobs(data)[0]
+				// write blob
+				versionedHash := writeBlob(uint64(kvIdx), blob, ds)
+				// write hash to file
+				content := hex.EncodeToString(versionedHash[:])
+				_, err = writer.WriteString(strconv.Itoa(kvIdx) + ":" + content + "\n")
+				if err != nil {
+					log.Crit("Write file failed", "error", err)
+				}
 				kvIdx += 1
 			}
-		}
-		log.Info("Write File Success \n")
+		}(i)
 	}
+	wg.Wait()
 
 	err = writer.Flush()
 	if err != nil {
-		log.Crit("Save file failed", "error", err)
+		log.Error("Save file failed", "error", err)
+		return err
 	}
+	log.Info("Write File Success \n")
 
-	endTime := time.Now()
-	elapsedTime := endTime.Sub(startTime)
-	log.Info("Create file time", "time", elapsedTime)
-	return hashes
+	// write 192 empty blob
+	blob := kzg4844.Blob{}
+	kvIdx := maxBlobSize
+	for j := 0; j < 192; j++ {
+		writeBlob(uint64(kvIdx), blob, ds)
+		kvIdx += 1
+	}
+	log.Info("Write Empty File Success \n")
+
+	log.Info("Write file time", "time", time.Now().Sub(startTime))
+	return nil
 }
 
 func uploadBlobHashes(cli *ethclient.Client, hashes []common.Hash) error {
@@ -232,7 +240,6 @@ func GenerateTestData(ctx *cli.Context) error {
 	fromAddress = crypto.PubkeyToAddress(key.PublicKey)
 
 	// create files
-	var hashes []common.Hash
 	if generateData == "true" {
 		files, err := initFiles(storageCfg)
 		if err != nil {
@@ -243,15 +250,19 @@ func GenerateTestData(ctx *cli.Context) error {
 		}
 
 		// generate data
-		hashes = generateDataAndWrite(files, storageCfg)
-	} else {
-		hashes, err = readHashFile()
+		err = generateDataAndWrite(files, storageCfg)
 		if err != nil {
-			log.Error("Failed to load hash", "error", err)
+			log.Error("Write file failed", "error", err)
 			return err
-		} else {
-			log.Info("Load Hash Success \n")
 		}
+	}
+
+	hashes, err := readHashFile()
+	if err != nil {
+		log.Error("Failed to load hash", "error", err)
+		return err
+	} else {
+		log.Info("Load Hash Success \n")
 	}
 
 	// upload

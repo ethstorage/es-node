@@ -13,6 +13,8 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
+	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -24,7 +26,6 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/crypto/kzg4844"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethereum/go-ethereum/params"
 	es "github.com/ethstorage/go-ethstorage/ethstorage"
 	"github.com/ethstorage/go-ethstorage/ethstorage/storage"
 )
@@ -130,12 +131,11 @@ func readHashFile() ([]common.Hash, error) {
 	}
 	defer file.Close()
 
-	var hashes []common.Hash
+	var hashInfos []HashInfo
 	var e error
 	reader := bufio.NewReader(file)
 	for {
 		line, err := reader.ReadString('\n')
-		line = strings.Replace(line, "\n", "", -1)
 		if err != nil {
 			if err.Error() == "EOF" {
 				// read finish, nothing
@@ -145,16 +145,40 @@ func readHashFile() ([]common.Hash, error) {
 			break
 		}
 
+		line = strings.Replace(line, "\n", "", -1)
+		val := strings.Split(line, ":")
+
+		num := val[0]
+		index, err := strconv.ParseInt(num, 10, 0)
+		if err != nil {
+			e = err
+			break
+		}
 		hash := common.Hash{}
-		hashData, err := hex.DecodeString(line)
+		hashData, err := hex.DecodeString(val[1])
 		if err != nil {
 			e = err
 			break
 		}
 		copy(hash[:], hashData[:])
-		hashes = append(hashes, hash)
+
+		info := HashInfo{int(index), hash}
+		hashInfos = append(hashInfos, info)
+	}
+
+	sortHashInfos(hashInfos)
+
+	var hashes []common.Hash
+	for _, hashInfo := range hashInfos {
+		hashes = append(hashes, hashInfo.hash)
 	}
 	return hashes, e
+}
+
+func sortHashInfos(hashInfos []HashInfo) {
+	sort.Slice(hashInfos, func(i, j int) bool {
+		return hashInfos[i].index < hashInfos[j].index
+	})
 }
 
 func initDataShard(shardIdx uint64, filename string, storageCfg *storage.StorageConfig) *es.DataShard {
@@ -189,15 +213,6 @@ func genRandomCanonicalScalar() [32]byte {
 	var res [32]byte
 	randomNum.FillBytes(res[:])
 	return res
-}
-
-func generateBlob() kzg4844.Blob {
-	blob := kzg4844.Blob{}
-	for i := 0; i < params.BlobTxFieldElementsPerBlob; i++ {
-		data := genRandomCanonicalScalar()
-		copy(blob[i*32+1:], data[:31])
-	}
-	return blob
 }
 
 func writeBlob(kvIdx uint64, blob kzg4844.Blob, ds *es.DataShard) common.Hash {
