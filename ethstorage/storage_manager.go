@@ -63,19 +63,23 @@ func (s *StorageManager) DownloadFinished(newL1 int64, kvIndices []uint64, blobs
 	}
 
 	taskNum := runtime.NumCPU()
-	sizePerTask := (len(kvIndices) + taskNum - 1) / taskNum
-	taskNum = (len(kvIndices) + sizePerTask - 1) / sizePerTask
 	var wg sync.WaitGroup
 	chanRes := make(chan int, taskNum)
 	defer close(chanRes)
 
-	i := 0
-	for i < len(kvIndices) {
-		wg.Add(1)
-		last := i + sizePerTask
-		if last > len(kvIndices) {
-			last = len(kvIndices)
+	taskIdx := 0
+	for taskIdx < taskNum {
+		if taskIdx >= len(kvIndices) {
+			break
 		}
+		
+		wg.Add(1)
+		
+		insertKvsInTask := make([]uint64, 0) 
+		for i := 0; i < len(kvIndices); i += taskNum {
+			insertKvsInTask = append(insertKvsInTask, kvIndices[taskIdx + i])
+		}
+
 		go func(kvIndices []uint64, out chan<- int) {
 			defer wg.Done()
 
@@ -94,18 +98,18 @@ func (s *StorageManager) DownloadFinished(newL1 int64, kvIndices []uint64, blobs
 			} else {
 				chanRes <- 1
 			}
-		}(kvIndices[i:last], chanRes)
+		}(insertKvsInTask, chanRes)
 		
-		i = last
+		taskIdx++
 	}
 
 	wg.Wait()
-	for i < taskNum {
+	
+	for i := 0; i < taskIdx; i++ {
 		res := <- chanRes
 		if (res == 1) {
 			return errors.New("blob write failed")
 		}
-		i++
 	}
 
 	s.localL1 = newL1
