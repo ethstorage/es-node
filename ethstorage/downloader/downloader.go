@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -288,6 +289,8 @@ func (s *Downloader) download() {
 // 2. Writing the blobs into the shard file when they are finalized, with the option toCache set to false.
 // we will attempt to read the blobs from the cache initially. If they don't exist in the cache, we will download them instead.
 func (s *Downloader) downloadRange(start int64, end int64, toCache bool) ([]blob, error) {
+	ts := time.Now()
+	
 	if end < start {
 		end = start
 	}
@@ -338,7 +341,7 @@ func (s *Downloader) downloadRange(start int64, end int64, toCache bool) ([]blob
 		}
 	}
 	
-	s.log.Info("Download range", "cache", toCache, "start", start, "end", end, "blobNumber", len(blobs))
+	s.log.Info("Download range", "cache", toCache, "start", start, "end", end, "blobNumber", len(blobs), "duration(ms)", time.Since(ts).Milliseconds())
 
 	return blobs, nil
 }
