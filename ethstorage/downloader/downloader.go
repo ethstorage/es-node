@@ -257,11 +257,13 @@ func (s *Downloader) download() {
 				copy(metas[i][0:ethstorage.HashSizeInContract], blob.hash[0:ethstorage.HashSizeInContract])
 			}
 
+			ts := time.Now()
 			err := s.sm.DownloadFinished(end, kvIndices, dataBlobs, metas)
 			if err != nil {
 				s.log.Error("Save blobs error", "err", err)
 				return
 			}
+			log.Info("DownloadFinished", "duration(ms)", time.Since(ts).Milliseconds(), "blobs", len(blobs))
 
 			// save lastDownloadedBlock into database
 			bs := make([]byte, 8)
