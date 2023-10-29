@@ -368,25 +368,24 @@ func (s *Downloader) dumpBlobsIfNeeded(blobs []blob) {
 
 func (s *Downloader) eventsToBlocks(events []types.Log) ([]*blockBlobs, error) {
 	blocks := []*blockBlobs{}
-	lastTimestamp := uint64(0)
+	lastBlockNumber := uint64(0)
 
 	for _, event := range events {
-		res, err := s.l1Source.HeaderByNumber(context.Background(), big.NewInt(int64(event.BlockNumber)))
-		if err != nil {
-			return nil, err
-		}
-		timestamp := res.Time
-
-		if timestamp != lastTimestamp {
-			blocks = append(blocks, &blockBlobs{blobs: []*blob{}})  
+		if lastBlockNumber != event.BlockNumber {
+			res, err := s.l1Source.HeaderByNumber(context.Background(), big.NewInt(int64(event.BlockNumber)))
+			if err != nil {
+				return nil, err
+			}
+			lastBlockNumber = event.BlockNumber
+			blocks = append(blocks, &blockBlobs{
+				timestamp: res.Time,
+				number: event.BlockNumber,
+				hash: event.BlockHash,
+				blobs: []*blob{},
+			}) 
 		}
 
 		block := blocks[len(blocks) - 1]
-		
-		block.timestamp = timestamp
-		block.number = event.BlockNumber
-		block.hash = event.BlockHash
-		
 		hash := common.Hash{}
 		copy(hash[:], event.Topics[3][:])
 		
@@ -396,8 +395,6 @@ func (s *Downloader) eventsToBlocks(events []types.Log) ([]*blockBlobs, error) {
 			hash: hash,
 		}
 		block.blobs = append(block.blobs, &blob)
-
-		lastTimestamp = timestamp
 	}
 
 	return blocks, nil
