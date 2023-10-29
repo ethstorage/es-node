@@ -93,6 +93,12 @@ var (
 		Value:  0,
 		EnvVar: prefixEnvVar("DOWNLOAD_START"),
 	}
+	DownloadThreadNum = cli.IntFlag{
+		Name:   "download.thread",
+		Usage:  "Threads number that will be used to download the blobs",
+		Value:  1,
+		EnvVar: prefixEnvVar("DOWNLOAD_THREAD"),
+	}	
 	DownloadDump = cli.StringFlag{
 		Name:   "download.dump",
 		Usage:  "Where to dump the downloaded blobs",
@@ -184,6 +190,7 @@ var optionalFlags = []cli.Flag{
 	L2ChainId,
 	MetricsEnable,
 	DownloadStart,
+	DownloadThreadNum,
 	DownloadDump,
 	L1EpochPollIntervalFlag,
 	StorageKvSize,

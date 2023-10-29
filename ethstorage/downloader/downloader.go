@@ -87,8 +87,10 @@ func NewDownloader(
 	downloadStart int64, 
 	downloadDump  string,
 	minDurationForBlobsRequest uint64,
+	downloadThreadNum int,
 	log log.Logger,
 ) *Downloader{
+	sm.DownloadThreadNum = downloadThreadNum
 	return &Downloader{
 		Cache: NewBlobCache(),		
 		l1Source: l1Source,

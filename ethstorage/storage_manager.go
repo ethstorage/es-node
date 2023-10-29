@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"errors"
 	"math/big"
-	"runtime"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -32,10 +31,11 @@ type Il1Source interface {
 // StorageManager is a higher-level abstract of ShardManager which provides multi-thread safety to storage file read/write
 // and a consistent view of most-recent-finalized L1 block.
 type StorageManager struct {
-	shardManager *ShardManager
-	mu           sync.Mutex // protect localL1 and underlying blob read/write
-	localL1      int64      // local view of most-recent-finalized L1 block
-	l1Source     Il1Source
+	shardManager      *ShardManager
+	mu                sync.Mutex // protect localL1 and underlying blob read/write
+	localL1           int64      // local view of most-recent-finalized L1 block
+	l1Source          Il1Source
+	DownloadThreadNum int
 }
 
 func NewStorageManager(sm *ShardManager, l1Source Il1Source) *StorageManager {
@@ -62,7 +62,7 @@ func (s *StorageManager) DownloadFinished(newL1 int64, kvIndices []uint64, blobs
 		return errors.New("new L1 is older than local L1")
 	}
 
-	taskNum := runtime.NumCPU()
+	taskNum := s.DownloadThreadNum
 	var wg sync.WaitGroup
 	chanRes := make(chan int, taskNum)
 	defer close(chanRes)
