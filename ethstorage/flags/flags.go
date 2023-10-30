@@ -87,6 +87,23 @@ var (
 		Usage:  "Enable metrics",
 		EnvVar: prefixEnvVar("METRICS_ENABLE"),
 	}
+	PprofEnabledFlag = cli.BoolFlag{
+		Name:   "pprof.enabled",
+		Usage:  "Enable the pprof server",
+		EnvVar: prefixEnvVar("PPROF_ENABLED"),
+	}
+	PprofAddrFlag = cli.StringFlag{
+		Name:   "pprof.addr",
+		Usage:  "pprof listening address",
+		Value:  "0.0.0.0",
+		EnvVar: prefixEnvVar("PPROF_ADDR"),
+	}
+	PprofPortFlag = cli.IntFlag{
+		Name:   "pprof.port",
+		Usage:  "pprof listening port",
+		Value:  6060,
+		EnvVar: prefixEnvVar("PPROF_PORT"),
+	}
 	DownloadStart = cli.Int64Flag{
 		Name:   "download.start",
 		Usage:  "Block number which the downloader download blobs from",
@@ -189,6 +206,9 @@ var optionalFlags = []cli.Flag{
 	L1MinDurationForBlobsRequest,
 	L2ChainId,
 	MetricsEnable,
+	PprofEnabledFlag,
+	PprofAddrFlag,
+	PprofPortFlag,
 	DownloadStart,
 	DownloadThreadNum,
 	DownloadDump,
