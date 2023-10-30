@@ -75,19 +75,19 @@ func (s *StorageManager) DownloadFinished(newL1 int64, kvIndices []uint64, blobs
 		
 		wg.Add(1)
 		
-		insertKvsInTask := make([]uint64, 0) 
+		insertIdxInTask := make([]int, 0) 
 		for i := taskIdx; i < len(kvIndices); i += taskNum {
-			insertKvsInTask = append(insertKvsInTask, kvIndices[i])
+			insertIdxInTask = append(insertIdxInTask, i)
 		}
 
-		go func(kvIndices []uint64, out chan<- int) {
+		go func(insertIdx []int, out chan<- int) {
 			defer wg.Done()
 
 			var err error = nil
-			for i, kvIndex := range kvIndices {
-				c := prepareCommit(commits[i])
+			for _, idx := range insertIdx {
+				c := prepareCommit(commits[idx])
 				// if return false, just ignore because we are not intersted in it
-				_, err = s.shardManager.TryWrite(kvIndex, blobs[i], c)
+				_, err = s.shardManager.TryWrite(kvIndices[idx], blobs[idx], c)
 				if err != nil {
 					break
 				} 
@@ -98,7 +98,7 @@ func (s *StorageManager) DownloadFinished(newL1 int64, kvIndices []uint64, blobs
 			} else {
 				chanRes <- 1
 			}
-		}(insertKvsInTask, chanRes)
+		}(insertIdxInTask, chanRes)
 		
 		taskIdx++
 	}
