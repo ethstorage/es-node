@@ -76,8 +76,8 @@ func (s *StorageManager) DownloadFinished(newL1 int64, kvIndices []uint64, blobs
 		wg.Add(1)
 		
 		insertKvsInTask := make([]uint64, 0) 
-		for i := 0; i < len(kvIndices); i += taskNum {
-			insertKvsInTask = append(insertKvsInTask, kvIndices[taskIdx + i])
+		for i := taskIdx; i < len(kvIndices); i += taskNum {
+			insertKvsInTask = append(insertKvsInTask, kvIndices[i])
 		}
 
 		go func(kvIndices []uint64, out chan<- int) {
