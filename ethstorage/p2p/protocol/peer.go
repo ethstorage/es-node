@@ -83,7 +83,7 @@ func (p *Peer) Log() log.Logger {
 }
 
 // RequestBlobsByRange fetches a batch of kvs using a list of kv index
-func (p *Peer) RequestBlobsByRange(id uint64, contract common.Address, shardId uint64, origin uint64, limit uint64,
+func (p *Peer) RequestBlobsByRange(id uint64, contract common.Address, shardId uint64, origin uint64, limit uint64, maxReqestSize uint64,
 	blobs *BlobsByRangePacket) (byte, error) {
 	p.logger.Trace("Fetching KVs", "reqId", id, "contract", contract,
 		"shardId", shardId, "origin", origin, "limit", limit)
@@ -99,12 +99,12 @@ func (p *Peer) RequestBlobsByRange(id uint64, contract common.Address, shardId u
 		ShardId:  shardId,
 		Origin:   origin,
 		Limit:    limit,
-		Bytes:    maxMessageSize,
+		Bytes:    maxReqestSize,
 	}, blobs)
 }
 
 // RequestBlobsByList fetches a batch of kvs using a list of kv index
-func (p *Peer) RequestBlobsByList(id uint64, contract common.Address, shardId uint64, kvList []uint64,
+func (p *Peer) RequestBlobsByList(id uint64, contract common.Address, shardId uint64, kvList []uint64, maxReqestSize uint64,
 	blobs *BlobsByListPacket) (byte, error) {
 	p.logger.Trace("Fetching KVs", "reqId", id, "contract", contract,
 		"shardId", shardId, "count", len(kvList))
@@ -119,6 +119,6 @@ func (p *Peer) RequestBlobsByList(id uint64, contract common.Address, shardId ui
 		Contract: contract,
 		ShardId:  shardId,
 		BlobList: kvList,
-		Bytes:    maxMessageSize,
+		Bytes:    maxReqestSize,
 	}, blobs)
 }
