@@ -56,7 +56,7 @@ cd es-node/cmd/es-node && go build && cd ../..
 
 # run
 chmod +x run.sh
-env ES_NODE_STORAGE_MINER=<miner> ES_NODE_PRIVATE_KEY=<private_key> ./run.sh
+env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> ./run.sh
 ```
 ### How to launch an es-node with Docker
 
@@ -69,12 +69,12 @@ _Note: Currently, you will need to build the Docker image locally from es-node s
 #### Docker compose
 To start es-node with `docker compose`, pull es-node source code and execute the following command in the repo:
 ```sh
-env ES_NODE_STORAGE_MINER=<miner> ES_NODE_PRIVATE_KEY=<private_key> docker compose up 
+env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> docker compose up 
 ```
 #### Docker as a background process
 Or you can use `run-docker.sh` that builds an es-node Docker image and launches a container in the background:
 ```sh
-env ES_NODE_STORAGE_MINER=<miner> ES_NODE_PRIVATE_KEY=<private_key> ./run-docker.sh
+env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> ./run-docker.sh
 ```
 Then check logs by
 ```sh
@@ -96,7 +96,7 @@ To build Docker image and launch a container manually, execute:
 # build image
 docker build -t es-node .
 # start container
-docker run -v ./es-data:/es-node/es-data -e ES_NODE_STORAGE_MINER=<miner> -e ES_NODE_PRIVATE_KEY=<private_key> -p 9545:9545 -p 9222:9222 -p 30305:30305/udp -it --entrypoint /es-node/run.sh es-node
+docker run -v ./es-data:/es-node/es-data -e ES_NODE_STORAGE_MINER=<miner> -e ES_NODE_SIGNER_PRIVATE_KEY=<private_key> -p 9545:9545 -p 9222:9222 -p 30305:30305/udp -it --entrypoint /es-node/run.sh es-node
 ```
 Where `es-node` is the name of the es-node image.
 
@@ -138,7 +138,7 @@ The full list of options that you can use to configure an es-node are as follows
 |`--miner.enabled`|Storage mining enabled|||
 |`--miner.gas-price`|Gas price for mining transactions|||
 |`--miner.priority-gas-price`|Priority gas price for mining transactions|||
-|`--miner.threads-per-shard`|Number of threads per shard|`1`||
+|`--miner.threads-per-shard`|Number of threads per shard|`runtime.NumCPU()`||
 |`--miner.zk-working-dir`|Path to the snarkjs folder|`ethstorage\prover`||
 |`--miner.zkey`|zkey file name which should be put in the snarkjs folder|`blob_poseidon.zkey`||
 |`--network`|Predefined L1 network selection. Available networks: devnet|||

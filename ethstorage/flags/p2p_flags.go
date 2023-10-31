@@ -152,6 +152,14 @@ var (
 		Value:    "noise",
 		EnvVar:   p2pEnv("SECURITY"),
 	}
+	MaxRequestSize = cli.Uint64Flag{
+		Name: "p2p.max.request.size",
+		Usage: "max request size is the maximum number of bytes to request from a remote peer." +
+			"It is value should not larger than 8 * 1024 * 1024.",
+		Required: false,
+		Value:    1 * 1024 * 1024,
+		EnvVar:   p2pEnv("MAX_REQUEST_SIZE"),
+	}
 	PeersLo = cli.UintFlag{
 		Name:     "p2p.peers.lo",
 		Usage:    "Low-tide peer count. The node actively searches for new peer connections if below this amount.",
@@ -313,6 +321,7 @@ var p2pFlags = []cli.Flag{
 	StaticPeers,
 	HostMux,
 	HostSecurity,
+	MaxRequestSize,
 	PeersLo,
 	PeersHi,
 	PeersGrace,

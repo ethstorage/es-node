@@ -39,10 +39,11 @@ const (
 )
 
 var (
-	contract = common.HexToAddress("0x0000000000000000000000000000000003330001")
-	empty    = make([]byte, 0)
-	testLog  = log.New("TestSync")
-	prover   = prv.NewKZGProver(testLog)
+	contract       = common.HexToAddress("0x0000000000000000000000000000000003330001")
+	empty          = make([]byte, 0)
+	maxRequestSize = uint64(4 * 1024 * 1024)
+	testLog        = log.New("TestSync")
+	prover         = prv.NewKZGProver(testLog)
 )
 
 type remotePeer struct {
@@ -206,7 +207,6 @@ func createEthStorage(contract common.Address, shardIdxList []uint64, chunkSize,
 			log.Crit("open failed", "error", err)
 		}
 		sm.AddDataFile(df)
-
 	}
 
 	return sm, files
@@ -332,7 +332,7 @@ func createLocalHostAndSyncClient(t *testing.T, testLog log.Logger, rollupCfg *r
 	storageManager StorageManager, metrics SyncClientMetrics, mux *event.Feed) (host.Host, *SyncClient) {
 	localHost := getNetHost(t)
 
-	syncCl := NewSyncClient(testLog, rollupCfg, localHost.NewStream, storageManager, db, metrics, mux)
+	syncCl := NewSyncClient(testLog, rollupCfg, localHost.NewStream, storageManager, maxRequestSize, db, metrics, mux)
 	localHost.Network().Notify(&network.NotifyBundle{
 		ConnectedF: func(nw network.Network, conn network.Conn) {
 			shards := make(map[common.Address][]uint64)
@@ -770,10 +770,10 @@ func testSync(t *testing.T, chunkSize, kvSize, kvEntries uint64, localShards []u
 
 	l1 := NewMockL1Source(lastKvIndex, metafileName)
 	sm := ethstorage.NewStorageManager(shardManager, l1)
+	data := makeKVStorage(contract, localShards, chunkSize, kvSize, kvEntries, lastKvIndex, common.Address{}, encodeType, metafile)
 	localHost, syncCl := createLocalHostAndSyncClient(t, testLog, rollupCfg, db, sm, metrics, mux)
 	syncCl.Start()
 
-	data := makeKVStorage(contract, localShards, chunkSize, kvSize, kvEntries, lastKvIndex, common.Address{}, encodeType, metafile)
 	finalExcludedList := remotePeers[0].excludedList
 	for _, rPeer := range remotePeers {
 		// fill empty to excludedList for verify KVs
@@ -803,7 +803,7 @@ func testSync(t *testing.T, chunkSize, kvSize, kvEntries uint64, localShards []u
 	verifyKVs(data, finalExcludedList, t)
 }
 
-// TestSync test sync process with local node support a single small (its task contains only 1 subTask) shard
+// TestSimpleSync test sync process with local node support a single small (its task contains only 1 subTask) shard
 // and sync data from 1 remote peer, it should be sync done.
 func TestSimpleSync(t *testing.T) {
 	var (
@@ -871,7 +871,7 @@ func TestSyncWithFewerResult(t *testing.T) {
 		},
 	}
 
-	testSync(t, defaultChunkSize, kvSize, kvEntries, []uint64{0}, lastKvIndex, defaultEncodeType, 2, remotePeers, true)
+	testSync(t, defaultChunkSize, kvSize, kvEntries, []uint64{0}, lastKvIndex, defaultEncodeType, 4, remotePeers, true)
 }
 
 // TestSyncWithPeerShardsOverlay test sync process with local node support multi shards and sync from multi remote peers,
@@ -893,7 +893,7 @@ func TestSyncWithPeerShardsOverlay(t *testing.T) {
 		},
 	}
 
-	testSync(t, defaultChunkSize, kvSize, kvEntries, []uint64{0, 1, 2, 3}, lastKvIndex, defaultEncodeType, 4, remotePeers, true)
+	testSync(t, defaultChunkSize, kvSize, kvEntries, []uint64{0, 1, 2, 3}, lastKvIndex, defaultEncodeType, 6, remotePeers, true)
 }
 
 // TestSyncWithExcludedDataOverlay test sync process with local node support multi shards and sync from multi remote peers,
@@ -1057,17 +1057,24 @@ func TestCloseSyncWhileFillEmpty(t *testing.T) {
 		}
 	)
 
+	metafile, err := CreateMetaFile(metafileName, int64(kvEntries))
+	if err != nil {
+		t.Error("Create metafileName fail", err.Error())
+	}
+	defer metafile.Close()
+
 	shardMap[contract] = shards
 	shardManager, files := createEthStorage(contract, shards, defaultChunkSize, kvSize, kvEntries, common.Address{}, defaultEncodeType)
 	if shardManager == nil {
 		t.Fatalf("createEthStorage failed")
 	}
-
 	defer func(files []string) {
 		for _, file := range files {
 			os.Remove(file)
 		}
 	}(files)
+
+	makeKVStorage(contract, shards, defaultChunkSize, kvSize, kvEntries, lastKvIndex, common.Address{}, defaultEncodeType, metafile)
 
 	l1 := NewMockL1Source(lastKvIndex, metafileName)
 	sm := ethstorage.NewStorageManager(shardManager, l1)

@@ -13,6 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethstorage/go-ethstorage/ethstorage/flags"
 	"github.com/ethstorage/go-ethstorage/ethstorage/p2p"
+	"github.com/ethstorage/go-ethstorage/ethstorage/p2p/protocol"
 	ds "github.com/ipfs/go-datastore"
 	"github.com/ipfs/go-datastore/sync"
 	leveldb "github.com/ipfs/go-ds-leveldb"
@@ -65,6 +66,10 @@ func NewConfig(ctx *cli.Context, blockTime uint64) (*p2p.Config, error) {
 
 	if err := loadTopicScoringParams(conf, ctx, blockTime); err != nil {
 		return nil, fmt.Errorf("failed to load p2p topic scoring options: %w", err)
+	}
+
+	if err := loadSyncerParams(conf, ctx); err != nil {
+		return nil, fmt.Errorf("failed to load syncer params: %w", err)
 	}
 
 	conf.ConnGater = p2p.DefaultConnGater
@@ -354,5 +359,12 @@ func loadGossipOptions(conf *p2p.Config, ctx *cli.Context) error {
 	conf.MeshDHi = ctx.GlobalInt(flags.GossipMeshDhiFlag.Name)
 	conf.MeshDLazy = ctx.GlobalInt(flags.GossipMeshDlazyFlag.Name)
 	conf.FloodPublish = ctx.GlobalBool(flags.GossipFloodPublishFlag.Name)
+	return nil
+}
+
+// loadSyncerParams loads [protocol.SyncerParams] from the CLI context.
+func loadSyncerParams(conf *p2p.Config, ctx *cli.Context) error {
+	maxRequestSize := ctx.GlobalUint64(flags.MaxRequestSize.Name)
+	conf.SyncParams = &protocol.SyncerParams{MaxRequestSize: maxRequestSize}
 	return nil
 }

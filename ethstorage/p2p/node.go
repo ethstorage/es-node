@@ -41,7 +41,7 @@ type NodeP2P struct {
 
 type Metricer interface {
 	RecordGossipEvent(evType int32)
-	// Peer Scoring Metric Funcs
+	// SetPeerScores Peer Scoring Metric Funcs
 	SetPeerScores(map[string]float64)
 }
 
@@ -92,7 +92,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 			m = protocol.NewMetrics("sync")
 		}
 		// Activate the P2P req-resp sync
-		n.syncCl = protocol.NewSyncClient(log, rollupCfg, n.host.NewStream, storageManager, db, m, feed)
+		n.syncCl = protocol.NewSyncClient(log, rollupCfg, n.host.NewStream, storageManager, setup.SyncerParams().MaxRequestSize, db, m, feed)
 		n.host.Network().Notify(&network.NotifyBundle{
 			ConnectedF: func(nw network.Network, conn network.Conn) {
 				var (
@@ -170,7 +170,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 			return fmt.Errorf("failed to start gossipsub router: %w", err)
 		}
 
-		log.Info("Started p2p host", "addrs", n.host.Addrs(), "peerID", n.host.ID().Pretty(), "targetPeers", setup.TargetPeers())
+		log.Info("Started p2p host", "addrs", n.host.Addrs(), "peerID", n.host.ID().String(), "targetPeers", setup.TargetPeers())
 
 		tcpPort, err := FindActiveTCPPort(n.host)
 		if err != nil {

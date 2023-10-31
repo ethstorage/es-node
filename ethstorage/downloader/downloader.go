@@ -74,7 +74,7 @@ type blockBlobs struct {
 	timestamp   uint64
 	number      uint64
 	hash        common.Hash
-	blobs       map[common.Hash]*blob
+	blobs       []*blob
 }
 
 
@@ -324,8 +324,8 @@ func (s *Downloader) downloadRange(start int64, end int64, toCache bool) ([]blob
 			return nil, err
 		}
 		
-		for hash, elBlob := range elBlock.blobs {
-			clBlob, exists := clBlobs[hash]; 
+		for _, elBlob := range elBlock.blobs {
+			clBlob, exists := clBlobs[elBlob.hash]; 
 			if !exists {
 				s.log.Error("Did not find the event specified blob in the CL")
 
@@ -373,7 +373,7 @@ func (s *Downloader) eventsToBlocks(events []types.Log) ([]*blockBlobs, error) {
 		timestamp := res.Time
 
 		if timestamp != lastTimestamp {
-			blocks = append(blocks, &blockBlobs{blobs: map[common.Hash]*blob{}})  
+			blocks = append(blocks, &blockBlobs{blobs: []*blob{}})  
 		}
 
 		block := blocks[len(blocks) - 1]
@@ -390,7 +390,7 @@ func (s *Downloader) eventsToBlocks(events []types.Log) ([]*blockBlobs, error) {
 			kvSize: big.NewInt(0).SetBytes(event.Topics[2][:]),
 			hash: hash,
 		}
-		block.blobs[hash] = &blob
+		block.blobs = append(block.blobs, &blob)
 
 		lastTimestamp = timestamp
 	}
