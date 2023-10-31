@@ -6,7 +6,6 @@ package main
 import (
 	"bufio"
 	crand "crypto/rand"
-	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -475,14 +474,10 @@ func runUploadBlobs(cmd *cobra.Command, args []string) {
 		go func(idx int, priv string) {
 			files := genBlobAndDump(idx)
 
-			for j, file := range files {
-				selector := "0x4581a920"
-				byteArray := make([]byte, 32)
-				binary.LittleEndian.PutUint64(byteArray, uint64(j))
-				firstParam := hex.EncodeToString(byteArray)
-				otherParams := "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000020000"
-				calldata := selector + firstParam + otherParams
-
+			for _, file := range files {
+				selector := "0x377025af"
+				firstParam := "0000000000000000000000000000000000000000000000000000000000000200"
+				calldata := selector + firstParam
 				utils.SendBlobTx(
 					*rpcURL,
 					common.HexToAddress(*contractAddr),
@@ -491,9 +486,9 @@ func runUploadBlobs(cmd *cobra.Command, args []string) {
 					false,
 					-1,
 					"0x0",
-					210000,
+					30000000,
 					"",
-					"200000000",
+					"",
 					"300000000",
 					*chainId, // TODO: @Qiang everytime devnet update, we may need to update it
 					calldata,

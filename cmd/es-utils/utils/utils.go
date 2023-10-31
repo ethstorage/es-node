@@ -80,6 +80,7 @@ func SendBlobTx(
 		val = res[0].(* big.Int)
 	}
 
+	val = val.Mul(val, big.NewInt(512))
 	value256, overflow := uint256.FromBig(val)
 	if overflow {
 		log.Crit("Invalid value param", "error", err)
@@ -168,17 +169,19 @@ func SendBlobTx(
 	}
 
 	for {
-		// receipt, err = client.TransactionReceipt(context.Background(), txWithBlobs.Transaction.Hash())
-		txn, isPending, err := client.TransactionByHash(context.Background(), tx.Hash())
-		if err != nil || isPending {
+		receipt, err := client.TransactionReceipt(context.Background(), tx.Hash())
+		// txn, isPending, err := client.TransactionByHash(context.Background(), tx.Hash())
+		if err != nil || receipt == nil {
 			time.Sleep(1 * time.Second)
 		} else {
-			tx = txn
+			if receipt.Status == 1 {
+				log.Info("Transaction success.", "nonce", nonce, "hash", tx.Hash(), "blobs", len(blobs))
+			} else {
+				log.Info("Transaction failed.")
+			}
 			break
 		}
 	}
-
-	log.Info("Transaction submitted.", "nonce", nonce, "hash", tx.Hash(), "blobs", len(blobs))
 	return tx
 }
 
