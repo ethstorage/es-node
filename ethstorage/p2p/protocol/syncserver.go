@@ -38,6 +38,9 @@ const (
 	peerServerBlocksRateLimit rate.Limit = 5
 	// Allow a peer to burst 10 requests, so it does not have to wait
 	peerServerBlocksBurst = 10
+
+	// maxMessageSize is the target maximum size of replies to data retrievals.
+	maxMessageSize = 8 * 1024 * 1024
 )
 
 // peerStat maintains rate-limiting data of a peer that requests blocks from us.

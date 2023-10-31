@@ -83,7 +83,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 			n.connMgr = extra.ConnectionManager()
 		}
 		// Activate the P2P req-resp sync
-		n.syncCl = protocol.NewSyncClient(log, rollupCfg, n.host.NewStream, storageManager, db, m, feed)
+		n.syncCl = protocol.NewSyncClient(log, rollupCfg, n.host.NewStream, storageManager, setup.SyncerParams().MaxRequestSize, db, m, feed)
 		n.host.Network().Notify(&network.NotifyBundle{
 			ConnectedF: func(nw network.Network, conn network.Conn) {
 				var (
