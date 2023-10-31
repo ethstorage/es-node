@@ -64,7 +64,7 @@ func (s *StorageManager) DownloadFinished(newL1 int64, kvIndices []uint64, blobs
 
 	taskNum := s.DownloadThreadNum
 	var wg sync.WaitGroup
-	chanRes := make(chan int, taskNum)
+	chanRes := make(chan error, taskNum)
 	defer close(chanRes)
 
 	taskIdx := 0
@@ -72,15 +72,15 @@ func (s *StorageManager) DownloadFinished(newL1 int64, kvIndices []uint64, blobs
 		if taskIdx >= len(kvIndices) {
 			break
 		}
-		
+
 		wg.Add(1)
-		
-		insertIdxInTask := make([]int, 0) 
+
+		insertIdxInTask := make([]int, 0)
 		for i := taskIdx; i < len(kvIndices); i += taskNum {
 			insertIdxInTask = append(insertIdxInTask, i)
 		}
 
-		go func(insertIdx []int, out chan<- int) {
+		go func(insertIdx []int, out chan<- error) {
 			defer wg.Done()
 
 			var err error = nil
@@ -90,25 +90,21 @@ func (s *StorageManager) DownloadFinished(newL1 int64, kvIndices []uint64, blobs
 				_, err = s.shardManager.TryWrite(kvIndices[idx], blobs[idx], c)
 				if err != nil {
 					break
-				} 
+				}
 			}
 
-			if err == nil {
-				chanRes <- 0
-			} else {
-				chanRes <- 1
-			}
+			chanRes <- err
 		}(insertIdxInTask, chanRes)
-		
+
 		taskIdx++
 	}
 
 	wg.Wait()
-	
+
 	for i := 0; i < taskIdx; i++ {
 		res := <- chanRes
-		if (res == 1) {
-			return errors.New("blob write failed")
+		if (res != nil) {
+			return res
 		}
 	}
 
