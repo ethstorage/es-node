@@ -286,10 +286,10 @@ func testSync(t *testing.T, chunkSize, kvSize, kvEntries uint64, localShards []u
 
 	l1 := NewMockL1Source(lastKvIndex, metafileName)
 	sm := ethstorage.NewStorageManager(shardManager, l1)
+	data := makeKVStorage(contract, localShards, chunkSize, kvSize, kvEntries, lastKvIndex, common.Address{}, encodeType, metafile)
 	localHost, syncCl := createLocalHostAndSyncClient(t, testLog, rollupCfg, db, sm, metrics, mux)
 	syncCl.Start()
 
-	data := makeKVStorage(contract, localShards, chunkSize, kvSize, kvEntries, lastKvIndex, common.Address{}, encodeType, metafile)
 	finalExcludedList := remotePeers[0].excludedList
 	for _, rPeer := range remotePeers {
 		// fill empty to excludedList for verify KVs
@@ -319,7 +319,7 @@ func testSync(t *testing.T, chunkSize, kvSize, kvEntries uint64, localShards []u
 	verifyKVs(data, finalExcludedList, t)
 }
 
-// TestSync test sync process with local node support a single small (its task contains only 1 subTask) shard
+// TestSimpleSync test sync process with local node support a single small (its task contains only 1 subTask) shard
 // and sync data from 1 remote peer, it should be sync done.
 func TestSimpleSync(t *testing.T) {
 	var (
@@ -387,7 +387,7 @@ func TestSyncWithFewerResult(t *testing.T) {
 		},
 	}
 
-	testSync(t, defaultChunkSize, kvSize, kvEntries, []uint64{0}, lastKvIndex, defaultEncodeType, 2, remotePeers, true)
+	testSync(t, defaultChunkSize, kvSize, kvEntries, []uint64{0}, lastKvIndex, defaultEncodeType, 4, remotePeers, true)
 }
 
 // TestSyncWithPeerShardsOverlay test sync process with local node support multi shards and sync from multi remote peers,
@@ -409,7 +409,7 @@ func TestSyncWithPeerShardsOverlay(t *testing.T) {
 		},
 	}
 
-	testSync(t, defaultChunkSize, kvSize, kvEntries, []uint64{0, 1, 2, 3}, lastKvIndex, defaultEncodeType, 4, remotePeers, true)
+	testSync(t, defaultChunkSize, kvSize, kvEntries, []uint64{0, 1, 2, 3}, lastKvIndex, defaultEncodeType, 6, remotePeers, true)
 }
 
 // TestSyncWithExcludedDataOverlay test sync process with local node support multi shards and sync from multi remote peers,
@@ -573,17 +573,24 @@ func TestCloseSyncWhileFillEmpty(t *testing.T) {
 		}
 	)
 
+	metafile, err := CreateMetaFile(metafileName, int64(kvEntries))
+	if err != nil {
+		t.Error("Create metafileName fail", err.Error())
+	}
+	defer metafile.Close()
+
 	shardMap[contract] = shards
 	shardManager, files := createEthStorage(contract, shards, defaultChunkSize, kvSize, kvEntries, common.Address{}, defaultEncodeType)
 	if shardManager == nil {
 		t.Fatalf("createEthStorage failed")
 	}
-
 	defer func(files []string) {
 		for _, file := range files {
 			os.Remove(file)
 		}
 	}(files)
+
+	makeKVStorage(contract, shards, defaultChunkSize, kvSize, kvEntries, lastKvIndex, common.Address{}, defaultEncodeType, metafile)
 
 	l1 := NewMockL1Source(lastKvIndex, metafileName)
 	sm := ethstorage.NewStorageManager(shardManager, l1)

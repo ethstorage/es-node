@@ -296,7 +296,7 @@ func runKVRead(cmd *cobra.Command, args []string) {
 		if err != nil {
 			log.Crit("Read failed", "error", err)
 		}
-		fileName := fmt.Sprintf("%s/%s.dat", *dumpFolder, hex.EncodeToString((b[0:5])))
+		fileName := fmt.Sprintf("%s/%s.dat", *dumpFolder, hex.EncodeToString(b[0:5]))
 		f, err := os.Create(fileName)
 		if err != nil {
 			log.Crit("Error creating file:", err)
@@ -418,7 +418,7 @@ func genBlobAndDump(idx int) [][]byte {
 			copy(data[j:(j+32)], scalar[:])
 		}
 		for j := uint64(0); j < *blobNum; j++ {
-			fileName := fmt.Sprintf("%s/%s.txt", saveDir, hex.EncodeToString((data[(j * fileSize) : (j*fileSize)+5])))
+			fileName := fmt.Sprintf("%s/%s.txt", saveDir, hex.EncodeToString(data[(j*fileSize):(j*fileSize)+5]))
 			f, err := os.Create(fileName)
 			if err != nil {
 				log.Crit("Error creating file:", err)

@@ -29,7 +29,7 @@ type KZGProver struct {
 }
 
 func NewKZGProver(lg log.Logger) *KZGProver {
-	ctx, err := gokzg4844.NewContext4096Insecure1337()
+	ctx, err := gokzg4844.NewContext4096Secure()
 	if err != nil {
 		lg.Crit("Failed to init KZG prover", "error", err)
 	}

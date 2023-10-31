@@ -204,7 +204,7 @@ func (w *PollingClient) GetStorageLastBlobIdx(blockNumber int64) (uint64, error)
 	h := crypto.Keccak256Hash([]byte(`lastKvIdx()`))
 
 	callMsg := ethereum.CallMsg{
-		To: &w.esContract,
+		To:   &w.esContract,
 		Data: h[:],
 	}
 
@@ -235,17 +235,17 @@ func (w *PollingClient) GetKvMetas(kvIndices []uint64, blockNumber int64) ([][32
 		indices[i] = new(big.Int).SetUint64(num)
 	}
 
-	uint256Array, _ := abi.NewType("uint256[]", "", nil)	
+	uint256Array, _ := abi.NewType("uint256[]", "", nil)
 	dataField, err := abi.Arguments{
 		{Type: uint256Array},
 	}.Pack(indices)
 	if err != nil {
 		return nil, err
-	}	
-	
+	}
+
 	calldata := append(h[0:4], dataField...)
 	callMsg := ethereum.CallMsg{
-		To: &w.esContract,
+		To:   &w.esContract,
 		Data: calldata,
 	}
 
@@ -259,11 +259,15 @@ func (w *PollingClient) GetKvMetas(kvIndices []uint64, blockNumber int64) ([][32
 	res, err := abi.Arguments{
 		{Type: bytes32Array},
 	}.UnpackValues(bs)
-	
+
 	if err != nil {
 		return nil, err
 	}
-	
+
+	if len(res[0].([][32]byte)) != len(kvIndices) {
+		return nil, errors.New("invalid return from GetKvMetas")
+	}
+
 	return res[0].([][32]byte), nil
 }
 
