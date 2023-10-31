@@ -15,6 +15,7 @@ import (
 )
 
 const (
+	BlobFile               = "blob-file"
 	DaRpcFlagName          = "da-rpc"
 	NamespaceIdFlagName    = "namespace-id"
 	AuthTokenFlagName      = "auth-token"
@@ -26,26 +27,31 @@ const (
 func CLIFlags() []cli.Flag {
 	return []cli.Flag{
 		cli.StringFlag{
+			Name:  BlobFile,
+			Usage: "File path to read blob data",
+		},
+		cli.StringFlag{
 			Name:  DaRpcFlagName,
 			Usage: "RPC URL of the DA layer",
-			Value: "",
+			Value: "http://65.108.236.27:26658",
 		},
 		cli.StringFlag{
 			Name:  NamespaceIdFlagName,
 			Usage: "Namespace ID of the DA layer",
+			Value: "00000000000000003333",
 		},
 		cli.StringFlag{
 			Name:  AuthTokenFlagName,
 			Usage: "Authentication Token of the DA layer",
-			Value: "",
+			Value: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBbGxvdyI6WyJwdWJsaWMiLCJyZWFkIiwid3JpdGUiLCJhZG1pbiJdfQ.MaHtzm_HvBw810jMsd1Vr4bz1f4oAMPZExRNsOJ9n1g",
 		},
 		cli.StringFlag{
-			Name:  "l1-eth-rpc",
+			Name:  L1RPCFlagName,
 			Usage: "HTTP provider URL for L1",
 			Value: "http://localhost:8545",
 		},
 		cli.StringFlag{
-			Name:  "private-key",
+			Name:  PrivateKeyFlagName,
 			Usage: "The private key to use with the service. Must not be used with mnemonic.",
 		},
 		cli.DurationFlag{
@@ -57,6 +63,7 @@ func CLIFlags() []cli.Flag {
 }
 
 type CLIConfig struct {
+	BlobFilePath   string
 	DaRpc          string
 	NamespaceId    string
 	AuthToken      string
@@ -67,18 +74,20 @@ type CLIConfig struct {
 
 func ReadCLIConfig(ctx *cli.Context) CLIConfig {
 	return CLIConfig{
-		DaRpc:       ctx.GlobalString(DaRpcFlagName),
-		NamespaceId: ctx.GlobalString(NamespaceIdFlagName),
-		AuthToken:   ctx.GlobalString(AuthTokenFlagName),
-		L1RPCURL:    ctx.GlobalString(L1RPCFlagName),
-		PrivateKey:  ctx.GlobalString(PrivateKeyFlagName),
+		BlobFilePath:   ctx.String(BlobFile),
+		DaRpc:          ctx.String(DaRpcFlagName),
+		NamespaceId:    ctx.String(NamespaceIdFlagName),
+		AuthToken:      ctx.String(AuthTokenFlagName),
+		L1RPCURL:       ctx.String(L1RPCFlagName),
+		PrivateKey:     ctx.String(PrivateKeyFlagName),
+		NetworkTimeout: ctx.Duration(NetworkTimeoutFlagName),
 	}
 }
 
 func NewConfig(l log.Logger, cfg CLIConfig) (Config, error) {
-
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.NetworkTimeout)
 	defer cancel()
+
 	l1, err := ethclient.DialContext(ctx, cfg.L1RPCURL)
 	if err != nil {
 		return Config{}, fmt.Errorf("could not dial eth client: %w", err)
@@ -95,9 +104,8 @@ func NewConfig(l log.Logger, cfg CLIConfig) (Config, error) {
 		cfg.PrivateKey, "", "", signer.CLIConfig{},
 	)
 	if err != nil {
-		return Config{}, fmt.Errorf("SignerFactoryFromConfig %w", err)
+		return Config{}, fmt.Errorf("could not init signer %w", err)
 	}
-
 	return Config{
 		Backend:        l1,
 		ChainID:        chainID,
