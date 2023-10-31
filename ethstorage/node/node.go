@@ -28,11 +28,12 @@ import (
 type EsNode struct {
 	log        log.Logger
 	appVersion string
-	metrics    *metrics.Metrics
+	metrics    metrics.Metricer
 
-	l1HeadsSub     ethereum.Subscription // Subscription to get L1 heads (automatically re-subscribes on error)
-	l1SafeSub      ethereum.Subscription // Subscription to get L1 safe blocks, a.k.a. justified data (polling)
-	l1FinalizedSub ethereum.Subscription // Subscription to get L1 safe blocks, a.k.a. justified data (polling)
+	l1HeadsSub       ethereum.Subscription // Subscription to get L1 heads (automatically re-subscribes on error)
+	l1SafeSub        ethereum.Subscription // Subscription to get L1 safe blocks, a.k.a. justified data (polling)
+	l1FinalizedSub   ethereum.Subscription // Subscription to get L1 Finalized blocks, a.k.a. justified data (polling)
+	l1LatestBlockSub ethereum.Subscription // Subscription to get L1 latest blocks, a.k.a. justified data (polling)
 
 	l1Source   *eth.PollingClient     // L1 Client to fetch data from
 	l1Beacon   *eth.BeaconClient      // L1 Beacon Chain to fetch blobs from
@@ -56,14 +57,15 @@ type EsNode struct {
 	feed *event.Feed
 }
 
-func New(ctx context.Context, cfg *Config, log log.Logger, appVersion string) (*EsNode, error) {
-	// if err := cfg.Check(); err != nil {
-	// 	return nil, err
-	// }
+func New(ctx context.Context, cfg *Config, log log.Logger, appVersion string, m metrics.Metricer) (*EsNode, error) {
+	if err := cfg.Check(); err != nil {
+		return nil, err
+	}
 
 	n := &EsNode{
 		log:        log,
 		appVersion: appVersion,
+		metrics:    m,
 	}
 	// not a context leak, gossipsub is closed with a context.
 	n.resourcesCtx, n.resourcesClose = context.WithCancel(context.Background())
@@ -113,9 +115,9 @@ func (n *EsNode) init(ctx context.Context, cfg *Config) error {
 	if err := n.initRPCServer(ctx, cfg); err != nil {
 		return err
 	}
-	// if err := n.initMetricsServer(ctx, cfg); err != nil {
-	// 	return err
-	// }
+	if err := n.initMetricsServer(ctx, cfg); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -166,6 +168,10 @@ func (n *EsNode) startL1(cfg *Config) {
 		cfg.L1EpochPollInterval, time.Second*10)
 	n.l1FinalizedSub = eth.PollBlockChanges(n.resourcesCtx, n.log, n.l1Source, n.OnNewL1Finalized, ethRPC.FinalizedBlockNumber,
 		cfg.L1EpochPollInterval, time.Second*10)
+	if cfg.Metrics.Enabled {
+		n.l1LatestBlockSub = eth.PollBlockChanges(n.resourcesCtx, n.log, n.l1Source, n.RefreshContractMetrics, ethRPC.LatestBlockNumber,
+			1*time.Minute, time.Second*10)
+	}
 }
 
 func (n *EsNode) initP2P(ctx context.Context, cfg *Config) error {
@@ -223,6 +229,20 @@ func (n *EsNode) initRPCServer(ctx context.Context, cfg *Config) error {
 		return fmt.Errorf("unable to start RPC server: %w", err)
 	}
 	n.server = server
+	return nil
+}
+
+func (n *EsNode) initMetricsServer(ctx context.Context, cfg *Config) error {
+	if !cfg.Metrics.Enabled {
+		n.log.Info("metrics disabled")
+		return nil
+	}
+	n.log.Info("starting metrics server", "addr", cfg.Metrics.ListenAddr, "port", cfg.Metrics.ListenPort)
+	go func() {
+		if err := n.metrics.Serve(ctx, cfg.Metrics.ListenAddr, cfg.Metrics.ListenPort); err != nil {
+			log.Crit("error starting metrics server", "err", err)
+		}
+	}()
 	return nil
 }
 
@@ -286,6 +306,26 @@ func (n *EsNode) RequestL2Range(ctx context.Context, start, end uint64) (uint64,
 	}
 	n.log.Debug("Ignoring request to sync L2 range, no sync method available", "start", start, "end", end)
 	return 0, nil
+}
+
+func (n *EsNode) RefreshContractMetrics(ctx context.Context, sig eth.L1BlockRef) {
+	lastKVIndex, err := n.l1Source.GetStorageLastBlobIdx(int64(sig.Number))
+	if err != nil {
+		log.Warn("refresh contract metrics (last kv index) failed", "err", err.Error())
+		return
+	}
+	maxShardIdx := lastKVIndex / n.storageManager.KvEntries()
+	n.metrics.SetLastKVIndexAndMaxShardId(lastKVIndex, maxShardIdx)
+
+	l1api := miner.NewL1MiningAPI(n.l1Source, n.log)
+	for sid := uint64(0); sid < maxShardIdx; sid++ {
+		info, err := l1api.GetMiningInfo(ctx, n.storageManager.ContractAddress(), sid)
+		if err != nil {
+			log.Warn("get mining info for metrics fail", "shardId", sid, "err", err.Error())
+			continue
+		}
+		n.metrics.SetMiningInfo(sid, info.Difficulty.Uint64(), info.LastMineTime, info.BlockMined.Uint64())
+	}
 }
 
 func (n *EsNode) Close() error {

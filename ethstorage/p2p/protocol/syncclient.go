@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/ethstorage/go-ethstorage/ethstorage/metrics"
 	"math/big"
 	"math/rand"
 	"runtime"
@@ -186,7 +187,7 @@ type SyncClient struct {
 }
 
 func NewSyncClient(log log.Logger, cfg *rollup.EsConfig, newStream newStreamFn, storageManager StorageManager,
-	db ethdb.Database, metrics SyncClientMetrics, mux *event.Feed) *SyncClient {
+	db ethdb.Database, m SyncClientMetrics, mux *event.Feed) *SyncClient {
 	ctx, cancel := context.WithCancel(context.Background())
 	maxFillEmptyTaskTreads = int32(runtime.NumCPU() - 2)
 	if maxFillEmptyTaskTreads < 1 {
@@ -194,8 +195,8 @@ func NewSyncClient(log log.Logger, cfg *rollup.EsConfig, newStream newStreamFn, 
 	}
 	maxKvCountPerReq = maxMessageSize / storageManager.MaxKvSize()
 	shardCount := len(storageManager.Shards())
-	if metrics == nil {
-		metrics = NoopMetrics
+	if m == nil {
+		m = metrics.NoopMetrics
 	}
 
 	c := &SyncClient{
@@ -203,7 +204,7 @@ func NewSyncClient(log log.Logger, cfg *rollup.EsConfig, newStream newStreamFn, 
 		mux:                        mux,
 		cfg:                        cfg,
 		db:                         db,
-		metrics:                    metrics,
+		metrics:                    m,
 		newStreamFn:                newStream,
 		idlerPeers:                 make(map[peer.ID]struct{}),
 		peers:                      make(map[peer.ID]*Peer),
