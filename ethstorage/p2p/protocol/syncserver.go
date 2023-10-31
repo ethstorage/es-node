@@ -6,7 +6,6 @@ package protocol
 import (
 	"context"
 	"fmt"
-	"github.com/ethstorage/go-ethstorage/ethstorage/metrics"
 	"sync"
 	"time"
 
@@ -15,6 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethstorage/go-ethstorage/ethstorage"
+	"github.com/ethstorage/go-ethstorage/ethstorage/metrics"
 	"github.com/ethstorage/go-ethstorage/ethstorage/rollup"
 	"github.com/hashicorp/golang-lru/v2/simplelru"
 	"github.com/libp2p/go-libp2p/core/network"
