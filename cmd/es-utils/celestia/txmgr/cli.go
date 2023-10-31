@@ -52,7 +52,7 @@ func CLIFlags() []cli.Flag {
 		},
 		cli.StringFlag{
 			Name:  PrivateKeyFlagName,
-			Usage: "The private key to use with the service. Must not be used with mnemonic.",
+			Usage: "The private key to submit Ethereum transactions with.",
 		},
 		cli.DurationFlag{
 			Name:  NetworkTimeoutFlagName,

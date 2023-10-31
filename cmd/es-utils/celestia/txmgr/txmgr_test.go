@@ -2,6 +2,7 @@ package txmgr
 
 import (
 	"context"
+	"encoding/hex"
 	"io"
 	"net/http"
 	"os"
@@ -42,11 +43,12 @@ func TestSend(t *testing.T) {
 		data := tt(t, 10*32)
 		t.Run("", func(t *testing.T) {
 			ctx := context.Background()
-			_, err := txManager.Send(ctx, data)
+			cmt, ht, err := txManager.Send(ctx, data)
 			if err != nil {
 				t.Errorf("SimpleTxManager.send() error = %v", err)
 				return
 			}
+			t.Log("upload done", hex.EncodeToString(cmt), ht)
 		})
 	}
 }
