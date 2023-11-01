@@ -1,4 +1,4 @@
-package txmgr
+package blobmgr
 
 import (
 	"context"
@@ -18,7 +18,7 @@ import (
 	"github.com/rollkit/celestia-openrpc/types/share"
 )
 
-type SimpleTxManager struct {
+type BlobManager struct {
 	cfg     Config
 	chainID *big.Int
 
@@ -29,7 +29,7 @@ type SimpleTxManager struct {
 	l       log.Logger
 }
 
-func NewSimpleTxManager(l log.Logger, cfg CLIConfig) (*SimpleTxManager, error) {
+func NewBlobManager(l log.Logger, cfg CLIConfig) (*BlobManager, error) {
 	conf := Config{NetworkTimeout: cfg.NetworkTimeout}
 	// TODO uncomment
 	// conf, err := NewConfig(l, cfg)
@@ -55,7 +55,7 @@ func NewSimpleTxManager(l log.Logger, cfg CLIConfig) (*SimpleTxManager, error) {
 		return nil, err
 	}
 
-	return &SimpleTxManager{
+	return &BlobManager{
 		chainID:   conf.ChainID,
 		cfg:       conf,
 		daClient:  daClient,
@@ -65,7 +65,7 @@ func NewSimpleTxManager(l log.Logger, cfg CLIConfig) (*SimpleTxManager, error) {
 	}, nil
 }
 
-func (m *SimpleTxManager) Send(ctx context.Context, data []byte) ([]byte, uint64, error) {
+func (m *BlobManager) SendBlob(ctx context.Context, data []byte) ([]byte, uint64, error) {
 	ctx, cancel := context.WithTimeout(ctx, m.cfg.NetworkTimeout)
 	defer cancel()
 
@@ -95,7 +95,7 @@ func (m *SimpleTxManager) Send(ctx context.Context, data []byte) ([]byte, uint64
 	return com, height, nil
 }
 
-func (m *SimpleTxManager) craftTx(ctx context.Context, commit []byte, height uint64) (*types.Transaction, error) {
+func (m *BlobManager) CraftEvmTx(ctx context.Context, commit []byte, height, size uint64) (*types.Transaction, error) {
 	// frameRef := FrameRef{
 	// 	BlockHeight:  height,
 	// 	TxCommitment: com,
@@ -110,7 +110,7 @@ func (m *SimpleTxManager) craftTx(ctx context.Context, commit []byte, height uin
 	panic("not implemented")
 }
 
-func (m *SimpleTxManager) sendTx(ctx context.Context, tx *types.Transaction) (*types.Receipt, error) {
+func (m *BlobManager) sendTx(ctx context.Context, tx *types.Transaction) (*types.Receipt, error) {
 	panic("not implemented")
 }
 

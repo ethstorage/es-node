@@ -1,4 +1,4 @@
-package txmgr
+package blobmgr
 
 import (
 	"context"
@@ -15,11 +15,12 @@ import (
 )
 
 const (
-	BlobFile               = "blob-file"
+	BlobFileFlagName       = "blob-file"
 	DaRpcFlagName          = "da-rpc"
 	NamespaceIdFlagName    = "namespace-id"
 	AuthTokenFlagName      = "auth-token"
 	L1RPCFlagName          = "l1-eth-rpc"
+	L1ContractFlagName     = "l1-contract"
 	PrivateKeyFlagName     = "private-key"
 	NetworkTimeoutFlagName = "network-timeout"
 )
@@ -27,7 +28,7 @@ const (
 func CLIFlags() []cli.Flag {
 	return []cli.Flag{
 		cli.StringFlag{
-			Name:  BlobFile,
+			Name:  BlobFileFlagName,
 			Usage: "File path to read blob data",
 		},
 		cli.StringFlag{
@@ -48,7 +49,12 @@ func CLIFlags() []cli.Flag {
 		cli.StringFlag{
 			Name:  L1RPCFlagName,
 			Usage: "HTTP provider URL for L1",
-			Value: "http://localhost:8545",
+			Value: "http://65.108.236.27:8545",
+		},
+		cli.StringFlag{
+			Name:  L1ContractFlagName,
+			Usage: "L1 contract address",
+			Value: "0x878705ba3f8Bc32FCf7F4CAa1A35E72AF65CF766",
 		},
 		cli.StringFlag{
 			Name:  PrivateKeyFlagName,
@@ -68,17 +74,19 @@ type CLIConfig struct {
 	NamespaceId    string
 	AuthToken      string
 	L1RPCURL       string
+	L1Contract     string
 	PrivateKey     string
 	NetworkTimeout time.Duration
 }
 
 func ReadCLIConfig(ctx *cli.Context) CLIConfig {
 	return CLIConfig{
-		BlobFilePath:   ctx.String(BlobFile),
+		BlobFilePath:   ctx.String(BlobFileFlagName),
 		DaRpc:          ctx.String(DaRpcFlagName),
 		NamespaceId:    ctx.String(NamespaceIdFlagName),
 		AuthToken:      ctx.String(AuthTokenFlagName),
 		L1RPCURL:       ctx.String(L1RPCFlagName),
+		L1Contract:     ctx.String(L1ContractFlagName),
 		PrivateKey:     ctx.String(PrivateKeyFlagName),
 		NetworkTimeout: ctx.Duration(NetworkTimeoutFlagName),
 	}

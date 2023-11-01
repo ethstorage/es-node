@@ -1,4 +1,4 @@
-package txmgr
+package blobmgr
 
 import (
 	"context"
@@ -24,6 +24,7 @@ func TestSend(t *testing.T) {
 		NamespaceId:    "00000000000000003333",
 		AuthToken:      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBbGxvdyI6WyJwdWJsaWMiLCJyZWFkIiwid3JpdGUiLCJhZG1pbiJdfQ.MaHtzm_HvBw810jMsd1Vr4bz1f4oAMPZExRNsOJ9n1g",
 		L1RPCURL:       "http://65.109.115.36:32813",
+		L1Contract:     "0x878705ba3f8Bc32FCf7F4CAa1A35E72AF65CF766",
 		PrivateKey:     "7da08f856b5956d40a72968f93396f6acff17193f013e8053f6fbb6c08c194d6",
 		NetworkTimeout: 30 * time.Second,
 	}
@@ -34,7 +35,7 @@ func TestSend(t *testing.T) {
 		readTxt,
 	}
 
-	txManager, err := NewSimpleTxManager(l, cfg)
+	txManager, err := NewBlobManager(l, cfg)
 	if err != nil {
 		t.Fatalf("Failed to init tx mgr %v", err)
 	}
@@ -43,7 +44,7 @@ func TestSend(t *testing.T) {
 		data := tt(t, 10*32)
 		t.Run("", func(t *testing.T) {
 			ctx := context.Background()
-			cmt, ht, err := txManager.Send(ctx, data)
+			cmt, ht, err := txManager.SendBlob(ctx, data)
 			if err != nil {
 				t.Errorf("SimpleTxManager.send() error = %v", err)
 				return
