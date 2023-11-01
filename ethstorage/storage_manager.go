@@ -31,10 +31,11 @@ type Il1Source interface {
 // StorageManager is a higher-level abstract of ShardManager which provides multi-thread safety to storage file read/write
 // and a consistent view of most-recent-finalized L1 block.
 type StorageManager struct {
-	shardManager *ShardManager
-	mu           sync.Mutex // protect localL1 and underlying blob read/write
-	localL1      int64      // local view of most-recent-finalized L1 block
-	l1Source     Il1Source
+	shardManager      *ShardManager
+	mu                sync.Mutex // protect localL1 and underlying blob read/write
+	localL1           int64      // local view of most-recent-finalized L1 block
+	l1Source          Il1Source
+	DownloadThreadNum int
 }
 
 func NewStorageManager(sm *ShardManager, l1Source Il1Source) *StorageManager {
@@ -61,14 +62,52 @@ func (s *StorageManager) DownloadFinished(newL1 int64, kvIndices []uint64, blobs
 		return errors.New("new L1 is older than local L1")
 	}
 
-	for i, kvIndex := range kvIndices {
-		c := prepareCommit(commits[i])
-		// if return false, just ignore because we are not intersted in it
-		_, err := s.shardManager.TryWrite(kvIndex, blobs[i], c)
-		if err != nil {
-			return err
+	taskNum := s.DownloadThreadNum
+	var wg sync.WaitGroup
+	chanRes := make(chan error, taskNum)
+	defer close(chanRes)
+
+	taskIdx := 0
+	for taskIdx < taskNum {
+		if taskIdx >= len(kvIndices) {
+			break
+		}
+
+		wg.Add(1)
+
+		insertIdxInTask := make([]int, 0)
+		for i := taskIdx; i < len(kvIndices); i += taskNum {
+			insertIdxInTask = append(insertIdxInTask, i)
+		}
+
+		go func(insertIdx []int, out chan<- error) {
+			defer wg.Done()
+
+			var err error = nil
+			for _, idx := range insertIdx {
+				c := prepareCommit(commits[idx])
+				// if return false, just ignore because we are not intersted in it
+				_, err = s.shardManager.TryWrite(kvIndices[idx], blobs[idx], c)
+				if err != nil {
+					break
+				}
+			}
+
+			chanRes <- err
+		}(insertIdxInTask, chanRes)
+
+		taskIdx++
+	}
+
+	wg.Wait()
+
+	for i := 0; i < taskIdx; i++ {
+		res := <- chanRes
+		if (res != nil) {
+			return res
 		}
 	}
+
 	s.localL1 = newL1
 
 	return nil

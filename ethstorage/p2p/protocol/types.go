@@ -133,3 +133,7 @@ type EthStorageSyncDone struct {
 	DoneType int
 	ShardId  uint64
 }
+
+type SyncerParams struct {
+	MaxRequestSize uint64
+}
