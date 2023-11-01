@@ -332,7 +332,7 @@ func TestSimpleSync(t *testing.T) {
 		excludedList: make(map[uint64]struct{}),
 	}}
 
-	testSync(t, defaultChunkSize, kvSize, kvEntries, []uint64{0}, lastKvIndex, defaultEncodeType, 2, remotePeers, true)
+	testSync(t, defaultChunkSize, kvSize, kvEntries, []uint64{0}, lastKvIndex, defaultEncodeType, 3, remotePeers, true)
 }
 
 // TestMultiSubTasksSync test sync process with local node support a single big (its task contains multi subTask) shard
