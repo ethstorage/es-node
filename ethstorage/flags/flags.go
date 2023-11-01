@@ -20,8 +20,6 @@ func prefixEnvVar(name string) string {
 }
 
 var (
-	/* Required Flags */
-	/* Optional Flags */
 	Network = cli.StringFlag{
 		Name:   "network",
 		Usage:  fmt.Sprintf("Predefined L1 network selection. Available networks: %s", "devnet"),
@@ -29,19 +27,13 @@ var (
 	}
 	DataDir = cli.StringFlag{
 		Name:   "datadir",
-		Usage:  "Data directory for the databases and keystore",
+		Usage:  "Data directory for the storage files, databases and keystore",
 		EnvVar: prefixEnvVar("DATADIR"),
 	}
 	RollupConfig = cli.StringFlag{
 		Name:   "rollup.config",
 		Usage:  "Rollup chain parameters",
 		EnvVar: prefixEnvVar("ROLLUP_CONFIG"),
-	}
-	// TODO: move storage flag to storage folder
-	StorageFiles = cli.StringSliceFlag{
-		Name:   "storage.files",
-		Usage:  "Storage files parameter",
-		EnvVar: prefixEnvVar("STORAGE_FILES"),
 	}
 	L1ChainId = cli.Uint64Flag{
 		Name:   "l1.chain_id",
@@ -52,33 +44,29 @@ var (
 	L1NodeAddr = cli.StringFlag{
 		Name:   "l1.rpc",
 		Usage:  "Address of L1 User JSON-RPC endpoint to use (eth namespace required)",
-		Value:  "http://127.0.0.1:8545",
 		EnvVar: prefixEnvVar("L1_ETH_RPC"),
 	}
 	L1BeaconAddr = cli.StringFlag{
 		Name:   "l1.beacon",
 		Usage:  "Address of L1 beacon chain endpoint to use",
-		Value:  "http://127.0.0.1:5052",
 		EnvVar: prefixEnvVar("L1_BEACON_URL"),
 	}
 	// TODO: @Qiang everytime devnet changed, we may need to change it
 	L1BeaconBasedTime = cli.Uint64Flag{
 		Name:   "l1.beacon-based-time",
-		Usage:  "A pair of timestamp and slot number in the past time",
-		Value:  1688443932,
+		Usage:  "Timestamp of a slot specified by l1.beacon-based-slot",
 		EnvVar: prefixEnvVar("L1_BEACON_BASED_TIME"),
 	}
 	// TODO: @Qiang everytime devnet changed, we may need to change it
 	L1BeaconBasedSlot = cli.Uint64Flag{
 		Name:   "l1.beacon-based-slot",
-		Usage:  "A pair of timestamp and slot number in the past time",
-		Value:  26456,
+		Usage:  "A slot number in the past time specified by l1.beacon-based-time",
 		EnvVar: prefixEnvVar("L1_BEACON_BASED_SLOT"),
 	}
 	// TODO: @Qiang everytime devnet changed, we may need to change it if the slot time changed
 	L1BeaconSlotTime = cli.Uint64Flag{
 		Name:   "l1.beacon-slot-time",
-		Usage:  "Address of L1 beacon chain endpoint to use",
+		Usage:  "Slot time of the L1 beacon chain",
 		Value:  12,
 		EnvVar: prefixEnvVar("L1_BEACON_SLOT_TIME"),
 	}
@@ -102,10 +90,26 @@ var (
 		EnvVar: prefixEnvVar("L2_CHAIN_ID"),
 	}
 	MetricsEnable = cli.BoolFlag{
-		Name:     "metrics.enable",
-		Usage:    "Enable metrics",
-		Required: false,
-		EnvVar:   prefixEnvVar("METRICS_ENABLE"),
+		Name:   "metrics.enable",
+		Usage:  "Enable metrics",
+		EnvVar: prefixEnvVar("METRICS_ENABLE"),
+	}
+	PprofEnabledFlag = cli.BoolFlag{
+		Name:   "pprof.enabled",
+		Usage:  "Enable the pprof server",
+		EnvVar: prefixEnvVar("PPROF_ENABLED"),
+	}
+	PprofAddrFlag = cli.StringFlag{
+		Name:   "pprof.addr",
+		Usage:  "pprof listening address",
+		Value:  "0.0.0.0",
+		EnvVar: prefixEnvVar("PPROF_ADDR"),
+	}
+	PprofPortFlag = cli.IntFlag{
+		Name:   "pprof.port",
+		Usage:  "pprof listening port",
+		Value:  6060,
+		EnvVar: prefixEnvVar("PPROF_PORT"),
 	}
 	DownloadStart = cli.Int64Flag{
 		Name:   "download.start",
@@ -119,96 +123,97 @@ var (
 		Value:  "",
 		EnvVar: prefixEnvVar("DOWNLOAD_DUMP"),
 	}
+	// TODO: move storage flag to storage folder
+	StorageFiles = cli.StringSliceFlag{
+		Name:   "storage.files",
+		Usage:  "File paths where the data are stored",
+		EnvVar: prefixEnvVar("STORAGE_FILES"),
+	}
 	StorageMiner = cli.StringFlag{
-		Name:     "storage.miner",
-		Usage:    "Storage miner address parameter",
-		Required: false,
-		Value:    "0x0000000000000000000000000000000000000000",
-		EnvVar:   prefixEnvVar("STORAGE_MINER"),
+		Name:   "storage.miner",
+		Usage:  "Miner's address to encode data and receive mining rewards",
+		EnvVar: prefixEnvVar("STORAGE_MINER"),
 	}
 	StorageL1Contract = cli.StringFlag{
-		Name:     "storage.l1contract",
-		Usage:    "Storage contract on l1 address parameter",
-		Required: false,
-		Value:    "0x0000000000000000000000000000000000000000",
-		EnvVar:   prefixEnvVar("STORAGE_L1CONTRACT"),
+		Name:   "storage.l1contract",
+		Usage:  "Storage contract address on l1",
+		EnvVar: prefixEnvVar("STORAGE_L1CONTRACT"),
 	}
 	StorageKvSize = cli.Uint64Flag{
-		Name:     "storage.kv-size",
-		Usage:    "Storage kv size paramaeter",
-		Required: false,
-		Hidden:   true,
-		Value:    0,
-		EnvVar:   prefixEnvVar("STORAGE_KV_SIZE"),
+		Name:   "storage.kv-size",
+		Usage:  "Storage kv size parameter",
+		Hidden: true,
+		Value:  0,
+		EnvVar: prefixEnvVar("STORAGE_KV_SIZE"),
 	}
 	StorageChunkSize = cli.Uint64Flag{
-		Name:     "storage.chunk-size",
-		Usage:    "Storage chunk (encoding) size parameter",
-		Required: false,
-		Hidden:   true,
-		Value:    0,
-		EnvVar:   prefixEnvVar("STORAGE_CHUNK_SIZE"),
+		Name:   "storage.chunk-size",
+		Usage:  "Storage chunk (encoding) size parameter",
+		Hidden: true,
+		Value:  0,
+		EnvVar: prefixEnvVar("STORAGE_CHUNK_SIZE"),
 	}
 	StorageKvEntries = cli.Uint64Flag{
-		Name:     "storage.kv-entries",
-		Usage:    "Storage kv entries per shard parameter",
-		Required: false,
-		Hidden:   true,
-		Value:    0,
-		EnvVar:   prefixEnvVar("STORAGE_KV_ENTRIES"),
+		Name:   "storage.kv-entries",
+		Usage:  "Storage kv entries per shard parameter",
+		Hidden: true,
+		Value:  0,
+		EnvVar: prefixEnvVar("STORAGE_KV_ENTRIES"),
 	}
 	L1EpochPollIntervalFlag = cli.DurationFlag{
-		Name:     "l1.epoch-poll-interval",
-		Usage:    "Poll interval for retrieving new L1 epoch updates such as safe and finalized block changes. Disabled if 0 or negative.",
-		EnvVar:   prefixEnvVar("L1_EPOCH_POLL_INTERVAL"),
-		Required: false,
-		Value:    time.Second * 12 * 32,
+		Name:   "l1.epoch-poll-interval",
+		Usage:  "Poll interval for retrieving new L1 epoch updates such as safe and finalized block changes. Disabled if 0 or negative.",
+		EnvVar: prefixEnvVar("L1_EPOCH_POLL_INTERVAL"),
+		Value:  time.Second * 12 * 32,
 	}
 	RPCListenAddr = cli.StringFlag{
-		Name:     "rpc.addr",
-		Usage:    "RPC listening address",
-		Required: false,
-		EnvVar:   prefixEnvVar("RPC_ADDR"),
-		Value:    "127.0.0.1",
+		Name:   "rpc.addr",
+		Usage:  "RPC listening address",
+		EnvVar: prefixEnvVar("RPC_ADDR"),
+		Value:  "127.0.0.1",
 	}
-	RPCListenPort = &cli.IntFlag{
-		Name:     "rpc.port",
-		Usage:    "RPC listening port",
-		Required: false,
-		EnvVar:   prefixEnvVar("RPC_PORT"),
-		Value:    9545,
+	RPCListenPort = cli.IntFlag{
+		Name:   "rpc.port",
+		Usage:  "RPC listening port",
+		EnvVar: prefixEnvVar("RPC_PORT"),
+		Value:  9545,
 	}
 	RPCESCallURL = cli.StringFlag{
-		Name:     "rpc.escall-url",
-		Usage:    "RPC EsCall URL",
-		Required: false,
-		EnvVar:   prefixEnvVar("RPC_ESCALL_URL"),
-		Value:    "http://127.0.0.1:8545",
+		Name:   "rpc.escall-url",
+		Usage:  "RPC EsCall URL",
+		EnvVar: prefixEnvVar("RPC_ESCALL_URL"),
+		Value:  "http://127.0.0.1:8545",
 	}
 )
 
-var requiredFlags = []cli.Flag{}
-
-var optionalFlags = []cli.Flag{
-	Network,
+// Not use 'Required' field in order to avoid unnecessary check when use 'init' subcommand
+// Instead follow optimism's design to use `CheckRequired()`
+var requiredFlags = []cli.Flag{
 	DataDir,
-	RollupConfig,
-	L1ChainId,
+	StorageFiles,
 	L1NodeAddr,
 	L1BeaconAddr,
 	L1BeaconBasedTime,
 	L1BeaconBasedSlot,
+	StorageMiner,
+	StorageL1Contract,
+}
+
+var optionalFlags = []cli.Flag{
+	Network,
+	RollupConfig,
+	L1ChainId,
 	L1BeaconSlotTime,
 	L1MinDurationForBlobsRequest,
 	L1MockMetafile,
 	L2ChainId,
 	MetricsEnable,
+	PprofEnabledFlag,
+	PprofAddrFlag,
+	PprofPortFlag,
 	DownloadStart,
 	DownloadDump,
 	L1EpochPollIntervalFlag,
-	StorageFiles,
-	StorageMiner,
-	StorageL1Contract,
 	StorageKvSize,
 	StorageChunkSize,
 	StorageKvEntries,

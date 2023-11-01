@@ -10,6 +10,7 @@ import (
 	"math/big"
 	"os"
 
+	oppprof "github.com/ethereum-optimism/optimism/op-service/pprof"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/log"
@@ -94,11 +95,11 @@ func NewConfig(ctx *cli.Context, log log.Logger) (*node.Config, error) {
 		// 		ListenAddr: ctx.GlobalString(flags.MetricsAddrFlag.Name),
 		// 		ListenPort: ctx.GlobalInt(flags.MetricsPortFlag.Name),
 		// 	},
-		// 	Pprof: oppprof.CLIConfig{
-		// 		Enabled:    ctx.GlobalBool(flags.PprofEnabledFlag.Name),
-		// 		ListenAddr: ctx.GlobalString(flags.PprofAddrFlag.Name),
-		// 		ListenPort: ctx.GlobalInt(flags.PprofPortFlag.Name),
-		// 	},
+		Pprof: oppprof.CLIConfig{
+			Enabled:    ctx.GlobalBool(flags.PprofEnabledFlag.Name),
+			ListenAddr: ctx.GlobalString(flags.PprofAddrFlag.Name),
+			ListenPort: ctx.GlobalInt(flags.PprofPortFlag.Name),
+		},
 		P2P: p2pConfig,
 		// 	P2PSigner:           p2pSignerSetup,
 		L1EpochPollInterval: ctx.GlobalDuration(flags.L1EpochPollIntervalFlag.Name),
@@ -108,9 +109,7 @@ func NewConfig(ctx *cli.Context, log log.Logger) (*node.Config, error) {
 		// 		URL:     ctx.GlobalString(flags.HeartbeatURLFlag.Name),
 		// 	},
 		Storage: *storageConfig,
-	}
-	if minerConfig != nil {
-		cfg.Mining = *minerConfig
+		Mining:  minerConfig,
 	}
 	if err := cfg.Check(); err != nil {
 		return nil, err
@@ -123,7 +122,14 @@ func NewMinerConfig(ctx *cli.Context, client *ethclient.Client, l1Contract commo
 	if !cliConfig.Enabled {
 		return nil, nil
 	}
-	minerConfig := cliConfig.ToMinerConfig()
+	err := cliConfig.Check()
+	if err != nil {
+		return nil, fmt.Errorf("invalid miner flags: %w", err)
+	}
+	minerConfig, err := cliConfig.ToMinerConfig()
+	if err != nil {
+		return nil, err
+	}
 	cctx := context.Background()
 	randomChecks, err := readUintFromContract(cctx, client, l1Contract, "randomChecks")
 	if err != nil {

@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
+	oppprof "github.com/ethereum-optimism/optimism/op-service/pprof"
 	"github.com/ethstorage/go-ethstorage/ethstorage/db"
 	"github.com/ethstorage/go-ethstorage/ethstorage/downloader"
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
@@ -42,7 +43,7 @@ type Config struct {
 
 	// Metrics MetricsConfig
 
-	// Pprof oppprof.CLIConfig
+	Pprof oppprof.CLIConfig
 
 	// Used to poll the L1 for new finalized or safe blocks
 	L1EpochPollInterval time.Duration
@@ -50,7 +51,7 @@ type Config struct {
 	// // Optional
 	// Tracer    Tracer
 	// Heartbeat HeartbeatConfig
-	Mining miner.Config
+	Mining *miner.Config
 }
 
 type RPCConfig struct {
@@ -73,9 +74,9 @@ func (cfg *Config) Check() error {
 	// if err := cfg.Metrics.Check(); err != nil {
 	// 	return fmt.Errorf("metrics config error: %w", err)
 	// }
-	// if err := cfg.Pprof.Check(); err != nil {
-	// 	return fmt.Errorf("pprof config error: %w", err)
-	// }
+	if err := cfg.Pprof.Check(); err != nil {
+		return fmt.Errorf("pprof config error: %w", err)
+	}
 	if cfg.P2P != nil {
 		if err := cfg.P2P.Check(); err != nil {
 			return fmt.Errorf("p2p config error: %w", err)

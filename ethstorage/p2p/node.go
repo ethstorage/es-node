@@ -41,7 +41,7 @@ type NodeP2P struct {
 
 type Metricer interface {
 	RecordGossipEvent(evType int32)
-	// Peer Scoring Metric Funcs
+	// SetPeerScores Peer Scoring Metric Funcs
 	SetPeerScores(map[string]float64)
 }
 
@@ -56,7 +56,7 @@ func NewNodeP2P(resourcesCtx context.Context, rollupCfg *rollup.EsConfig, l1Chai
 	if err := n.init(resourcesCtx, rollupCfg, l1ChainID, log, setup, storageManager, db, metrics, feed); err != nil {
 		closeErr := n.Close()
 		if closeErr != nil {
-			log.Error("failed to close p2p after starting with err", "closeErr", closeErr, "err", err)
+			log.Error("Failed to close p2p after starting with err", "closeErr", closeErr, "err", err)
 		}
 		return nil, err
 	}
@@ -92,7 +92,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 			m = protocol.NewMetrics("sync")
 		}
 		// Activate the P2P req-resp sync
-		n.syncCl = protocol.NewSyncClient(log, rollupCfg, n.host.NewStream, storageManager, db, m, feed)
+		n.syncCl = protocol.NewSyncClient(log, rollupCfg, n.host.NewStream, storageManager, setup.SyncerParams().MaxRequestSize, db, m, feed)
 		n.host.Network().Notify(&network.NotifyBundle{
 			ConnectedF: func(nw network.Network, conn network.Conn) {
 				var (
@@ -103,7 +103,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 					// As the node host enable NATService, which will create a new connection with another
 					// peer id and its Addrs will not be set to Peerstore, so if len of peer Addrs is 0,
 					// then ignore this connection.
-					log.Debug("no addresses to get shard list, return without close conn", "peer", remotePeerId)
+					log.Debug("No addresses to get shard list, return without close conn", "peer", remotePeerId)
 					return
 				}
 				css, err := n.Host().Peerstore().Get(remotePeerId, protocol.EthStorageENRKey)
@@ -113,11 +113,11 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 					// n.RequestShardList to fetch the shard list of the new node.
 					remoteShardList, e := n.RequestShardList(remotePeerId)
 					if e != nil {
-						log.Info("get remote shard list fail", "peer", remotePeerId, "err", e.Error())
+						log.Info("Get remote shard list fail", "peer", remotePeerId, "err", e.Error())
 						conn.Close()
 						return
 					}
-					log.Debug("get remote shard list success", "peer", remotePeerId, "shards", remoteShardList)
+					log.Debug("Get remote shard list success", "peer", remotePeerId, "shards", remoteShardList)
 					n.Host().Peerstore().Put(remotePeerId, protocol.EthStorageENRKey, remoteShardList)
 					shards = protocol.ConvertToShardList(remoteShardList)
 				} else {
@@ -130,7 +130,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 			},
 			DisconnectedF: func(nw network.Network, conn network.Conn) {
 				if len(n.host.Peerstore().Addrs(conn.RemotePeer())) == 0 {
-					log.Debug("no addresses in peer store, return without remove peer", "peer", conn.RemotePeer())
+					log.Debug("No addresses in peer store, return without remove peer", "peer", conn.RemotePeer())
 					return
 				}
 				n.syncCl.RemovePeer(conn.RemotePeer())
@@ -142,7 +142,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 			shards := make(map[common.Address][]uint64)
 			css, err := n.host.Peerstore().Get(conn.RemotePeer(), protocol.EthStorageENRKey)
 			if err != nil {
-				log.Debug("get shards from peer failed", "peer", conn.RemotePeer(), "error", err.Error())
+				log.Debug("Get shards from peer failed", "peer", conn.RemotePeer(), "error", err.Error())
 				continue
 			} else {
 				shards = protocol.ConvertToShardList(css.([]*protocol.ContractShards))
@@ -170,11 +170,11 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 			return fmt.Errorf("failed to start gossipsub router: %w", err)
 		}
 
-		log.Info("Started p2p host", "addrs", n.host.Addrs(), "peerID", n.host.ID().Pretty(), "targetPeers", setup.TargetPeers())
+		log.Info("Started p2p host", "addrs", n.host.Addrs(), "peerID", n.host.ID().String(), "targetPeers", setup.TargetPeers())
 
 		tcpPort, err := FindActiveTCPPort(n.host)
 		if err != nil {
-			log.Warn("failed to find what TCP port p2p is binded to", "err", err)
+			log.Warn("Failed to find what TCP port p2p is binded to", "err", err)
 		}
 
 		// All nil if disabled.

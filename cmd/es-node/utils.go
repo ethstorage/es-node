@@ -19,6 +19,7 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	es "github.com/ethstorage/go-ethstorage/ethstorage"
 	"github.com/ethstorage/go-ethstorage/ethstorage/storage"
+	"github.com/urfave/cli"
 )
 
 const (
@@ -98,16 +99,17 @@ func getShardList(ctx context.Context, client *ethclient.Client, contract common
 	}
 	// get the shards with lowest difficulty
 	sortedShardIds := sortBigIntSlice(diffs)
-	if len(sortedShardIds) < shardLen {
-		shardLen = len(sortedShardIds)
-	}
 	var result []uint64
-	for i := 0; i < shardLen; i++ {
-		result = append(result, uint64(sortedShardIds[i]))
-	}
-	// Will create at least one data file
-	if len(result) == 0 {
+	if len(sortedShardIds) == 0 {
+		// Will create at least one data file
 		result = []uint64{0}
+	} else {
+		if len(sortedShardIds) < shardLen {
+			shardLen = len(sortedShardIds)
+		}
+		for i := 0; i < shardLen; i++ {
+			result = append(result, uint64(sortedShardIds[i]))
+		}
 	}
 	log.Info("Get shard list", "shards", result)
 	return result, nil
@@ -140,7 +142,7 @@ func getDifficulty(ctx context.Context, client *ethclient.Client, contract commo
 }
 
 func createDataFile(cfg *storage.StorageConfig, shardIdxList []uint64, datadir string) ([]string, error) {
-	log.Info("Creating data files", "shardIdxList", shardIdxList, "datadir", datadir)
+	log.Info("Creating data files", "shardIdxList", shardIdxList, "dataDir", datadir)
 	if _, err := os.Stat(datadir); os.IsNotExist(err) {
 		if err := os.Mkdir(datadir, 0755); err != nil {
 			log.Error("Creating data directory", "error", err)
@@ -170,8 +172,7 @@ func createDataFile(cfg *storage.StorageConfig, shardIdxList []uint64, datadir s
 			log.Error("Creating data file", "error", err)
 			return nil, err
 		}
-
-		log.Info("Data file created", "shard", shardIdx, "file", dataFile, "datafile", fmt.Sprintf("%+v", df))
+		log.Info("Data file created", "shard", shardIdx, "file", dataFile, "chunkIdxStart", df.KvIdxStart(), "ChunkIdxEnd", df.ChunkIdxEnd(), "miner", df.Miner())
 		files = append(files, dataFile)
 	}
 	return files, nil
@@ -186,4 +187,13 @@ func sortBigIntSlice(slice []*big.Int) []int {
 		return slice[indices[i]].Cmp(slice[indices[j]]) < 0
 	})
 	return indices
+}
+
+func readRequiredFlag(ctx *cli.Context, name string) string {
+	if !ctx.IsSet(name) {
+		log.Crit("Flag is required", "flag", name)
+	}
+	value := ctx.String(name)
+	log.Info("Read flag", "name", name, "value", value)
+	return value
 }

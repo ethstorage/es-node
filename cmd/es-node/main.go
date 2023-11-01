@@ -7,11 +7,14 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"net"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 
+	oppprof "github.com/ethereum-optimism/optimism/op-service/pprof"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/log"
@@ -24,7 +27,7 @@ import (
 var (
 	GitCommit = ""
 	GitDate   = ""
-	Version   = "v0.0.1"
+	Version   = "v0.1.1"
 	Meta      = "dev"
 )
 
@@ -77,18 +80,6 @@ func main() {
 			},
 			Action: EsNodeInit,
 		},
-		// 	{
-		// 		Name:        "p2p",
-		// 		Subcommands: p2p.Subcommands,
-		// 	},
-		// 	{
-		// 		Name:        "genesis",
-		// 		Subcommands: genesis.Subcommands,
-		// 	},
-		// 	{
-		// 		Name:        "doc",
-		// 		Subcommands: doc.Subcommands,
-		// 	},
 	}
 
 	err := app.Run(os.Args)
@@ -98,7 +89,7 @@ func main() {
 }
 
 func EsNodeMain(ctx *cli.Context) error {
-	log.Info("Initializing EthStorage Node")
+	log.Info("Configuring EthStorage Node")
 	logCfg := eslog.ReadCLIConfig(ctx)
 	if err := logCfg.Check(); err != nil {
 		log.Error("Unable to create the log config", "error", err)
@@ -125,7 +116,16 @@ func EsNodeMain(ctx *cli.Context) error {
 	defer n.Close()
 
 	// TODO: heartbeat
-	// TODO: pprof
+	if cfg.Pprof.Enabled {
+		pprofCtx, pprofCancel := context.WithCancel(context.Background())
+		go func() {
+			log.Info("pprof server started", "addr", net.JoinHostPort(cfg.Pprof.ListenAddr, strconv.Itoa(cfg.Pprof.ListenPort)))
+			if err := oppprof.ListenAndServe(pprofCtx, cfg.Pprof.ListenAddr, cfg.Pprof.ListenPort); err != nil {
+				log.Error("error starting pprof", "err", err)
+			}
+		}()
+		defer pprofCancel()
+	}
 
 	log.Info("Storage node started")
 
@@ -151,16 +151,17 @@ func EsNodeMain(ctx *cli.Context) error {
 }
 
 func EsNodeInit(ctx *cli.Context) error {
+	logCfg := eslog.ReadCLIConfig(ctx)
+	if err := logCfg.Check(); err != nil {
+		log.Error("Unable to create the log config", "error", err)
+		return err
+	}
+	log := eslog.NewLogger(logCfg)
 	log.Info("Will create data files for storage node")
-	l1Rpc := ctx.String(flags.L1NodeAddr.Name)
-	log.Info("Read flag", "name", flags.L1NodeAddr.Name, "value", l1Rpc)
-	contract := ctx.String(flags.StorageL1Contract.Name)
-	log.Info("Read flag", "name", flags.StorageL1Contract.Name, "value", contract)
-	l1Contract := common.HexToAddress(contract)
-	miner := ctx.String(flags.StorageMiner.Name)
-	log.Info("Read flag", "name", flags.StorageMiner.Name, "value", miner)
-	datadir := ctx.String(flags.DataDir.Name)
-	log.Info("Read flag", "name", flags.DataDir.Name, "value", datadir)
+	l1Rpc := readRequiredFlag(ctx, flags.L1NodeAddr.Name)
+	contract := readRequiredFlag(ctx, flags.StorageL1Contract.Name)
+	miner := readRequiredFlag(ctx, flags.StorageMiner.Name)
+	datadir := readRequiredFlag(ctx, flags.DataDir.Name)
 	shardIndexes := ctx.Int64Slice(shardIndexFlagName)
 	log.Info("Read flag", "name", shardIndexFlagName, "value", shardIndexes)
 	shardLen := 0
@@ -180,6 +181,7 @@ func EsNodeInit(ctx *cli.Context) error {
 	}
 	defer client.Close()
 
+	l1Contract := common.HexToAddress(contract)
 	storageCfg, err := initStorageConfig(cctx, client, l1Contract, common.HexToAddress(miner))
 	if err != nil {
 		log.Error("Failed to load storage config", "error", err)

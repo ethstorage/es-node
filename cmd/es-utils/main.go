@@ -183,26 +183,26 @@ func runCreate(cmd *cobra.Command, args []string) {
 	setupLogger()
 
 	if len(*filenames) != 1 {
-		log.Crit("must provide single filename")
+		log.Crit("Must provide single filename")
 	}
 
 	if *miner == "" {
-		log.Crit("must provide miner")
+		log.Crit("Must provide miner")
 	}
 	minerAddr := common.HexToAddress(*miner)
 
 	if *chunkSize == 0 {
-		log.Crit("chunk size should not be 0")
+		log.Crit("Chunk size should not be 0")
 	}
 	if *kvSize%*chunkSize != 0 {
-		log.Crit("max kv size %% chunk size should be 0")
+		log.Crit("Max kv size %% chunk size should be 0")
 	}
 
 	if *chunkLen == 0 && *kvLen == 0 {
-		log.Crit("chunk_Len or kv_Len is needed")
+		log.Crit("Chunk_Len or kv_Len is needed")
 	}
 	if *chunkLen > 0 && *kvLen > 0 {
-		log.Crit("only one of chunk_Len and kv_Len is nonzero")
+		log.Crit("Only one of chunk_Len and kv_Len is nonzero")
 	}
 	if *chunkLen == 0 {
 		chunkPerKV := *kvSize / *chunkSize
@@ -214,7 +214,7 @@ func runCreate(cmd *cobra.Command, args []string) {
 
 	_, err := es.Create((*filenames)[0], *chunkIdx, *chunkLen, 0, *kvSize, *encodeType, minerAddr, *chunkSize)
 	if err != nil {
-		log.Crit("create failed", "error", err)
+		log.Crit("Create failed", "error", err)
 	}
 }
 
@@ -234,20 +234,20 @@ func runChunkRead(cmd *cobra.Command, args []string) {
 	setupLogger()
 
 	if len(*filenames) != 1 {
-		log.Crit("must provide a filename")
+		log.Crit("Must provide a filename")
 	}
 
 	var err error
 	var df *es.DataFile
 	df, err = es.OpenDataFile((*filenames)[0])
 	if err != nil {
-		log.Crit("open failed", "error", err)
+		log.Crit("Open failed", "error", err)
 	}
 
 	// do not have data hash, use empty hash for placeholder
 	b, err := df.Read(*chunkIdx, int(*readLen))
 	if err != nil {
-		log.Crit("open failed", "error", err)
+		log.Crit("Open failed", "error", err)
 	}
 	os.Stdout.Write(b)
 }
@@ -285,22 +285,22 @@ func generateMetadata(idx, size uint64, hash []byte) common.Hash {
 func runChunkWrite(cmd *cobra.Command, args []string) {
 	setupLogger()
 
-	log.Warn("writing chunk without writing meta may corrupt the file!")
+	log.Warn("Writing chunk without writing meta may corrupt the file!")
 
 	if len(*filenames) != 1 {
-		log.Crit("must provide a filename")
+		log.Crit("Must provide a filename")
 	}
 
 	var err error
 	var df *es.DataFile
 	df, err = es.OpenDataFile((*filenames)[0])
 	if err != nil {
-		log.Crit("open failed", "error", err)
+		log.Crit("Open failed", "error", err)
 	}
 
 	err = df.Write(*chunkIdx, readInputBytes())
 	if err != nil {
-		log.Crit("write failed", "error", err)
+		log.Crit("Write failed", "error", err)
 	}
 }
 
@@ -312,7 +312,7 @@ func runShardRead(cmd *cobra.Command, args []string) {
 	commit := common.HexToHash(*commitString)
 	b, err := ds.Read(*kvIdx, int(*readLen), commit)
 	if err != nil {
-		log.Crit("read failed", "error", err)
+		log.Crit("Read failed", "error", err)
 	}
 	os.Stdout.Write(b)
 }
@@ -325,9 +325,9 @@ func runKVRead(cmd *cobra.Command, args []string) {
 	for i := *readStart; i < *readEnd; i++ {
 		b, _, err := ds.ReadWithMeta(i, int(*readLen))
 		if err != nil {
-			log.Crit("read failed", "error", err)
+			log.Crit("Read failed", "error", err)
 		}
-		fileName := fmt.Sprintf("%s/%s.dat", *dumpFolder, hex.EncodeToString((b[0:5])))
+		fileName := fmt.Sprintf("%s/%s.dat", *dumpFolder, hex.EncodeToString(b[0:5]))
 		f, err := os.Create(fileName)
 		if err != nil {
 			log.Crit("Error creating file:", err)
@@ -348,7 +348,7 @@ func runMetaRead(cmd *cobra.Command, args []string) {
 
 	b, err := ds.ReadMeta(*kvIdx)
 	if err != nil {
-		log.Crit("read failed", "error", err)
+		log.Crit("Read failed", "error", err)
 	}
 	os.Stdout.Write([]byte(common.Bytes2Hex(b)))
 }
@@ -360,16 +360,16 @@ func initDataShard() *es.DataShard {
 		var df *es.DataFile
 		df, err = es.OpenDataFile(filename)
 		if err != nil {
-			log.Crit("open failed", "error", err)
+			log.Crit("Open failed", "error", err)
 		}
 		err = ds.AddDataFile(df)
 		if err != nil {
-			log.Crit("open failed", "error", err)
+			log.Crit("Open failed", "error", err)
 		}
 	}
 
 	if !ds.IsComplete() {
-		log.Warn("shard is not completed")
+		log.Warn("Shard is not completed")
 	}
 	return ds
 }
@@ -387,7 +387,7 @@ func runShardWrite(cmd *cobra.Command, args []string) {
 
 	err := ds.Write(*kvIdx, bs, commit)
 	if err != nil {
-		log.Crit("write failed", "error", err)
+		log.Crit("Write failed", "error", err)
 	}
 	log.Info("Write value", "kvIdx", *kvIdx, "bytes", len(bs))
 }
@@ -399,7 +399,7 @@ func runSampleRead(cmd *cobra.Command, args []string) {
 
 	b, err := ds.ReadSample(*sampleIdx)
 	if err != nil {
-		log.Crit("read failed", "error", err)
+		log.Crit("Read failed", "error", err)
 	}
 	os.Stdout.Write(b.Bytes())
 }
@@ -411,16 +411,16 @@ func runWriteBlob(cmd *cobra.Command, args []string) {
 	blobs := utils.EncodeBlobs(bs)
 	commitments, _, versionedHashes, err := utils.ComputeBlobs(blobs)
 	if err != nil {
-		log.Crit("compute versioned hash failed", "error", err)
+		log.Crit("Compute versioned hash failed", "error", err)
 	} else {
-		log.Info(fmt.Sprintf("versioned hash is %x and commitment is %x", versionedHashes[0][:], commitments[0][:]))
+		log.Info(fmt.Sprintf("Versioned hash is %x and commitment is %x", versionedHashes[0][:], commitments[0][:]))
 	}
 
 	ds := initDataShard()
 
 	err = ds.Write(*kvIdx, blobs[0][:], versionedHashes[0])
 	if err != nil {
-		log.Crit("write failed", "error", err)
+		log.Crit("Write failed", "error", err)
 	}
 	log.Info("Write value", "kvIdx", *kvIdx, "bytes", len(blobs[0][:]))
 
@@ -449,7 +449,7 @@ func genBlobAndDump(idx int) [][]byte {
 			copy(data[j:(j+32)], scalar[:])
 		}
 		for j := uint64(0); j < *blobNum; j++ {
-			fileName := fmt.Sprintf("%s/%s.txt", saveDir, hex.EncodeToString((data[(j * fileSize) : (j*fileSize)+5])))
+			fileName := fmt.Sprintf("%s/%s.txt", saveDir, hex.EncodeToString(data[(j*fileSize):(j*fileSize)+5]))
 			f, err := os.Create(fileName)
 			if err != nil {
 				log.Crit("Error creating file:", err)

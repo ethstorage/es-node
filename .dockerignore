@@ -1,0 +1,6 @@
+**/*_test.go
+
+es-data/
+esnode_discovery_db/
+esnode_p2p_priv.txt
+esnode_peerstore_db/

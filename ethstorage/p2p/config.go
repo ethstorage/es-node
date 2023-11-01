@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
+	"github.com/ethstorage/go-ethstorage/ethstorage/p2p/protocol"
 	"github.com/ethstorage/go-ethstorage/ethstorage/rollup"
 	ds "github.com/ipfs/go-datastore"
 	"github.com/libp2p/go-libp2p"
@@ -48,6 +49,7 @@ type SetupP2P interface {
 	// Discovery creates a disc-v5 service. Returns nil, nil, nil if discovery is disabled.
 	Discovery(log log.Logger, l1ChainID uint64, tcpPort uint16) (*enode.LocalNode, *discover.UDPv5, error)
 	TargetPeers() uint
+	SyncerParams() *protocol.SyncerParams
 	GossipSetupConfigurables
 }
 
@@ -114,6 +116,9 @@ type Config struct {
 	TestSimpleSyncStart uint64
 	TestSimpleSyncEnd   uint64
 
+	// Syncer params
+	SyncParams *protocol.SyncerParams
+
 	// Underlying store that hosts connection-gater and peerstore data.
 	Store ds.Batching
 
@@ -179,6 +184,10 @@ func (conf *Config) BanPeers() bool {
 
 func (conf *Config) TopicScoringParams() *pubsub.TopicScoreParams {
 	return &conf.TopicScoring
+}
+
+func (conf *Config) SyncerParams() *protocol.SyncerParams {
+	return conf.SyncParams
 }
 
 const maxMeshParam = 1000

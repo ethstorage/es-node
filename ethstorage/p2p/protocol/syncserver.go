@@ -37,6 +37,9 @@ const (
 	peerServerBlocksRateLimit rate.Limit = 5
 	// Allow a peer to burst 10 requests, so it does not have to wait
 	peerServerBlocksBurst = 10
+
+	// maxMessageSize is the target maximum size of replies to data retrievals.
+	maxMessageSize = 8 * 1024 * 1024
 )
 
 // peerStat maintains rate-limiting data of a peer that requests blocks from us.
@@ -100,9 +103,14 @@ func (srv *SyncServer) HandleGetBlobsByRangeRequest(ctx context.Context, log log
 	cancel()
 
 	if err != nil {
-		log.Warn("failed to serve p2p sync request", "err", err)
+		log.Warn("Failed to serve p2p sync request", "err", err)
 	}
-	WriteMsg(stream, &Msg{returnCode, data})
+	err = WriteMsg(stream, &Msg{returnCode, data})
+	if err != nil {
+		log.Debug("write message fail", "err", err.Error())
+	} else {
+		log.Debug("Sent response for func HandleGetBlobsByRangeRequest", "returnCode", returnCode, "len(Bytes)", len(data), "peer", stream.Conn().RemotePeer().String())
+	}
 }
 
 func (srv *SyncServer) HandleGetBlobsByListRequest(ctx context.Context, log log.Logger, stream network.Stream) {
@@ -115,9 +123,14 @@ func (srv *SyncServer) HandleGetBlobsByListRequest(ctx context.Context, log log.
 	cancel()
 
 	if err != nil {
-		log.Warn("failed to serve p2p sync request", "err", err)
+		log.Warn("Failed to serve p2p sync request", "err", err)
 	}
-	WriteMsg(stream, &Msg{returnCode, data})
+	err = WriteMsg(stream, &Msg{returnCode, data})
+	if err != nil {
+		log.Debug("write message fail", "err", err.Error())
+	} else {
+		log.Debug("Sent response for func HandleGetBlobsByListRequest", "returnCode", returnCode, "len(Bytes)", len(data), "peer", stream.Conn().RemotePeer().String())
+	}
 }
 
 func (srv *SyncServer) handleGetBlobsByRangeRequest(ctx context.Context, stream network.Stream) (byte, []byte, error) {
@@ -287,13 +300,13 @@ func (srv *SyncServer) HandleRequestShardList(ctx context.Context, log log.Logge
 	rCode := byte(0)
 	bs, err := rlp.EncodeToBytes(ConvertToContractShards(ethstorage.Shards()))
 	if err != nil {
-		log.Warn("encode shard list fail", "err", err.Error())
+		log.Warn("Encode shard list fail", "err", err.Error())
 		rCode = returnCodeServerError
 	}
 
 	err = WriteMsg(stream, &Msg{rCode, bs})
 	if err != nil {
-		log.Warn("write response failed for HandleRequestShardList", "err", err.Error())
+		log.Warn("Write response failed for HandleRequestShardList", "err", err.Error())
 	}
-	log.Debug("write response done for HandleRequestShardList")
+	log.Debug("Write response done for HandleRequestShardList")
 }

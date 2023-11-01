@@ -41,8 +41,6 @@ const (
 	// after the rate-limit reservation hits the max throttle delay, give up on serving a request and just close the stream
 	maxThrottleDelay = time.Second * 20
 
-	maxMessageSize = 4 * 1024 * 1024
-
 	defaultMaxPeerCount = 30
 
 	defaultMinPeersPerShard = 5
@@ -78,7 +76,7 @@ func MakeStreamHandler(resourcesCtx context.Context, log log.Logger, fn requestH
 		handleLog := log.New("peer", stream.Conn().ID(), "remote", stream.Conn().RemoteMultiaddr())
 		defer func() {
 			if err := recover(); err != nil {
-				handleLog.Error("p2p server request handling panic", "err", err, "protocol", stream.Protocol())
+				handleLog.Error("P2p server request handling panic", "err", err, "protocol", stream.Protocol())
 			}
 		}()
 		defer stream.Close()
@@ -124,6 +122,10 @@ type StorageManagerReader interface {
 
 type StorageManagerWriter interface {
 	CommitBlob(kvIndex uint64, blob []byte, commit common.Hash) error
+
+	CommitEmptyBlobs(start, limit uint64) (uint64, uint64, error)
+
+	CommitBlobs(kvIndices []uint64, blobs [][]byte, commits []common.Hash) ([]uint64, error)
 }
 
 type StorageManager interface {
@@ -147,6 +149,7 @@ type SyncClient struct {
 
 	maxPeers         int
 	minPeersPerShard int
+	maxRequestSize   uint64
 
 	// Don't allow anything to be added to the wait-group while, or after, we are shutting down.
 	// This is protected by lock.
@@ -170,8 +173,9 @@ type SyncClient struct {
 	lock sync.Mutex
 
 	prover         prv.IProver
-	startTime      time.Time // Time instance when sstorage sync started
+	startTime      time.Time // Time instance when storage sync started
 	logTime        time.Time // Time instance when status was last reported
+	saveTime       time.Time // Time instance when state was last saved to DB
 	storageManager StorageManager
 
 	blobsSynced      uint64
@@ -180,14 +184,14 @@ type SyncClient struct {
 	emptyBlobsFilled uint64
 }
 
-func NewSyncClient(log log.Logger, cfg *rollup.EsConfig, newStream newStreamFn, storageManager StorageManager,
+func NewSyncClient(log log.Logger, cfg *rollup.EsConfig, newStream newStreamFn, storageManager StorageManager, maxRequestSize uint64,
 	db ethdb.Database, metrics SyncClientMetrics, mux *event.Feed) *SyncClient {
 	ctx, cancel := context.WithCancel(context.Background())
 	maxFillEmptyTaskTreads = int32(runtime.NumCPU() - 2)
 	if maxFillEmptyTaskTreads < 1 {
 		maxFillEmptyTaskTreads = 1
 	}
-	maxKvCountPerReq = maxMessageSize / storageManager.MaxKvSize()
+	maxKvCountPerReq = maxRequestSize / storageManager.MaxKvSize()
 	shardCount := len(storageManager.Shards())
 	if metrics == nil {
 		metrics = NoopMetrics
@@ -211,6 +215,7 @@ func NewSyncClient(log log.Logger, cfg *rollup.EsConfig, newStream newStreamFn, 
 		prover:                     prv.NewKZGProver(log),
 		maxPeers:                   defaultMaxPeerCount,
 		minPeersPerShard:           getMinPeersPerShard(defaultMaxPeerCount, shardCount),
+		maxRequestSize:             maxRequestSize,
 	}
 	return c
 }
@@ -236,7 +241,7 @@ func (s *SyncClient) setSyncDone() {
 	if s.mux != nil {
 		s.mux.Send(EthStorageSyncDone{DoneType: AllShardDone})
 	}
-	log.Info("Sync done", "time used", time.Since(s.startTime))
+	log.Info("Sync done", "timeUsed", time.Since(s.startTime))
 }
 
 func (s *SyncClient) loadSyncStatus() {
@@ -250,7 +255,7 @@ func (s *SyncClient) loadSyncStatus() {
 			log.Error("Failed to decode storage sync status", "err", err)
 		} else {
 			for _, task := range progress.Tasks {
-				log.Debug("Load sync subTask", "Contract", task.Contract.Hex(),
+				log.Debug("Load sync subTask", "contract", task.Contract.Hex(),
 					"shard", task.ShardId, "count", len(task.SubTasks))
 				task.healTask = &healTask{
 					Indexes: make(map[uint64]int64),
@@ -264,7 +269,7 @@ func (s *SyncClient) loadSyncStatus() {
 				}
 				for _, sEmptyTask := range task.SubEmptyTasks {
 					sEmptyTask.task = task
-					s.emptyBlobsToFill += (sEmptyTask.Last - sEmptyTask.First)
+					s.emptyBlobsToFill += sEmptyTask.Last - sEmptyTask.First
 				}
 			}
 			s.blobsSynced, s.syncedBytes = progress.BlobsSynced, progress.SyncedBytes
@@ -276,7 +281,7 @@ func (s *SyncClient) loadSyncStatus() {
 	lastKvIndex, err := s.storageManager.LastKvIndex()
 	if err != nil {
 		// TODO: panic?
-		log.Info("loadSyncStatus failed: get lastKvIdx")
+		log.Info("LoadSyncStatus failed: get lastKvIdx")
 		lastKvIndex = 0
 	}
 	for _, sid := range s.storageManager.Shards() {
@@ -375,7 +380,14 @@ func (s *SyncClient) createTask(sid uint64, lastKvIndex uint64) *task {
 }
 
 // saveSyncStatus marshals the remaining sync tasks into leveldb.
-func (s *SyncClient) saveSyncStatus() {
+func (s *SyncClient) saveSyncStatus(force bool) {
+	if !force && time.Since(s.saveTime) < 10*time.Minute {
+		return
+	}
+	s.saveTime = time.Now()
+
+	s.lock.Lock()
+	defer s.lock.Unlock()
 	// Store the actual progress markers
 	progress := &SyncProgress{
 		Tasks:            s.tasks,
@@ -389,8 +401,9 @@ func (s *SyncClient) saveSyncStatus() {
 		panic(err) // This can only fail during implementation
 	}
 	if err := s.db.Put(syncStatusKey, status); err != nil {
-		log.Crit("Failed to store sync status", "err", err)
+		log.Error("Failed to store sync status", "err", err)
 	}
+	log.Debug("Save sync state to DB")
 }
 
 // cleanTasks removes kv range retrieval tasks that have already been completed.
@@ -429,7 +442,7 @@ func (s *SyncClient) cleanTasks() {
 	// If everything was just finalized, generate the account trie and origin heal
 	if allDone {
 		s.setSyncDone()
-		log.Info("storage sync done", "subTask count", len(s.tasks))
+		log.Info("Storage sync done", "subTaskCount", len(s.tasks))
 
 		s.report(true)
 	}
@@ -450,7 +463,7 @@ func (s *SyncClient) Start() {
 func (s *SyncClient) AddPeer(id peer.ID, shards map[common.Address][]uint64) bool {
 	s.lock.Lock()
 	if _, ok := s.peers[id]; ok {
-		s.log.Warn("cannot register peer for sync duties, peer was already registered", "peer", id)
+		s.log.Warn("Cannot register peer for sync duties, peer was already registered", "peer", id)
 		s.lock.Unlock()
 		return true
 	}
@@ -464,8 +477,8 @@ func (s *SyncClient) AddPeer(id peer.ID, shards map[common.Address][]uint64) boo
 		return false
 	}
 	// add new peer routine
-	peer := NewPeer(0, s.cfg.L2ChainID, id, s.newStreamFn, shards)
-	s.peers[id] = peer
+	pr := NewPeer(0, s.cfg.L2ChainID, id, s.newStreamFn, shards)
+	s.peers[id] = pr
 
 	s.idlerPeers[id] = struct{}{}
 	s.addPeerToTask(id, shards)
@@ -479,14 +492,14 @@ func (s *SyncClient) AddPeer(id peer.ID, shards map[common.Address][]uint64) boo
 func (s *SyncClient) RemovePeer(id peer.ID) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	peer, ok := s.peers[id]
+	pr, ok := s.peers[id]
 	if !ok {
-		s.log.Warn("cannot remove peer from sync duties, peer was not registered", "peer", id)
+		s.log.Warn("Cannot remove peer from sync duties, peer was not registered", "peer", id)
 		return
 	}
-	peer.resCancel() // once loop exits
+	pr.resCancel() // once loop exits
 	delete(s.peers, id)
-	s.removePeerFromTask(id, peer.shards)
+	s.removePeerFromTask(id, pr.shards)
 	s.metrics.DecPeerCount()
 	delete(s.idlerPeers, id)
 	for _, t := range s.tasks {
@@ -503,16 +516,16 @@ func (s *SyncClient) Close() error {
 	s.resCancel()
 	s.wg.Wait()
 	s.cleanTasks()
-	s.saveSyncStatus()
+	s.saveSyncStatus(true)
 	s.report(true)
 	return nil
 }
 
 func (s *SyncClient) RequestL2Range(ctx context.Context, start, end uint64) (uint64, error) {
-	for _, peer := range s.peers {
+	for _, pr := range s.peers {
 		id := rand.Uint64()
 		var packet BlobsByRangePacket
-		_, err := peer.RequestBlobsByRange(id, s.storageManager.ContractAddress(), start/s.storageManager.KvEntries(), start, end, &packet)
+		_, err := pr.RequestBlobsByRange(id, s.storageManager.ContractAddress(), start/s.storageManager.KvEntries(), start, end, s.maxRequestSize, &packet)
 		if err != nil {
 			return 0, err
 		}
@@ -529,10 +542,10 @@ func (s *SyncClient) RequestL2List(indexes []uint64) (uint64, error) {
 	if len(indexes) == 0 {
 		return 0, nil
 	}
-	for _, peer := range s.peers {
+	for _, pr := range s.peers {
 		id := rand.Uint64()
 		var packet BlobsByListPacket
-		_, err := peer.RequestBlobsByList(id, s.storageManager.ContractAddress(), indexes[0]/s.storageManager.KvEntries(), indexes, &packet)
+		_, err := pr.RequestBlobsByList(id, s.storageManager.ContractAddress(), indexes[0]/s.storageManager.KvEntries(), indexes, s.maxRequestSize, &packet)
 		if err != nil {
 			return 0, err
 		}
@@ -552,6 +565,7 @@ func (s *SyncClient) mainLoop() {
 		// Remove all completed tasks and terminate sync if everything's done
 		s.cleanTasks()
 		if s.syncDone {
+			s.saveSyncStatus(true)
 			return
 		}
 		s.assignBlobRangeTasks()
@@ -568,10 +582,11 @@ func (s *SyncClient) mainLoop() {
 		case <-s.peerJoin:
 			// A new peer joined, try to schedule it new tasks
 		case <-s.resCtx.Done():
-			s.log.Info("stopped P2P req-resp L2 block sync client")
+			s.log.Info("Stopped P2P req-resp L2 block sync client")
 			return
 		}
-		// Report stats if something meaningful happened
+		// Report and save stats if something meaningful happened
+		s.saveSyncStatus(false)
 		s.report(false)
 	}
 }
@@ -601,7 +616,7 @@ func (s *SyncClient) assignBlobRangeTasks() {
 
 	// Iterate over all the tasks and try to find a pending one
 	for _, t := range s.tasks {
-		maxRange := maxMessageSize / ethstorage.ContractToShardManager[t.Contract].MaxKvSize() * 2
+		maxRange := s.maxRequestSize / ethstorage.ContractToShardManager[t.Contract].MaxKvSize() * 2
 		for _, stask := range t.SubTasks {
 			st := stask
 			if st.done {
@@ -645,7 +660,7 @@ func (s *SyncClient) assignBlobRangeTasks() {
 				start := time.Now()
 				var packet BlobsByRangePacket
 				// Attempt to send the remote request and revert if it fails
-				returnCode, err := pr.RequestBlobsByRange(req.id, req.contract, req.shardId, req.origin, req.limit, &packet)
+				returnCode, err := pr.RequestBlobsByRange(req.id, req.contract, req.shardId, req.origin, req.limit, s.maxRequestSize, &packet)
 				s.metrics.ClientGetBlobsByRangeEvent(req.peer.String(), returnCode, time.Since(start))
 
 				s.lock.Lock()
@@ -660,9 +675,9 @@ func (s *SyncClient) assignBlobRangeTasks() {
 				}
 
 				if req.id != packet.ID || req.contract != packet.Contract || req.shardId != packet.ShardId {
-					log.Warn("req mismatch with res", "req id", req.id, "packet id", packet.ID,
-						"req contract", req.contract.Hex(), "packet contract", packet.Contract.Hex(),
-						"req shardId", req.shardId, "packet shardId", packet.ShardId)
+					log.Warn("Req mismatch with res", "reqId", req.id, "packetId", packet.ID,
+						"reqContract", req.contract.Hex(), "packetContract", packet.Contract.Hex(),
+						"reqShardId", req.shardId, "packetShardId", packet.ShardId)
 					return
 				}
 				res := &blobsByRangeResponse{
@@ -688,9 +703,9 @@ func (s *SyncClient) assignBlobHealTasks() {
 	// Iterate over all the tasks and try to find a pending one
 	for _, t := range s.tasks {
 		// All the kvs are downloading, wait for request time or success
-		batch := maxMessageSize / ethstorage.ContractToShardManager[t.Contract].MaxKvSize() * 2
+		batch := s.maxRequestSize / ethstorage.ContractToShardManager[t.Contract].MaxKvSize() * 2
 
-		// kvHealTask pending retrieval, try to find an idle pr. If no such pr
+		// kvHealTask pending retrieval, try to find an idle peer. If no such peer
 		// exists, we probably assigned tasks for all (or they are stateless).
 		// Abort the entire assignment mechanism.
 		if len(s.idlerPeers) == 0 {
@@ -702,8 +717,8 @@ func (s *SyncClient) assignBlobHealTasks() {
 		}
 		pr := s.getIdlePeerForTask(t)
 		if pr == nil {
-			log.Info("pr for request no found", "Contract", t.Contract.Hex(), "shard id",
-				t.ShardId, "index count", t.healTask.count(), "peers", len(s.peers), "idlers", len(s.idlerPeers))
+			log.Info("Peer for request no found", "contract", t.Contract.Hex(), "shardId",
+				t.ShardId, "indexCount", t.healTask.count(), "peers", len(s.peers), "idlers", len(s.idlerPeers))
 			continue
 		}
 
@@ -728,7 +743,7 @@ func (s *SyncClient) assignBlobHealTasks() {
 			start := time.Now()
 			var packet BlobsByListPacket
 			// Attempt to send the remote request and revert if it fails
-			returnCode, err := pr.RequestBlobsByList(req.id, req.contract, req.shardId, req.indexes, &packet)
+			returnCode, err := pr.RequestBlobsByList(req.id, req.contract, req.shardId, req.indexes, s.maxRequestSize, &packet)
 			s.metrics.ClientGetBlobsByListEvent(req.peer.String(), returnCode, time.Since(start))
 
 			s.lock.Lock()
@@ -742,9 +757,9 @@ func (s *SyncClient) assignBlobHealTasks() {
 				return
 			}
 			if req.id != packet.ID || req.contract != packet.Contract || req.shardId != packet.ShardId {
-				log.Warn("req mismatch with res", "req id", req.id, "packet id", packet.ID,
-					"req contract", req.contract.Hex(), "packet contract", packet.Contract.Hex(),
-					"req shardId", req.shardId, "packet shardId", packet.ShardId)
+				log.Warn("Req mismatch with res", "reqId", req.id, "packetId", packet.ID,
+					"reqContract", req.contract.Hex(), "packetContract", packet.Contract.Hex(),
+					"reqShardId", req.shardId, "packetShardId", packet.ShardId)
 				return
 			}
 			res := &blobsByListResponse{
@@ -788,9 +803,9 @@ func (s *SyncClient) assignFillEmptyBlobTasks() {
 				t := time.Now()
 				next, err := s.FillFileWithEmptyBlob(start, limit)
 				if err != nil {
-					log.Warn("fill in empty fail", "err", err.Error())
+					log.Warn("Fill in empty fail", "err", err.Error())
 				} else {
-					log.Debug("fill in empty done", "time", time.Now().Sub(t).Seconds())
+					log.Debug("Fill in empty done", "time", time.Now().Sub(t).Seconds())
 				}
 				filled := next - start
 				s.emptyBlobsFilled += filled
@@ -812,7 +827,7 @@ func (s *SyncClient) assignFillEmptyBlobTasks() {
 }
 
 func (s *SyncClient) getIdlePeerForTask(t *task) *Peer {
-	for id, _ := range s.idlerPeers {
+	for id := range s.idlerPeers {
 		if _, ok := t.statelessPeers[id]; ok {
 			continue
 		}
@@ -842,7 +857,7 @@ func (s *SyncClient) OnBlobsByRange(res *blobsByRangeResponse) {
 			size += common.StorageSize(len(blob.EncodedBlob))
 		}
 	}
-	s.log.Debug("OnBlobsByRange: static", "reqid", req.id, "blob count", len(res.Blobs), "bytes", size)
+	s.log.Debug("OnBlobsByRange: static", "reqId", req.id, "blobCount", len(res.Blobs), "bytes", size)
 
 	blobsInRange := make([]*BlobPayload, 0)
 	for _, blob := range res.Blobs {
@@ -877,7 +892,7 @@ func (s *SyncClient) OnBlobsByRange(res *blobsByRangeResponse) {
 	s.blobsSynced += synced
 	s.syncedBytes += common.StorageSize(syncedBytes)
 	s.metrics.ClientOnBlobsByRange(req.peer.String(), reqCount, uint64(len(res.Blobs)), synced, time.Since(start))
-	log.Info("Persisted set of kvs", "count", synced, "bytes", syncedBytes)
+	log.Debug("Persisted set of kvs", "count", synced, "bytes", syncedBytes)
 
 	// set peer to stateless peer if fail too much
 	if len(inserted) == 0 {
@@ -923,7 +938,7 @@ func (s *SyncClient) OnBlobsByList(res *blobsByListResponse) {
 			size += common.StorageSize(len(blob.EncodedBlob))
 		}
 	}
-	s.log.Debug("OnBlobsByList: static", "reqid", req.id, "blob count", len(res.Blobs), "bytes", size)
+	s.log.Debug("OnBlobsByList: static", "reqId", req.id, "blobCount", len(res.Blobs), "bytes", size)
 
 	startIdx, endIdx := s.storageManager.KvEntries()*req.shardId, s.storageManager.KvEntries()*(req.shardId+1)-1
 	blobsInRange := make([]*BlobPayload, 0)
@@ -961,7 +976,7 @@ func (s *SyncClient) OnBlobsByList(res *blobsByListResponse) {
 	s.syncedBytes += common.StorageSize(syncedBytes)
 	s.metrics.ClientOnBlobsByList(req.peer.String(), uint64(len(req.indexes)), uint64(len(res.Blobs)),
 		synced, time.Since(start))
-	log.Trace("Persisted set of kvs", "count", synced, "bytes", syncedBytes)
+	log.Debug("Persisted set of kvs", "count", synced, "bytes", syncedBytes)
 
 	s.lock.Lock()
 	// set peer to stateless peer if fail too much
@@ -977,10 +992,12 @@ func (s *SyncClient) OnBlobsByList(res *blobsByListResponse) {
 // FillFileWithEmptyBlob this func is used to fill empty blobs to storage file to make the whole file data encoded.
 // file in the blobs between origin and limit (include limit). if the lastKvIdx larger than kv idx to fill, ignore it.
 func (s *SyncClient) FillFileWithEmptyBlob(start, limit uint64) (uint64, error) {
-	st := time.Now()
-	inserted := uint64(0)
+	var (
+		st       = time.Now()
+		inserted = uint64(0)
+		next     = start
+	)
 	defer s.metrics.ClientFillEmptyBlobsEvent(inserted, time.Since(st))
-	empty := make([]byte, 0)
 	lastBlobIdx, err := s.storageManager.LastKvIndex()
 	if err != nil {
 		return start, fmt.Errorf("get lastBlobIdx for FillEmptyKV fail, err: %s", err.Error())
@@ -988,25 +1005,21 @@ func (s *SyncClient) FillFileWithEmptyBlob(start, limit uint64) (uint64, error) 
 	if start < lastBlobIdx {
 		start = lastBlobIdx
 	}
-	for idx := start; idx <= limit; idx++ {
-		err = s.storageManager.CommitBlob(idx, empty, common.Hash{})
-		if err != nil {
-			err = fmt.Errorf("write empty to kv file fail, index: %d; error: %s", idx, err.Error())
-			return idx, err
-		}
-		inserted++
-	}
+	inserted, next, err = s.storageManager.CommitEmptyBlobs(start, limit)
 
-	return limit + 1, nil
+	return next, err
 }
 
 // onResult is exclusively called by the main loop, and has thus direct access to the request bookkeeping state.
 // This function verifies if the result is canonical, and either promotes the result or moves the result into quarantine.
 func (s *SyncClient) onResult(blobs []*BlobPayload) (uint64, uint64, []uint64, error) {
 	var (
-		synced      uint64
-		syncedBytes uint64
-		inserted    = make([]uint64, 0)
+		synced       uint64
+		syncedBytes  uint64
+		inserted     = make([]uint64, 0)
+		indices      = make([]uint64, 0)
+		decodedBlobs = make([][]byte, 0)
+		commits      = make([]common.Hash, 0)
 	)
 	for _, payload := range blobs {
 		synced++
@@ -1022,13 +1035,13 @@ func (s *SyncClient) onResult(blobs []*BlobPayload) (uint64, uint64, []uint64, e
 			continue
 		}
 
-		success = s.commitBlob(decodedBlob, payload)
-		if success {
-			inserted = append(inserted, payload.BlobIndex)
-		}
+		indices = append(indices, payload.BlobIndex)
+		decodedBlobs = append(decodedBlobs, decodedBlob)
+		commits = append(commits, payload.BlobCommit)
 	}
 
-	return synced, syncedBytes, inserted, nil
+	inserted, err := s.commitBlobs(indices, decodedBlobs, commits)
+	return synced, syncedBytes, inserted, err
 }
 
 func (s *SyncClient) decodeKV(payload *BlobPayload) ([]byte, bool) {
@@ -1039,9 +1052,9 @@ func (s *SyncClient) decodeKV(payload *BlobPayload) ([]byte, bool) {
 		payload.MinerAddress, payload.EncodeType)
 	if err != nil || !found {
 		if err != nil {
-			s.log.Error("failed to decode", "kv_idx", payload.BlobIndex, "error", err)
+			s.log.Error("Failed to decode", "kvIdx", payload.BlobIndex, "error", err)
 		} else {
-			s.log.Error("failed to decode", "kv_idx", payload.BlobIndex, "error", "not found")
+			s.log.Error("Failed to decode", "kvIdx", payload.BlobIndex, "error", "not found")
 		}
 		return []byte{}, false
 	}
@@ -1054,11 +1067,11 @@ func (s *SyncClient) checkBlobCommit(decodedBlob []byte, payload *BlobPayload) b
 	recordDur()
 
 	if err != nil {
-		s.log.Error("get proof fail", "idx", payload.BlobIndex, "err", err.Error())
+		s.log.Error("Get proof fail", "idx", payload.BlobIndex, "err", err.Error())
 		return false
 	}
 	if !bytes.Equal(root[:ethstorage.HashSizeInContract], payload.BlobCommit[:ethstorage.HashSizeInContract]) {
-		s.log.Error("compare blob failed", "idx", payload.BlobIndex, "err",
+		s.log.Error("Compare blob failed", "idx", payload.BlobIndex, "err",
 			fmt.Sprintf("verify blob fail: root: %s; MetaHash hash (24): %s, providerAddr %s, data len %d",
 				common.Bytes2Hex(root[:ethstorage.HashSizeInContract]), common.Bytes2Hex(payload.BlobCommit[:ethstorage.HashSizeInContract]),
 				payload.MinerAddress.Hex(), len(payload.EncodedBlob)))
@@ -1068,17 +1081,10 @@ func (s *SyncClient) checkBlobCommit(decodedBlob []byte, payload *BlobPayload) b
 	return true
 }
 
-func (s *SyncClient) commitBlob(decodedBlob []byte, payload *BlobPayload) bool {
-	recordDur := s.metrics.ClientRecordTimeUsed("commitBlob")
+func (s *SyncClient) commitBlobs(kvIndices []uint64, decodedBlobs [][]byte, commits []common.Hash) ([]uint64, error) {
+	recordDur := s.metrics.ClientRecordTimeUsed("commitBlobs")
 	defer recordDur()
-
-	err := s.storageManager.CommitBlob(payload.BlobIndex, decodedBlob, payload.BlobCommit)
-	if err != nil {
-		s.log.Error("commit blob failed", "err", err.Error())
-		return false
-	}
-
-	return true
+	return s.storageManager.CommitBlobs(kvIndices, decodedBlobs, commits)
 }
 
 // report calculates various status reports and provides it to the user.
@@ -1090,31 +1096,39 @@ func (s *SyncClient) report(force bool) {
 	s.logTime = time.Now()
 
 	// Don't report anything until we have a meaningful progress
-	synced := s.blobsSynced
-	if synced == 0 {
+	synced, syncedBytes := s.blobsSynced, s.syncedBytes
+	emptyFilled, emptyToFill := s.emptyBlobsFilled, s.emptyBlobsToFill
+	filledBytes := common.StorageSize(emptyFilled * s.storageManager.MaxKvSize())
+	if synced == 0 && emptyFilled == 0 {
 		return
 	}
-	kvsToSync := uint64(0)
-	subTaskRemain := 0
-	for _, task := range s.tasks {
-		for _, subTask := range task.SubTasks {
-			kvsToSync = kvsToSync + (subTask.Last - subTask.next)
+	blobsToSync := uint64(0)
+	taskRemain, subTaskRemain, subFillTaskRemain := 0, 0, 0
+	for _, t := range s.tasks {
+		for _, st := range t.SubTasks {
+			blobsToSync = blobsToSync + (st.Last - st.next)
 			subTaskRemain++
 		}
-		kvsToSync = kvsToSync + uint64(task.healTask.count())
+		blobsToSync = blobsToSync + uint64(t.healTask.count())
+		if !t.done {
+			taskRemain++
+		}
+		subFillTaskRemain = subFillTaskRemain + len(t.SubEmptyTasks)
 	}
 
 	elapsed := time.Since(s.startTime)
-	estTime := elapsed / time.Duration(synced) * time.Duration(kvsToSync+synced)
+	estTime := elapsed / time.Duration(synced+emptyFilled) * time.Duration(blobsToSync+synced+emptyFilled+emptyToFill)
 
 	// Create a mega progress report
 	var (
-		progress = fmt.Sprintf("%.2f%%", float64(synced)*100/float64(kvsToSync+synced))
-		kv       = fmt.Sprintf("%v@%v", log.FormatLogfmtUint64(s.blobsSynced), s.syncedBytes.TerminalString())
+		progress        = fmt.Sprintf("%.2f%%", float64(synced+emptyFilled)*100/float64(blobsToSync+synced+emptyFilled+emptyToFill))
+		syncTasksRemain = fmt.Sprintf("%d@%d", taskRemain, subTaskRemain)
+		blobsSynced     = fmt.Sprintf("%v@%v", log.FormatLogfmtUint64(synced), syncedBytes.TerminalString())
+		blobsFilled     = fmt.Sprintf("%v@%v", log.FormatLogfmtUint64(emptyFilled), filledBytes.TerminalString())
 	)
-	log.Info("Sstorage sync in progress", "synced", progress, "state", synced, "kvsToSync", kvsToSync,
-		"sub subTask remain", subTaskRemain, "kv", kv, "eta", common.PrettyDuration(estTime-elapsed),
-		"empty KV filled", s.emptyBlobsFilled, "empty KV to fill", s.emptyBlobsToFill)
+	log.Info("Storage sync in progress", "progress", progress, "syncTasksRemain", syncTasksRemain,
+		"blobsSynced", blobsSynced, "blobsToSync", blobsToSync, "fillTasksRemain", subFillTaskRemain,
+		"emptyFilled", blobsFilled, "emptyToFill", emptyToFill, "eta", common.PrettyDuration(estTime-elapsed))
 }
 
 func (s *SyncClient) needThisPeer(contractShards map[common.Address][]uint64) bool {
