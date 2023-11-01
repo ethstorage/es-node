@@ -2,8 +2,8 @@ package blobmgr
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
-	"math/big"
 	"time"
 
 	opcrypto "github.com/ethereum-optimism/optimism/op-service/crypto"
@@ -11,6 +11,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/log"
+	openrpc "github.com/rollkit/celestia-openrpc"
+	"github.com/rollkit/celestia-openrpc/types/share"
 	"github.com/urfave/cli"
 )
 
@@ -34,27 +36,22 @@ func CLIFlags() []cli.Flag {
 		cli.StringFlag{
 			Name:  DaRpcFlagName,
 			Usage: "RPC URL of the DA layer",
-			Value: "http://65.108.236.27:26658",
 		},
 		cli.StringFlag{
 			Name:  NamespaceIdFlagName,
 			Usage: "Namespace ID of the DA layer",
-			Value: "00000000000000003333",
 		},
 		cli.StringFlag{
 			Name:  AuthTokenFlagName,
 			Usage: "Authentication Token of the DA layer",
-			Value: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBbGxvdyI6WyJwdWJsaWMiLCJyZWFkIiwid3JpdGUiLCJhZG1pbiJdfQ.MaHtzm_HvBw810jMsd1Vr4bz1f4oAMPZExRNsOJ9n1g",
 		},
 		cli.StringFlag{
 			Name:  L1RPCFlagName,
 			Usage: "HTTP provider URL for L1",
-			Value: "http://65.108.236.27:8545",
 		},
 		cli.StringFlag{
 			Name:  L1ContractFlagName,
-			Usage: "L1 contract address",
-			Value: "0x878705ba3f8Bc32FCf7F4CAa1A35E72AF65CF766",
+			Usage: "L1 storage contract address",
 		},
 		cli.StringFlag{
 			Name:  PrivateKeyFlagName,
@@ -92,57 +89,45 @@ func ReadCLIConfig(ctx *cli.Context) CLIConfig {
 	}
 }
 
-func NewConfig(l log.Logger, cfg CLIConfig) (Config, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), cfg.NetworkTimeout)
-	defer cancel()
-
-	l1, err := ethclient.DialContext(ctx, cfg.L1RPCURL)
+func NewConfig(l log.Logger, ccfg CLIConfig) (*Config, error) {
+	daClient, err := openrpc.NewClient(context.Background(), ccfg.DaRpc, ccfg.AuthToken)
 	if err != nil {
-		return Config{}, fmt.Errorf("could not dial eth client: %w", err)
+		l.Error("Init DA client failed", "rpc", ccfg.DaRpc, "err", err)
+		return nil, err
+	}
+	nsBytes, err := hex.DecodeString(ccfg.NamespaceId)
+	if err != nil {
+		return nil, err
+	}
+	namespace, err := share.NewBlobNamespaceV0(nsBytes)
+	if err != nil {
+		return nil, err
 	}
 
-	ctx, cancel = context.WithTimeout(context.Background(), cfg.NetworkTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), ccfg.NetworkTimeout)
 	defer cancel()
+	l1, err := ethclient.DialContext(ctx, ccfg.L1RPCURL)
+	if err != nil {
+		return nil, fmt.Errorf("could not dial eth client: %w", err)
+	}
 	chainID, err := l1.ChainID(ctx)
 	if err != nil {
-		return Config{}, fmt.Errorf("could not dial fetch L1 chain ID: %w", err)
+		return nil, fmt.Errorf("could not dial fetch L1 chain ID: %w", err)
 	}
-
 	signerFactory, from, err := opcrypto.SignerFactoryFromConfig(l,
-		cfg.PrivateKey, "", "", signer.CLIConfig{},
+		ccfg.PrivateKey, "", "", signer.CLIConfig{},
 	)
 	if err != nil {
-		return Config{}, fmt.Errorf("could not init signer %w", err)
+		return nil, fmt.Errorf("could not init signer %w", err)
 	}
-	return Config{
+	return &Config{
+		DAclient:       daClient,
+		Namespace:      namespace,
 		Backend:        l1,
 		ChainID:        chainID,
 		Signer:         signerFactory(chainID),
 		From:           from,
-		NetworkTimeout: cfg.NetworkTimeout,
+		L1Contract:     common.HexToAddress(ccfg.L1Contract),
+		NetworkTimeout: ccfg.NetworkTimeout,
 	}, nil
-}
-
-// Config houses parameters for altering the behavior of a SimpleTxManager.
-type Config struct {
-	Backend ETHBackend
-	// ChainID is the chain ID of the L1 chain.
-	ChainID *big.Int
-
-	// NetworkTimeout is the allowed duration for a single network request.
-	// This is intended to be used for network requests that can be replayed.
-
-	NetworkTimeout time.Duration
-	// DaRpc is the HTTP provider URL for the Data Availability node.
-	DaRpc string
-
-	// NamespaceId is the id of the namespace of the Data Availability node.
-	NamespaceId string
-
-	// AuthToken is the authentication token for the Data Availability node.
-	AuthToken string
-
-	// Signer is used to sign transactions when the gas price is increased.
-	Signer opcrypto.SignerFn
-	From   common.Address
 }
