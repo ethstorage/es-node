@@ -235,7 +235,8 @@ func NewL1EndpointConfig(ctx *cli.Context) (*eth.L1EndpointConfig, *ethclient.Cl
 
 func NewDownloaderConfig(ctx *cli.Context) *downloader.Config {
 	return &downloader.Config{
-		DownloadStart: ctx.GlobalInt64(flags.DownloadStart.Name),
-		DownloadDump:  ctx.GlobalString(flags.DownloadDump.Name),
+		DownloadStart:     ctx.GlobalInt64(flags.DownloadStart.Name),
+		DownloadDump:      ctx.GlobalString(flags.DownloadDump.Name),
+		DownloadThreadNum: ctx.GlobalInt(flags.DownloadThreadNum.Name),
 	}
 }
