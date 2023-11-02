@@ -16,60 +16,8 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/ethstorage/go-ethstorage/ethstorage/signer"
-	openrpc "github.com/rollkit/celestia-openrpc"
 	"github.com/rollkit/celestia-openrpc/types/blob"
-
-	"github.com/rollkit/celestia-openrpc/types/share"
 )
-
-const (
-	gasBufferRatio = 1.2
-	waitTxTimeout  = 25 // seconds
-)
-
-type Config struct {
-
-	// NetworkTimeout is the allowed duration for a single network request.
-	NetworkTimeout time.Duration
-
-	//
-	DAclient *openrpc.Client
-
-	// Namespace is the id of the namespace of the Data Availability node.
-	Namespace share.Namespace
-
-	// AuthToken is the authentication token for the Data Availability node.
-	AuthToken string
-
-	// ETHBackend is the set of methods to submit transactions to L1.
-	Backend ETHBackend
-
-	// ChainID is the chain ID of the L1 chain.
-	ChainID *big.Int
-
-	// Signer is a function used to sign transactions.
-	Signer signer.SignerFn
-
-	// From returns the sending address of the transaction.
-	From common.Address
-
-	// L1Contract is the address of the L1 storage contract.
-	L1Contract common.Address
-}
-
-// ETHBackend is the set of methods that the transaction manager uses to resubmit gas & determine
-// when transactions are included on L1.
-type ETHBackend interface {
-	BlockNumber(ctx context.Context) (uint64, error)
-	TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error)
-	SendTransaction(ctx context.Context, tx *types.Transaction) error
-	TransactionByHash(ctx context.Context, txHash common.Hash) (tx *types.Transaction, isPending bool, err error)
-	HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error)
-	SuggestGasTipCap(ctx context.Context) (*big.Int, error)
-	NonceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (uint64, error)
-	EstimateGas(ctx context.Context, msg ethereum.CallMsg) (uint64, error)
-}
 
 type BlobManager struct {
 	*Config
@@ -87,6 +35,29 @@ func NewBlobManager(l log.Logger, ccfg CLIConfig) (*BlobManager, error) {
 	}, nil
 }
 
+func NewBlobDownloader(l log.Logger, ccfg CLIConfig) (*BlobManager, error) {
+	daCfg, err := NewDaConfig(ccfg.DaRpc, ccfg.AuthToken, ccfg.NamespaceId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load da config: %w", err)
+	}
+	return &BlobManager{
+		Config: &Config{DaConfig: daCfg},
+		l:      l,
+	}, nil
+}
+
+func (m *BlobManager) GetBlob(ctx context.Context, commitment []byte, height uint64) ([]byte, error) {
+	ctx, cancel := context.WithTimeout(ctx, m.NetworkTimeout)
+	defer cancel()
+
+	m.l.Info("requesting data from celestia", "namespace", hex.EncodeToString(m.Namespace), "height", height)
+	blob, err := m.DaClient.Blob.Get(context.Background(), height, m.Namespace, commitment)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve frame from celestia: %w", err)
+	}
+	return blob.Data, nil
+}
+
 func (m *BlobManager) SendBlob(ctx context.Context, data []byte) ([]byte, uint64, error) {
 	ctx, cancel := context.WithTimeout(ctx, m.NetworkTimeout)
 	defer cancel()
@@ -98,13 +69,13 @@ func (m *BlobManager) SendBlob(ctx context.Context, data []byte) ([]byte, uint64
 		return nil, 0, err
 	}
 	m.l.Debug("Create commitment", "commitment", hex.EncodeToString(com))
-	err = m.DAclient.Header.SyncWait(ctx)
+	err = m.DaClient.Header.SyncWait(ctx)
 	if err != nil {
 		m.l.Warn("Unable to wait for Celestia header sync", "err", err)
 		return nil, 0, err
 	}
 	m.l.Debug("Start sending blob", "size", len(data))
-	height, err := m.DAclient.Blob.Submit(ctx, []*blob.Blob{dataBlob}, nil)
+	height, err := m.DaClient.Blob.Submit(ctx, []*blob.Blob{dataBlob}, nil)
 	if err != nil {
 		m.l.Warn("Unable to publish tx to Celestia", "err", err)
 		return nil, 0, err
@@ -188,18 +159,18 @@ func (m *BlobManager) PublishBlob(ctx context.Context, key, commit []byte, size,
 		return err
 	}
 	m.l.Info("Send tx successfully", "hash", txHash)
-
 	// waiting for tx confirmation or timeout
 	ticker := time.NewTicker(1 * time.Second)
 	checked := 0
 	for range ticker.C {
+		m.l.Debug("Waiting for tx being confirmed...", "hash", txHash)
 		if checked > waitTxTimeout {
-			log.Warn("Waiting for tx confirm timed out", "hash", txHash)
+			m.l.Warn("Waiting for tx confirm timed out", "hash", txHash)
 			break
 		}
 		_, isPending, err := m.Backend.TransactionByHash(context.Background(), txHash)
 		if err == nil && !isPending {
-			log.Debug("Tx confirmed", "hash", txHash)
+			m.l.Debug("Tx confirmed", "hash", txHash)
 			m.checkTxStatus(txHash)
 			break
 		}
@@ -235,11 +206,11 @@ func (m *BlobManager) checkTxStatus(txHash common.Hash) {
 	defer cancel()
 	receipt, err := m.Backend.TransactionReceipt(ctx, txHash)
 	if err != nil || receipt == nil {
-		log.Warn("Tx not found!", "err", err, "hash", txHash)
+		m.l.Warn("Tx not found!", "err", err, "hash", txHash)
 	} else if receipt.Status == 1 {
-		log.Info("Tx success!", "hash", txHash)
+		m.l.Info("Tx success!", "hash", txHash)
 	} else if receipt.Status == 0 {
-		log.Error("Tx failed!", "hash", txHash)
+		m.l.Error("Tx failed!", "hash", txHash)
 	}
 }
 
