@@ -147,19 +147,25 @@ func (ds *DataShard) readChunkWith(kvIdx uint64, chunkIdx uint64, decoder func([
 
 // ReadEncoded read the encoded data from storage and return it.
 func (ds *DataShard) ReadEncoded(kvIdx uint64, readLen int) ([]byte, error) {
-	return ds.readWith(kvIdx, readLen, func(cdata []byte, chunkIdx uint64) ([]byte, error) {
-		return cdata, nil
+	return ds.readWith(kvIdx, readLen, func(cdata []byte, chunkIdx uint64) []byte {
+		return cdata
 	})
 }
 
 // Read the encoded data from storage and decode it.
 func (ds *DataShard) Read(kvIdx uint64, readLen int, commit common.Hash) ([]byte, error) {
-	return ds.readWith(kvIdx, readLen, func(cdata []byte, chunkIdx uint64) ([]byte, error) {
+	bs, err := ds.readWith(kvIdx, int(ds.kvSize), func(cdata []byte, chunkIdx uint64) []byte {
 		encodeKey := calcEncodeKey(commit, chunkIdx, ds.dataFiles[0].miner)
-		blob := decodeChunk(ds.chunkSize, cdata, ds.dataFiles[0].encodeType, encodeKey)
-		err := checkCommit(commit, blob)
-		return blob, err
+		return decodeChunk(ds.chunkSize, cdata, ds.dataFiles[0].encodeType, encodeKey)
 	})
+	if err != nil {
+		return nil, err
+	}
+
+	if err = checkCommit(commit, bs); err != nil {
+		return nil, err
+	}
+	return bs[0:readLen], nil
 }
 
 // Read the encoded data from storage and decode it.
@@ -168,17 +174,22 @@ func (ds *DataShard) ReadWithMeta(kvIdx uint64, readLen int) ([]byte, []byte, er
 	if err != nil {
 		return nil, nil, err
 	}
-	bs, err := ds.readWith(kvIdx, readLen, func(cdata []byte, chunkIdx uint64) ([]byte, error) {
+	bs, err := ds.readWith(kvIdx, int(ds.kvSize), func(cdata []byte, chunkIdx uint64) []byte {
 		encodeKey := calcEncodeKey(common.BytesToHash(commit), chunkIdx, ds.dataFiles[0].miner)
-		blob := decodeChunk(ds.chunkSize, cdata, ds.dataFiles[0].encodeType, encodeKey)
-		err := checkCommit(common.BytesToHash(commit), blob)
-		return blob, err
+		return decodeChunk(ds.chunkSize, cdata, ds.dataFiles[0].encodeType, encodeKey)
 	})
-	return bs, commit, err
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if err = checkCommit(common.BytesToHash(commit), bs); err != nil {
+		return nil, nil, err
+	}
+	return bs[0:readLen], commit, nil
 }
 
 // readWith read the encoded data from storage with a decoder.
-func (ds *DataShard) readWith(kvIdx uint64, readLen int, decoder func([]byte, uint64) ([]byte, error)) ([]byte, error) {
+func (ds *DataShard) readWith(kvIdx uint64, readLen int, decoder func([]byte, uint64) []byte) ([]byte, error) {
 	if !ds.Contains(kvIdx) {
 		return nil, fmt.Errorf("kv not found")
 	}
@@ -203,10 +214,7 @@ func (ds *DataShard) readWith(kvIdx uint64, readLen int, decoder func([]byte, ui
 			return nil, err
 		}
 
-		cdata, err = decoder(cdata, chunkIdx)
-		if err != nil {
-			return nil, err
-		}
+		cdata = decoder(cdata, chunkIdx)
 		data = append(data, cdata...)
 	}
 	return data, nil
@@ -327,21 +335,21 @@ func decodeChunk(chunkSize uint64, bs []byte, encodeType uint64, encodeKey commo
 }
 
 var EmptyBlobHash, _ = hex.DecodeString("fa43239bcee7b97ca62f007cc68487560a39e19f74f3dde7486db3f98df8e471")
-var EmptyBlobCommit = common.Hash{}
+var EmptyBlobCommit = make([]byte, HashSizeInContract)
 
 func checkCommit(commit common.Hash, blobData []byte) error {
+	// kzg blob
+	blob := kzg4844.Blob{}
+	copy(blob[:], blobData)
+
+	// blob is empty 0x00...00, hash is EmptyBlobHash
 	dataHash := sha256.Sum256(blobData)
 	if bytes.Equal(dataHash[:], EmptyBlobHash) {
-		// Blob is null
-		if commit == EmptyBlobCommit {
+		if bytes.Equal(commit[0:HashSizeInContract], EmptyBlobCommit) {
 			return nil
 		}
 		return fmt.Errorf("commit does not match")
 	}
-
-	// kzg blob
-	blob := kzg4844.Blob{}
-	copy(blob[:], blobData)
 
 	// Generate VersionedHash
 	commitment, err := kzg4844.BlobToCommitment(blob)
@@ -349,7 +357,6 @@ func checkCommit(commit common.Hash, blobData []byte) error {
 		return fmt.Errorf("could not convert blob to commitment: %v", err)
 	}
 	versionedHash := eth.KZGToVersionedHash(eth.KZGCommitment(commitment))
-
 	// Get the hash and only take 24 bits
 	if !bytes.Equal(versionedHash[0:HashSizeInContract], commit[0:HashSizeInContract]) {
 		return fmt.Errorf("commit does not match")
