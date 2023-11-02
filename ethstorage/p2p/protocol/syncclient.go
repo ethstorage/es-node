@@ -654,7 +654,6 @@ func (s *SyncClient) assignBlobRangeTasks() {
 					s.lock.Lock()
 					st.isRunning = false
 					s.lock.Unlock()
-					s.notifyUpdate()
 					s.wg.Done()
 				}()
 				start := time.Now()
@@ -666,6 +665,7 @@ func (s *SyncClient) assignBlobRangeTasks() {
 				s.lock.Lock()
 				if _, ok := s.peers[id]; ok {
 					s.idlerPeers[id] = struct{}{}
+					s.notifyUpdate()
 				}
 				s.lock.Unlock()
 
@@ -737,7 +737,6 @@ func (s *SyncClient) assignBlobHealTasks() {
 		s.wg.Add(1)
 		go func(id peer.ID) {
 			defer func() {
-				s.notifyUpdate()
 				s.wg.Done()
 			}()
 			start := time.Now()
@@ -749,6 +748,7 @@ func (s *SyncClient) assignBlobHealTasks() {
 			s.lock.Lock()
 			if _, ok := s.peers[id]; ok {
 				s.idlerPeers[id] = struct{}{}
+				s.notifyUpdate()
 			}
 			s.lock.Unlock()
 

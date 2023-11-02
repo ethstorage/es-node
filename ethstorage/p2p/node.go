@@ -201,7 +201,8 @@ func (n *NodeP2P) RequestShardList(remotePeer peer.ID) ([]*protocol.ContractShar
 	if err != nil {
 		return remoteShardList, err
 	}
-
+	defer s.Close()
+	
 	code, err := protocol.SendRPC(s, make([]byte, 0), &remoteShardList)
 	if err != nil {
 		return remoteShardList, err
