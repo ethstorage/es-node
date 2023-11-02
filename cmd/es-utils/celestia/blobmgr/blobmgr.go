@@ -9,7 +9,6 @@ import (
 
 	"math/big"
 
-	opcrypto "github.com/ethereum-optimism/optimism/op-service/crypto"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -17,6 +16,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/ethstorage/go-ethstorage/ethstorage/signer"
 	openrpc "github.com/rollkit/celestia-openrpc"
 	"github.com/rollkit/celestia-openrpc/types/blob"
 
@@ -49,7 +49,7 @@ type Config struct {
 	ChainID *big.Int
 
 	// Signer is a function used to sign transactions.
-	Signer opcrypto.SignerFn
+	Signer signer.SignerFn
 
 	// From returns the sending address of the transaction.
 	From common.Address

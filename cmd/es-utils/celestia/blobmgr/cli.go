@@ -6,11 +6,10 @@ import (
 	"fmt"
 	"time"
 
-	opcrypto "github.com/ethereum-optimism/optimism/op-service/crypto"
-	"github.com/ethereum-optimism/optimism/op-service/signer"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethstorage/go-ethstorage/ethstorage/signer"
 	openrpc "github.com/rollkit/celestia-openrpc"
 	"github.com/rollkit/celestia-openrpc/types/share"
 	"github.com/urfave/cli"
@@ -114,8 +113,8 @@ func NewConfig(l log.Logger, ccfg CLIConfig) (*Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not dial fetch L1 chain ID: %w", err)
 	}
-	signerFactory, from, err := opcrypto.SignerFactoryFromConfig(l,
-		ccfg.PrivateKey, "", "", signer.CLIConfig{},
+	signerFactory, from, err := signer.SignerFactoryFromConfig(
+		signer.CLIConfig{PrivateKey: ccfg.PrivateKey},
 	)
 	if err != nil {
 		return nil, fmt.Errorf("could not init signer %w", err)
