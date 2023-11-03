@@ -81,7 +81,7 @@ func main() {
 				key := crypto.Keccak256Hash(keySource)
 
 				// publish blob info to Ethereum
-				value := big.NewInt(10000000000000)
+				value := big.NewInt(2000000000000)
 				hash, err := bmgr.PublishBlob(context.Background(), key.Bytes(), com, uint64(len((data))), height, value)
 				if err != nil {
 					l.Crit("Failed to publish blob info", "txHash", hash, "err", err)

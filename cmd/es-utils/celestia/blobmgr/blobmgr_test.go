@@ -29,7 +29,7 @@ func TestUploadDownload(t *testing.T) {
 		NamespaceId:    "00000000000000003333",
 		AuthToken:      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBbGxvdyI6WyJwdWJsaWMiLCJyZWFkIiwid3JpdGUiLCJhZG1pbiJdfQ.MaHtzm_HvBw810jMsd1Vr4bz1f4oAMPZExRNsOJ9n1g",
 		L1RPCURL:       "http://65.108.236.27:8545",
-		L1Contract:     "0xd8767d1C4226326b695A95E46a79Abd724eb8690",
+		L1Contract:     "0xAA052c137c830FaFB3BC8F62146e8C0d041fD624",
 		PrivateKey:     "95eb6ffd2ae0b115db4d1f0d58388216f9d026896696a5211d77b5f14eb5badf",
 		NetworkTimeout: 30 * time.Second,
 	}
@@ -37,7 +37,7 @@ func TestUploadDownload(t *testing.T) {
 	type gen func(*testing.T, int) []byte
 	tests := []gen{
 		generateSequentialBytes,
-		// readTxt,
+		readTxt,
 	}
 
 	bmgr, err := NewBlobManager(l, cfg)
@@ -61,7 +61,7 @@ func TestUploadDownload(t *testing.T) {
 			key := crypto.Keccak256Hash(keySource)
 
 			// publish blob info to Ethereum
-			value := big.NewInt(1000000000000000)
+			value := big.NewInt(2000000000000)
 			txHash, err := bmgr.PublishBlob(context.Background(), key.Bytes(), com, uint64(len((data))), height, value)
 			if err != nil {
 				t.Fatalf("PublishBlob error = %v", err)
@@ -105,6 +105,7 @@ func TestUploadDownload(t *testing.T) {
 				fmt.Println("uploaded", string(data))
 				fmt.Println("downloaded", string(downloaded))
 			}
+			t.Log("Comparing blobs success!")
 		})
 	}
 }

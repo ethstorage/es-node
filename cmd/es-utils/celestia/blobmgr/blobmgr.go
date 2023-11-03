@@ -126,6 +126,7 @@ func (m *BlobManager) PublishBlob(ctx context.Context, key, commit []byte, size,
 		GasFeeCap: gasFeeCap,
 		GasTipCap: gasTipCap,
 		Data:      calldata,
+		Value:     ethValue,
 	})
 	if err != nil {
 		m.l.Error("Estimate gas failed", "error", err.Error())
