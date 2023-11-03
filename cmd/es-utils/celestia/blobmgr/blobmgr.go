@@ -50,7 +50,7 @@ func (m *BlobManager) GetBlob(ctx context.Context, commitment []byte, height uin
 	ctx, cancel := context.WithTimeout(ctx, m.NetworkTimeout)
 	defer cancel()
 
-	m.l.Info("requesting data from celestia", "namespace", hex.EncodeToString(m.Namespace), "height", height)
+	m.l.Info("Requesting data from celestia", "namespaceId", hex.EncodeToString(m.Namespace), "height", height, "commitment", hex.EncodeToString(commitment))
 	blob, err := m.DaClient.Blob.Get(context.Background(), height, m.Namespace, commitment)
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve frame from celestia: %w", err)
@@ -88,8 +88,8 @@ func (m *BlobManager) SendBlob(ctx context.Context, data []byte) ([]byte, uint64
 	return com, height, nil
 }
 
-func (m *BlobManager) PublishBlob(ctx context.Context, key, commit []byte, size, height uint64, ethValue *big.Int) error {
-	m.l.Debug("Create tx for Ethereum", "commitment", hex.EncodeToString(commit), "height", height, "size", size, "value", ethValue)
+func (m *BlobManager) PublishBlob(ctx context.Context, key, commit []byte, size, height uint64, ethValue *big.Int) (common.Hash, error) {
+	m.l.Debug("Create tx for Ethereum", "contract", m.L1Contract, "commitment", hex.EncodeToString(commit), "height", height, "size", size, "value", ethValue)
 	bytes32Type, _ := abi.NewType("bytes32", "", nil)
 	uint256Type, _ := abi.NewType("uint256", "", nil)
 	dataField, _ := abi.Arguments{
@@ -98,24 +98,24 @@ func (m *BlobManager) PublishBlob(ctx context.Context, key, commit []byte, size,
 		{Type: uint256Type},
 		{Type: uint256Type},
 	}.Pack(
-		key,
-		commit,
+		common.BytesToHash(key),
+		common.BytesToHash(commit),
 		new(big.Int).SetUint64(size),
 		new(big.Int).SetUint64(height),
 	)
-	h := crypto.Keccak256Hash([]byte(`putBlob(bytes32,bytes32,uint256,uint256)`))
+	h := crypto.Keccak256Hash([]byte(`publishBlob(bytes32,bytes32,uint256,uint256)`))
 	calldata := append(h[0:4], dataField...)
 
 	nonce, err := m.Backend.NonceAt(ctx, m.From, big.NewInt(rpc.LatestBlockNumber.Int64()))
 	if err != nil {
 		m.l.Error("Query nonce failed", "error", err.Error())
-		return err
+		return common.Hash{}, err
 	}
 	m.l.Debug("Query nonce done", "nonce", nonce)
 
 	gasTipCap, basefee, err := m.suggestGasPriceCaps(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to get gas price info: %w", err)
+		return common.Hash{}, fmt.Errorf("failed to get gas price info: %w", err)
 	}
 	gasFeeCap := calcGasFeeCap(basefee, gasTipCap)
 	m.l.Debug("Query gas price done", "tip", gasTipCap, "feeCap", gasFeeCap)
@@ -129,7 +129,7 @@ func (m *BlobManager) PublishBlob(ctx context.Context, key, commit []byte, size,
 	})
 	if err != nil {
 		m.l.Error("Estimate gas failed", "error", err.Error())
-		return fmt.Errorf("failed to estimate gas: %w", err)
+		return common.Hash{}, fmt.Errorf("failed to estimate gas: %w", err)
 	}
 	m.l.Debug("Estimated gas done", "gas", estimatedGas)
 	gas := uint64(float64(estimatedGas) * gasBufferRatio)
@@ -148,7 +148,7 @@ func (m *BlobManager) PublishBlob(ctx context.Context, key, commit []byte, size,
 	signedTx, err := m.Signer(ctx, m.From, types.NewTx(rawTx))
 	if err != nil {
 		m.l.Error("Sign tx error", "error", err)
-		return err
+		return common.Hash{}, err
 	}
 	txHash := signedTx.Hash()
 	fmt.Println("txHash:", txHash.Hex())
@@ -156,14 +156,13 @@ func (m *BlobManager) PublishBlob(ctx context.Context, key, commit []byte, size,
 	err = m.Backend.SendTransaction(ctx, signedTx)
 	if err != nil {
 		m.l.Error("Send tx failed", "hash", txHash, "error", err)
-		return err
+		return txHash, err
 	}
 	m.l.Info("Send tx successfully", "hash", txHash)
 	// waiting for tx confirmation or timeout
 	ticker := time.NewTicker(1 * time.Second)
 	checked := 0
 	for range ticker.C {
-		m.l.Debug("Waiting for tx being confirmed...", "hash", txHash)
 		if checked > waitTxTimeout {
 			m.l.Warn("Waiting for tx confirm timed out", "hash", txHash)
 			break
@@ -174,10 +173,11 @@ func (m *BlobManager) PublishBlob(ctx context.Context, key, commit []byte, size,
 			m.checkTxStatus(txHash)
 			break
 		}
+		m.l.Debug("Waiting for tx being confirmed...", "hash", txHash, "status", "pending")
 		checked++
 	}
 	ticker.Stop()
-	return nil
+	return txHash, nil
 }
 
 // suggestGasPriceCaps suggests what the new tip & new basefee should be based on the current L1 conditions

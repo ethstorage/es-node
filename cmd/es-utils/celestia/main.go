@@ -82,9 +82,9 @@ func main() {
 
 				// publish blob info to Ethereum
 				value := big.NewInt(10000000000000)
-				err = bmgr.PublishBlob(context.Background(), key.Bytes(), com, uint64(len((data))), height, value)
+				hash, err := bmgr.PublishBlob(context.Background(), key.Bytes(), com, uint64(len((data))), height, value)
 				if err != nil {
-					l.Crit("Failed to publish blob info", "err", err)
+					l.Crit("Failed to publish blob info", "txHash", hash, "err", err)
 				}
 				l.Info("Successfully published blob info", "key", key.String(), "height", height, "commitment", hex.EncodeToString(com))
 				return nil

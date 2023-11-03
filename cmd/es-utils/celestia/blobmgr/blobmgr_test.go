@@ -2,18 +2,23 @@ package blobmgr
 
 import (
 	"context"
-	"encoding/hex"
+	"encoding/binary"
+	"fmt"
 	"io"
+	"math/big"
 	"net/http"
 	"os"
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	esLog "github.com/ethstorage/go-ethstorage/ethstorage/log"
 	"golang.org/x/term"
 )
 
-func TestSend(t *testing.T) {
+func TestUploadDownload(t *testing.T) {
 	l := esLog.NewLogger(esLog.CLIConfig{
 		Level:  "debug",
 		Format: "terminal",
@@ -23,19 +28,19 @@ func TestSend(t *testing.T) {
 		DaRpc:          "http://65.108.236.27:26658",
 		NamespaceId:    "00000000000000003333",
 		AuthToken:      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBbGxvdyI6WyJwdWJsaWMiLCJyZWFkIiwid3JpdGUiLCJhZG1pbiJdfQ.MaHtzm_HvBw810jMsd1Vr4bz1f4oAMPZExRNsOJ9n1g",
-		L1RPCURL:       "http://65.109.115.36:32813",
-		L1Contract:     "0x878705ba3f8Bc32FCf7F4CAa1A35E72AF65CF766",
-		PrivateKey:     "7da08f856b5956d40a72968f93396f6acff17193f013e8053f6fbb6c08c194d6",
+		L1RPCURL:       "http://65.108.236.27:8545",
+		L1Contract:     "0xd8767d1C4226326b695A95E46a79Abd724eb8690",
+		PrivateKey:     "95eb6ffd2ae0b115db4d1f0d58388216f9d026896696a5211d77b5f14eb5badf",
 		NetworkTimeout: 30 * time.Second,
 	}
 
 	type gen func(*testing.T, int) []byte
 	tests := []gen{
 		generateSequentialBytes,
-		readTxt,
+		// readTxt,
 	}
 
-	txManager, err := NewBlobManager(l, cfg)
+	bmgr, err := NewBlobManager(l, cfg)
 	if err != nil {
 		t.Fatalf("Failed to init tx mgr %v", err)
 	}
@@ -44,12 +49,62 @@ func TestSend(t *testing.T) {
 		data := tt(t, 10*32)
 		t.Run("", func(t *testing.T) {
 			ctx := context.Background()
-			cmt, ht, err := txManager.SendBlob(ctx, data)
+			com, height, err := bmgr.SendBlob(ctx, data)
 			if err != nil {
-				t.Errorf("SimpleTxManager.send() error = %v", err)
-				return
+				t.Fatalf("SendBlob error = %v", err)
 			}
-			t.Log("upload done", hex.EncodeToString(cmt), ht)
+			t.Logf("upload done commit %x, height %d, size %d", com, height, len((data)))
+			// create blob key
+			keySource := make([]byte, 8)
+			binary.LittleEndian.PutUint64(keySource, height)
+			keySource = append(keySource, com...)
+			key := crypto.Keccak256Hash(keySource)
+
+			// publish blob info to Ethereum
+			value := big.NewInt(1000000000000000)
+			txHash, err := bmgr.PublishBlob(context.Background(), key.Bytes(), com, uint64(len((data))), height, value)
+			if err != nil {
+				t.Fatalf("PublishBlob error = %v", err)
+			}
+
+			// get height and commitment from event
+			receipt, err := bmgr.Backend.TransactionReceipt(context.Background(), txHash)
+			if err != nil {
+				t.Fatalf("TransactionReceipt error = %v", err)
+			}
+			block := receipt.BlockNumber
+			eventSig := []byte("BlobPublished(uint256,uint256,bytes32,uint256)")
+			query := ethereum.FilterQuery{
+				Addresses: []common.Address{bmgr.L1Contract},
+				Topics:    [][]common.Hash{{crypto.Keccak256Hash(eventSig)}},
+				FromBlock: block,
+				ToBlock:   block,
+			}
+			logs, err := bmgr.Backend.FilterLogs(context.Background(), query)
+			if err != nil {
+				t.Fatalf("FilterLogs error = %v", err)
+			}
+			if len(logs) == 0 {
+				t.Fatalf("No event found.")
+			}
+			eventTopics := logs[0].Topics
+			blobHeight := new(big.Int).SetBytes(eventTopics[2][:]).Uint64()
+			commitment := eventTopics[3].Bytes()
+			t.Logf("Got blob info from storage contract: height %d, commitment=%x \n", blobHeight, commitment)
+
+			// retrieve blob from Celestia
+			downloaded, err := bmgr.GetBlob(context.Background(), commitment, blobHeight)
+			if err != nil {
+				t.Fatalf("GetBlob error=%v, height=%d", err, blobHeight)
+			}
+
+			// compare the blobs
+			t.Log("Comparing blobs")
+			if crypto.Keccak256Hash(downloaded) != crypto.Keccak256Hash(data) {
+				t.Error("data mismatch")
+				fmt.Println("uploaded", string(data))
+				fmt.Println("downloaded", string(downloaded))
+			}
 		})
 	}
 }

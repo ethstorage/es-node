@@ -117,4 +117,5 @@ type ETHBackend interface {
 	SuggestGasTipCap(ctx context.Context) (*big.Int, error)
 	NonceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (uint64, error)
 	EstimateGas(ctx context.Context, msg ethereum.CallMsg) (uint64, error)
+	FilterLogs(ctx context.Context, q ethereum.FilterQuery) ([]types.Log, error)
 }
