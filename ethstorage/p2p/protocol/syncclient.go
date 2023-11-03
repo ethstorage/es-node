@@ -380,7 +380,7 @@ func (s *SyncClient) createTask(sid uint64, lastKvIndex uint64) *task {
 
 // saveSyncStatus marshals the remaining sync tasks into leveldb.
 func (s *SyncClient) saveSyncStatus(force bool) {
-	if !force && time.Since(s.saveTime) < 10*time.Minute {
+	if !force && time.Since(s.saveTime) < 5*time.Minute {
 		return
 	}
 	s.saveTime = time.Now()
@@ -1129,7 +1129,7 @@ func (s *SyncClient) report(force bool) {
 	)
 	log.Info("Storage sync in progress", "progress", progress, "peerCount", peerCount, "syncTasksRemain", syncTasksRemain,
 		"blobsSynced", blobsSynced, "blobsToSync", blobsToSync, "fillTasksRemain", subFillTaskRemain,
-		"emptyFilled", blobsFilled, "emptyToFill", emptyToFill, "eta", common.PrettyDuration(estTime-elapsed))
+		"emptyFilled", blobsFilled, "emptyToFill", emptyToFill, "timeUsed", common.PrettyDuration(elapsed), "eta", common.PrettyDuration(estTime-elapsed))
 }
 
 func (s *SyncClient) needThisPeer(contractShards map[common.Address][]uint64) bool {
