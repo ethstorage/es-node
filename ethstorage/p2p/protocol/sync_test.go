@@ -643,13 +643,14 @@ func TestSync_RequestL2List(t *testing.T) {
 // TestSaveAndLoadSyncStatus test save sync state to DB for tasks and load sync state from DB for tasks.
 func TestSaveAndLoadSyncStatus(t *testing.T) {
 	var (
-		entries     = uint64(1) << 10
-		kvSize      = defaultChunkSize
-		lastKvIndex = entries*3 - 20
-		db          = rawdb.NewMemoryDatabase()
-		mux         = new(event.Feed)
-		metrics     = NewMetrics("sync_test")
-		rollupCfg   = &rollup.EsConfig{
+		entries          = uint64(1) << 10
+		kvSize           = defaultChunkSize
+		lastKvIndex      = entries*3 - 20
+		db               = rawdb.NewMemoryDatabase()
+		mux              = new(event.Feed)
+		metrics          = NewMetrics("sync_test")
+		expectedTimeUsed = time.Second * 10
+		rollupCfg        = &rollup.EsConfig{
 			L2ChainID:     new(big.Int).SetUint64(3333),
 			MetricsEnable: true,
 		}
@@ -681,9 +682,11 @@ func TestSaveAndLoadSyncStatus(t *testing.T) {
 	if !syncCl.tasks[1].done {
 		t.Fatalf("task 1 should be done.")
 	}
+	syncCl.totalTimeUsed = expectedTimeUsed
 	syncCl.saveSyncStatus(true)
 
 	syncCl.tasks = make([]*task, 0)
+	syncCl.totalTimeUsed = 0
 	syncCl.loadSyncStatus()
 	tasks[0].healTask.Indexes = make(map[uint64]int64)
 	tasks[0].SubTasks[0].First = 5
@@ -691,6 +694,9 @@ func TestSaveAndLoadSyncStatus(t *testing.T) {
 	tasks[1].done = false
 	if err := compareTasks(tasks, syncCl.tasks); err != nil {
 		t.Fatalf("compare kv task fail. err: %s", err.Error())
+	}
+	if syncCl.totalTimeUsed != expectedTimeUsed {
+		t.Fatalf("compare totalTimeUsed fail, expect")
 	}
 }
 

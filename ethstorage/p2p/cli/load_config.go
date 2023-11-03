@@ -366,8 +366,8 @@ func loadGossipOptions(conf *p2p.Config, ctx *cli.Context) error {
 func loadSyncerParams(conf *p2p.Config, ctx *cli.Context) error {
 	maxRequestSize := ctx.GlobalUint64(flags.MaxRequestSize.Name)
 	maxConcurrency := ctx.GlobalUint64(flags.MaxConcurrency.Name)
-	if maxConcurrency < 8 {
-		maxConcurrency = 8
+	if maxConcurrency < 1 {
+		maxConcurrency = 1
 	}
 	conf.SyncParams = &protocol.SyncerParams{MaxRequestSize: maxRequestSize, MaxConcurrency: maxConcurrency}
 	return nil

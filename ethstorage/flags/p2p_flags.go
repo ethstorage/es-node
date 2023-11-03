@@ -164,7 +164,7 @@ var (
 	MaxConcurrency = cli.Uint64Flag{
 		Name: "p2p.max.concurrency",
 		Usage: "max concurrency is the number of chunks to split a shard into to allow concurrent retrievals. " +
-			"The default value is 16, the min value is 8.",
+			"The default value is 16, the min value is 1.",
 		Required: false,
 		Value:    16,
 		EnvVar:   p2pEnv("MAX_CONCURRENCY"),
