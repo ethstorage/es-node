@@ -44,10 +44,6 @@ const (
 	defaultMaxPeerCount = 30
 
 	defaultMinPeersPerShard = 5
-)
-
-const (
-	maxConcurrency = 16
 
 	minSubTaskSize = 16
 )
@@ -149,7 +145,7 @@ type SyncClient struct {
 
 	maxPeers         int
 	minPeersPerShard int
-	maxRequestSize   uint64
+	syncerParams     *SyncerParams
 
 	// Don't allow anything to be added to the wait-group while, or after, we are shutting down.
 	// This is protected by lock.
@@ -184,14 +180,14 @@ type SyncClient struct {
 	emptyBlobsFilled uint64
 }
 
-func NewSyncClient(log log.Logger, cfg *rollup.EsConfig, newStream newStreamFn, storageManager StorageManager, maxRequestSize uint64,
+func NewSyncClient(log log.Logger, cfg *rollup.EsConfig, newStream newStreamFn, storageManager StorageManager, params *SyncerParams,
 	db ethdb.Database, metrics SyncClientMetrics, mux *event.Feed) *SyncClient {
 	ctx, cancel := context.WithCancel(context.Background())
 	maxFillEmptyTaskTreads = int32(runtime.NumCPU() - 2)
 	if maxFillEmptyTaskTreads < 1 {
 		maxFillEmptyTaskTreads = 1
 	}
-	maxKvCountPerReq = maxRequestSize / storageManager.MaxKvSize()
+	maxKvCountPerReq = params.MaxRequestSize / storageManager.MaxKvSize()
 	shardCount := len(storageManager.Shards())
 	if metrics == nil {
 		metrics = NoopMetrics
@@ -215,7 +211,7 @@ func NewSyncClient(log log.Logger, cfg *rollup.EsConfig, newStream newStreamFn, 
 		prover:                     prv.NewKZGProver(log),
 		maxPeers:                   defaultMaxPeerCount,
 		minPeersPerShard:           getMinPeersPerShard(defaultMaxPeerCount, shardCount),
-		maxRequestSize:             maxRequestSize,
+		syncerParams:               params,
 	}
 	return c
 }
@@ -328,7 +324,7 @@ func (s *SyncClient) createTask(sid uint64, lastKvIndex uint64) *task {
 	subTasks := make([]*subTask, 0)
 	// split subTask for a shard to 16 subtasks and if one batch is too small
 	// set to minSubTaskSize
-	maxTaskSize := (limit - first - 1 + maxConcurrency) / maxConcurrency
+	maxTaskSize := (limit - first - 1 + s.syncerParams.MaxConcurrency) / s.syncerParams.MaxConcurrency
 	if maxTaskSize < minSubTaskSize {
 		maxTaskSize = minSubTaskSize
 	}
@@ -525,7 +521,7 @@ func (s *SyncClient) RequestL2Range(ctx context.Context, start, end uint64) (uin
 	for _, pr := range s.peers {
 		id := rand.Uint64()
 		var packet BlobsByRangePacket
-		_, err := pr.RequestBlobsByRange(id, s.storageManager.ContractAddress(), start/s.storageManager.KvEntries(), start, end, s.maxRequestSize, &packet)
+		_, err := pr.RequestBlobsByRange(id, s.storageManager.ContractAddress(), start/s.storageManager.KvEntries(), start, end, s.syncerParams.MaxRequestSize, &packet)
 		if err != nil {
 			return 0, err
 		}
@@ -545,7 +541,7 @@ func (s *SyncClient) RequestL2List(indexes []uint64) (uint64, error) {
 	for _, pr := range s.peers {
 		id := rand.Uint64()
 		var packet BlobsByListPacket
-		_, err := pr.RequestBlobsByList(id, s.storageManager.ContractAddress(), indexes[0]/s.storageManager.KvEntries(), indexes, s.maxRequestSize, &packet)
+		_, err := pr.RequestBlobsByList(id, s.storageManager.ContractAddress(), indexes[0]/s.storageManager.KvEntries(), indexes, s.syncerParams.MaxRequestSize, &packet)
 		if err != nil {
 			return 0, err
 		}
@@ -616,7 +612,7 @@ func (s *SyncClient) assignBlobRangeTasks() {
 
 	// Iterate over all the tasks and try to find a pending one
 	for _, t := range s.tasks {
-		maxRange := s.maxRequestSize / ethstorage.ContractToShardManager[t.Contract].MaxKvSize() * 2
+		maxRange := s.syncerParams.MaxRequestSize / ethstorage.ContractToShardManager[t.Contract].MaxKvSize() * 2
 		for _, stask := range t.SubTasks {
 			st := stask
 			if st.done {
@@ -659,7 +655,7 @@ func (s *SyncClient) assignBlobRangeTasks() {
 				start := time.Now()
 				var packet BlobsByRangePacket
 				// Attempt to send the remote request and revert if it fails
-				returnCode, err := pr.RequestBlobsByRange(req.id, req.contract, req.shardId, req.origin, req.limit, s.maxRequestSize, &packet)
+				returnCode, err := pr.RequestBlobsByRange(req.id, req.contract, req.shardId, req.origin, req.limit, s.syncerParams.MaxRequestSize, &packet)
 				s.metrics.ClientGetBlobsByRangeEvent(req.peer.String(), returnCode, time.Since(start))
 
 				s.lock.Lock()
@@ -703,7 +699,7 @@ func (s *SyncClient) assignBlobHealTasks() {
 	// Iterate over all the tasks and try to find a pending one
 	for _, t := range s.tasks {
 		// All the kvs are downloading, wait for request time or success
-		batch := s.maxRequestSize / ethstorage.ContractToShardManager[t.Contract].MaxKvSize() * 2
+		batch := s.syncerParams.MaxRequestSize / ethstorage.ContractToShardManager[t.Contract].MaxKvSize() * 2
 
 		// kvHealTask pending retrieval, try to find an idle peer. If no such peer
 		// exists, we probably assigned tasks for all (or they are stateless).
@@ -742,7 +738,7 @@ func (s *SyncClient) assignBlobHealTasks() {
 			start := time.Now()
 			var packet BlobsByListPacket
 			// Attempt to send the remote request and revert if it fails
-			returnCode, err := pr.RequestBlobsByList(req.id, req.contract, req.shardId, req.indexes, s.maxRequestSize, &packet)
+			returnCode, err := pr.RequestBlobsByList(req.id, req.contract, req.shardId, req.indexes, s.syncerParams.MaxRequestSize, &packet)
 			s.metrics.ClientGetBlobsByListEvent(req.peer.String(), returnCode, time.Since(start))
 
 			s.lock.Lock()

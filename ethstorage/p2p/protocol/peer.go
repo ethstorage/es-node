@@ -92,7 +92,11 @@ func (p *Peer) RequestBlobsByRange(id uint64, contract common.Address, shardId u
 	if err != nil {
 		return clientError, err
 	}
-	defer stream.Close()
+	defer func() {
+		if stream != nil {
+			stream.Close()
+		}
+	}()
 
 	return SendRPC(stream, &GetBlobsByRangePacket{
 		ID:       id,
@@ -114,7 +118,11 @@ func (p *Peer) RequestBlobsByList(id uint64, contract common.Address, shardId ui
 	if err != nil {
 		return clientError, err
 	}
-	defer stream.Close()
+	defer func() {
+		if stream != nil {
+			stream.Close()
+		}
+	}()
 
 	return SendRPC(stream, &GetBlobsByListPacket{
 		ID:       id,
