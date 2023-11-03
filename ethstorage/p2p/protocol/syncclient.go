@@ -1096,7 +1096,7 @@ func (s *SyncClient) report(force bool) {
 	s.logTime = time.Now()
 
 	// Don't report anything until we have a meaningful progress
-	synced, syncedBytes := s.blobsSynced, s.syncedBytes
+	synced, syncedBytes, peerCount := s.blobsSynced, s.syncedBytes, len(s.peers)
 	emptyFilled, emptyToFill := s.emptyBlobsFilled, s.emptyBlobsToFill
 	filledBytes := common.StorageSize(emptyFilled * s.storageManager.MaxKvSize())
 	if synced == 0 && emptyFilled == 0 {
@@ -1126,7 +1126,7 @@ func (s *SyncClient) report(force bool) {
 		blobsSynced     = fmt.Sprintf("%v@%v", log.FormatLogfmtUint64(synced), syncedBytes.TerminalString())
 		blobsFilled     = fmt.Sprintf("%v@%v", log.FormatLogfmtUint64(emptyFilled), filledBytes.TerminalString())
 	)
-	log.Info("Storage sync in progress", "progress", progress, "syncTasksRemain", syncTasksRemain,
+	log.Info("Storage sync in progress", "progress", progress, "peerCount", peerCount, "syncTasksRemain", syncTasksRemain,
 		"blobsSynced", blobsSynced, "blobsToSync", blobsToSync, "fillTasksRemain", subFillTaskRemain,
 		"emptyFilled", blobsFilled, "emptyToFill", emptyToFill, "eta", common.PrettyDuration(estTime-elapsed))
 }
