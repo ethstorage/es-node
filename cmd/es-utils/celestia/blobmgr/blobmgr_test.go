@@ -28,8 +28,8 @@ func TestUploadDownload(t *testing.T) {
 		DaRpc:          "http://65.108.236.27:26658",
 		NamespaceId:    "00000000000000003333",
 		AuthToken:      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBbGxvdyI6WyJwdWJsaWMiLCJyZWFkIiwid3JpdGUiLCJhZG1pbiJdfQ.MaHtzm_HvBw810jMsd1Vr4bz1f4oAMPZExRNsOJ9n1g",
-		L1RPCURL:       "http://65.108.236.27:8545",
-		L1Contract:     "0xAA052c137c830FaFB3BC8F62146e8C0d041fD624",
+		L1RPCURL:       "https://rpc-sepolia.rockx.com",
+		L1Contract:     "0x882BC290fc22C330592819977c48968a62AE25f4",
 		PrivateKey:     "95eb6ffd2ae0b115db4d1f0d58388216f9d026896696a5211d77b5f14eb5badf",
 		NetworkTimeout: 30 * time.Second,
 	}
