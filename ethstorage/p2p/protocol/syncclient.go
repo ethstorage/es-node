@@ -174,6 +174,7 @@ type SyncClient struct {
 	saveTime       time.Time // Time instance when state was last saved to DB
 	storageManager StorageManager
 
+	totalTimeUsed    time.Duration
 	blobsSynced      uint64
 	syncedBytes      common.StorageSize
 	emptyBlobsToFill uint64
@@ -244,6 +245,7 @@ func (s *SyncClient) loadSyncStatus() {
 	// Start a fresh sync for retrieval.
 	s.blobsSynced, s.syncedBytes = 0, 0
 	s.emptyBlobsToFill, s.emptyBlobsFilled = 0, 0
+	s.totalTimeUsed = 0
 	var progress SyncProgress
 
 	if status, _ := s.db.Get(syncStatusKey); status != nil {
@@ -270,6 +272,7 @@ func (s *SyncClient) loadSyncStatus() {
 			}
 			s.blobsSynced, s.syncedBytes = progress.BlobsSynced, progress.SyncedBytes
 			s.emptyBlobsFilled = progress.EmptyBlobsFilled
+			s.totalTimeUsed = progress.TotalTimeUsed
 		}
 	}
 
@@ -391,6 +394,7 @@ func (s *SyncClient) saveSyncStatus(force bool) {
 		SyncedBytes:      s.syncedBytes,
 		EmptyBlobsToFill: s.emptyBlobsToFill,
 		EmptyBlobsFilled: s.emptyBlobsFilled,
+		TotalTimeUsed:    s.totalTimeUsed,
 	}
 	status, err := json.Marshal(progress)
 	if err != nil {
@@ -1094,6 +1098,7 @@ func (s *SyncClient) report(force bool) {
 	// Don't report anything until we have a meaningful progress
 	synced, syncedBytes, peerCount := s.blobsSynced, s.syncedBytes, len(s.peers)
 	emptyFilled, emptyToFill := s.emptyBlobsFilled, s.emptyBlobsToFill
+	totalTimeUsed, peerCount := s.totalTimeUsed, len(s.peers)
 	filledBytes := common.StorageSize(emptyFilled * s.storageManager.MaxKvSize())
 	if synced == 0 && emptyFilled == 0 {
 		return
@@ -1112,7 +1117,7 @@ func (s *SyncClient) report(force bool) {
 		subFillTaskRemain = subFillTaskRemain + len(t.SubEmptyTasks)
 	}
 
-	elapsed := time.Since(s.startTime)
+	elapsed := totalTimeUsed + time.Since(s.startTime)
 	estTime := elapsed / time.Duration(synced+emptyFilled) * time.Duration(blobsToSync+synced+emptyFilled+emptyToFill)
 
 	// Create a mega progress report
