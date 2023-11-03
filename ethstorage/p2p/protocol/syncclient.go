@@ -451,6 +451,7 @@ func (s *SyncClient) cleanTasks() {
 func (s *SyncClient) Start() {
 	if s.startTime == (time.Time{}) {
 		s.startTime = time.Now()
+		s.logTime = time.Now()
 	}
 
 	// Retrieve the previous sync status from LevelDB and abort if already synced
@@ -1093,12 +1094,13 @@ func (s *SyncClient) report(force bool) {
 	if !force && time.Since(s.logTime) < 8*time.Second {
 		return
 	}
+	s.totalTimeUsed = s.totalTimeUsed + time.Since(s.logTime)
 	s.logTime = time.Now()
 
 	// Don't report anything until we have a meaningful progress
 	synced, syncedBytes, peerCount := s.blobsSynced, s.syncedBytes, len(s.peers)
 	emptyFilled, emptyToFill := s.emptyBlobsFilled, s.emptyBlobsToFill
-	totalTimeUsed, peerCount := s.totalTimeUsed, len(s.peers)
+	elapsed, peerCount := s.totalTimeUsed, len(s.peers)
 	filledBytes := common.StorageSize(emptyFilled * s.storageManager.MaxKvSize())
 	if synced == 0 && emptyFilled == 0 {
 		return
@@ -1117,7 +1119,6 @@ func (s *SyncClient) report(force bool) {
 		subFillTaskRemain = subFillTaskRemain + len(t.SubEmptyTasks)
 	}
 
-	elapsed := totalTimeUsed + time.Since(s.startTime)
 	estTime := elapsed / time.Duration(synced+emptyFilled) * time.Duration(blobsToSync+synced+emptyFilled+emptyToFill)
 
 	// Create a mega progress report
