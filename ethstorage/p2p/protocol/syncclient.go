@@ -238,7 +238,7 @@ func (s *SyncClient) setSyncDone() {
 	if s.mux != nil {
 		s.mux.Send(EthStorageSyncDone{DoneType: AllShardDone})
 	}
-	log.Info("Sync done", "timeUsed", time.Since(s.startTime))
+	log.Info("Sync done", "timeUsed", s.totalTimeUsed)
 }
 
 func (s *SyncClient) loadSyncStatus() {
@@ -1098,7 +1098,7 @@ func (s *SyncClient) report(force bool) {
 	s.logTime = time.Now()
 
 	// Don't report anything until we have a meaningful progress
-	synced, syncedBytes, peerCount := s.blobsSynced, s.syncedBytes, len(s.peers)
+	synced, syncedBytes := s.blobsSynced, s.syncedBytes
 	emptyFilled, emptyToFill := s.emptyBlobsFilled, s.emptyBlobsToFill
 	elapsed, peerCount := s.totalTimeUsed, len(s.peers)
 	filledBytes := common.StorageSize(emptyFilled * s.storageManager.MaxKvSize())
