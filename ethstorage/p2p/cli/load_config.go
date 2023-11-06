@@ -245,8 +245,6 @@ func loadLibp2pOpts(conf *p2p.Config, ctx *cli.Context) error {
 		switch v {
 		case "yamux":
 			conf.HostMux = append(conf.HostMux, p2p.YamuxC())
-		case "mplex":
-			conf.HostMux = append(conf.HostMux, p2p.MplexC())
 		default:
 			return fmt.Errorf("could not recognize mux %s", v)
 		}

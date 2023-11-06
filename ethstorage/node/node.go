@@ -130,6 +130,7 @@ func (n *EsNode) initL2(ctx context.Context, cfg *Config) error {
 		cfg.Downloader.DownloadStart,
 		cfg.Downloader.DownloadDump,
 		cfg.L1.L1MinDurationForBlobsRequest,
+		cfg.Downloader.DownloadThreadNum,
 		n.log,
 	)
 	return nil

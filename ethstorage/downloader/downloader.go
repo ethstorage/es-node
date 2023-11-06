@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -86,8 +87,10 @@ func NewDownloader(
 	downloadStart int64, 
 	downloadDump  string,
 	minDurationForBlobsRequest uint64,
+	downloadThreadNum int,
 	log log.Logger,
 ) *Downloader{
+	sm.DownloadThreadNum = downloadThreadNum
 	return &Downloader{
 		Cache: NewBlobCache(),		
 		l1Source: l1Source,
@@ -256,11 +259,13 @@ func (s *Downloader) download() {
 				copy(metas[i][0:ethstorage.HashSizeInContract], blob.hash[0:ethstorage.HashSizeInContract])
 			}
 
+			ts := time.Now()
 			err := s.sm.DownloadFinished(end, kvIndices, dataBlobs, metas)
 			if err != nil {
 				s.log.Error("Save blobs error", "err", err)
 				return
 			}
+			log.Info("DownloadFinished", "duration(ms)", time.Since(ts).Milliseconds(), "blobs", len(blobs))
 
 			// save lastDownloadedBlock into database
 			bs := make([]byte, 8)
@@ -288,6 +293,8 @@ func (s *Downloader) download() {
 // 2. Writing the blobs into the shard file when they are finalized, with the option toCache set to false.
 // we will attempt to read the blobs from the cache initially. If they don't exist in the cache, we will download them instead.
 func (s *Downloader) downloadRange(start int64, end int64, toCache bool) ([]blob, error) {
+	ts := time.Now()
+	
 	if end < start {
 		end = start
 	}
@@ -338,7 +345,7 @@ func (s *Downloader) downloadRange(start int64, end int64, toCache bool) ([]blob
 		}
 	}
 	
-	s.log.Info("Download range", "cache", toCache, "start", start, "end", end, "blobNumber", len(blobs))
+	s.log.Info("Download range", "cache", toCache, "start", start, "end", end, "blobNumber", len(blobs), "duration(ms)", time.Since(ts).Milliseconds())
 
 	return blobs, nil
 }
@@ -363,25 +370,24 @@ func (s *Downloader) dumpBlobsIfNeeded(blobs []blob) {
 
 func (s *Downloader) eventsToBlocks(events []types.Log) ([]*blockBlobs, error) {
 	blocks := []*blockBlobs{}
-	lastTimestamp := uint64(0)
+	lastBlockNumber := uint64(0)
 
 	for _, event := range events {
-		res, err := s.l1Source.HeaderByNumber(context.Background(), big.NewInt(int64(event.BlockNumber)))
-		if err != nil {
-			return nil, err
-		}
-		timestamp := res.Time
-
-		if timestamp != lastTimestamp {
-			blocks = append(blocks, &blockBlobs{blobs: []*blob{}})  
+		if lastBlockNumber != event.BlockNumber {
+			res, err := s.l1Source.HeaderByNumber(context.Background(), big.NewInt(int64(event.BlockNumber)))
+			if err != nil {
+				return nil, err
+			}
+			lastBlockNumber = event.BlockNumber
+			blocks = append(blocks, &blockBlobs{
+				timestamp: res.Time,
+				number: event.BlockNumber,
+				hash: event.BlockHash,
+				blobs: []*blob{},
+			}) 
 		}
 
 		block := blocks[len(blocks) - 1]
-		
-		block.timestamp = timestamp
-		block.number = event.BlockNumber
-		block.hash = event.BlockHash
-		
 		hash := common.Hash{}
 		copy(hash[:], event.Topics[3][:])
 		
@@ -391,8 +397,6 @@ func (s *Downloader) eventsToBlocks(events []types.Log) ([]*blockBlobs, error) {
 			hash: hash,
 		}
 		block.blobs = append(block.blobs, &blob)
-
-		lastTimestamp = timestamp
 	}
 
 	return blocks, nil
