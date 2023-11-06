@@ -138,10 +138,10 @@ var (
 	}
 	HostMux = cli.StringFlag{
 		Name:     "p2p.mux",
-		Usage:    "Comma-separated list of multiplexing protocols in order of preference. At least 1 required. Options: 'yamux','mplex'.",
+		Usage:    "Comma-separated list of multiplexing protocols in order of preference. At least 1 required. Options: 'yamux'.",
 		Hidden:   true,
 		Required: false,
-		Value:    "yamux,mplex",
+		Value:    "yamux",
 		EnvVar:   p2pEnv("MUX"),
 	}
 	HostSecurity = cli.StringFlag{
