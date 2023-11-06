@@ -169,10 +169,6 @@ func (n *EsNode) startL1(cfg *Config) {
 		cfg.L1EpochPollInterval, time.Second*10)
 	n.l1FinalizedSub = eth.PollBlockChanges(n.resourcesCtx, n.log, n.l1Source, n.OnNewL1Finalized, ethRPC.FinalizedBlockNumber,
 		cfg.L1EpochPollInterval, time.Second*10)
-	if cfg.Metrics.Enabled {
-		n.l1LatestBlockSub = eth.PollBlockChanges(n.resourcesCtx, n.log, n.l1Source, n.RefreshContractMetrics, ethRPC.LatestBlockNumber,
-			1*time.Minute, time.Second*10)
-	}
 }
 
 func (n *EsNode) initP2P(ctx context.Context, cfg *Config) error {
@@ -307,26 +303,6 @@ func (n *EsNode) RequestL2Range(ctx context.Context, start, end uint64) (uint64,
 	}
 	n.log.Debug("Ignoring request to sync L2 range, no sync method available", "start", start, "end", end)
 	return 0, nil
-}
-
-func (n *EsNode) RefreshContractMetrics(ctx context.Context, sig eth.L1BlockRef) {
-	lastKVIndex, err := n.l1Source.GetStorageLastBlobIdx(int64(sig.Number))
-	if err != nil {
-		log.Warn("refresh contract metrics (last kv index) failed", "err", err.Error())
-		return
-	}
-	maxShardIdx := lastKVIndex / n.storageManager.KvEntries()
-	n.metrics.SetLastKVIndexAndMaxShardId(lastKVIndex, maxShardIdx)
-
-	l1api := miner.NewL1MiningAPI(n.l1Source, n.log)
-	for sid := uint64(0); sid < maxShardIdx; sid++ {
-		info, err := l1api.GetMiningInfo(ctx, n.storageManager.ContractAddress(), sid)
-		if err != nil {
-			log.Warn("get mining info for metrics fail", "shardId", sid, "err", err.Error())
-			continue
-		}
-		n.metrics.SetMiningInfo(sid, info.Difficulty.Uint64(), info.LastMineTime, info.BlockMined.Uint64())
-	}
 }
 
 func (n *EsNode) Close() error {

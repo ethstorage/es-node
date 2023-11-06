@@ -5,6 +5,7 @@ package metrics
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"strconv"
 	"time"
@@ -387,9 +388,9 @@ func (m *Metrics) SetLastKVIndexAndMaxShardId(lastKVIndex uint64, maxShardId uin
 }
 
 func (m *Metrics) SetMiningInfo(shardId uint64, difficulty, minedTime, blockMined uint64) {
-	m.Difficulties.WithLabelValues(string(shardId)).Set(float64(difficulty))
-	m.MinedTime.WithLabelValues(string(shardId)).Set(float64(minedTime))
-	m.BlockMined.WithLabelValues(string(shardId)).Set(float64(blockMined))
+	m.Difficulties.WithLabelValues(fmt.Sprintf("%d", shardId)).Set(float64(difficulty))
+	m.MinedTime.WithLabelValues(fmt.Sprintf("%d", shardId)).Set(float64(minedTime))
+	m.BlockMined.WithLabelValues(fmt.Sprintf("%d", shardId)).Set(float64(blockMined))
 }
 
 func (m *Metrics) RecordGossipEvent(evType int32) {
@@ -441,7 +442,6 @@ func (m *Metrics) ClientOnBlobsByRange(peerID string, reqBlobCount, retBlobCount
 }
 
 func (m *Metrics) ClientOnBlobsByList(peerID string, reqCount, retBlobCount, insertedCount uint64, duration time.Duration) {
-
 	method := "onBlobsByList"
 	m.SyncClientPerfCallTotal.WithLabelValues(method).Inc()
 	m.SyncClientPerfCallTotal.WithLabelValues(method).Add(float64(duration) / float64(time.Second))
