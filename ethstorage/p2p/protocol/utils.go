@@ -71,6 +71,9 @@ func ReadMsg(stream network.Stream) ([]byte, byte, error) {
 
 	payload := make([]byte, size)
 	_, err = io.ReadFull(r, payload)
+	if err := stream.CloseRead(); err != nil {
+		return nil, code, fmt.Errorf("failed to close reading side")
+	}
 	return payload, code, err
 }
 
