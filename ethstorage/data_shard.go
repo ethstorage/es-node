@@ -4,13 +4,16 @@
 package ethstorage
 
 import (
+	"bytes"
 	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/crypto/kzg4844"
 	"github.com/ethstorage/go-ethstorage/ethstorage/encoder"
 	"github.com/ethstorage/go-ethstorage/ethstorage/pora"
+	"github.com/protolambda/go-kzg/eth"
 )
 
 // A DataShard is a logical shard that manages multiple DataFiles.
@@ -149,11 +152,18 @@ func (ds *DataShard) ReadEncoded(kvIdx uint64, readLen int) ([]byte, error) {
 
 // Read the encoded data from storage and decode it.
 func (ds *DataShard) Read(kvIdx uint64, readLen int, commit common.Hash) ([]byte, error) {
-	return ds.readWith(kvIdx, readLen, func(cdata []byte, chunkIdx uint64) []byte {
-		// TODO: do integration check with commit
+	bs, err := ds.readWith(kvIdx, int(ds.kvSize), func(cdata []byte, chunkIdx uint64) []byte {
 		encodeKey := calcEncodeKey(commit, chunkIdx, ds.dataFiles[0].miner)
 		return decodeChunk(ds.chunkSize, cdata, ds.dataFiles[0].encodeType, encodeKey)
 	})
+	if err != nil {
+		return nil, err
+	}
+
+	if err = checkCommit(commit, bs); err != nil {
+		return nil, err
+	}
+	return bs[0:readLen], nil
 }
 
 // Read the encoded data from storage and decode it.
@@ -162,12 +172,18 @@ func (ds *DataShard) ReadWithMeta(kvIdx uint64, readLen int) ([]byte, []byte, er
 	if err != nil {
 		return nil, nil, err
 	}
-	bs, err := ds.readWith(kvIdx, readLen, func(cdata []byte, chunkIdx uint64) []byte {
-		// TODO: do integration check with commit
+	bs, err := ds.readWith(kvIdx, int(ds.kvSize), func(cdata []byte, chunkIdx uint64) []byte {
 		encodeKey := calcEncodeKey(common.BytesToHash(commit), chunkIdx, ds.dataFiles[0].miner)
 		return decodeChunk(ds.chunkSize, cdata, ds.dataFiles[0].encodeType, encodeKey)
 	})
-	return bs, commit, err
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if err = checkCommit(common.BytesToHash(commit), bs); err != nil {
+		return nil, nil, err
+	}
+	return bs[0:readLen], commit, nil
 }
 
 // readWith read the encoded data from storage with a decoder.
@@ -316,7 +332,37 @@ func decodeChunk(chunkSize uint64, bs []byte, encodeType uint64, encodeKey commo
 	}
 }
 
-// Write a value of the KV to the store using a customized encoder. 
+var EmptyBlobCommit = make([]byte, HashSizeInContract)
+
+func checkCommit(commit common.Hash, blobData []byte) error {
+	// commit is empty 0x00..00
+	if bytes.Equal(commit[0:HashSizeInContract], EmptyBlobCommit) {
+		// blob is empty 0x00...00
+		for _, b := range blobData {
+			if b != 0 {
+				return fmt.Errorf("commit does not match")
+			}
+		}
+		return nil
+	}
+
+	// kzg blob
+	blob := kzg4844.Blob{}
+	copy(blob[:], blobData)
+	// Generate VersionedHash
+	commitment, err := kzg4844.BlobToCommitment(blob)
+	if err != nil {
+		return fmt.Errorf("could not convert blob to commitment: %v", err)
+	}
+	versionedHash := eth.KZGToVersionedHash(eth.KZGCommitment(commitment))
+	// Get the hash and only take 24 bits
+	if !bytes.Equal(versionedHash[0:HashSizeInContract], commit[0:HashSizeInContract]) {
+		return fmt.Errorf("commit does not match")
+	}
+	return nil
+}
+
+// Write a value of the KV to the store using a customized encoder.
 func (ds *DataShard) WriteWith(kvIdx uint64, b []byte, commit common.Hash, encoder func([]byte, uint64) []byte) error {
 	if !ds.Contains(kvIdx) {
 		return fmt.Errorf("kv not found")
