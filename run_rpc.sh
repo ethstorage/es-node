@@ -8,7 +8,6 @@ data_dir="./es-data"
 storage_file_0="$data_dir/shard-0.dat"
 
 common_flags=" --datadir $data_dir \
-  --encoding_type 0 \
   --l1.rpc http://65.108.236.27:8545 \
   --storage.l1contract 0x9f9F5Fd89ad648f2C000C954d8d9C87743243eC5"
 
@@ -27,7 +26,7 @@ es_node_start=" --network devnet \
 "
 # create data file for shard 0 if not yet
 if [ ! -e $storage_file_0 ]; then
-  $executable $es_node_init $common_flags
+  $executable $es_node_init $common_flags --encoding_type 0
   echo "initialized ${storage_file_0}"
 fi
 

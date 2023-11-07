@@ -166,14 +166,17 @@ func EsNodeInit(ctx *cli.Context) error {
 	log.Info("Will create data files for storage node")
 	l1Rpc := readRequiredFlag(ctx, flags.L1NodeAddr.Name)
 	contract := readRequiredFlag(ctx, flags.StorageL1Contract.Name)
-	miner := readRequiredFlag(ctx, flags.StorageMiner.Name)
 	datadir := readRequiredFlag(ctx, flags.DataDir.Name)
 	encodingType := ethstorage.ENCODE_BLOB_POSEIDON
+	miner := "0x"
 	if ctx.IsSet(encodingTypeFlagName) {
 		encodingType := ctx.Uint64(encodingTypeFlagName)
 		log.Info("Read flag", "name", encodingTypeFlagName, "value", encodingType)
 		if encodingType > 3 {
 			return fmt.Errorf("encoding_type must be an integer between 0 and 3")
+		}
+		if encodingType != 0 {
+			miner = readRequiredFlag(ctx, flags.StorageMiner.Name)
 		}
 	}
 	shardIndexes := ctx.Int64Slice(shardIndexFlagName)
