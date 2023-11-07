@@ -62,22 +62,27 @@ func (m *BlobManager) SendBlob(ctx context.Context, data []byte) ([]byte, uint64
 	ctx, cancel := context.WithTimeout(ctx, m.NetworkTimeout)
 	defer cancel()
 
+	m.l.Debug("Prepare sending blob", "size", len(data))
 	dataBlob, err := blob.NewBlobV0(m.Namespace.ToAppNamespace().Bytes(), data)
+	if err != nil {
+		m.l.Error("Unable to construct blob from the provided Namespace and data", "err", err)
+		return nil, 0, err
+	}
 	com, err := blob.CreateCommitment(dataBlob)
 	if err != nil {
-		m.l.Warn("Unable to create blob commitment to Celestia", "err", err)
+		m.l.Error("Unable to create blob commitment to Celestia", "err", err)
 		return nil, 0, err
 	}
 	m.l.Debug("Create commitment", "commitment", hex.EncodeToString(com))
 	err = m.DaClient.Header.SyncWait(ctx)
 	if err != nil {
-		m.l.Warn("Unable to wait for Celestia header sync", "err", err)
+		m.l.Error("Unable to wait for Celestia header sync", "err", err)
 		return nil, 0, err
 	}
 	m.l.Debug("Start sending blob", "size", len(data))
 	height, err := m.DaClient.Blob.Submit(ctx, []*blob.Blob{dataBlob}, nil)
 	if err != nil {
-		m.l.Warn("Unable to publish tx to Celestia", "err", err)
+		m.l.Error("Unable to publish tx to Celestia", "err", err)
 		return nil, 0, err
 	}
 	if height == 0 {
