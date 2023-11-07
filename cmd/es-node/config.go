@@ -10,6 +10,7 @@ import (
 	"math/big"
 	"os"
 
+	oppprof "github.com/ethereum-optimism/optimism/op-service/pprof"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/log"
@@ -94,11 +95,11 @@ func NewConfig(ctx *cli.Context, log log.Logger) (*node.Config, error) {
 		// 		ListenAddr: ctx.GlobalString(flags.MetricsAddrFlag.Name),
 		// 		ListenPort: ctx.GlobalInt(flags.MetricsPortFlag.Name),
 		// 	},
-		// 	Pprof: oppprof.CLIConfig{
-		// 		Enabled:    ctx.GlobalBool(flags.PprofEnabledFlag.Name),
-		// 		ListenAddr: ctx.GlobalString(flags.PprofAddrFlag.Name),
-		// 		ListenPort: ctx.GlobalInt(flags.PprofPortFlag.Name),
-		// 	},
+		Pprof: oppprof.CLIConfig{
+			Enabled:    ctx.GlobalBool(flags.PprofEnabledFlag.Name),
+			ListenAddr: ctx.GlobalString(flags.PprofAddrFlag.Name),
+			ListenPort: ctx.GlobalInt(flags.PprofPortFlag.Name),
+		},
 		P2P: p2pConfig,
 		// 	P2PSigner:           p2pSignerSetup,
 		L1EpochPollInterval: ctx.GlobalDuration(flags.L1EpochPollIntervalFlag.Name),
@@ -234,7 +235,8 @@ func NewL1EndpointConfig(ctx *cli.Context) (*eth.L1EndpointConfig, *ethclient.Cl
 
 func NewDownloaderConfig(ctx *cli.Context) *downloader.Config {
 	return &downloader.Config{
-		DownloadStart: ctx.GlobalInt64(flags.DownloadStart.Name),
-		DownloadDump:  ctx.GlobalString(flags.DownloadDump.Name),
+		DownloadStart:     ctx.GlobalInt64(flags.DownloadStart.Name),
+		DownloadDump:      ctx.GlobalString(flags.DownloadDump.Name),
+		DownloadThreadNum: ctx.GlobalInt(flags.DownloadThreadNum.Name),
 	}
 }

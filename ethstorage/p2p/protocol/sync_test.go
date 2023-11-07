@@ -41,6 +41,7 @@ const (
 var (
 	contract = common.HexToAddress("0x0000000000000000000000000000000003330001")
 	empty    = make([]byte, 0)
+	params   = SyncerParams{MaxRequestSize: uint64(4 * 1024 * 1024), MaxConcurrency: 16}
 	testLog  = log.New("TestSync")
 	prover   = prv.NewKZGProver(testLog)
 )
@@ -331,7 +332,7 @@ func createLocalHostAndSyncClient(t *testing.T, testLog log.Logger, rollupCfg *r
 	storageManager StorageManager, metrics SyncClientMetrics, mux *event.Feed) (host.Host, *SyncClient) {
 	localHost := getNetHost(t)
 
-	syncCl := NewSyncClient(testLog, rollupCfg, localHost.NewStream, storageManager, db, metrics, mux)
+	syncCl := NewSyncClient(testLog, rollupCfg, localHost.NewStream, storageManager, &params, db, metrics, mux)
 	localHost.Network().Notify(&network.NotifyBundle{
 		ConnectedF: func(nw network.Network, conn network.Conn) {
 			shards := make(map[common.Address][]uint64)
@@ -642,13 +643,14 @@ func TestSync_RequestL2List(t *testing.T) {
 // TestSaveAndLoadSyncStatus test save sync state to DB for tasks and load sync state from DB for tasks.
 func TestSaveAndLoadSyncStatus(t *testing.T) {
 	var (
-		entries     = uint64(1) << 10
-		kvSize      = defaultChunkSize
-		lastKvIndex = entries*3 - 20
-		db          = rawdb.NewMemoryDatabase()
-		mux         = new(event.Feed)
-		metrics     = NewMetrics("sync_test")
-		rollupCfg   = &rollup.EsConfig{
+		entries          = uint64(1) << 10
+		kvSize           = defaultChunkSize
+		lastKvIndex      = entries*3 - 20
+		db               = rawdb.NewMemoryDatabase()
+		mux              = new(event.Feed)
+		metrics          = NewMetrics("sync_test")
+		expectedTimeUsed = time.Second * 10
+		rollupCfg        = &rollup.EsConfig{
 			L2ChainID:     new(big.Int).SetUint64(3333),
 			MetricsEnable: true,
 		}
@@ -680,9 +682,11 @@ func TestSaveAndLoadSyncStatus(t *testing.T) {
 	if !syncCl.tasks[1].done {
 		t.Fatalf("task 1 should be done.")
 	}
+	syncCl.totalTimeUsed = expectedTimeUsed
 	syncCl.saveSyncStatus(true)
 
 	syncCl.tasks = make([]*task, 0)
+	syncCl.totalTimeUsed = 0
 	syncCl.loadSyncStatus()
 	tasks[0].healTask.Indexes = make(map[uint64]int64)
 	tasks[0].SubTasks[0].First = 5
@@ -690,6 +694,9 @@ func TestSaveAndLoadSyncStatus(t *testing.T) {
 	tasks[1].done = false
 	if err := compareTasks(tasks, syncCl.tasks); err != nil {
 		t.Fatalf("compare kv task fail. err: %s", err.Error())
+	}
+	if syncCl.totalTimeUsed != expectedTimeUsed {
+		t.Fatalf("compare totalTimeUsed fail, expect")
 	}
 }
 
@@ -815,7 +822,7 @@ func TestSimpleSync(t *testing.T) {
 		excludedList: make(map[uint64]struct{}),
 	}}
 
-	testSync(t, defaultChunkSize, kvSize, kvEntries, []uint64{0}, lastKvIndex, defaultEncodeType, 2, remotePeers, true)
+	testSync(t, defaultChunkSize, kvSize, kvEntries, []uint64{0}, lastKvIndex, defaultEncodeType, 3, remotePeers, true)
 }
 
 // TestMultiSubTasksSync test sync process with local node support a single big (its task contains multi subTask) shard
@@ -1031,7 +1038,7 @@ func TestAddPeerDuringSyncing(t *testing.T) {
 	}
 	remoteHost1 := createRemoteHost(t, ctx, rollupCfg, smr1, metrics, testLog)
 	connect(t, localHost, remoteHost1, shardMap, shardMap)
-	checkStall(t, 2, mux, cancel)
+	checkStall(t, 3, mux, cancel)
 
 	if !syncCl.syncDone {
 		t.Fatalf("sync state %v is not match with expected state %v, peer count %d", syncCl.syncDone, true, len(syncCl.peers))
@@ -1056,17 +1063,24 @@ func TestCloseSyncWhileFillEmpty(t *testing.T) {
 		}
 	)
 
+	metafile, err := CreateMetaFile(metafileName, int64(kvEntries))
+	if err != nil {
+		t.Error("Create metafileName fail", err.Error())
+	}
+	defer metafile.Close()
+
 	shardMap[contract] = shards
 	shardManager, files := createEthStorage(contract, shards, defaultChunkSize, kvSize, kvEntries, common.Address{}, defaultEncodeType)
 	if shardManager == nil {
 		t.Fatalf("createEthStorage failed")
 	}
-
 	defer func(files []string) {
 		for _, file := range files {
 			os.Remove(file)
 		}
 	}(files)
+
+	makeKVStorage(contract, shards, defaultChunkSize, kvSize, kvEntries, lastKvIndex, common.Address{}, defaultEncodeType, metafile)
 
 	l1 := NewMockL1Source(lastKvIndex, metafileName)
 	sm := ethstorage.NewStorageManager(shardManager, l1)

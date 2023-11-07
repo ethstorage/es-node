@@ -150,9 +150,10 @@ func (w *worker) newWorkLoop() {
 				taskCh := make(chan *taskItem, taskQueueSize)
 				taskChs = append(taskChs, taskCh)
 				w.wg.Add(1)
-				w.lg.Info("Worker is starting task loop", "shard", shardIdx, "thread", i)
+				w.lg.Debug("Worker is starting task loop", "shard", shardIdx, "thread", i)
 				go w.taskLoop(taskCh)
 			}
+			w.lg.Info("Worker is starting task loops", "shard", shardIdx, "threads", w.config.ThreadsPerShard)
 			task := task{
 				miner:    miner,
 				shardIdx: shardIdx,
@@ -338,7 +339,9 @@ func (w *worker) checkTxStatus(txHash common.Hash, miner common.Address) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	receipt, err := w.l1API.TransactionReceipt(ctx, txHash)
-	if err == nil && receipt.Status == 1 {
+	if err != nil || receipt == nil {
+		log.Warn("Mining transaction not found!", "err", err, "txHash", txHash)
+	} else if receipt.Status == 1 {
 		log.Info("Mining transaction success!      √", "miner", miner)
 	} else if receipt.Status == 0 {
 		log.Warn("Mining transaction failed!      ×", "txHash", txHash)
@@ -349,16 +352,26 @@ func (w *worker) checkTxStatus(txHash common.Hash, miner common.Address) {
 func (w *worker) mineTask(t *taskItem) (bool, error) {
 	startTime := time.Now()
 	nonce := t.nonceStart
-	w.lg.Info("Mining task started", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonce", fmt.Sprintf("%d~%d", t.nonceStart, t.nonceEnd))
+	if t.thread == 0 {
+		w.lg.Info("Mining task started", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonce", fmt.Sprintf("%d~%d", t.nonceStart, t.nonceEnd))
+	} else {
+		w.lg.Debug("Mining task started", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonce", fmt.Sprintf("%d~%d", t.nonceStart, t.nonceEnd))
+	}
 	for w.isRunning() {
 		if time.Since(startTime).Seconds() > mineTimeOut {
-			w.lg.Info("Mining task timed out", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "noncesTried", nonce-t.nonceStart)
+			w.lg.Warn("Mining task timed out", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "noncesTried", nonce-t.nonceStart)
 			break
 		}
 		if nonce >= t.nonceEnd {
-			w.lg.Info("The nonces are exhausted in this slot, waiting for the next block",
-				"samplingTime", fmt.Sprintf("%.1fs", time.Since(startTime).Seconds()),
-				"shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonce", nonce)
+			if t.thread == 0 {
+				w.lg.Info("The nonces are exhausted in this slot, waiting for the next block",
+					"samplingTime", fmt.Sprintf("%.1fs", time.Since(startTime).Seconds()),
+					"shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonce", nonce)
+			} else {
+				w.lg.Debug("The nonces are exhausted in this slot, waiting for the next block",
+					"samplingTime", fmt.Sprintf("%.1fs", time.Since(startTime).Seconds()),
+					"shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonce", nonce)
+			}
 			break
 		}
 		hash0 := initHash(t.miner, t.blockHash, nonce)
