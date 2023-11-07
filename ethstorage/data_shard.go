@@ -5,8 +5,6 @@ package ethstorage
 
 import (
 	"bytes"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"math/big"
 
@@ -334,24 +332,23 @@ func decodeChunk(chunkSize uint64, bs []byte, encodeType uint64, encodeKey commo
 	}
 }
 
-var EmptyBlobHash, _ = hex.DecodeString("fa43239bcee7b97ca62f007cc68487560a39e19f74f3dde7486db3f98df8e471")
 var EmptyBlobCommit = make([]byte, HashSizeInContract)
 
 func checkCommit(commit common.Hash, blobData []byte) error {
-	// kzg blob
-	blob := kzg4844.Blob{}
-	copy(blob[:], blobData)
-
 	// commit is empty 0x00..00
 	if bytes.Equal(commit[0:HashSizeInContract], EmptyBlobCommit) {
 		// blob is empty 0x00...00
-		dataHash := sha256.Sum256(blobData)
-		if bytes.Equal(dataHash[:], EmptyBlobHash) {
-			return nil
+		for _, b := range blobData {
+			if b != 0 {
+				return fmt.Errorf("commit does not match")
+			}
 		}
-		return fmt.Errorf("commit does not match")
+		return nil
 	}
 
+	// kzg blob
+	blob := kzg4844.Blob{}
+	copy(blob[:], blobData)
 	// Generate VersionedHash
 	commitment, err := kzg4844.BlobToCommitment(blob)
 	if err != nil {
