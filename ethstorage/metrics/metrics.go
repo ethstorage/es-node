@@ -418,7 +418,7 @@ func (m *Metrics) SetMiningInfo(shardId uint64, difficulty, minedTime, blockMine
 	if t, ok := m.lastSubmissionTimes[shardId]; ok && t != minedTime {
 		m.MinedTime.WithLabelValues(fmt.Sprintf("%d", shardId), fmt.Sprintf("%d", blockMined)).Set(float64(minedTime - t))
 	}
-	m.lastSubmissionTimes[shardId] = blockMined
+	m.lastSubmissionTimes[shardId] = minedTime
 }
 
 func (m *Metrics) RecordGossipEvent(evType int32) {
