@@ -173,7 +173,7 @@ func createDataFile(cfg *storage.StorageConfig, shardIdxList []uint64, datadir s
 			log.Error("Creating data file", "error", err)
 			return nil, err
 		}
-		log.Info("Data file created", "shard", shardIdx, "file", dataFile, "chunkIdxStart", df.KvIdxStart(), "chunkIdxEnd", df.ChunkIdxEnd(), "miner", df.Miner())
+		log.Info("Data file created", "shard", shardIdx, "file", dataFile, "kvIdxStart", df.KvIdxStart(), "kvIdxEnd", df.KvIdxEnd(), "miner", df.Miner())
 		files = append(files, dataFile)
 	}
 	return files, nil
