@@ -71,7 +71,7 @@ func (d *dashboard) RefreshContractMetrics(ctx context.Context, sig eth.L1BlockR
 		return
 	}
 	maxShardIdx := lastKVIndex / d.kvEntries
-	d.m.SetLastKVIndexAndMaxShardId(lastKVIndex, maxShardIdx)
+	d.m.SetLastKVIndexAndMaxShardId(sig.Number, lastKVIndex, maxShardIdx)
 	d.logger.Info("RefreshContractMetrics", "lastKvIndex", lastKVIndex, "maxShardIdx", maxShardIdx)
 
 	l1api := miner.NewL1MiningAPI(d.l1Source, d.logger)
