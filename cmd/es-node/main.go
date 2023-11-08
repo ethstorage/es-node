@@ -70,7 +70,7 @@ func main() {
 					Name:  shardLenFlagName,
 					Usage: "Number of shards to mine. Will create one data file per shard.",
 				},
-				cli.Uint64Flag{
+				cli.IntFlag{
 					Name:  encodingTypeFlagName,
 					Value: ethstorage.ENCODE_BLOB_POSEIDON,
 					Usage: "Encoding type of the shards. 0: no encoding, 1: keccak256, 2: ethash, 3: blob poseidon. Default: 3",
@@ -170,14 +170,14 @@ func EsNodeInit(ctx *cli.Context) error {
 	encodingType := ethstorage.ENCODE_BLOB_POSEIDON
 	miner := "0x"
 	if ctx.IsSet(encodingTypeFlagName) {
-		encodingType := ctx.Uint64(encodingTypeFlagName)
+		encodingType = ctx.Int(encodingTypeFlagName)
 		log.Info("Read flag", "name", encodingTypeFlagName, "value", encodingType)
-		if encodingType > 3 {
+		if encodingType > 3 || encodingType < 0 {
 			return fmt.Errorf("encoding_type must be an integer between 0 and 3")
 		}
-		if encodingType != 0 {
-			miner = readRequiredFlag(ctx, flags.StorageMiner.Name)
-		}
+	}
+	if encodingType != ethstorage.NO_ENCODE {
+		miner = readRequiredFlag(ctx, flags.StorageMiner.Name)
 	}
 	shardIndexes := ctx.Int64Slice(shardIndexFlagName)
 	log.Info("Read flag", "name", shardIndexFlagName, "value", shardIndexes)
