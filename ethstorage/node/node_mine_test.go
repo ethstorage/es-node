@@ -32,8 +32,7 @@ import (
 
 const (
 	rpcUrl            = "http://65.108.236.27:8545"
-	chainID           = "7011893058"
-	kvEntriesPerShard = 16
+	kvEntriesPerShard = 8192
 	kvSize            = 128 * 1024
 	chunkSize         = 128 * 1024
 	maxBlobsPerTx     = 4
@@ -42,7 +41,7 @@ const (
 
 var (
 	minerAddr    = common.HexToAddress("0x04580493117292ba13361D8e9e28609ec112264D")
-	contractAddr = common.HexToAddress("0x188aac000e21ec314C5694bB82035b72210315A8")
+	contractAddr = common.HexToAddress("0xE31DbfB4d12B67eE60690Ad8a5877Ce8D77842ED")
 	private      = "95eb6ffd2ae0b115db4d1f0d58388216f9d026896696a5211d77b5f14eb5badf"
 	shardIds     = []uint64{0, 1}
 	l            = esLog.NewLogger(esLog.CLIConfig{
@@ -215,6 +214,12 @@ func prepareData(t *testing.T, n *EsNode, contract common.Address) {
 		txs = txs + 1
 	}
 	t.Logf("tx len %d \n", txs)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+	defer cancel()
+	chainID, err := n.l1Source.ChainID(ctx)
+	if err != nil {
+		t.Fatalf("Get chain id failed %v", err)
+	}
 	for i := 0; i < txs; i++ {
 		max := maxBlobsPerTx
 		if i == txs-1 {
@@ -228,15 +233,16 @@ func prepareData(t *testing.T, n *EsNode, contract common.Address) {
 		if len(blobData) == 0 {
 			break
 		}
-		kvIdxes, dataHashes, err := utils.UploadBlobs(n.l1Source, rpcUrl, private, chainID, contract, blobData, false, value)
+		kvIdxes, dataHashes, err := utils.UploadBlobs(n.l1Source, rpcUrl, private, chainID.String(), contract, blobData, false, value)
 		if err != nil {
 			t.Fatalf("Upload blobs failed %v", err)
 		}
+		t.Logf("kvIdxes=%v \n", kvIdxes)
+		t.Logf("dataHashes=%x \n", dataHashes)
 		hashs = append(hashs, dataHashes...)
 		ids = append(ids, kvIdxes...)
-		t.Logf("ids=%v \n", ids)
 	}
-	block, err := n.l1Source.BlockNumber(context.Background())
+	block, err := n.l1Source.BlockNumber(ctx)
 	if err != nil {
 		t.Fatalf("Failed to get block number %v", err)
 	}
