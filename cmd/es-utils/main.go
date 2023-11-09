@@ -45,6 +45,7 @@ var (
 	chunkSize    *uint64
 	commitString *string
 	encodeType   *uint64
+	readEncoded  *bool
 
 	sampleIdx *uint64
 
@@ -137,6 +138,7 @@ func init() {
 
 	readLen = rootCmd.PersistentFlags().Uint64("readlen", 0, "Bytes to read (only for unmasked read)")
 	commitString = rootCmd.PersistentFlags().String("commit", "", "encode key")
+	readEncoded = rootCmd.PersistentFlags().Bool("read_encoded", false, "Read encoded KV data")
 
 	sampleIdx = rootCmd.PersistentFlags().Uint64("sample_idx", 0, "Sample idx to read")
 
@@ -268,9 +270,14 @@ func runShardRead(cmd *cobra.Command, args []string) {
 	setupLogger()
 
 	ds := initDataShard()
-
-	commit := common.HexToHash(*commitString)
-	b, err := ds.Read(*kvIdx, int(*readLen), commit)
+	var b []byte
+	var err error
+	if *readEncoded {
+		b, err = ds.ReadEncoded(*kvIdx, int(*readLen))
+	} else {
+		commit := common.HexToHash(*commitString)
+		b, err = ds.Read(*kvIdx, int(*readLen), commit)
+	}
 	if err != nil {
 		log.Crit("Read failed", "error", err)
 	}
