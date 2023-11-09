@@ -5,6 +5,7 @@ package miner
 
 import (
 	"math/big"
+	"os"
 	"path/filepath"
 	"runtime/debug"
 	"testing"
@@ -130,4 +131,5 @@ func TestMiner_update(t *testing.T) {
 	miner.Close()
 	checkMiningState(t, miner, false)
 	storageMgr.Close()
+	os.Remove(fileName)
 }

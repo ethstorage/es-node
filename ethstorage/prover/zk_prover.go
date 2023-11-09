@@ -42,6 +42,10 @@ func NewZKProver(workingDir, zkeyFile string, lg log.Logger) *ZKProver {
 	return newZKProver(workingDir, zkeyFile, true, lg)
 }
 
+func NewZKProverInternal(workingDir, zkeyFile string, lg log.Logger) *ZKProver {
+	return newZKProver(workingDir, zkeyFile, false, lg)
+}
+
 func newZKProver(workingDir, zkeyFile string, cleanup bool, lg log.Logger) *ZKProver {
 	path := workingDir
 	if path == "" {
@@ -81,7 +85,8 @@ func (p *ZKProver) GenerateZKProof(encodingKey common.Hash, sampleIdx uint64) (Z
 	}
 	err := os.Mkdir(buildDir, os.ModePerm)
 	if err != nil {
-		p.lg.Crit("Generate zk proof failed", "mkdir", buildDir, "error", err)
+		p.lg.Error("Generate zk proof failed", "mkdir", buildDir, "error", err)
+		return ZKProof{}, common.Hash{}, err
 	}
 	defer func() {
 		if p.cleanup {

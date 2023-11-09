@@ -1,13 +1,14 @@
 // Copyright 2022-2023, EthStorage.
 // For license information, see https://github.com/ethstorage/es-node/blob/main/LICENSE
 
-package prover
+package integration
 
 import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
 	esLog "github.com/ethstorage/go-ethstorage/ethstorage/log"
+	"github.com/ethstorage/go-ethstorage/ethstorage/prover"
 )
 
 func TestKZGPoseidonProver_GenerateZKProofs(t *testing.T) {
@@ -33,7 +34,7 @@ func TestKZGPoseidonProver_GenerateZKProofs(t *testing.T) {
 			wantErr: false,
 		},
 	}
-	prv := NewKZGPoseidonProver("", "blob_poseidon.zkey", esLog.NewLogger(esLog.DefaultCLIConfig()))
+	prv := prover.NewKZGPoseidonProver("", "blob_poseidon.zkey", esLog.NewLogger(esLog.DefaultCLIConfig()))
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			proofs, masks, err := prv.GenerateZKProofs(tt.args.encodingKeys, tt.args.chunkIdxes)

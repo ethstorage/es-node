@@ -1,35 +1,24 @@
 // Copyright 2022-2023, EthStorage.
 // For license information, see https://github.com/ethstorage/es-node/blob/main/LICENSE
 
-package prover
+package integration
 
 import (
 	"bytes"
 	"context"
-	"fmt"
-	"io"
 	"log"
 	"math/big"
-	"net/http"
+	"os"
 	"testing"
+	"time"
 
-	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethstorage/go-ethstorage/cmd/es-utils/utils"
-	esLog "github.com/ethstorage/go-ethstorage/ethstorage/log"
-)
-
-var (
-	rpc          = "http://65.108.236.27:8545"
-	chainID      = "7011893061"
-	prvk         = "95eb6ffd2ae0b115db4d1f0d58388216f9d026896696a5211d77b5f14eb5badf"
-	contractAddr = common.HexToAddress("0xE31DbfB4d12B67eE60690Ad8a5877Ce8D77842ED")
-	value        = hexutil.EncodeUint64(10000000000000)
+	"github.com/ethstorage/go-ethstorage/ethstorage/prover"
 )
 
 func TestKZGProver_GenerateKZGProof(t *testing.T) {
@@ -37,7 +26,7 @@ func TestKZGProver_GenerateKZGProof(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read raw data error = %v", err)
 	}
-	dataHash := uploadBlob(dataRaw)
+	dataHash := uploadBlob(t, dataRaw)
 	blobs := utils.EncodeBlobs(dataRaw)
 	blob := blobs[0][:]
 	tests := []struct {
@@ -54,7 +43,7 @@ func TestKZGProver_GenerateKZGProof(t *testing.T) {
 			3293,
 		},
 	}
-	p := NewKZGProver(esLog.NewLogger(esLog.DefaultCLIConfig()))
+	p := prover.NewKZGProver(lg)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			peInput, err := p.GenerateKZGProof(blob, tt.chunkIdx)
@@ -75,16 +64,31 @@ func TestKZGProver_GenerateKZGProof(t *testing.T) {
 	}
 }
 
-func uploadBlob(data []byte) common.Hash {
+func uploadBlob(t *testing.T, data []byte) common.Hash {
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+	defer cancel()
+
+	client, err := ethclient.DialContext(ctx, l1Endpoint)
+	if err != nil {
+		lg.Crit("Failed to connect to the Ethereum client: %v", err)
+	}
+	defer client.Close()
+
+	chainID, err := client.ChainID(ctx)
+	if err != nil {
+		t.Fatalf("Get chain id failed %v", err)
+	}
+
 	// key: "0x0000000000000000000000000000000000000000000000000000000000000001"
 	// blobIdx: 0
 	// length: 128*1024
 	calldata := "0x4581a920000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000020000"
 
 	tx := utils.SendBlobTx(
-		rpc,
-		contractAddr,
-		prvk,
+		l1Endpoint,
+		contractAddr1GB,
+		os.Getenv(pkName),
 		data,
 		true,
 		-1,
@@ -93,15 +97,10 @@ func uploadBlob(data []byte) common.Hash {
 		"",
 		"",
 		"10000000000",
-		chainID,
+		chainID.String(),
 		calldata,
 	)
 	log.Printf("Blob transaction submitted %v", tx.Hash())
-	ctx := context.Background()
-	client, err := ethclient.DialContext(ctx, rpc)
-	if err != nil {
-		log.Fatal("Failed to connect to the Ethereum client", err)
-	}
 	receipt, err := bind.WaitMined(ctx, client, tx)
 	if err != nil {
 		log.Fatal("Get transaction receipt err:", err)
@@ -120,7 +119,7 @@ func uploadBlob(data []byte) common.Hash {
 
 func verifyInclusive(trunkIdx uint64, peInput []byte) error {
 	ctx := context.Background()
-	client, err := ethclient.DialContext(ctx, rpc)
+	client, err := ethclient.DialContext(ctx, l1Endpoint)
 	if err != nil {
 		log.Fatalf("Failed to connect to the Ethereum client: %v", err)
 	}
@@ -149,39 +148,4 @@ func verifyInclusive(trunkIdx uint64, peInput []byte) error {
 	}
 	calldata := append(mid, dataField...)
 	return callVerify(calldata)
-}
-
-func callVerify(calldata []byte) error {
-	ctx := context.Background()
-	client, err := ethclient.DialContext(ctx, rpc)
-	if err != nil {
-		log.Fatalf("Failed to connect to the Ethereum client: %v", err)
-	}
-	defer client.Close()
-	msg := ethereum.CallMsg{
-		To:   &contractAddr,
-		Data: calldata,
-	}
-	bs, err := client.CallContract(ctx, msg, nil)
-	if err != nil {
-		return err
-	}
-	if bs[len(bs)-1] != 1 {
-		return fmt.Errorf("false")
-	}
-	return nil
-}
-
-func readFile() ([]byte, error) {
-	txt_77k := "https://www.gutenberg.org/files/7266/7266-0.txt"
-	resp, err := http.Get(txt_77k)
-	if err != nil {
-		return nil, fmt.Errorf("error reading blob txtUrl: %v", err)
-	}
-	defer resp.Body.Close()
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("error reading blob txtUrl: %v", err)
-	}
-	return data, nil
 }
