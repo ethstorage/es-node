@@ -177,7 +177,7 @@ func runCreate(cmd *cobra.Command, args []string) {
 		log.Crit("Must provide single filename")
 	}
 
-	if *miner == "" {
+	if *encodeType != es.NO_ENCODE && *miner == "" {
 		log.Crit("Must provide miner")
 	}
 	minerAddr := common.HexToAddress(*miner)
