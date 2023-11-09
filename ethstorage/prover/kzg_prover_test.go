@@ -26,9 +26,9 @@ import (
 
 var (
 	rpc          = "http://65.108.236.27:8545"
-	chainID      = "7011893058"
+	chainID      = "7011893061"
 	prvk         = "95eb6ffd2ae0b115db4d1f0d58388216f9d026896696a5211d77b5f14eb5badf"
-	contractAddr = common.HexToAddress("0xb55D964a4a9d73460393dbB0EB9b6565DB5c1362")
+	contractAddr = common.HexToAddress("0xE31DbfB4d12B67eE60690Ad8a5877Ce8D77842ED")
 	value        = hexutil.EncodeUint64(10000000000000)
 )
 
@@ -90,8 +90,8 @@ func uploadBlob(data []byte) common.Hash {
 		-1,
 		value,
 		510000,
-		"30000000000",
-		"20000000000",
+		"",
+		"",
 		"10000000000",
 		chainID,
 		calldata,
