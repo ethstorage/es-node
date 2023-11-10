@@ -27,11 +27,11 @@ func TestSignerFactoryFromConfig(t *testing.T) {
 		{
 			"",
 			signer.CLIConfig{
-				PrivateKey: "0xaaa279031ebf27a046278a8ff5d1b8ab77362d19ace646653b76a7c1184516ef",
+				PrivateKey: "0x7fb8f46cff75dd565c23e83f3c5aa2693f39cb6a5ede0120666af139cded39af",
 				Mnemonic:   "",
 				HDPath:     "",
 			},
-			common.HexToAddress("0x9ce0b38e90cd2a0c82409486078af83c790dff20"),
+			common.HexToAddress("0xd7cc258C5438a392cA1D7873020d5B9971568c00"),
 			contractAddrDevnet1,
 			false,
 		},
