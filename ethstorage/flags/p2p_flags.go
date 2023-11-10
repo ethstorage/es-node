@@ -138,10 +138,10 @@ var (
 	}
 	HostMux = cli.StringFlag{
 		Name:     "p2p.mux",
-		Usage:    "Comma-separated list of multiplexing protocols in order of preference. At least 1 required. Options: 'yamux','mplex'.",
+		Usage:    "Comma-separated list of multiplexing protocols in order of preference. At least 1 required. Options: 'yamux'.",
 		Hidden:   true,
 		Required: false,
-		Value:    "yamux,mplex",
+		Value:    "yamux",
 		EnvVar:   p2pEnv("MUX"),
 	}
 	HostSecurity = cli.StringFlag{
@@ -154,11 +154,20 @@ var (
 	}
 	MaxRequestSize = cli.Uint64Flag{
 		Name: "p2p.max.request.size",
-		Usage: "max request size is the maximum number of bytes to request from a remote peer." +
-			"It is value should not larger than 8 * 1024 * 1024.",
+		Usage: "max request size is the maximum number of bytes to request from a remote peer. The default value is 1 * 1024 * 1024. " +
+			"It is value should not larger than 8 * 1024 * 1024. if you have good network condition, " +
+			"you can increase the max request size to improve the sync performance.",
 		Required: false,
 		Value:    1 * 1024 * 1024,
 		EnvVar:   p2pEnv("MAX_REQUEST_SIZE"),
+	}
+	MaxConcurrency = cli.Uint64Flag{
+		Name: "p2p.max.concurrency",
+		Usage: "max concurrency is the number of chunks to split a shard into to allow concurrent retrievals. " +
+			"The default value is 16, the min value is 1.",
+		Required: false,
+		Value:    16,
+		EnvVar:   p2pEnv("MAX_CONCURRENCY"),
 	}
 	PeersLo = cli.UintFlag{
 		Name:     "p2p.peers.lo",
@@ -322,6 +331,7 @@ var p2pFlags = []cli.Flag{
 	HostMux,
 	HostSecurity,
 	MaxRequestSize,
+	MaxConcurrency,
 	PeersLo,
 	PeersHi,
 	PeersGrace,

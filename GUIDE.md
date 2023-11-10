@@ -6,14 +6,14 @@ To setup a new private EthStorage testnet, please refer to this [guide](/SETUP.m
 For a detailed explanation for es-node please refer to the [README](/README.md). 
 
 ## Testnet spec
-- Layer 1: [dencun-devnet-9](https://dencun-devnet-9.ethpandaops.io/)
+- Layer 1: [dencun-devnet-11](https://dencun-devnet-11.ethpandaops.io/)
 - storage-contracts-v1: v0.1.0
-- es-node: v0.1.0
+- es-node: v0.1.1
 
 ## Minimum Hardware Requirements 
  - CPU with 2+ cores
  - 4GB RAM
- - 2GB **free** storage space for the runtime and sync of one data shard
+ - 1.2TB **free** storage space for the runtime and sync of one data shard
  - 8 MBit/sec download Internet service
 
 ## System Environment
@@ -25,7 +25,7 @@ You can choose [how to run es-node](#step-3-run-es-node) according to your curre
 ## Step 1. Prepare miner and signer account
 It is suggested to prepare two Ethereum accounts specifically for this test, one of which needs to have some test ETH balance to be used as a transaction signer.
 
-The test ETH can be requested from [https://faucet-2.dencun-devnet-9.ethpandaops.io/](https://faucet-2.dencun-devnet-9.ethpandaops.io/). 
+The test ETH can be requested from [https://faucet.dencun-devnet-11.ethpandaops.io/](https://faucet.dencun-devnet-11.ethpandaops.io/). 
 
 Remember to use the signer's private key (with ETH balance) to replace `<private_key>` in the following steps. And use the other address to replace `<miner>`.
 
