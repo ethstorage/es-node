@@ -98,7 +98,8 @@ npm install -g snarkjs@0.7.0
 ```
 #### 4. Build es-node
 ```sh
-cd cmd/es-node && go build && cd ../..
+echo VERSION_META would be stable/beta/alpha/dev.
+export VERSION_META=dev && make 
 ```
 #### 5. Start es-node
 ```sh
