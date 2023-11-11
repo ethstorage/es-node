@@ -178,7 +178,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 		}
 
 		// All nil if disabled.
-		n.dv5Local, n.dv5Udp, err = setup.Discovery(log.New("p2p", "discv5"), l1ChainID, tcpPort)
+		n.dv5Local, n.dv5Udp, err = setup.Discovery(log.New("p2p", "discv5"), l1ChainID, tcpPort, n.host.Addrs())
 		if err != nil {
 			return fmt.Errorf("failed to start discv5: %w", err)
 		}
