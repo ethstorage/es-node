@@ -62,6 +62,7 @@ func (conf *Config) Discovery(log log.Logger, l1ChainID uint64, tcpPort uint16, 
 				continue
 			}
 			localNode.SetStaticIP(ip)
+			break
 		}
 	}
 	if conf.AdvertiseUDPPort != 0 { // explicitly advertised port gets priority
