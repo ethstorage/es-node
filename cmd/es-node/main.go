@@ -52,7 +52,7 @@ var VersionWithMeta = func() string {
 
 var BuildInfo = func() string {
 	return fmt.Sprintf(
-		"%s\nbuild date: %s\nsystem version: %s\ngolang version: %s",
+		"%s\nBuild date: %s\nSystem version: %s\nGolang version: %s",
 		VersionWithMeta, BuildTime, systemVersion, golangVersion)
 }()
 
@@ -64,7 +64,7 @@ func main() {
 	app := cli.NewApp()
 	app.Version = BuildInfo
 	app.Flags = flags.Flags
-	app.Name = "es-node"
+	app.Name = "EthStorage node"
 	app.Usage = "EthStorage Storage Node"
 	app.Description = "The EthStorage Storage Node derives L2 datahashes of the values of KV store from L1 data and reconstructs the values via L1 DA and ES P2P network."
 	app.Action = EsNodeMain
