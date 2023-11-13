@@ -4,6 +4,7 @@ BUILDDATE := $(shell date)
 
 LDFLAGSSTRING +=-X main.GitCommit=$(GITCOMMIT)
 LDFLAGSSTRING +=-X main.GitDate=$(GITDATE)
+LDFLAGSSTRING +=-X main.Meta=$(VERSION_META)
 LDFLAGSSTRING +=-X 'main.BuildTime=$(BUILDDATE)'
 LDFLAGS := -ldflags "$(LDFLAGSSTRING)"
 
