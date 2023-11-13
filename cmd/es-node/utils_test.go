@@ -62,7 +62,7 @@ func TestCreateDataFile(t *testing.T) {
 			if err != nil {
 				t.Fatalf("getShardList() error: %v ", err)
 			}
-			files, err := createDataFile(tt.args.cfg, shardList, ".")
+			files, err := createDataFile(tt.args.cfg, shardList, ".", ethstorage.ENCODE_BLOB_POSEIDON)
 			if err != nil {
 				t.Fatalf("createDataFile() error: %v ", err)
 			}
