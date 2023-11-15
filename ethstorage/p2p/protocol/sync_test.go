@@ -24,7 +24,6 @@ import (
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethstorage/go-ethstorage/cmd/es-utils/utils"
 	"github.com/ethstorage/go-ethstorage/ethstorage"
 	prv "github.com/ethstorage/go-ethstorage/ethstorage/prover"
 	"github.com/ethstorage/go-ethstorage/ethstorage/rollup"
@@ -721,21 +720,15 @@ func TestReadWrite(t *testing.T) {
 	}(files)
 
 	sm := ethstorage.ContractToShardManager[contract]
-
-	bs := []byte{1}
-	blobs := utils.EncodeBlobs(bs)
-	_, _, versionedHashes, err := utils.ComputeBlobs(blobs)
-	success, err := sm.TryWrite(0, blobs[0][:], versionedHashes[0])
+	success, err := sm.TryWrite(0, []byte{1}, common.Hash{})
 	if !success || err != nil {
 		t.Fatalf("failed to write")
 	}
-	// blob is 01000...000
-	rdata, success, err := sm.TryRead(0, 2, versionedHashes[0])
+	rdata, success, err := sm.TryRead(0, 1, common.Hash{})
 	if !success || err != nil {
 		t.Fatalf("failed to read")
 	}
-	// data is blob 2 index
-	if !bytes.Equal([]byte{1}, rdata[1:2]) {
+	if !bytes.Equal([]byte{1}, rdata) {
 		t.Fatalf("failed to compare")
 	}
 }
