@@ -9,7 +9,7 @@ if [ -z "$ES_NODE_STORAGE_MINER" ]; then
 fi
 
 if [ ${#ES_NODE_STORAGE_MINER} -ne 42 ] || [[ ! "$ES_NODE_STORAGE_MINER" == 0x* ]]; then
-  echo "Error: ES_NODE_STORAGE_MINER should have a length of 42 and prefixed with '0x"
+  echo "Error: ES_NODE_STORAGE_MINER should be prefixed with '0x' and have a total length of 42"
   exit 1
 fi
 
