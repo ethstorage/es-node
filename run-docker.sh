@@ -13,7 +13,7 @@ if [ ${#ES_NODE_STORAGE_MINER} -ne 42 ]; then
   exit 1
 fi
 
-if [[ ! "$ES_NODE_STORAGE_MINER" == 0x* ]]; then
+if [ ! "$ES_NODE_STORAGE_MINER" == 0x* ]; then
   echo "Error: ES_NODE_STORAGE_MINER should be prefixed with '0x'"
   exit 1
 fi
@@ -28,7 +28,7 @@ if [ ${#ES_NODE_SIGNER_PRIVATE_KEY} -ne 64 ]; then
   exit 1
 fi
 
-if [[ "$ES_NODE_SIGNER_PRIVATE_KEY" == 0x* ]]; then
+if [ "$ES_NODE_SIGNER_PRIVATE_KEY" == 0x* ]; then
   echo "Error: ES_NODE_SIGNER_PRIVATE_KEY should not be prefixed with '0x'"
   exit 1
 fi
