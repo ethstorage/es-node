@@ -80,6 +80,7 @@ if [ ! -e $storage_file_0 ]; then
     echo "initialized ${storage_file_0} successfully"
   else
     echo "failed to initialize ${storage_file_0}"
+  fi
 fi
 
 # start es-node
