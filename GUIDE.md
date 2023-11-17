@@ -32,7 +32,7 @@ Remember to use the signer's private key (with ETH balance) to replace `<private
 ## Step 2. Download source code
 ```sh
 # download source code
-git clone git@github.com:ethstorage/es-node.git
+git clone https://github.com/ethstorage/es-node.git
 
 # go to the repo
 cd es-node
