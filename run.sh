@@ -9,12 +9,12 @@ if [ -z "$ES_NODE_STORAGE_MINER" ]; then
 fi
 
 if [ ${#ES_NODE_STORAGE_MINER} -ne 42 ]; then
-  echo "ES_NODE_STORAGE_MINER should have a length of 42"
+  echo "Error: ES_NODE_STORAGE_MINER should have a length of 42"
   exit 1
 fi
 
 if [[ ! "$ES_NODE_STORAGE_MINER" == 0x* ]]; then
-  echo "ES_NODE_STORAGE_MINER should be prefixed with '0x'"
+  echo "Error: ES_NODE_STORAGE_MINER should be prefixed with '0x'"
   exit 1
 fi
 
@@ -24,12 +24,12 @@ if [ -z "$ES_NODE_SIGNER_PRIVATE_KEY" ]; then
 fi
 
 if [ ${#ES_NODE_SIGNER_PRIVATE_KEY} -ne 64 ]; then
-  echo "ES_NODE_SIGNER_PRIVATE_KEY should have a length of 64"
+  echo "Error: ES_NODE_SIGNER_PRIVATE_KEY should have a length of 64"
   exit 1
 fi
 
 if [[ "$ES_NODE_SIGNER_PRIVATE_KEY" == 0x* ]]; then
-  echo "ES_NODE_SIGNER_PRIVATE_KEY should not be prefixed with '0x'"
+  echo "Error: ES_NODE_SIGNER_PRIVATE_KEY should not be prefixed with '0x'"
   exit 1
 fi
 

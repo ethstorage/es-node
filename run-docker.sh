@@ -3,6 +3,36 @@
 # usage:
 # env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> ./run-docker.sh
 
+if [ -z "$ES_NODE_STORAGE_MINER" ]; then
+  echo "Please provide 'ES_NODE_STORAGE_MINER' as an environment variable"
+  exit 1
+fi
+
+if [ ${#ES_NODE_STORAGE_MINER} -ne 42 ]; then
+  echo "Error: ES_NODE_STORAGE_MINER should have a length of 42"
+  exit 1
+fi
+
+if [[ ! "$ES_NODE_STORAGE_MINER" == 0x* ]]; then
+  echo "Error: ES_NODE_STORAGE_MINER should be prefixed with '0x'"
+  exit 1
+fi
+
+if [ -z "$ES_NODE_SIGNER_PRIVATE_KEY" ]; then
+  echo "Please provide 'ES_NODE_SIGNER_PRIVATE_KEY' as an environment variable"
+  exit 1
+fi
+
+if [ ${#ES_NODE_SIGNER_PRIVATE_KEY} -ne 64 ]; then
+  echo "Error: ES_NODE_SIGNER_PRIVATE_KEY should have a length of 64"
+  exit 1
+fi
+
+if [[ "$ES_NODE_SIGNER_PRIVATE_KEY" == 0x* ]]; then
+  echo "Error: ES_NODE_SIGNER_PRIVATE_KEY should not be prefixed with '0x'"
+  exit 1
+fi
+
 container_name="es"
 image_name="es-node" 
 
