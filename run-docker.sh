@@ -49,7 +49,7 @@ else
             -p 9222:9222 \
             -p 30305:30305/udp \
             -d \
-            --entrypoint /bin/bash /es-node/run.sh \
+            --entrypoint /es-node/run.sh \
             $image_name
         echo "container $container_name started"
     fi
