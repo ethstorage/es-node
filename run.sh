@@ -4,12 +4,32 @@
 # env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> ./run.sh
 
 if [ -z "$ES_NODE_STORAGE_MINER" ]; then
-  echo "Please provide 'ES_NODE_STORAGE_MINER' as environment variable"
+  echo "Please provide 'ES_NODE_STORAGE_MINER' as an environment variable"
+  exit 1
+fi
+
+if [ ${#ES_NODE_STORAGE_MINER} -ne 42 ]; then
+  echo "ES_NODE_STORAGE_MINER should have a length of 42"
+  exit 1
+fi
+
+if [[ ! "$ES_NODE_STORAGE_MINER" == 0x* ]]; then
+  echo "ES_NODE_STORAGE_MINER should be prefixed with '0x'"
   exit 1
 fi
 
 if [ -z "$ES_NODE_SIGNER_PRIVATE_KEY" ]; then
-  echo "Please provide 'ES_NODE_SIGNER_PRIVATE_KEY' as environment variable"
+  echo "Please provide 'ES_NODE_SIGNER_PRIVATE_KEY' as an environment variable"
+  exit 1
+fi
+
+if [ ${#ES_NODE_SIGNER_PRIVATE_KEY} -ne 64 ]; then
+  echo "ES_NODE_SIGNER_PRIVATE_KEY should have a length of 64"
+  exit 1
+fi
+
+if [[ "$ES_NODE_SIGNER_PRIVATE_KEY" == 0x* ]]; then
+  echo "ES_NODE_SIGNER_PRIVATE_KEY should not be prefixed with '0x'"
   exit 1
 fi
 
@@ -55,8 +75,10 @@ es_node_start=" --network devnet \
 "
 # create data file for shard 0 if not yet
 if [ ! -e $storage_file_0 ]; then
-  $executable $es_node_init $common_flags
-  echo "initialized ${storage_file_0}"
+  if [ $executable $es_node_init $common_flags ]; then
+    echo "initialized ${storage_file_0} successfully"
+  else
+    echo "failed to initialize ${storage_file_0}"
 fi
 
 # start es-node
