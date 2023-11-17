@@ -65,7 +65,7 @@ es_node_start=" --network devnet \
 "
 # create data file for shard 0 if not yet
 if [ ! -e $storage_file_0 ]; then
-  if [ $executable $es_node_init $common_flags ]; then
+  if $executable $es_node_init $common_flags ; then
     echo "initialized ${storage_file_0} successfully"
   else
     echo "failed to initialize ${storage_file_0}"
