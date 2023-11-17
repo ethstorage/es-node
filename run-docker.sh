@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # usage:
 # env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> ./run-docker.sh
@@ -8,7 +8,7 @@ if [ -z "$ES_NODE_STORAGE_MINER" ]; then
   exit 1
 fi
 
-if [ ${#ES_NODE_STORAGE_MINER} -ne 42 ] || [[ ! "$ES_NODE_STORAGE_MINER" == 0x* ]]; then
+if [ ${#ES_NODE_STORAGE_MINER} -ne 42 ] || case $ES_NODE_STORAGE_MINER in 0x*) false;; *) true;; esac; then
   echo "Error: ES_NODE_STORAGE_MINER should be prefixed with '0x' and have a total length of 42"
   exit 1
 fi
