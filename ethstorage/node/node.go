@@ -231,13 +231,13 @@ func (n *EsNode) initRPCServer(ctx context.Context, cfg *Config) error {
 
 func (n *EsNode) initMetricsServer(ctx context.Context, cfg *Config) error {
 	if !cfg.Metrics.Enabled {
-		n.log.Info("metrics disabled")
+		n.log.Info("Metrics disabled")
 		return nil
 	}
-	n.log.Info("starting metrics server", "addr", cfg.Metrics.ListenAddr, "port", cfg.Metrics.ListenPort)
+	n.log.Info("Starting metrics server", "addr", cfg.Metrics.ListenAddr, "port", cfg.Metrics.ListenPort)
 	go func() {
 		if err := n.metrics.Serve(ctx, cfg.Metrics.ListenAddr, cfg.Metrics.ListenPort); err != nil {
-			log.Crit("error starting metrics server", "err", err)
+			log.Crit("Error starting metrics server", "err", err)
 		}
 	}()
 	return nil

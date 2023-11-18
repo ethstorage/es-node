@@ -127,7 +127,7 @@ var (
 		Usage:  "Threads number that will be used to download the blobs",
 		Value:  1,
 		EnvVar: prefixEnvVar("DOWNLOAD_THREAD"),
-	}	
+	}
 	DownloadDump = cli.StringFlag{
 		Name:   "download.dump",
 		Usage:  "Where to dump the downloaded blobs",
@@ -206,11 +206,11 @@ var requiredFlags = []cli.Flag{
 	L1BeaconAddr,
 	L1BeaconBasedTime,
 	L1BeaconBasedSlot,
-	StorageMiner,
 	StorageL1Contract,
 }
 
 var optionalFlags = []cli.Flag{
+	StorageMiner,
 	Network,
 	RollupConfig,
 	L1ChainId,

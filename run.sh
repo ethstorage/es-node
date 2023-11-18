@@ -29,7 +29,7 @@ storage_file_0="$data_dir/shard-0.dat"
 
 common_flags=" --datadir $data_dir \
   --l1.rpc http://65.108.236.27:8545 \
-  --storage.l1contract 0x882BC290fc22C330592819977c48968a62AE25f4 \
+  --storage.l1contract 0x9f9F5Fd89ad648f2C000C954d8d9C87743243eC5 \
   --storage.miner $ES_NODE_STORAGE_MINER"
 
 # init shard 0
@@ -40,16 +40,19 @@ es_node_init="init --shard_index 0"
 # TODO remove --miner.priority-gas-price and --miner.gas-price when gas price query is available
 es_node_start=" --network devnet \
   --miner.enabled \
-  --miner.priority-gas-price 2000000000 \
-  --miner.gas-price 3000000000 \
+  --miner.priority-gas-price 5000000000 \
+  --miner.gas-price 30000000000 \
   --storage.files $storage_file_0 \
   --signer.private-key $ES_NODE_SIGNER_PRIVATE_KEY \
   --l1.beacon http://65.108.236.27:5052 \
-  --l1.beacon-based-time 1695981612 \
+  --l1.beacon-based-time 1698751812 \
   --l1.beacon-based-slot 1 \
-  --p2p.listen.udp 30305  \
-  --p2p.bootnodes enr:-Li4QPWz6DaLXwZ3vgUfx5i0M6ysMAhjlFrkLlzaKdvbMykrIzdncYXQG0rjF8anZfv65LpEuYVdOZPbjzwvthqUIq-GAYsoHnk0imV0aHN0b3JhZ2XbAYDY15SIK8KQ_CLDMFkoGZd8SJaKYq4l9MGAgmlkgnY0gmlwhEFs7BuJc2VjcDI1NmsxoQI2rSdv0CGNPia7uQgvYdt4XuW2Nkp062a0jsr-H-SJ4IN0Y3CCJAaDdWRwgnZh \
-  "
+  --p2p.listen.udp 30305 \
+  --download.thread 32 \
+  --p2p.max.request.size 4194304 \
+  --p2p.max.concurrency 32 \
+  --p2p.bootnodes enr:-Li4QBn86W_viHlm3Fy-8EIukaE5ZbUxjd0be155AcDh5ZqMYPpgHXiWiUWFY9U63Xvqh52NBs16zOomxWHOZklMiueGAYuKhdVnimV0aHN0b3JhZ2XbAYDY15Sfn1_YmtZI8sAAyVTY2ch3QyQ-xcGAgmlkgnY0gmlwhEFtP5qJc2VjcDI1NmsxoQM1dy9sMGU3CnBv9b0qNjyRvfNBbgE-rJXFS2lfXJ8T1IN0Y3CCJAaDdWRwgnZh \
+"
 # create data file for shard 0 if not yet
 if [ ! -e $storage_file_0 ]; then
   $executable $es_node_init $common_flags
