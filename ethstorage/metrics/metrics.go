@@ -424,7 +424,7 @@ func (m *Metrics) ClientGetBlobsByListEvent(peerID string, resultCode byte, dura
 func (m *Metrics) ClientFillEmptyBlobsEvent(count uint64, duration time.Duration) {
 	method := "fillEmpty"
 	m.SyncClientPerfCallTotal.WithLabelValues(method).Add(float64(count))
-	m.SyncClientPerfCallTotal.WithLabelValues(method).Add(float64(duration) / float64(time.Second) / float64(count))
+	m.SyncClientPerfCallDurationSeconds.WithLabelValues(method).Observe(float64(duration) / float64(time.Second) / float64(count))
 }
 
 func (m *Metrics) ClientOnBlobsByRange(peerID string, reqBlobCount, retBlobCount, insertedCount uint64, duration time.Duration) {
@@ -438,13 +438,21 @@ func (m *Metrics) ClientOnBlobsByRange(peerID string, reqBlobCount, retBlobCount
 
 	method := "onBlobsByRange"
 	m.SyncClientPerfCallTotal.WithLabelValues(method).Inc()
-	m.SyncClientPerfCallTotal.WithLabelValues(method).Add(float64(duration) / float64(time.Second))
+	m.SyncClientPerfCallDurationSeconds.WithLabelValues(method).Observe(float64(duration) / float64(time.Second))
 }
 
 func (m *Metrics) ClientOnBlobsByList(peerID string, reqCount, retBlobCount, insertedCount uint64, duration time.Duration) {
+	m.SyncClientState.WithLabelValues("reqBlobCount").Add(float64(reqCount))
+	m.SyncClientState.WithLabelValues("retBlobCount").Add(float64(retBlobCount))
+	m.SyncClientState.WithLabelValues("insertedBlobCount").Add(float64(insertedCount))
+
+	m.SyncClientPeerState.WithLabelValues(peerID, "reqBlobCount").Add(float64(reqCount))
+	m.SyncClientPeerState.WithLabelValues(peerID, "retBlobCount").Add(float64(retBlobCount))
+	m.SyncClientPeerState.WithLabelValues(peerID, "insertedBlobCount").Add(float64(insertedCount))
+
 	method := "onBlobsByList"
 	m.SyncClientPerfCallTotal.WithLabelValues(method).Inc()
-	m.SyncClientPerfCallTotal.WithLabelValues(method).Add(float64(duration) / float64(time.Second))
+	m.SyncClientPerfCallDurationSeconds.WithLabelValues(method).Observe(float64(duration) / float64(time.Second))
 }
 
 func (m *Metrics) ClientRecordTimeUsed(method string) func() {
