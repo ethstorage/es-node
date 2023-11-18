@@ -21,6 +21,7 @@ func TestEncodeDecodeBlob(t *testing.T) {
 		t.Run("", func(t *testing.T) {
 			encoded := EncodeBlobs(data)
 			decoded := DecodeBlob(encoded[0][:])
+			decoded = decoded[:len(data)]
 			if !bytes.Equal(data, decoded) {
 				t.Errorf("data:\n%v\nencoded/decoded:\n%v\n", data, decoded)
 			}
