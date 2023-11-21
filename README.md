@@ -40,7 +40,7 @@ _Note: You need to have some ETH balance in the account of the private key as th
 #### Environment
 Please make sure that the following packages are pre-installed.
 
-* go 1.20 or above
+* go 1.20.* (can't be built on Go 1.21 yet)
 * node 16 or above
 
 Also, you will need to install `snarkjs` for the generation of zk proof.
@@ -116,6 +116,27 @@ Then, soon after the bootnode is started up, you can find the base64 encoded enr
 Next, you will need to replace the enr value of `--p2p.bootnodes` flag in other nodes with the new one to connect to the bootnode. 
 
 ## Configuration
+
+### Configuration to create data files
+
+With `es-node init` command, you can init your es-node by creating a data file for each shard.
+
+You can specify `shard_len` (the number of shards) or `shard_index` (the index of specified shard, and you can specify more than one) to create shards that you would like to mine. If both appears, `shard_index` takes precedence. 
+
+Here are the options that you can use with `init` command:
+
+|Name|Description|Default|Required|
+|---|---|---|---|
+|`--datadir`|Data directory for the storage files, databases and keystore||✓|
+|`--encoding_type`|Encoding type of the shards. 0: no encoding, 1: keccak256, 2: ethash, 3: blob poseidon. Default: 3|||
+|`--shard_len`|Number of shards to mine. Will create one data file per shard.|||
+|`--shard_index`|Indexes of shards to mine. Will create one data file per shard.|||
+|`--l1.rpc`|Address of L1 User JSON-RPC endpoint to use (eth namespace required)||✓|
+|`--storage.l1contract`|Storage contract address on l1||✓|
+|`--storage.miner`|Miner's address to encode data and receive mining rewards||✓|
+
+### Configuration to run es-node
+
 The full list of options that you can use to configure an es-node are as follows:
 |Name|Description|Default|Required|
 |---|---|---|---|

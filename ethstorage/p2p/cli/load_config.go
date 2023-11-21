@@ -245,8 +245,6 @@ func loadLibp2pOpts(conf *p2p.Config, ctx *cli.Context) error {
 		switch v {
 		case "yamux":
 			conf.HostMux = append(conf.HostMux, p2p.YamuxC())
-		case "mplex":
-			conf.HostMux = append(conf.HostMux, p2p.MplexC())
 		default:
 			return fmt.Errorf("could not recognize mux %s", v)
 		}
@@ -365,6 +363,10 @@ func loadGossipOptions(conf *p2p.Config, ctx *cli.Context) error {
 // loadSyncerParams loads [protocol.SyncerParams] from the CLI context.
 func loadSyncerParams(conf *p2p.Config, ctx *cli.Context) error {
 	maxRequestSize := ctx.GlobalUint64(flags.MaxRequestSize.Name)
-	conf.SyncParams = &protocol.SyncerParams{MaxRequestSize: maxRequestSize}
+	maxConcurrency := ctx.GlobalUint64(flags.MaxConcurrency.Name)
+	if maxConcurrency < 1 {
+		return fmt.Errorf("p2p.max.concurrency param is invalid: the value should larger than 0")
+	}
+	conf.SyncParams = &protocol.SyncerParams{MaxRequestSize: maxRequestSize, MaxConcurrency: maxConcurrency}
 	return nil
 }
