@@ -39,13 +39,13 @@ storage_file_0="$data_dir/shard-0.dat"
 
 common_flags=" --datadir $data_dir \
   --l1.rpc http://65.108.236.27:8545 \
-  --storage.l1contract 0x9f9F5Fd89ad648f2C000C954d8d9C87743243eC5 \
+  --storage.l1contract 0xB2ff05414B18ff39803ab39E585681bB7277Ac0D \
   --storage.miner $ES_NODE_STORAGE_MINER"
 
 # init shard 0
 es_node_init="init --shard_index 0"
 
-# start node 
+# start node
 # TODO remove --network
 # TODO remove --miner.priority-gas-price and --miner.gas-price when gas price query is available
 es_node_start=" --network devnet \

@@ -6,7 +6,6 @@ package ethstorage
 import (
 	"bytes"
 	"errors"
-	"math/big"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -196,14 +195,17 @@ func (s *StorageManager) CommitEmptyBlobs(start, limit uint64) (uint64, uint64, 
 		kvIndices = append(kvIndices, i)
 	}
 
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	metas, err := s.l1Source.GetKvMetas(kvIndices, s.localL1)
-	if err != nil {
-		return inserted, next, err
-	}
+	// s.mu.Lock()
+	// defer s.mu.Unlock()
+	// metas, err := s.l1Source.GetKvMetas(kvIndices, s.localL1)
+	// if err != nil {
+	// 	return inserted, next, err
+	// }
+
+
+
 	for i, index := range kvIndices {
-		err = s.commitEncodedBlob(index, encodedBlobs[i], hash, metas[i])
+		err := s.commitEncodedBlob(index, encodedBlobs[i], hash, [32]byte{})
 		if err == nil {
 			inserted++
 		} else if err != errCommitMismatch {
@@ -249,10 +251,10 @@ func (s *StorageManager) commitEncodedBlob(kvIndex uint64, encodedBlob []byte, c
 		return errors.New("metadata read failed")
 	}
 
-	contractKvIdx := new(big.Int).SetBytes(contractMeta[0:5]).Uint64()
-	if contractKvIdx != kvIndex {
-		return errors.New("kvIdx from contract and input is not matched")
-	}
+	// contractKvIdx := new(big.Int).SetBytes(contractMeta[0:5]).Uint64()
+	// if contractKvIdx != kvIndex {
+	// 	return errors.New("kvIdx from contract and input is not matched")
+	// }
 
 	localMeta := common.Hash{}
 	copy(localMeta[:], m)

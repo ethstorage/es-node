@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"math/big"
 	"math/rand"
-	"runtime"
 	"sort"
 	"sync"
 	"time"
@@ -184,7 +183,7 @@ type SyncClient struct {
 func NewSyncClient(log log.Logger, cfg *rollup.EsConfig, newStream newStreamFn, storageManager StorageManager, params *SyncerParams,
 	db ethdb.Database, metrics SyncClientMetrics, mux *event.Feed) *SyncClient {
 	ctx, cancel := context.WithCancel(context.Background())
-	maxFillEmptyTaskTreads = int32(runtime.NumCPU() - 2)
+	maxFillEmptyTaskTreads = 32
 	if maxFillEmptyTaskTreads < 1 {
 		maxFillEmptyTaskTreads = 1
 	}
@@ -999,14 +998,14 @@ func (s *SyncClient) FillFileWithEmptyBlob(start, limit uint64) (uint64, error) 
 		next     = start
 	)
 	defer s.metrics.ClientFillEmptyBlobsEvent(inserted, time.Since(st))
-	lastBlobIdx, err := s.storageManager.LastKvIndex()
-	if err != nil {
-		return start, fmt.Errorf("get lastBlobIdx for FillEmptyKV fail, err: %s", err.Error())
-	}
-	if start < lastBlobIdx {
-		start = lastBlobIdx
-	}
-	inserted, next, err = s.storageManager.CommitEmptyBlobs(start, limit)
+	// lastBlobIdx, err := s.storageManager.LastKvIndex()
+	// if err != nil {
+	// 	return start, fmt.Errorf("get lastBlobIdx for FillEmptyKV fail, err: %s", err.Error())
+	// }
+	// if start < lastBlobIdx {
+	// 	start = lastBlobIdx
+	// }
+	inserted, next, err := s.storageManager.CommitEmptyBlobs(start, limit)
 
 	return next, err
 }
