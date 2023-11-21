@@ -353,10 +353,9 @@ func (w *worker) mineTask(t *taskItem) (bool, error) {
 	startTime := time.Now()
 	nonce := t.nonceStart
 	if t.thread == 0 {
-		w.lg.Info("Mining task started", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonce", fmt.Sprintf("%d~%d", t.nonceStart, t.nonceEnd))
-	} else {
-		w.lg.Debug("Mining task started", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonce", fmt.Sprintf("%d~%d", t.nonceStart, t.nonceEnd))
+		w.lg.Info("Mining tasks started", "shard", t.shardIdx, "threads", w.config.ThreadsPerShard, "block", t.blockNumber, "nonces", fmt.Sprintf("%d~%d", 0, w.config.NonceLimit))
 	}
+	w.lg.Debug("Mining task started", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonces", fmt.Sprintf("%d~%d", t.nonceStart, t.nonceEnd))
 	for w.isRunning() {
 		if time.Since(startTime).Seconds() > mineTimeOut {
 			w.lg.Warn("Mining task timed out", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "noncesTried", nonce-t.nonceStart)
