@@ -37,11 +37,11 @@ const (
 )
 
 var (
-	contract       = common.HexToAddress("0x0000000000000000000000000000000003330001")
-	empty          = make([]byte, 0)
-	maxRequestSize = uint64(4 * 1024 * 1024)
-	testLog        = log.New("TestSync")
-	prover         = prv.NewKZGProver(testLog)
+	contract = common.HexToAddress("0x0000000000000000000000000000000003330001")
+	empty    = make([]byte, 0)
+	params   = &SyncerParams{MaxRequestSize: uint64(4 * 1024 * 1024), MaxConcurrency: 16}
+	testLog  = log.New("TestSync")
+	prover   = prv.NewKZGProver(testLog)
 )
 
 type remotePeer struct {
@@ -330,7 +330,7 @@ func createLocalHostAndSyncClient(t *testing.T, testLog log.Logger, rollupCfg *r
 	storageManager StorageManager, metrics SyncClientMetrics, mux *event.Feed) (host.Host, *SyncClient) {
 	localHost := getNetHost(t)
 
-	syncCl := NewSyncClient(testLog, rollupCfg, localHost.NewStream, storageManager, maxRequestSize, db, metrics, mux)
+	syncCl := NewSyncClient(testLog, rollupCfg, localHost.NewStream, storageManager, params, db, metrics, mux)
 	localHost.Network().Notify(&network.NotifyBundle{
 		ConnectedF: func(nw network.Network, conn network.Conn) {
 			shards := make(map[common.Address][]uint64)
