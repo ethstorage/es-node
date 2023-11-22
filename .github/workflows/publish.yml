@@ -1,10 +1,9 @@
 # This workflow will publish an es-node release with a pre-build executable
 
 name: GitHub Actions ES Publish
-run-name: ${{ github.actor }} is push code to main 🚀
+run-name: ${{ github.actor }} is publish a release 🚀
 on:
   push:
-    branches: [ "main", "build" ]
     tags: 
       - 'v*'
 jobs:
@@ -23,7 +22,6 @@ jobs:
         run: go build -o build/es-node ./cmd/es-node/...
 
       - name: Create Release
-        id: create_release
         uses: softprops/action-gh-release@v1
         with:
           files: build/es-node
