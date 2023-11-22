@@ -363,14 +363,11 @@ func (w *worker) mineTask(t *taskItem) (bool, error) {
 		}
 		if nonce >= t.nonceEnd {
 			if t.thread == 0 {
-				w.lg.Info("The nonces are exhausted in this slot, waiting for the next block",
-					"samplingTime", fmt.Sprintf("%.1fs", time.Since(startTime).Seconds()),
-					"shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonce", nonce)
-			} else {
-				w.lg.Debug("The nonces are exhausted in this slot, waiting for the next block",
-					"samplingTime", fmt.Sprintf("%.1fs", time.Since(startTime).Seconds()),
-					"shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonce", nonce)
+				w.lg.Info("The nonces are exhausted in this slot, waiting for the next block", "shard", t.shardIdx, "block", t.blockNumber)
 			}
+			w.lg.Debug("The nonces are exhausted in this slot, waiting for the next block",
+				"samplingTime", fmt.Sprintf("%.1fs", time.Since(startTime).Seconds()),
+				"shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonce", nonce)
 			break
 		}
 		hash0 := initHash(t.miner, t.blockHash, nonce)
