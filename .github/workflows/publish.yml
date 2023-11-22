@@ -20,12 +20,12 @@ jobs:
           go-version: '1.20'
 
       - name: Build
-        run: go build ./cmd/es-node/...
+        run: go build -o build/es-node ./cmd/es-node/...
 
       - name: Create Release
         id: create_release
         uses: softprops/action-gh-release@v1
         with:
-          files: es-node
+          files: [build/es-node]
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
