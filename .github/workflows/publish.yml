@@ -4,7 +4,6 @@ name: GitHub Actions ES Publish
 run-name: ${{ github.actor }} is publish a release 🚀
 on:
   push:
-    branches: [ "main", "build" ]
     tags: 
       - 'v*'
 jobs:
@@ -27,6 +26,7 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
+          tag_name: ${{ github.ref }}
           files: build/es-node
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
