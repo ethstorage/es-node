@@ -1,7 +1,7 @@
 # This workflow will publish an es-node release with a pre-build executable
 
 name: GitHub Actions ES Publish
-run-name: ${{ github.actor }} is publish a release 🚀
+run-name: ${{ github.actor }} is publishing a release 🚀
 on:
   push:
     tags: 
@@ -23,10 +23,13 @@ jobs:
           mkdir build
           go build -o build/es-node ./cmd/es-node/...
 
+      - name: Generate Changelog
+        run: echo "# Good things have arrived" > ${{ github.workspace }}-CHANGELOG.txt
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          body_path: ${{ github.workspace }}-CHANGELOG.txt
           files: build/es-node
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
