@@ -353,10 +353,9 @@ func (w *worker) mineTask(t *taskItem) (bool, error) {
 	startTime := time.Now()
 	nonce := t.nonceStart
 	if t.thread == 0 {
-		w.lg.Info("Mining task started", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonce", fmt.Sprintf("%d~%d", t.nonceStart, t.nonceEnd))
-	} else {
-		w.lg.Debug("Mining task started", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonce", fmt.Sprintf("%d~%d", t.nonceStart, t.nonceEnd))
+		w.lg.Info("Mining tasks started", "shard", t.shardIdx, "threads", w.config.ThreadsPerShard, "block", t.blockNumber, "nonces", fmt.Sprintf("%d~%d", 0, w.config.NonceLimit))
 	}
+	w.lg.Debug("Mining task started", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonces", fmt.Sprintf("%d~%d", t.nonceStart, t.nonceEnd))
 	for w.isRunning() {
 		if time.Since(startTime).Seconds() > mineTimeOut {
 			w.lg.Warn("Mining task timed out", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "noncesTried", nonce-t.nonceStart)
@@ -365,13 +364,11 @@ func (w *worker) mineTask(t *taskItem) (bool, error) {
 		if nonce >= t.nonceEnd {
 			if t.thread == 0 {
 				w.lg.Info("The nonces are exhausted in this slot, waiting for the next block",
-					"samplingTime", fmt.Sprintf("%.1fs", time.Since(startTime).Seconds()),
-					"shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonce", nonce)
-			} else {
-				w.lg.Debug("The nonces are exhausted in this slot, waiting for the next block",
-					"samplingTime", fmt.Sprintf("%.1fs", time.Since(startTime).Seconds()),
-					"shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonce", nonce)
+					"samplingTime", fmt.Sprintf("%.1fs", time.Since(startTime).Seconds()), "shard", t.shardIdx, "block", t.blockNumber)
 			}
+			w.lg.Debug("The nonces are exhausted in this slot, waiting for the next block",
+				"samplingTime", fmt.Sprintf("%.1fs", time.Since(startTime).Seconds()),
+				"shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonce", nonce)
 			break
 		}
 		hash0 := initHash(t.miner, t.blockHash, nonce)
