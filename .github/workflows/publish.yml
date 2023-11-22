@@ -26,6 +26,6 @@ jobs:
         id: create_release
         uses: softprops/action-gh-release@v1
         with:
-          files: [build/es-node]
+          files: build/es-node
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
