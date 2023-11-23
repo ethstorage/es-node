@@ -12,12 +12,7 @@ For a detailed explanation for es-node please refer to the [README](/README.md).
 
 ## Minimum Hardware Requirements 
 
- - CPU: at least 4 core 8 threads, otherwise the syncing process will be super long
- - 4GB RAM
- - Disk: 
-    - needs to be NVMe disk to provide full sampling speed
-    - at least 1.2TB **free** storage space for the runtime and sync of one data shard
- - 8 MBit/sec download Internet service
+Refer to [this section](/README.md/#minimum-hardware-requirements).
 
 ## System Environment
  - Ubuntu 20.04+ (has been tested with)
@@ -25,6 +20,10 @@ For a detailed explanation for es-node please refer to the [README](/README.md).
  - (Optional) go 1.20.* (can't be built on Go 1.21 yet) and node 16+ (can be installed following the [steps](#1-install-go-120-eg-v1213))
 
 You can choose [how to run es-node](#step-3-run-es-node) according to your current environment.
+
+_Note: It is assumed that you are using the `root` _user in all the command_ line operations. You may need to add `sudo` before some of the commands if you are using a non-root user._
+
+
 ## Step 1. Prepare miner and signer account
 It is suggested to prepare two Ethereum accounts specifically for this test, one of which needs to have some test ETH balance to be used as a transaction signer.
 
