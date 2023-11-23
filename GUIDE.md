@@ -11,9 +11,12 @@ For a detailed explanation for es-node please refer to the [README](/README.md).
 - es-node: v0.1.1
 
 ## Minimum Hardware Requirements 
- - CPU with 2+ cores
+
+ - CPU: at least 4 core 8 threads, otherwise the syncing process will be super long
  - 4GB RAM
- - 1.2TB **free** storage space for the runtime and sync of one data shard
+ - Disk: 
+    - needs to be NVMe disk to provide full sampling speed
+    - at least 1.2TB **free** storage space for the runtime and sync of one data shard
  - 8 MBit/sec download Internet service
 
 ## System Environment
