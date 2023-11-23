@@ -249,15 +249,34 @@ func (w *worker) updateDifficulty(shardIdx, blockTime uint64) (*big.Int, error) 
 // taskLoop is a standalone goroutine to fetch mining task from the task channel and mine the task.
 func (w *worker) taskLoop(taskCh chan *taskItem) {
 	defer w.wg.Done()
+
+	noncesTriedPerBlockByShard := make(map[uint64]map[uint64]uint64)
+	threadsCounterPerBlockByShard := make(map[uint64]map[uint64]uint64)
+	for shard := range w.shardTaskMap {
+		noncesTriedPerBlock := make(map[uint64]uint64)
+		noncesTriedPerBlockByShard[shard] = noncesTriedPerBlock
+		threadsCounterPerBlock := make(map[uint64]uint64)
+		threadsCounterPerBlockByShard[shard] = threadsCounterPerBlock
+	}
 	for {
 		select {
 		case ti := <-taskCh:
-			success, err := w.mineTask(ti)
+			success, noncesTried, err := w.mineTask(ti)
 			if err != nil {
 				w.lg.Warn("Mine task fail", "shard", ti.shardIdx, "thread", ti.thread, "block", ti.blockNumber, "err", err.Error())
 			}
 			if success {
 				w.lg.Info("Mine task success", "shard", ti.shardIdx, "thread", ti.thread, "block", ti.blockNumber)
+			} else {
+				noncesTriedPerBlockByShard[ti.shardIdx][ti.blockNumber.Uint64()] += noncesTried
+				threadsCounterPerBlockByShard[ti.shardIdx][ti.blockNumber.Uint64()]++
+				if threadsCounterPerBlockByShard[ti.shardIdx][ti.blockNumber.Uint64()] == w.config.ThreadsPerShard {
+					w.lg.Info("Mine tasks done", "shard", ti.shardIdx, "threads", w.config.ThreadsPerShard, "block", ti.blockNumber,
+						"noncesTried", noncesTriedPerBlockByShard[ti.shardIdx][ti.blockNumber.Uint64()],
+					)
+					delete(noncesTriedPerBlockByShard[ti.shardIdx], ti.blockNumber.Uint64())
+					delete(threadsCounterPerBlockByShard[ti.shardIdx], ti.blockNumber.Uint64())
+				}
 			}
 		case <-w.exitCh:
 			w.lg.Warn("Worker is exiting from task loop...")
@@ -349,40 +368,33 @@ func (w *worker) checkTxStatus(txHash common.Hash, miner common.Address) {
 }
 
 // mineTask acturally executes a mining task
-func (w *worker) mineTask(t *taskItem) (bool, error) {
+func (w *worker) mineTask(t *taskItem) (bool, uint64, error) {
 	startTime := time.Now()
 	nonce := t.nonceStart
-	if t.thread == 0 {
-		w.lg.Info("Mining tasks started", "shard", t.shardIdx, "threads", w.config.ThreadsPerShard, "block", t.blockNumber, "nonces", fmt.Sprintf("%d~%d", 0, w.config.NonceLimit))
-	}
 	w.lg.Debug("Mining task started", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonces", fmt.Sprintf("%d~%d", t.nonceStart, t.nonceEnd))
 	for w.isRunning() {
 		if time.Since(startTime).Seconds() > mineTimeOut {
 			w.lg.Warn("Mining task timed out", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "noncesTried", nonce-t.nonceStart)
-			break
+			return false, nonce - t.nonceStart, nil
 		}
 		if nonce >= t.nonceEnd {
-			if t.thread == 0 {
-				w.lg.Info("The nonces are exhausted in this slot, waiting for the next block",
-					"samplingTime", fmt.Sprintf("%.1fs", time.Since(startTime).Seconds()), "shard", t.shardIdx, "block", t.blockNumber)
-			}
 			w.lg.Debug("The nonces are exhausted in this slot, waiting for the next block",
 				"samplingTime", fmt.Sprintf("%.1fs", time.Since(startTime).Seconds()),
 				"shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonce", nonce)
-			break
+			return false, nonce - t.nonceStart, nil
 		}
 		hash0 := initHash(t.miner, t.blockHash, nonce)
 		hash1, sampleIdxs, err := w.computeHash(t.task, hash0)
 		if err != nil {
 			w.lg.Error("Calculate hash error", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "err", err.Error())
-			return false, err
+			return false, nonce - t.nonceStart, err
 		}
 		if t.requiredDiff.Cmp(new(big.Int).SetBytes(hash1.Bytes())) >= 0 {
 			w.lg.Info("Calculated a valid hash", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonce", nonce)
 			dataSet, kvIdxs, sampleIdxsInKv, encodingKeys, encodedSamples, err := w.getMiningData(t.task, sampleIdxs)
 			if err != nil {
 				w.lg.Error("Get sample data failed", "kvIdxs", kvIdxs, "sampleIdxsInKv", sampleIdxsInKv, "err", err.Error())
-				return false, err
+				return false, nonce - t.nonceStart, err
 			}
 			w.lg.Info("Got sample data", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "kvIdxs", kvIdxs, "sampleIdxsInKv", sampleIdxsInKv)
 			proofs := make([][]byte, len(kvIdxs))
@@ -390,7 +402,7 @@ func (w *worker) mineTask(t *taskItem) (bool, error) {
 				ps, err := w.prover.GetStorageProof(dataSet[i], encodingKeys[i], sampleIdxsInKv[i])
 				if err != nil {
 					w.lg.Error("Get storage proof error", "kvIdx", kvIdxs[i], "sampleIdxsInKv", sampleIdxsInKv[i], "error", err.Error())
-					return false, fmt.Errorf("get proof err: %v", err)
+					return false, nonce - t.nonceStart, fmt.Errorf("get proof err: %v", err)
 				}
 				w.lg.Info("Got storage proof", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "kvIdx", kvIdxs[i], "sampleIdxsInKv", sampleIdxsInKv[i])
 				proofs[i] = ps
@@ -412,12 +424,12 @@ func (w *worker) mineTask(t *taskItem) (bool, error) {
 
 			// notify the result worker to wake up
 			w.notifyResultLoop()
-			return true, nil
+			return true, nonce - t.nonceStart, nil
 		}
 		nonce++
 	}
 
-	return false, nil
+	return false, nonce - t.nonceStart, nil
 }
 
 // computeHash calculates final hash from hash0
