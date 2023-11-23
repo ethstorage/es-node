@@ -20,6 +20,8 @@ import (
 const (
 	blobFillingMask    = byte(0b10000000)
 	HashSizeInContract = 24
+	MetaBatchSize      = 8000
+	MetaDownloadThread = 32
 )
 
 var (
@@ -42,6 +44,7 @@ type StorageManager struct {
 	lastKvIdx         uint64     // lastKvIndex in the most-recent-finalized L1 block
 	l1Source          Il1Source
 	DownloadThreadNum int
+	metaMapMu         sync.Mutex // this is only for blobMetas writing thread safe in downloadMetaInParallel
 	blobMetas         map[uint64][32]byte
 }
 
@@ -326,28 +329,9 @@ func (s *StorageManager) DownloadAllMetas() error {
 		log.Info("Begin to download metas", "shard", sid, "first", first, "end", end, "limit", limit, "lastKvIdx", lastKvIdx)
 		ts := time.Now()
 
-		for first < end {
-			batchLimit := first + 10000
-			if batchLimit > end {
-				batchLimit = end
-			}
-			kvIndices := []uint64{}
-			for i := first; i < batchLimit; i++ {
-				kvIndices = append(kvIndices, i)
-			}
-
-			metas, err := s.l1Source.GetKvMetas(kvIndices, l1)
-			if err != nil {
-				return err
-			}
-
-			for i, meta := range(metas) {
-				s.blobMetas[kvIndices[i]] = meta
-			}
-
-			log.Info("One batch metas has been downloaded", "first", first, "batchLimit", batchLimit)
-
-			first = batchLimit
+		err := s.downloadMetaInParallel(first, end, l1)
+		if err != nil {
+			return err
 		}
 
 		log.Info("All the metas has been downloaded", "first", first, "end", end, "time", time.Since(ts).Seconds())
@@ -364,6 +348,76 @@ func (s *StorageManager) DownloadAllMetas() error {
 		log.Info("Empty metas has been filled", "first", end, "limit", limit, "time", time.Since(ts).Seconds())
 	}
 
+	return nil
+}
+
+func (s *StorageManager) downloadMetaInParallel(from, to uint64, l1 int64) error {
+	var wg sync.WaitGroup
+	taskNum := uint64(MetaDownloadThread)
+
+	// We don't need to download in parallel if the meta amount is small
+	if to - from < uint64(taskNum) * MetaBatchSize {
+		return s.downloadMetaInRange(from, to, l1, 0)
+	}
+
+	chanRes := make(chan error, taskNum)
+	defer close(chanRes)
+
+	rangeSize := (to - from) / uint64(taskNum)
+	for taskIdx := uint64(0); taskIdx < taskNum; taskIdx++ {
+		rangeStart := taskIdx * rangeSize
+		rangeEnd := (taskIdx + 1) * rangeSize
+		if taskIdx == taskNum - 1 {
+			rangeEnd = to
+		}
+		wg.Add(1)
+
+		go func(start, end, taskId uint64, out chan<- error) {
+			defer wg.Done()
+			err := s.downloadMetaInRange(start, end, l1, taskId)
+
+			chanRes <- err
+		}(rangeStart, rangeEnd, taskIdx, chanRes)
+	}
+
+	wg.Wait()
+
+	for i := uint64(0); i < taskNum; i++ {
+		res := <- chanRes
+		if (res != nil) {
+			return res
+		}
+	}
+
+	return nil
+}
+
+func (s *StorageManager) downloadMetaInRange(from, to uint64, l1 int64, taskId uint64) error {
+	for from < to {
+		batchLimit := from + MetaBatchSize
+		if batchLimit > to {
+			batchLimit = to
+		}
+		kvIndices := []uint64{}
+		for i := from; i < batchLimit; i++ {
+			kvIndices = append(kvIndices, i)
+		}
+
+		metas, err := s.l1Source.GetKvMetas(kvIndices, l1)
+		if err != nil {
+			return err
+		}
+
+		s.metaMapMu.Lock()
+		for i, meta := range(metas) {
+			s.blobMetas[kvIndices[i]] = meta
+		}
+		s.metaMapMu.Unlock()
+
+		log.Info("One batch metas has been downloaded", "first", from, "batchLimit", batchLimit, "to", to, "taskId", taskId)
+
+		from = batchLimit
+	}
 	return nil
 }
 
