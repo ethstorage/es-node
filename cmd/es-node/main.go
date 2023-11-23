@@ -10,6 +10,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
@@ -26,10 +27,13 @@ import (
 )
 
 var (
-	GitCommit = ""
-	GitDate   = ""
-	Version   = "v0.1.1"
-	Meta      = "dev"
+	GitCommit     = ""
+	GitDate       = ""
+	Version       = "v0.1.1"
+	Meta          = "dev"
+	BuildTime     = ""
+	systemVersion = fmt.Sprintf("%s/%s", runtime.GOARCH, runtime.GOOS)
+	golangVersion = runtime.Version()
 )
 
 // VersionWithMeta holds the textual version string including the metadata.
@@ -47,15 +51,21 @@ var VersionWithMeta = func() string {
 	return v
 }()
 
+var BuildInfo = func() string {
+	return fmt.Sprintf(
+		"%s\nBuild date: %s\nSystem version: %s\nGolang version: %s",
+		VersionWithMeta, BuildTime, systemVersion, golangVersion)
+}()
+
 func main() {
 	// Set up logger with a default INFO level in case we fail to parse flags,
 	// otherwise the final critical log won't show what the parsing error was.
 	eslog.SetupDefaults()
 
 	app := cli.NewApp()
-	app.Version = VersionWithMeta
+	app.Version = BuildInfo
 	app.Flags = flags.Flags
-	app.Name = "es-node"
+	app.Name = "EthStorage node"
 	app.Usage = "EthStorage Storage Node"
 	app.Description = "The EthStorage Storage Node derives L2 datahashes of the values of KV store from L1 data and reconstructs the values via L1 DA and ES P2P network."
 	app.Action = EsNodeMain
