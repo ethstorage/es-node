@@ -40,11 +40,11 @@ type Il1Source interface {
 // and a consistent view of most-recent-finalized L1 block.
 type StorageManager struct {
 	shardManager      *ShardManager
+	localL1           int64      // local view of most-recent-finalized L1 block
 	mu                sync.Mutex // protect lastKvIdx, shardManager and blobMeta read/write state
 	lastKvIdx         uint64     // lastKvIndex in the most-recent-finalized L1 block
 	l1Source          Il1Source
 	DownloadThreadNum int
-	metaMapMu         sync.Mutex // this is only for blobMetas writing thread safe in downloadMetaInParallel
 	blobMetas         map[uint64][32]byte
 }
 
@@ -64,15 +64,21 @@ func (s *StorageManager) DownloadFinished(newL1 int64, kvIndices []uint64, blobs
 	}
 
 	s.mu.Lock()
-	defer s.mu.Unlock()
+
+	// in most case, newL1 should be equal to s.localL1 + 32
+	// but it is possible that the node was shutdown for some time, and when it restart and DownloadFinished for the first time
+	// the new finalized L1 will be larger than that, so we just do the simple compare check here.
+	if newL1 <= s.localL1 {
+		s.mu.Unlock()
+		return errors.New("new L1 is older than local L1")
+	}
 
 	lastKvIdx, err := s.l1Source.GetStorageLastBlobIdx(newL1)
 	if err != nil {
+		s.mu.Unlock()
 		return err
 	}
 	s.lastKvIdx = lastKvIdx
-
-	s.updateLocalMetas(kvIndices, commits)
 
 	taskNum := s.DownloadThreadNum
 	var wg sync.WaitGroup
@@ -116,9 +122,16 @@ func (s *StorageManager) DownloadFinished(newL1 int64, kvIndices []uint64, blobs
 	for i := 0; i < taskIdx; i++ {
 		res := <- chanRes
 		if (res != nil) {
+			s.mu.Unlock()
 			return res
 		}
 	}
+
+	s.localL1 = newL1
+
+	s.mu.Unlock()
+
+	s.updateLocalMetas(kvIndices, commits)
 
 	return nil
 }
@@ -144,6 +157,8 @@ func (s *StorageManager) Reset(newL1 int64) error {
 		return err
 	}
 	s.lastKvIdx = lastKvIdx
+	s.localL1 = newL1
+
 	return nil
 }
 
@@ -169,9 +184,10 @@ func (s *StorageManager) CommitBlobs(kvIndices []uint64, blobs [][]byte, commits
 		encoded[i] = true
 	}
 
+	metas := s.getKvMetas(kvIndices)
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	metas := s.getKvMetas(kvIndices)
 
 	inserted := []uint64{}
 	for i, contractMeta := range metas {
@@ -209,9 +225,10 @@ func (s *StorageManager) CommitEmptyBlobs(start, limit uint64) (uint64, uint64, 
 		kvIndices = append(kvIndices, i)
 	}
 
+	metas:= s.getKvMetas(kvIndices)
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	metas:= s.getKvMetas(kvIndices)
 
 	for i, index := range kvIndices {
 		err := s.commitEncodedBlob(index, encodedBlobs[i], hash, metas[i])
@@ -235,9 +252,11 @@ func (s *StorageManager) CommitBlob(kvIndex uint64, blob []byte, commit common.H
 	if !success || err != nil {
 		return errors.New("blob encode failed")
 	}
+
+	metas:= s.getKvMetas([]uint64{kvIndex})
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	metas:= s.getKvMetas([]uint64{kvIndex})
 
 	if len(metas) != 1 {
 		return errors.New("invalid params lens")
@@ -304,9 +323,6 @@ func (s *StorageManager) syncCheck(kvIdx uint64) error {
 
 // DownloadAllMetas This function download the blob hashes of all the local storage shards from the smart contract
 func (s *StorageManager) DownloadAllMetas() error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	header, err := s.l1Source.HeaderByNumber(context.Background(), big.NewInt(rpc.FinalizedBlockNumber.Int64()))
 	if err != nil {
 		return err
@@ -329,7 +345,7 @@ func (s *StorageManager) DownloadAllMetas() error {
 		log.Info("Begin to download metas", "shard", sid, "first", first, "end", end, "limit", limit, "lastKvIdx", lastKvIdx)
 		ts := time.Now()
 
-		err := s.downloadMetaInParallel(first, end, l1)
+		err := s.downloadMetaInParallel(first, end)
 		if err != nil {
 			return err
 		}
@@ -351,13 +367,13 @@ func (s *StorageManager) DownloadAllMetas() error {
 	return nil
 }
 
-func (s *StorageManager) downloadMetaInParallel(from, to uint64, l1 int64) error {
+func (s *StorageManager) downloadMetaInParallel(from, to uint64) error {
 	var wg sync.WaitGroup
 	taskNum := uint64(MetaDownloadThread)
 
 	// We don't need to download in parallel if the meta amount is small
 	if to - from < uint64(taskNum) * MetaBatchSize {
-		return s.downloadMetaInRange(from, to, l1, 0)
+		return s.downloadMetaInRange(from, to, 0)
 	}
 
 	chanRes := make(chan error, taskNum)
@@ -374,7 +390,7 @@ func (s *StorageManager) downloadMetaInParallel(from, to uint64, l1 int64) error
 
 		go func(start, end, taskId uint64, out chan<- error) {
 			defer wg.Done()
-			err := s.downloadMetaInRange(start, end, l1, taskId)
+			err := s.downloadMetaInRange(start, end, taskId)
 
 			chanRes <- err
 		}(rangeStart, rangeEnd, taskIdx, chanRes)
@@ -392,7 +408,7 @@ func (s *StorageManager) downloadMetaInParallel(from, to uint64, l1 int64) error
 	return nil
 }
 
-func (s *StorageManager) downloadMetaInRange(from, to uint64, l1 int64, taskId uint64) error {
+func (s *StorageManager) downloadMetaInRange(from, to uint64, taskId uint64) error {
 	for from < to {
 		batchLimit := from + MetaBatchSize
 		if batchLimit > to {
@@ -403,20 +419,28 @@ func (s *StorageManager) downloadMetaInRange(from, to uint64, l1 int64, taskId u
 			kvIndices = append(kvIndices, i)
 		}
 
-		metas, err := s.l1Source.GetKvMetas(kvIndices, l1)
+		s.mu.Lock()
+		localL1 := s.localL1
+		s.mu.Unlock()
+
+		metas, err := s.l1Source.GetKvMetas(kvIndices, localL1)
 		if err != nil {
 			// Retry the request again in case it could fail occasionally in poor network connection
-			metas, err = s.l1Source.GetKvMetas(kvIndices, l1)
+			metas, err = s.l1Source.GetKvMetas(kvIndices, localL1)
 			if err != nil {
 				return err
 			}
 		}
 
-		s.metaMapMu.Lock()
+		s.mu.Lock()
+		if localL1 != s.localL1 {
+			s.mu.Unlock()
+			continue
+		}
 		for i, meta := range(metas) {
 			s.blobMetas[kvIndices[i]] = meta
 		}
-		s.metaMapMu.Unlock()
+		s.mu.Unlock()
 
 		log.Info("One batch metas has been downloaded", "first", from, "batchLimit", batchLimit, "to", to, "taskId", taskId)
 
@@ -426,6 +450,9 @@ func (s *StorageManager) downloadMetaInRange(from, to uint64, l1 int64, taskId u
 }
 
 func (s *StorageManager) updateLocalMetas(kvIndices []uint64, commits []common.Hash) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	for i, idx := range kvIndices {
 		meta := [32]byte{}
 		new(big.Int).SetInt64(int64(idx)).FillBytes(meta[0:5])
@@ -436,6 +463,9 @@ func (s *StorageManager) updateLocalMetas(kvIndices []uint64, commits []common.H
 }
 
 func (s *StorageManager) getKvMetas(kvIndices []uint64) [][32]byte {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	metas := [][32]byte{}
 	for _, i := range kvIndices {
 		metas = append(metas, s.blobMetas[i])
