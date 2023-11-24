@@ -21,7 +21,7 @@ jobs:
       - name: Build
         run: |
           make
-          mv es-node es-node.${{github.ref_name}}.ubuntu
+          mv cmd/es-node/es-node es-node.${{github.ref_name}}.ubuntu
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
