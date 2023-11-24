@@ -34,8 +34,9 @@ Remember to use the signer's private key (with ETH balance) to replace `<private
 # download source code
 git clone https://github.com/ethstorage/es-node.git
 
-# go to the repo
+# checkout branch
 cd es-node
+git checkout v0.1.1
 ```
 ## Step 3. Run es-node
 
@@ -98,7 +99,7 @@ npm install -g snarkjs@0.7.0
 ```
 #### 4. Build es-node
 ```sh
-cd cmd/es-node && go build && cd ../..
+make 
 ```
 #### 5. Start es-node
 ```sh
