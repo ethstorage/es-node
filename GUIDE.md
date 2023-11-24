@@ -23,15 +23,25 @@ You can choose [how to run es-node](#step-3-run-es-node) according to your curre
 
 _Note: It is assumed that you are using the `root` _user in all the command_ line operations. You may need to add `sudo` before some of the commands if you are using a non-root user._
 
-
-## Step 1. Prepare miner and signer account
+## Prepare miner and signer account
 It is suggested to prepare two Ethereum accounts specifically for this test, one of which needs to have some test ETH balance to be used as a transaction signer.
 
 The test ETH can be requested from [https://faucet.dencun-devnet-11.ethpandaops.io/](https://faucet.dencun-devnet-11.ethpandaops.io/). 
 
 Remember to use the signer's private key (with ETH balance) to replace `<private_key>` in the following steps. And use the other address to replace `<miner>`.
 
-## Step 2. Download source code
+## Options to run es-node
+
+You can run es-node directly, or in a Docker container.
+
+If you choose to run es-node directly on a machine, you need to manually install some dependencies such as nodejs, snarkjs, etc. 
+If you choose to build from source code other than download pre-built, you also need to install go. 
+If you choose to run es-node in a Docker container, you will have Docker version 24.0.5 or above installed. 
+
+### Download source code
+
+If you choose to download a pre-built binary, ignore this step.
+
 ```sh
 # download source code
 git clone https://github.com/ethstorage/es-node.git
@@ -40,8 +50,6 @@ git clone https://github.com/ethstorage/es-node.git
 cd es-node
 git checkout v0.1.1
 ```
-## Step 3. Run es-node
-
 ### Option 1: With Docker compose
 If you have Docker version 24.0.5 or above installed, simply run:
 ```sh
@@ -57,7 +65,11 @@ docker logs -f es
 ```
 ### Option 3: Without Docker
 
+You have two options for acquiring es-node: build from source code or download pre-built.
+
 #### 1. Install go 1.20+ (e.g. v1.20.10)
+
+If you choose to download a pre-built binary, ignore this step.
 
 Download a stable go release
 ```sh
@@ -99,9 +111,15 @@ nvm use 20
 ```sh
 npm install -g snarkjs@0.7.0
 ```
-#### 4. Build es-node
+#### 4. Build or download es-node
+
+- Use the following command to build es-node:
 ```sh
-make
+make 
+```
+- Alternatively, you can download the pre-built executable of the specific version from  [the releases page](https://github.com/ethstorage/es-node/releases), such as es-node.v0.1.2.ubuntu, and then rename it using the following command:
+```sh
+mv es-node.${version}.ubuntu ./cmd/es-node/es-node
 ```
 #### 5. Start es-node
 ```sh
