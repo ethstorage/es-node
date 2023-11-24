@@ -74,13 +74,6 @@ func (s *StorageManager) DownloadFinished(newL1 int64, kvIndices []uint64, blobs
 		return errors.New("new L1 is older than local L1")
 	}
 
-	lastKvIdx, err := s.l1Source.GetStorageLastBlobIdx(newL1)
-	if err != nil {
-		s.mu.Unlock()
-		return err
-	}
-	s.lastKvIdx = lastKvIdx
-
 	taskNum := s.DownloadThreadNum
 	var wg sync.WaitGroup
 	chanRes := make(chan error, taskNum)
@@ -128,6 +121,12 @@ func (s *StorageManager) DownloadFinished(newL1 int64, kvIndices []uint64, blobs
 		}
 	}
 
+	lastKvIdx, err := s.l1Source.GetStorageLastBlobIdx(newL1)
+	if err != nil {
+		s.mu.Unlock()
+		return err
+	}
+	s.lastKvIdx = lastKvIdx
 	s.localL1 = newL1
 
 	s.mu.Unlock()
