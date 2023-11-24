@@ -19,7 +19,9 @@ jobs:
           go-version: '1.20'
 
       - name: Build
-        run: go build -o es-node.${{github.ref_name}}.ubuntu ./cmd/es-node/...
+        run: |
+          make
+          mv es-node es-node.${{github.ref_name}}.ubuntu
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
