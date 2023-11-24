@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"math/big"
 	"sync"
 	"time"
@@ -409,6 +410,7 @@ func (s *StorageManager) downloadMetaInParallel(from, to uint64) error {
 }
 
 func (s *StorageManager) downloadMetaInRange(from, to uint64, taskId uint64) error {
+	rangeStart := from
 	for from < to {
 		batchLimit := from + MetaBatchSize
 		if batchLimit > to {
@@ -442,7 +444,12 @@ func (s *StorageManager) downloadMetaInRange(from, to uint64, taskId uint64) err
 		}
 		s.mu.Unlock()
 
-		log.Info("One batch metas has been downloaded", "first", from, "batchLimit", batchLimit, "to", to, "taskId", taskId)
+		log.Info(
+			"One batch metas has been downloaded", "first", from,
+			"batchLimit", batchLimit,
+			"to", to,
+			"progress", fmt.Sprintf("%.1f%%", float64((from - rangeStart)*100)/float64(to - rangeStart)),
+			"taskId", taskId)
 
 		from = batchLimit
 	}
