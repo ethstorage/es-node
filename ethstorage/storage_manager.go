@@ -405,7 +405,11 @@ func (s *StorageManager) downloadMetaInRange(from, to uint64, l1 int64, taskId u
 
 		metas, err := s.l1Source.GetKvMetas(kvIndices, l1)
 		if err != nil {
-			return err
+			// Retry the request again in case it could fail occasionally in poor network connection
+			metas, err = s.l1Source.GetKvMetas(kvIndices, l1)
+			if err != nil {
+				return err
+			}
 		}
 
 		s.metaMapMu.Lock()
