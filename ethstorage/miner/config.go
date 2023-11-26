@@ -39,5 +39,5 @@ var DefaultConfig = Config{
 	PriorityGasPrice: nil,
 	ZKeyFileName:     "blob_poseidon.zkey",
 	ZKWorkingDir:     filepath.Join("ethstorage", "prover"),
-	ThreadsPerShard:  uint64(runtime.NumCPU()),
+	ThreadsPerShard:  uint64(2 * runtime.NumCPU()),
 }

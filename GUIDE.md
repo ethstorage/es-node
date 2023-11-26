@@ -19,7 +19,7 @@ For a detailed explanation for es-node please refer to the [README](/README.md).
 ## System Environment
  - Ubuntu 20.04+ (has been tested with)
  - (Optional) Docker 24.0.5+ (would simplify the process)
- - (Optional) go 1.20+ and node 16+ (can be installed following the [steps](#1-install-go-120-eg-v1213))
+ - (Optional) go 1.20.* (can't be built on Go 1.21 yet) and node 16+ (can be installed following the [steps](#1-install-go-120-eg-v1213))
 
 You can choose [how to run es-node](#step-3-run-es-node) according to your current environment.
 ## Step 1. Prepare miner and signer account
@@ -32,10 +32,11 @@ Remember to use the signer's private key (with ETH balance) to replace `<private
 ## Step 2. Download source code
 ```sh
 # download source code
-git clone git@github.com:ethstorage/es-node.git
+git clone https://github.com/ethstorage/es-node.git
 
-# go to the repo
+# checkout branch
 cd es-node
+git checkout v0.1.1
 ```
 ## Step 3. Run es-node
 
@@ -98,7 +99,7 @@ npm install -g snarkjs@0.7.0
 ```
 #### 4. Build es-node
 ```sh
-cd cmd/es-node && go build && cd ../..
+make 
 ```
 #### 5. Start es-node
 ```sh
