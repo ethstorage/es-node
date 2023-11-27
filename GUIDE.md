@@ -97,16 +97,9 @@ nvm use 20
 ```sh
 npm install -g snarkjs@0.7.0
 ```
-#### 4. Build or download es-node
-You have two options for acquiring es-node:
-
-- Use the following command to build es-node:
+#### 4. Build es-node
 ```sh
 make 
-```
-- Alternatively, you can download the pre-built executable of the specific version from  [the releases page](https://github.com/ethstorage/es-node/releases), such as es-node.v0.1.2.ubuntu, and then rename it using the following command:
-```sh
-mv es-node.${version}.ubuntu ./cmd/es-node/es-node
 ```
 #### 5. Start es-node
 ```sh
