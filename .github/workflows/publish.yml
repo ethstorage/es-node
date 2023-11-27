@@ -24,6 +24,8 @@ jobs:
           mv cmd/es-node/es-node es-node.${{github.ref_name}}.linux-amd64
           make TARGETOS=darwin TARGETARCH=amd64
           mv cmd/es-node/es-node es-node.${{github.ref_name}}.darwin-amd64
+          make TARGETOS=darwin TARGETARCH=arm64
+          mv cmd/es-node/es-node es-node.${{github.ref_name}}.darwin-arm64
           make TARGETOS=windows TARGETARCH=amd64
           mv cmd/es-node/es-node es-node.${{github.ref_name}}.windows-amd64
 
@@ -35,5 +37,6 @@ jobs:
           files: |
             es-node.${{github.ref_name}}.linux-amd64
             es-node.${{github.ref_name}}.darwin-amd64
+            es-node.${{github.ref_name}}.darwin-arm64
             es-node.${{github.ref_name}}.windows-amd64
           generate_release_notes: true
