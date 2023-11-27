@@ -20,13 +20,20 @@ jobs:
 
       - name: Build
         run: |
-          make
-          mv cmd/es-node/es-node es-node.${{github.ref_name}}.ubuntu
+          make TARGETOS=linux TARGETARCH=amd64
+          mv cmd/es-node/es-node es-node.${{github.ref_name}}.linux-amd64
+          make TARGETOS=darwin TARGETARCH=amd64
+          mv cmd/es-node/es-node es-node.${{github.ref_name}}.darwin-amd64
+          make TARGETOS=windows TARGETARCH=amd64
+          mv cmd/es-node/es-node es-node.${{github.ref_name}}.windows-amd64
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.ref }}
           name: Release ${{github.ref_name}}
-          files: es-node.${{github.ref_name}}.ubuntu
+          files: |
+            es-node.${{github.ref_name}}.linux-amd64
+            es-node.${{github.ref_name}}.darwin-amd64
+            es-node.${{github.ref_name}}.windows-amd64
           generate_release_notes: true
