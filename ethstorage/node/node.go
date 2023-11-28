@@ -210,7 +210,7 @@ func (n *EsNode) initStorageManager(ctx context.Context, cfg *Config) error {
 		"chunkSize", shardManager.ChunkSize(),
 		"kvsPerShard", shardManager.KvEntries())
 
-	n.storageManager = ethstorage.NewStorageManager(shardManager, n.l1Source)
+	n.storageManager = ethstorage.NewStorageManager(shardManager, n.l1Source, cfg.P2P.SyncerParams().MetaDownloadBatchSize)
 	return nil
 }
 

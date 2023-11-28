@@ -169,6 +169,13 @@ var (
 		Value:    16,
 		EnvVar:   p2pEnv("MAX_CONCURRENCY"),
 	}
+	MetaDownloadBatchSize = cli.Uint64Flag{
+		Name: "p2p.meta.download.batch",
+		Usage: "Batch size for requesting the blob metadatas stored in the storage contract in one RPC call.",
+		Required: false,
+		Value:    8000, // The upper limit of devnet-11 geth node
+		EnvVar:   p2pEnv("META_BATCH_SIZE"),
+	}
 	PeersLo = cli.UintFlag{
 		Name:     "p2p.peers.lo",
 		Usage:    "Low-tide peer count. The node actively searches for new peer connections if below this amount.",
@@ -332,6 +339,7 @@ var p2pFlags = []cli.Flag{
 	HostSecurity,
 	MaxRequestSize,
 	MaxConcurrency,
+	MetaDownloadBatchSize,
 	PeersLo,
 	PeersHi,
 	PeersGrace,

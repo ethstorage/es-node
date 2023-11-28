@@ -453,13 +453,6 @@ func (s *SyncClient) Start() error {
 
 	// Retrieve the previous sync status from LevelDB and abort if already synced
 	s.loadSyncStatus()
-	s.cleanTasks()
-	if !s.syncDone {
-		err := s.storageManager.DownloadAllMetas()
-		if err != nil {
-			return err
-		}
-	}
 
 	s.wg.Add(1)
 	go s.mainLoop()
@@ -567,6 +560,15 @@ func (s *SyncClient) RequestL2List(indexes []uint64) (uint64, error) {
 
 func (s *SyncClient) mainLoop() {
 	defer s.wg.Done()
+
+	s.cleanTasks()
+	if !s.syncDone {
+		err := s.storageManager.DownloadAllMetas()
+		if err != nil {
+			log.Error("Download blob metadata failed", "error", err)
+			return
+		}
+	}
 
 	for {
 		// Remove all completed tasks and terminate sync if everything's done
