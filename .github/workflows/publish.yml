@@ -60,6 +60,7 @@ jobs:
         uses: actions/delete-package-versions@v4
         with: 
           package-name: 'es-node'
+          package-type: 'container'
 
       - name: Checkout repository
         uses: actions/checkout@v4
