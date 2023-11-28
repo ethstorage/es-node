@@ -5,7 +5,6 @@ package ethstorage
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"fmt"
 	"math/big"
@@ -13,7 +12,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
 )
 
@@ -31,8 +29,6 @@ type Il1Source interface {
 	GetKvMetas(kvIndices []uint64, blockNumber int64) ([][32]byte, error)
 
 	GetStorageLastBlobIdx(blockNumber int64) (uint64, error)
-
-	HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error)
 }
 
 // StorageManager is a higher-level abstract of ShardManager which provides multi-thread safety to storage file read/write
