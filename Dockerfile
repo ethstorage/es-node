@@ -1,12 +1,7 @@
 # Build ES node in a stock Go builder container
 FROM golang:1.20-alpine as builder
 
-RUN apk add --no-cache gcc musl-dev linux-headers
-
-# Get dependencies - will also be cached if we won't change go.mod/go.sum
-COPY go.mod /es-node/
-COPY go.sum /es-node/
-RUN cd /es-node && go mod download
+RUN apk add --no-cache gcc musl-dev linux-headers make
 
 # build
 ADD . /es-node
