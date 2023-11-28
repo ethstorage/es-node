@@ -55,8 +55,15 @@ jobs:
       packages: write
       # 
     steps:
+      # TODO remove
+      - name: delete package
+        uses: actions/delete-package-versions@v4
+        with: 
+          package-name: 'es-node'
+
       - name: Checkout repository
         uses: actions/checkout@v4
+
       # Uses the `docker/login-action` action to log in to the Container registry registry using the account and password that will publish the packages. 
       # Once published, the packages are scoped to the account defined here.
       - name: Log in to the Container registry
@@ -65,6 +72,8 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+          visibility: public
+
       # This step uses [docker/metadata-action](https://github.com/docker/metadata-action#about) to extract tags and labels that will be applied to the specified image. 
       # The `id` "meta" allows the output of this step to be referenced in a subsequent step. The `images` value provides the base name for the tags and labels.
       - name: Extract metadata (tags, labels) for Docker
@@ -72,6 +81,7 @@ jobs:
         uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+
       # This step uses the `docker/build-push-action` action to build the image, based on your repository's `Dockerfile`. 
       # If the build succeeds, it pushes the image to GitHub Packages.
       # It uses the `context` parameter to define the build's context as the set of files located in the specified path. 
