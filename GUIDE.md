@@ -99,7 +99,7 @@ npm install -g snarkjs@0.7.0
 ```
 #### 4. Build es-node
 ```sh
-make 
+cd cmd/es-node && go build && cd ../..
 ```
 #### 5. Start es-node
 ```sh
