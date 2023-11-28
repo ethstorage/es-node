@@ -305,6 +305,7 @@ func (s *SyncClient) createTask(sid uint64, lastKvIndex uint64) *task {
 	task := task{
 		Contract:       s.storageManager.ContractAddress(),
 		ShardId:        sid,
+		lastSubTaskIdx: 0,
 		statelessPeers: make(map[peer.ID]struct{}),
 		peers:          make(map[peer.ID]struct{}),
 	}
@@ -420,6 +421,9 @@ func (s *SyncClient) cleanTasks() {
 			t.SubTasks[i].First = min
 			if t.SubTasks[i].done && !exist {
 				t.SubTasks = append(t.SubTasks[:i], t.SubTasks[i+1:]...)
+				if t.lastSubTaskIdx >= i {
+					t.lastSubTaskIdx--
+				}
 				i--
 			}
 		}
@@ -618,14 +622,21 @@ func (s *SyncClient) assignBlobRangeTasks() {
 	// Iterate over all the tasks and try to find a pending one
 	for _, t := range s.tasks {
 		maxRange := s.syncerParams.MaxRequestSize / ethstorage.ContractToShardManager[t.Contract].MaxKvSize() * 2
-		for _, stask := range t.SubTasks {
-			st := stask
+		nextIdx := t.lastSubTaskIdx + 1
+		subTaskCount := len(t.SubTasks)
+		for idx := 0; idx < subTaskCount; idx++ {
+			nextIdx = nextIdx % subTaskCount
+			st := t.SubTasks[nextIdx]
+			nextIdx++
 			if st.done {
 				continue
 			}
 			// Skip any tasks already running
 			if st.isRunning {
 				continue
+			}
+			if len(s.idlerPeers) == 0 {
+				break
 			}
 			pr := s.getIdlePeerForTask(t)
 			if pr == nil {
@@ -689,6 +700,7 @@ func (s *SyncClient) assignBlobRangeTasks() {
 				s.OnBlobsByRange(res)
 			}(pr.id)
 		}
+		t.lastSubTaskIdx = nextIdx - 1
 	}
 }
 

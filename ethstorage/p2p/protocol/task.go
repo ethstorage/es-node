@@ -13,11 +13,12 @@ import (
 // task represents the sync task for a storage shard.
 type task struct {
 	// These fields get serialized to leveldb on shutdown
-	Contract      common.Address // Contract address
-	ShardId       uint64         // ShardId
-	SubTasks      []*subTask
-	healTask      *healTask
-	SubEmptyTasks []*subEmptyTask
+	Contract       common.Address // Contract address
+	ShardId        uint64         // ShardId
+	SubTasks       []*subTask
+	lastSubTaskIdx int
+	healTask       *healTask
+	SubEmptyTasks  []*subEmptyTask
 
 	// TODO: consider whether we need to retry those stateless peers or disconnect the peer
 	statelessPeers map[peer.ID]struct{} // Peers that failed to deliver kv Data
