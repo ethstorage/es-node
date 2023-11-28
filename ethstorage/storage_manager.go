@@ -44,15 +44,13 @@ type StorageManager struct {
 	mu                    sync.Mutex // protect lastKvIdx, shardManager and blobMeta read/write state
 	lastKvIdx             uint64     // lastKvIndex in the most-recent-finalized L1 block
 	l1Source              Il1Source
-	metaDownloadBatchSize uint64
 	blobMetas             map[uint64][32]byte
 }
 
-func NewStorageManager(sm *ShardManager, l1Source Il1Source, batchSize uint64) *StorageManager {
+func NewStorageManager(sm *ShardManager, l1Source Il1Source) *StorageManager {
 	return &StorageManager{
 		shardManager:          sm,
 		l1Source:              l1Source,
-		metaDownloadBatchSize: batchSize,
 		blobMetas:             map[uint64][32]byte{},
 	}
 }
@@ -327,7 +325,7 @@ func (s *StorageManager) syncCheck(kvIdx uint64) error {
 }
 
 // DownloadAllMetas This function download the blob hashes of all the local storage shards from the smart contract
-func (s *StorageManager) DownloadAllMetas() error {
+func (s *StorageManager) DownloadAllMetas(batchSize uint64) error {
 	s.mu.Lock()
 	lastKvIdx := s.lastKvIdx
 	s.mu.Unlock()
@@ -343,7 +341,7 @@ func (s *StorageManager) DownloadAllMetas() error {
 		log.Info("Begin to download metas", "shard", sid, "first", first, "end", end, "limit", limit, "lastKvIdx", lastKvIdx)
 		ts := time.Now()
 
-		err := s.downloadMetaInParallel(first, end)
+		err := s.downloadMetaInParallel(first, end, batchSize)
 		if err != nil {
 			return err
 		}
@@ -365,13 +363,13 @@ func (s *StorageManager) DownloadAllMetas() error {
 	return nil
 }
 
-func (s *StorageManager) downloadMetaInParallel(from, to uint64) error {
+func (s *StorageManager) downloadMetaInParallel(from, to, batchSize uint64) error {
 	var wg sync.WaitGroup
 	taskNum := uint64(MetaDownloadThread)
 
 	// We don't need to download in parallel if the meta amount is small
-	if to - from < uint64(taskNum) * s.metaDownloadBatchSize {
-		return s.downloadMetaInRange(from, to, 0)
+	if to - from < uint64(taskNum) * batchSize {
+		return s.downloadMetaInRange(from, to, batchSize, 0)
 	}
 
 	chanRes := make(chan error, taskNum)
@@ -388,7 +386,7 @@ func (s *StorageManager) downloadMetaInParallel(from, to uint64) error {
 
 		go func(start, end, taskId uint64, out chan<- error) {
 			defer wg.Done()
-			err := s.downloadMetaInRange(start, end, taskId)
+			err := s.downloadMetaInRange(start, end, batchSize, taskId)
 
 			chanRes <- err
 		}(rangeStart, rangeEnd, taskIdx, chanRes)
@@ -406,10 +404,10 @@ func (s *StorageManager) downloadMetaInParallel(from, to uint64) error {
 	return nil
 }
 
-func (s *StorageManager) downloadMetaInRange(from, to uint64, taskId uint64) error {
+func (s *StorageManager) downloadMetaInRange(from, to, batchSize, taskId uint64) error {
 	rangeStart := from
 	for from < to {
-		batchLimit := from + s.metaDownloadBatchSize
+		batchLimit := from + batchSize
 		if batchLimit > to {
 			batchLimit = to
 		}
