@@ -27,7 +27,7 @@ container_name="es"
 image_name="ghcr.io/ethstorage/es-node" 
 
 # run container in the background
-sudo docker run --name $container_name \
+if sudo docker run --name $container_name \
     -v ./es-data:/es-node/es-data \
     -e ES_NODE_STORAGE_MINER=$ES_NODE_STORAGE_MINER \
     -e ES_NODE_SIGNER_PRIVATE_KEY=$ES_NODE_SIGNER_PRIVATE_KEY \
@@ -36,5 +36,9 @@ sudo docker run --name $container_name \
     -p 30305:30305/udp \
     -d \
     --entrypoint /es-node/run.sh \
-    $image_name
-echo "container $container_name started"
+    $image_name; then
+    echo "Container $container_name started"
+  else
+    echo "Error: container $container_name failed to start"
+fi
+
