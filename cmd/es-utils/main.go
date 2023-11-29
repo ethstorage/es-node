@@ -11,10 +11,13 @@ import (
 	"fmt"
 	"io"
 	"math/big"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
+	"github.com/detailyang/go-fallocate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethstorage/go-ethstorage/cmd/es-utils/utils"
@@ -30,6 +33,7 @@ var (
 	miner      *string
 	dumpFolder *string
 	filenames  *[]string
+	metaFile   *string
 
 	verbosity *int
 
@@ -117,6 +121,12 @@ var BlobUploadCmd = &cobra.Command{
 	Run:   runUploadBlobs,
 }
 
+var FillUpShardCmd = &cobra.Command{
+	Use:   "fill_up_shard",
+	Short: "fill up shard with random data and write meta file too.",
+	Run:   runFillUpShard,
+}
+
 func init() {
 	kvLen = CreateCmd.Flags().Uint64("kv_len", 0, "kv idx len to create")
 	chunkLen = CreateCmd.Flags().Uint64("chunk_len", 0, "Chunks idx len to create")
@@ -150,6 +160,7 @@ func init() {
 	chainId = rootCmd.PersistentFlags().String("chain_id", "3151908", "L1 Chain Id")
 
 	privateKeys = rootCmd.PersistentFlags().StringArray("private_key", []string{}, "Private keys to upload the blobs")
+	metaFile = rootCmd.PersistentFlags().String("metafile", "", "metafile use by mock l1 for performance test")
 }
 
 func setupLogger() {
@@ -209,6 +220,18 @@ func runCreate(cmd *cobra.Command, args []string) {
 	}
 }
 
+func createMetaFile(filename string, len int64) (*os.File, error) {
+	file, err := os.Create(filename)
+	if err != nil {
+		return nil, err
+	}
+	err = fallocate.Fallocate(file, int64((32)*len), int64(32))
+	if err != nil {
+		return nil, err
+	}
+	return file, nil
+}
+
 func runChunkRead(cmd *cobra.Command, args []string) {
 	setupLogger()
 
@@ -242,6 +265,23 @@ func readInputBytes() []byte {
 		b = append(b, c)
 	}
 	return b
+}
+
+func generateRandBytes() []byte {
+	bs := make([]byte, *kvSize)
+	rand.Read(bs)
+	return bs
+}
+func generateMetadata(idx, size uint64, hash []byte) common.Hash {
+	meta := make([]byte, 0)
+	idx_bs := make([]byte, 8)
+	binary.BigEndian.PutUint64(idx_bs, idx)
+	meta = append(meta, idx_bs[3:]...)
+	size_bs := make([]byte, 8)
+	binary.BigEndian.PutUint64(size_bs, size)
+	meta = append(meta, size_bs[5:]...)
+	meta = append(meta, hash[:24]...)
+	return common.BytesToHash(meta)
 }
 
 func runChunkWrite(cmd *cobra.Command, args []string) {
@@ -514,6 +554,36 @@ func runUploadBlobs(cmd *cobra.Command, args []string) {
 	wg.Wait()
 }
 
+func runFillUpShard(cmd *cobra.Command, args []string) {
+	setupLogger()
+	ds := initDataShard()
+	if *metaFile == "" {
+		log.Crit("must provide metafile")
+	}
+	file, err := createMetaFile(*metaFile, int64((*shardIdx+1)**kvEntries))
+	if err != nil {
+		log.Crit("failed", "error", err)
+	}
+	start := time.Now()
+	inserted := 0
+	for idx := *shardIdx * *kvEntries; idx < (*shardIdx+1)**kvEntries; idx++ {
+		bs := generateRandBytes()
+		blobs := utils.EncodeBlobs(bs)
+		_, _, versionedHashes, err := utils.ComputeBlobs(blobs)
+		if err != nil {
+			log.Crit("compute versioned hash failed", "error", err)
+		}
+		err = ds.Write(idx, blobs[0][:], versionedHashes[0])
+		if err != nil {
+			log.Crit("write failed", "error", err)
+		}
+		commit := generateMetadata(idx, *kvSize, versionedHashes[0][:])
+		file.WriteAt(commit[:], int64(idx*32))
+		inserted++
+	}
+	log.Info("fill up shard done", "inserted", inserted, "time used", time.Since(start).Seconds())
+}
+
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "es-utils",
@@ -531,6 +601,7 @@ func init() {
 	rootCmd.AddCommand(BlobWriteCmd)
 	rootCmd.AddCommand(BlobUploadCmd)
 	rootCmd.AddCommand(KVReadCmd)
+	rootCmd.AddCommand(FillUpShardCmd)
 }
 
 func main() {

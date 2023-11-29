@@ -11,10 +11,9 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
-	ethRPC "github.com/ethereum/go-ethereum/rpc"
-
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
+	ethRPC "github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethstorage/go-ethstorage/ethstorage"
 	"github.com/ethstorage/go-ethstorage/ethstorage/downloader"
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
@@ -210,7 +209,14 @@ func (n *EsNode) initStorageManager(ctx context.Context, cfg *Config) error {
 		"chunkSize", shardManager.ChunkSize(),
 		"kvsPerShard", shardManager.KvEntries())
 
-	n.storageManager = ethstorage.NewStorageManager(shardManager, n.l1Source)
+	if cfg.Storage.UseMockL1 {
+		mockL1 := ethstorage.NewMockL1Source(shardManager, cfg.Storage.L1MockMetaFile)
+		n.storageManager = ethstorage.NewStorageManager(shardManager, mockL1)
+		metrics.Enabled = true
+	} else {
+		n.storageManager = ethstorage.NewStorageManager(shardManager, n.l1Source)
+	}
+
 	return nil
 }
 
@@ -253,6 +259,8 @@ func (n *EsNode) Start(ctx context.Context, cfg *Config) error {
 	}
 
 	n.p2pNode.Start()
+
+	go metrics.CollectProcessMetrics(3 * time.Second)
 	return nil
 }
 
@@ -292,6 +300,9 @@ func (n *EsNode) RequestL2Range(ctx context.Context, start, end uint64) (uint64,
 func (n *EsNode) Close() error {
 	var result *multierror.Error
 
+	metrics.PrintRuntimeMetrics()
+
+	log.Warn("stop node")
 	if n.server != nil {
 		n.server.Stop()
 	}

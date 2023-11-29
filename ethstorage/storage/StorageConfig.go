@@ -12,4 +12,6 @@ type StorageConfig struct {
 	KvEntriesPerShard uint64
 	L1Contract        common.Address
 	Miner             common.Address
+	UseMockL1         bool
+	L1MockMetaFile    string
 }
