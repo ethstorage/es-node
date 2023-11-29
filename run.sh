@@ -24,7 +24,7 @@ if [ ${#ES_NODE_SIGNER_PRIVATE_KEY} -ne 64 ]; then
 fi
 
 # download blob_poseidon.zkey if not yet
-zkey_file="./ethstorage/prover/snarkjs/blob_poseidon.zkey"
+zkey_file="./snarkjs/blob_poseidon.zkey"
 if [ ! -e  ${zkey_file} ]; then
   echo "${zkey_file} not found. Start downloading..."
   file_id="1ZLfhYeCXMnbk6wUiBADRAn1mZ8MI_zg-"
@@ -33,7 +33,7 @@ if [ ! -e  ${zkey_file} ]; then
   echo "downloaded ${zkey_file}"
 fi
 
-executable="./cmd/es-node/es-node"
+executable="./es-node"
 data_dir="./es-data"
 storage_file_0="$data_dir/shard-0.dat"
 

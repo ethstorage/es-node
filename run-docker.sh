@@ -28,7 +28,7 @@ image_name="ghcr.io/ethstorage/es-node"
 
 # check if container is running
 if sudo docker ps --format "{{.Names}}" | grep -q "^$container_name$"; then
-    echo "container $container_name already started"
+    echo "Container $container_name already started"
 else
     # start container if exist
     if sudo docker ps -a --format "{{.Names}}" | grep -q "^$container_name$"; then
