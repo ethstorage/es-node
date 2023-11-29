@@ -174,13 +174,14 @@ func (s *StorageManager) CommitBlobs(kvIndices []uint64, blobs [][]byte, commits
 		encoded[i] = true
 	}
 
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	metas, err := s.getKvMetas(kvIndices)
 	if err != nil {
 		return nil, err
 	}
-
-	s.mu.Lock()
-	defer s.mu.Unlock()
 
 	inserted := []uint64{}
 	for i, contractMeta := range metas {
@@ -218,13 +219,13 @@ func (s *StorageManager) CommitEmptyBlobs(start, limit uint64) (uint64, uint64, 
 		kvIndices = append(kvIndices, i)
 	}
 
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	metas, err := s.getKvMetas(kvIndices)
 	if err != nil {
 		return inserted, next, err
 	}
-
-	s.mu.Lock()
-	defer s.mu.Unlock()
 
 	for i, index := range kvIndices {
 		err := s.commitEncodedBlob(index, encodedBlobs[i], hash, metas[i])
@@ -249,13 +250,13 @@ func (s *StorageManager) CommitBlob(kvIndex uint64, blob []byte, commit common.H
 		return errors.New("blob encode failed")
 	}
 
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	metas, err := s.getKvMetas([]uint64{kvIndex})
 	if err != nil {
 		return err
 	}
-
-	s.mu.Lock()
-	defer s.mu.Unlock()
 
 	if len(metas) != 1 {
 		return errors.New("invalid params lens")
@@ -403,18 +404,24 @@ func (s *StorageManager) downloadMetaInParallel(from, to, batchSize uint64) erro
 func (s *StorageManager) downloadMetaInRange(from, to, batchSize, taskId uint64) error {
 	rangeStart := from
 	for from < to {
+		s.mu.Lock()
+		localL1 := s.localL1
+		lastKvIdx := s.lastKvIdx
+		s.mu.Unlock()
+
 		batchLimit := from + batchSize
 		if batchLimit > to {
 			batchLimit = to
 		}
+		// In case remove is supported and lastKvIndex is decreased
+		if batchLimit > lastKvIdx {
+			batchLimit = lastKvIdx
+		}
+
 		kvIndices := []uint64{}
 		for i := from; i < batchLimit; i++ {
 			kvIndices = append(kvIndices, i)
 		}
-
-		s.mu.Lock()
-		localL1 := s.localL1
-		s.mu.Unlock()
 
 		metas, err := s.l1Source.GetKvMetas(kvIndices, localL1)
 		for retryTimes := 0; (retryTimes < 10) && (err != nil); retryTimes++ {
@@ -459,12 +466,16 @@ func (s *StorageManager) updateLocalMetas(kvIndices []uint64, commits []common.H
 
 		s.blobMetas[idx] = meta
 	}
+
+	// Remove the metas in the map if lastKvIdx is smaller because of removal
+	lastLocalMetaIdx := len(s.blobMetas) - 1
+	for i := lastLocalMetaIdx; i > int(s.lastKvIdx) - 1; i-- {
+		delete(s.blobMetas, uint64(i))
+	}
 }
 
+// Please note that the caller function must uses s.mu to protect the s.blobMetas reading in this function
 func (s *StorageManager) getKvMetas(kvIndices []uint64) ([][32]byte, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	metas := [][32]byte{}
 	for _, i := range kvIndices {
 		meta, ok := s.blobMetas[i]
