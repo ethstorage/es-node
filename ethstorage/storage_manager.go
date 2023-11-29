@@ -118,10 +118,11 @@ func (s *StorageManager) DownloadFinished(newL1 int64, kvIndices []uint64, blobs
 	if err != nil {
 		return err
 	}
+	oldLastKvIdx := s.lastKvIdx
 	s.lastKvIdx = lastKvIdx
 	s.localL1 = newL1
 
-	s.updateLocalMetas(kvIndices, commits)
+	s.updateLocalMetas(kvIndices, commits, oldLastKvIdx)
 
 	return nil
 }
@@ -458,7 +459,7 @@ func (s *StorageManager) downloadMetaInRange(from, to, batchSize, taskId uint64)
 
 // This function is only called by DownloadFinished which already uses s.mu to protect the s.blobMetas, so
 // we don't need to lock in this function
-func (s *StorageManager) updateLocalMetas(kvIndices []uint64, commits []common.Hash) {
+func (s *StorageManager) updateLocalMetas(kvIndices []uint64, commits []common.Hash, oldLastKvIndex uint64) {
 	for i, idx := range kvIndices {
 		meta := [32]byte{}
 		new(big.Int).SetInt64(int64(idx)).FillBytes(meta[0:5])
@@ -467,10 +468,12 @@ func (s *StorageManager) updateLocalMetas(kvIndices []uint64, commits []common.H
 		s.blobMetas[idx] = meta
 	}
 
-	// Remove the metas in the map if lastKvIdx is smaller because of removal
-	lastLocalMetaIdx := len(s.blobMetas) - 1
-	for i := lastLocalMetaIdx; i > int(s.lastKvIdx) - 1; i-- {
-		delete(s.blobMetas, uint64(i))
+	// In case the lastKvIdx is smaller than oldLastKvIdx because of removal, we need to reset the removal metas
+	for i := s.lastKvIdx; i < oldLastKvIndex; i++ {
+		meta := [32]byte{}
+		new(big.Int).SetInt64(int64(i)).FillBytes(meta[0:5])
+
+		s.blobMetas[i] = meta
 	}
 }
 
