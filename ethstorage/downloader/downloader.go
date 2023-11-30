@@ -137,7 +137,10 @@ func (s *Downloader) Start() error {
 		}
 	}
 
-	s.sm.Reset(s.lastDownloadBlock)
+	err := s.sm.Reset(s.lastDownloadBlock)
+	if err != nil {
+		return err
+	}
 
 	s.wg.Add(1)
 	go s.eventLoop()
