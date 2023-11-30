@@ -9,11 +9,12 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-  BUILD_DIR: es-node.${{github.ref_name}}
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      BUILD_DIR: es-node.${{github.ref_name}}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
