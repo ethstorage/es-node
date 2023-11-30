@@ -102,8 +102,8 @@ func (s *StorageManager) DownloadFinished(newL1 int64, kvIndices []uint64, blobs
 	wg.Wait()
 
 	for i := 0; i < taskIdx; i++ {
-		res := <- chanRes
-		if (res != nil) {
+		res := <-chanRes
+		if res != nil {
 			return res
 		}
 	}
