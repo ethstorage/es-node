@@ -30,11 +30,11 @@ type rpcServer struct {
 }
 
 func newRPCServer(
-	ctx context.Context, 
-	rpcCfg *RPCConfig, 
-	sm *ethstorage.StorageManager, 
-	dl *downloader.Downloader, 
-	log log.Logger, 
+	ctx context.Context,
+	rpcCfg *RPCConfig,
+	sm *ethstorage.StorageManager,
+	dl *downloader.Downloader,
+	log log.Logger,
 	appVersion string,
 ) (*rpcServer, error) {
 	esAPI := NewESAPI(rpcCfg, sm, dl, log)
