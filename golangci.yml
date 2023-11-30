@@ -176,49 +176,36 @@ linters-settings:
         sizeThreshold: 32
 
 linters:
+  disable-all: true
+  # Enable specific linter
+  # https://golangci-lint.run/usage/linters/#enabled-by-default
   enable:
-    - bodyclose
-    - deadcode
-    - depguard
-    - dogsled
-    - errcheck
-    - gochecknoinits
-    - goconst
-    - gocritic
-    - gocyclo
+#    - bodyclose
+#    - deadcode
+#    - depguard
+#    - dogsled
+#    - errcheck
+#    - gochecknoinits
+#    - goconst
+#    - gocritic
+#    - gocyclo
     - gofmt
-    - goimports
-    - gosec
-    - gosimple
-    - govet
-    - ineffassign
-    - interfacer
-    - misspell
-    - scopelint
-    - staticcheck
-    - typecheck
-    - unconvert
-    - unparam
-    - varcheck
-    - godox
-    - structcheck
-    - maligned
-  enable-all: false
-  disable:
-    - unused
-    - stylecheck
-    - funlen
-    - whitespace
-    - dupl
-    - golint
-    - lll
-    - wsl
-    - nakedret
-    - gochecknoglobals
-  disable-all: false
-  presets:
-    - bugs
-  fast: false
+#    - goimports
+#    - gosec
+#    - gosimple
+#    - govet
+#    - ineffassign
+#    - interfacer
+#    - misspell
+#    - scopelint
+#    - staticcheck
+#    - typecheck
+#    - unconvert
+#    - unparam
+#    - varcheck
+#    - godox
+#    - structcheck
+#    - maligned
 
 issues:
   # Show only new issues: if there are unstaged changes or untracked files,
