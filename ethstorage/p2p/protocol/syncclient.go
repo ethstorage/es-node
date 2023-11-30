@@ -20,6 +20,7 @@ import (
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethstorage/go-ethstorage/ethstorage"
+	"github.com/ethstorage/go-ethstorage/ethstorage/metrics"
 	prv "github.com/ethstorage/go-ethstorage/ethstorage/prover"
 	"github.com/ethstorage/go-ethstorage/ethstorage/rollup"
 	"github.com/libp2p/go-libp2p/core/network"
@@ -182,7 +183,7 @@ type SyncClient struct {
 }
 
 func NewSyncClient(log log.Logger, cfg *rollup.EsConfig, newStream newStreamFn, storageManager StorageManager, params *SyncerParams,
-	db ethdb.Database, metrics SyncClientMetrics, mux *event.Feed) *SyncClient {
+	db ethdb.Database, m SyncClientMetrics, mux *event.Feed) *SyncClient {
 	ctx, cancel := context.WithCancel(context.Background())
 	maxFillEmptyTaskTreads = int32(runtime.NumCPU() - 2)
 	if maxFillEmptyTaskTreads < 1 {
@@ -190,8 +191,8 @@ func NewSyncClient(log log.Logger, cfg *rollup.EsConfig, newStream newStreamFn, 
 	}
 	maxKvCountPerReq = params.MaxRequestSize / storageManager.MaxKvSize()
 	shardCount := len(storageManager.Shards())
-	if metrics == nil {
-		metrics = NoopMetrics
+	if m == nil {
+		m = metrics.NoopMetrics
 	}
 
 	c := &SyncClient{
@@ -199,7 +200,7 @@ func NewSyncClient(log log.Logger, cfg *rollup.EsConfig, newStream newStreamFn, 
 		mux:                        mux,
 		cfg:                        cfg,
 		db:                         db,
-		metrics:                    metrics,
+		metrics:                    m,
 		newStreamFn:                newStream,
 		idlerPeers:                 make(map[peer.ID]struct{}),
 		peers:                      make(map[peer.ID]*Peer),
