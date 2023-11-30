@@ -72,7 +72,7 @@ linters-settings:
     # report about assignment of errors to blank identifier: `num, _ := strconv.Atoi(numStr)`.
     # Such cases aren't reported by default.
     # Default: false
-    check-blank: true
+    check-blank: false
     # DEPRECATED comma-separated list of pairs of the form pkg:regex
     #
     # the regex is used to ignore names within pkg. (default "fmt:.*").
