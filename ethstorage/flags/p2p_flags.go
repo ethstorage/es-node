@@ -170,8 +170,8 @@ var (
 		EnvVar:   p2pEnv("MAX_CONCURRENCY"),
 	}
 	MetaDownloadBatchSize = cli.Uint64Flag{
-		Name: "p2p.meta.download.batch",
-		Usage: "Batch size for requesting the blob metadatas stored in the storage contract in one RPC call.",
+		Name:     "p2p.meta.download.batch",
+		Usage:    "Batch size for requesting the blob metadatas stored in the storage contract in one RPC call.",
 		Required: false,
 		Value:    8000, // The upper limit of devnet-11 geth node
 		EnvVar:   p2pEnv("META_BATCH_SIZE"),
