@@ -27,6 +27,10 @@ fi
 zkey_file="./snarkjs/blob_poseidon.zkey"
 if [ ! -e  ${zkey_file} ]; then
   echo "${zkey_file} not found. Start downloading..."
+  if [ ! -d snarkjs ]; then
+    mkdir snarkjs
+  fi
+
   file_id="1ZLfhYeCXMnbk6wUiBADRAn1mZ8MI_zg-"
   html=`curl -c ./cookie -s -L "https://drive.google.com/uc?export=download&id=${file_id}"`
   curl -Lb ./cookie "https://drive.google.com/uc?export=download&`echo ${html}|grep -Po '(confirm=[a-zA-Z0-9\-_]+)'`&id=${file_id}" -o ${zkey_file}
@@ -39,7 +43,7 @@ storage_file_0="$data_dir/shard-0.dat"
 
 common_flags=" --datadir $data_dir \
   --l1.rpc http://65.108.236.27:8545 \
-  --storage.l1contract 0x9f9F5Fd89ad648f2C000C954d8d9C87743243eC5 \
+  --storage.l1contract 0xc30A14fFfF311794A278dC54B35CEE07De8D2528 \
   --storage.miner $ES_NODE_STORAGE_MINER \
   $@"
 
