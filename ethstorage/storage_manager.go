@@ -35,19 +35,19 @@ type Il1Source interface {
 // and a consistent view of most-recent-finalized L1 block.
 type StorageManager struct {
 	DownloadThreadNum int
-	shardManager          *ShardManager
-	localL1               int64      // local view of most-recent-finalized L1 block
-	mu                    sync.Mutex // protect lastKvIdx, shardManager and blobMeta read/write state
-	lastKvIdx             uint64     // lastKvIndex in the most-recent-finalized L1 block
-	l1Source              Il1Source
-	blobMetas             map[uint64][32]byte
+	shardManager      *ShardManager
+	localL1           int64      // local view of most-recent-finalized L1 block
+	mu                sync.Mutex // protect lastKvIdx, shardManager and blobMeta read/write state
+	lastKvIdx         uint64     // lastKvIndex in the most-recent-finalized L1 block
+	l1Source          Il1Source
+	blobMetas         map[uint64][32]byte
 }
 
 func NewStorageManager(sm *ShardManager, l1Source Il1Source) *StorageManager {
 	return &StorageManager{
-		shardManager:          sm,
-		l1Source:              l1Source,
-		blobMetas:             map[uint64][32]byte{},
+		shardManager: sm,
+		l1Source:     l1Source,
+		blobMetas:    map[uint64][32]byte{},
 	}
 }
 
@@ -108,8 +108,8 @@ func (s *StorageManager) DownloadFinished(newL1 int64, kvIndices []uint64, blobs
 	wg.Wait()
 
 	for i := 0; i < taskIdx; i++ {
-		res := <- chanRes
-		if (res != nil) {
+		res := <-chanRes
+		if res != nil {
 			return res
 		}
 	}
@@ -118,11 +118,10 @@ func (s *StorageManager) DownloadFinished(newL1 int64, kvIndices []uint64, blobs
 	if err != nil {
 		return err
 	}
-	oldLastKvIdx := s.lastKvIdx
 	s.lastKvIdx = lastKvIdx
 	s.localL1 = newL1
 
-	s.updateLocalMetas(kvIndices, commits, oldLastKvIdx)
+	s.updateLocalMetas(kvIndices, commits)
 
 	return nil
 }
@@ -174,7 +173,6 @@ func (s *StorageManager) CommitBlobs(kvIndices []uint64, blobs [][]byte, commits
 		encodedBlobs[i] = encodedBlob
 		encoded[i] = true
 	}
-
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -345,17 +343,6 @@ func (s *StorageManager) DownloadAllMetas(batchSize uint64) error {
 		}
 
 		log.Info("All the metas has been downloaded", "first", first, "end", end, "time", time.Since(ts).Seconds())
-		ts = time.Now()
-
-		// empty blobs
-		for i := end; i < limit; i++ {
-			meta := [32]byte{}
-			new(big.Int).SetInt64(int64(i)).FillBytes(meta[0:5])
-
-			s.blobMetas[i] = meta
-		}
-
-		log.Info("Empty metas has been filled", "first", end, "limit", limit, "time", time.Since(ts).Seconds())
 	}
 
 	return nil
@@ -366,7 +353,7 @@ func (s *StorageManager) downloadMetaInParallel(from, to, batchSize uint64) erro
 	taskNum := uint64(MetaDownloadThread)
 
 	// We don't need to download in parallel if the meta amount is small
-	if to - from < uint64(taskNum) * batchSize {
+	if to-from < uint64(taskNum)*batchSize {
 		return s.downloadMetaInRange(from, to, batchSize, 0)
 	}
 
@@ -377,7 +364,7 @@ func (s *StorageManager) downloadMetaInParallel(from, to, batchSize uint64) erro
 	for taskIdx := uint64(0); taskIdx < taskNum; taskIdx++ {
 		rangeStart := taskIdx * rangeSize
 		rangeEnd := (taskIdx + 1) * rangeSize
-		if taskIdx == taskNum - 1 {
+		if taskIdx == taskNum-1 {
 			rangeEnd = to
 		}
 		wg.Add(1)
@@ -393,8 +380,8 @@ func (s *StorageManager) downloadMetaInParallel(from, to, batchSize uint64) erro
 	wg.Wait()
 
 	for i := uint64(0); i < taskNum; i++ {
-		res := <- chanRes
-		if (res != nil) {
+		res := <-chanRes
+		if res != nil {
 			return res
 		}
 	}
@@ -440,7 +427,7 @@ func (s *StorageManager) downloadMetaInRange(from, to, batchSize, taskId uint64)
 			s.mu.Unlock()
 			continue
 		}
-		for i, meta := range(metas) {
+		for i, meta := range metas {
 			s.blobMetas[kvIndices[i]] = meta
 		}
 		s.mu.Unlock()
@@ -449,7 +436,7 @@ func (s *StorageManager) downloadMetaInRange(from, to, batchSize, taskId uint64)
 			"One batch metas has been downloaded", "first", from,
 			"batchLimit", batchLimit,
 			"to", to,
-			"progress", fmt.Sprintf("%.1f%%", float64((from - rangeStart)*100)/float64(to - rangeStart)),
+			"progress", fmt.Sprintf("%.1f%%", float64((from-rangeStart)*100)/float64(to-rangeStart)),
 			"taskId", taskId)
 
 		from = batchLimit
@@ -459,7 +446,7 @@ func (s *StorageManager) downloadMetaInRange(from, to, batchSize, taskId uint64)
 
 // This function is only called by DownloadFinished which already uses s.mu to protect the s.blobMetas, so
 // we don't need to lock in this function
-func (s *StorageManager) updateLocalMetas(kvIndices []uint64, commits []common.Hash, oldLastKvIndex uint64) {
+func (s *StorageManager) updateLocalMetas(kvIndices []uint64, commits []common.Hash) {
 	for i, idx := range kvIndices {
 		meta := [32]byte{}
 		new(big.Int).SetInt64(int64(idx)).FillBytes(meta[0:5])
@@ -468,12 +455,10 @@ func (s *StorageManager) updateLocalMetas(kvIndices []uint64, commits []common.H
 		s.blobMetas[idx] = meta
 	}
 
-	// In case the lastKvIdx is smaller than oldLastKvIdx because of removal, we need to reset the removal metas
-	for i := s.lastKvIdx; i < oldLastKvIndex; i++ {
-		meta := [32]byte{}
-		new(big.Int).SetInt64(int64(i)).FillBytes(meta[0:5])
-
-		s.blobMetas[i] = meta
+	// In case the lastKvIdx is smaller than oldLastKvIdx because of removal, we need to remove those metas
+	LocalMetaLen := len(s.blobMetas)
+	for i := int(s.lastKvIdx); i < LocalMetaLen; i++ {
+		delete(s.blobMetas, uint64(i))
 	}
 }
 
@@ -485,7 +470,13 @@ func (s *StorageManager) getKvMetas(kvIndices []uint64) ([][32]byte, error) {
 		if ok {
 			metas = append(metas, meta)
 		} else {
-			return nil, errors.New("meta not found in blobMetas")
+			if i >= s.lastKvIdx {
+				meta := [32]byte{}
+				new(big.Int).SetInt64(int64(i)).FillBytes(meta[0:5])
+				metas = append(metas, meta)
+			} else {
+				return nil, errors.New("meta not found in blobMetas")
+			}
 		}
 	}
 	return metas, nil
