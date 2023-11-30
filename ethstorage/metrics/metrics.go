@@ -51,7 +51,7 @@ type Metricer interface {
 	Serve(ctx context.Context, hostname string, port int) error
 }
 
-// Metrics tracks all the metrics for the op-node.
+// Metrics tracks all the metrics for the es-node.
 type Metrics struct {
 	lastSubmissionTimes map[uint64]uint64
 
@@ -377,7 +377,7 @@ func NewMetrics(procName string) *Metrics {
 		Up: factory.NewGauge(prometheus.GaugeOpts{
 			Namespace: ns,
 			Name:      "up",
-			Help:      "1 if the op node has finished starting up",
+			Help:      "1 if the es node has finished starting up",
 		}),
 
 		registry: registry,
@@ -541,7 +541,7 @@ func (m *Metrics) ServerRecordTimeUsed(method string) func() {
 }
 
 // RecordInfo sets a pseudo-metric that contains versioning and
-// config info for the opnode.
+// config info for the es node.
 func (m *Metrics) RecordInfo(version string) {
 	m.Info.WithLabelValues(version).Set(1)
 }
