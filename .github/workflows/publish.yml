@@ -14,7 +14,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      BUILD_DIR: es-node.${{github.ref_name}}
+      BUILD_DIR: es-node.${{ github.ref_name }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -26,22 +26,22 @@ jobs:
 
       - name: Create package
         run:
-          mkdir ${{BUILD_DIR}}          
-          mkdir -p ${{BUILD_DIR}}/snarkbuild
-          cp -r ethstorage/prover/snarkjs/* ${{BUILD_DIR}}
-          cp run.sh ${{BUILD_DIR}}
+          mkdir ${{ env.BUILD_DIR }}
+          mkdir -p ${{ env.BUILD_DIR }}/snarkbuild
+          cp -r ethstorage/prover/snarkjs/* ${{ env.BUILD_DIR }}
+          cp run.sh ${{ env.BUILD_DIR }}
 
       - name: Build
         run: |
           make TARGETOS=linux TARGETARCH=amd64
-          mv es-node ${{BUILD_DIR}}
-          tar -czvf es-node.${{github.ref_name}}.linux-amd64.tar.gz ${{BUILD_DIR}}
+          mv es-node ${{ env.BUILD_DIR }}
+          tar -czvf es-node.${{github.ref_name}}.linux-amd64.tar.gz ${{ env.BUILD_DIR }}
           make TARGETOS=darwin TARGETARCH=amd64
-          mv es-node ${{BUILD_DIR}}
-          tar -czvf es-node.${{github.ref_name}}.darwin-amd64.tar.gz ${{BUILD_DIR}}
+          mv es-node ${{ env.BUILD_DIR }}
+          tar -czvf es-node.${{github.ref_name}}.darwin-amd64.tar.gz ${{ env.BUILD_DIR }}
           make TARGETOS=darwin TARGETARCH=arm64
-          mv es-node ${{BUILD_DIR}}
-          tar -czvf es-node.${{github.ref_name}}.darwin-arm64.tar.gz ${{BUILD_DIR}}
+          mv es-node ${{ env.BUILD_DIR }}
+          tar -czvf es-node.${{github.ref_name}}.darwin-arm64.tar.gz ${{ env.BUILD_DIR }}
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
