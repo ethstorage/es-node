@@ -28,30 +28,30 @@ jobs:
         run: |
           mkdir ${{ env.BUILD_DIR }}
           mkdir -p ${{ env.BUILD_DIR }}/snarkbuild
-          cp -r ethstorage/prover/snarkjs/* ${{ env.BUILD_DIR }}
+          cp -r ethstorage/prover/snarkjs ${{ env.BUILD_DIR }}
           cp run.sh ${{ env.BUILD_DIR }}
 
       - name: Build
         run: |
           make TARGETOS=linux TARGETARCH=amd64
           mv es-node ${{ env.BUILD_DIR }}
-          tar -czvf es-node.${{github.ref_name}}.linux-amd64.tar.gz ${{ env.BUILD_DIR }}
+          tar -czvf es-node.${{ github.ref_name }}.linux-amd64.tar.gz ${{ env.BUILD_DIR }}
           make TARGETOS=darwin TARGETARCH=amd64
           mv es-node ${{ env.BUILD_DIR }}
-          tar -czvf es-node.${{github.ref_name}}.darwin-amd64.tar.gz ${{ env.BUILD_DIR }}
+          tar -czvf es-node.${{ github.ref_name }}.darwin-amd64.tar.gz ${{ env.BUILD_DIR }}
           make TARGETOS=darwin TARGETARCH=arm64
           mv es-node ${{ env.BUILD_DIR }}
-          tar -czvf es-node.${{github.ref_name}}.darwin-arm64.tar.gz ${{ env.BUILD_DIR }}
+          tar -czvf es-node.${{ github.ref_name }}.darwin-arm64.tar.gz ${{ env.BUILD_DIR }}
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.ref }}
-          name: Release ${{github.ref_name}}
+          name: Release ${{ github.ref_name }}
           files: |
-            es-node.${{github.ref_name}}.linux-amd64.tar.gz
-            es-node.${{github.ref_name}}.darwin-amd64.tar.gz
-            es-node.${{github.ref_name}}.darwin-arm64.tar.gz
+            es-node.${{ github.ref_name }}.linux-amd64.tar.gz
+            es-node.${{ github.ref_name }}.darwin-amd64.tar.gz
+            es-node.${{ github.ref_name }}.darwin-arm64.tar.gz
           generate_release_notes: true
 
   build-and-push-image:
