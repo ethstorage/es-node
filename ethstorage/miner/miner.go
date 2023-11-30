@@ -38,7 +38,7 @@ type miningInfo struct {
 
 func (a *miningInfo) String() string {
 	return fmt.Sprintf(
-		"lastMineTime: %d, difficulty: %s, blockMined: %s",
+		"LastMineTime: %d, Difficulty: %s, BlockMined: %s",
 		a.lastMineTime,
 		a.difficulty.String(),
 		a.blockMined.String(),
