@@ -31,17 +31,17 @@ type MiningProver interface {
 }
 
 type miningInfo struct {
-	LastMineTime uint64
-	Difficulty   *big.Int
-	BlockMined   *big.Int
+	lastMineTime uint64
+	difficulty   *big.Int
+	blockMined   *big.Int
 }
 
 func (a *miningInfo) String() string {
 	return fmt.Sprintf(
-		"LastMineTime: %d, Difficulty: %s, BlockMined: %s",
-		a.LastMineTime,
-		a.Difficulty.String(),
-		a.BlockMined.String(),
+		"lastMineTime: %d, difficulty: %s, blockMined: %s",
+		a.lastMineTime,
+		a.difficulty.String(),
+		a.blockMined.String(),
 	)
 }
 
