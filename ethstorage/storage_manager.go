@@ -469,14 +469,12 @@ func (s *StorageManager) getKvMetas(kvIndices []uint64) ([][32]byte, error) {
 		meta, ok := s.blobMetas[i]
 		if ok {
 			metas = append(metas, meta)
+		} else if i >= s.lastKvIdx {
+			meta := [32]byte{}
+			new(big.Int).SetInt64(int64(i)).FillBytes(meta[0:5])
+			metas = append(metas, meta)
 		} else {
-			if i >= s.lastKvIdx {
-				meta := [32]byte{}
-				new(big.Int).SetInt64(int64(i)).FillBytes(meta[0:5])
-				metas = append(metas, meta)
-			} else {
-				return nil, errors.New("meta not found in blobMetas")
-			}
+			return nil, errors.New("meta not found in blobMetas")
 		}
 	}
 	return metas, nil
