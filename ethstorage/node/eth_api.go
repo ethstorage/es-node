@@ -20,14 +20,13 @@ type ethAPI struct {
 }
 
 const (
-	ESChainID = 333
+	ESChainID          = 333
 	defaultCallTimeout = 2 * time.Second
 )
 
 var (
 	rpcCli *rpc.Client
 )
-
 
 func NewETHAPI(config *RPCConfig, log log.Logger) *ethAPI {
 	return &ethAPI{
@@ -98,9 +97,9 @@ func (api *ethAPI) Call(ctx context.Context, args TransactionArgs, blockNrOrHash
 	defer cancel()
 	var hex hexutil.Bytes
 	err = rpcCli.CallContext(
-		callCtx, 
-		&hex, 
-		"eth_esCall", 
+		callCtx,
+		&hex,
+		"eth_esCall",
 		args, blockNrOrHash)
 	return hex, err
 }

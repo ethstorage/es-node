@@ -20,6 +20,7 @@ import (
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethstorage/go-ethstorage/ethstorage"
+	"github.com/ethstorage/go-ethstorage/ethstorage/metrics"
 	prv "github.com/ethstorage/go-ethstorage/ethstorage/prover"
 	"github.com/ethstorage/go-ethstorage/ethstorage/rollup"
 	"github.com/libp2p/go-libp2p/core/network"
@@ -129,9 +130,11 @@ type StorageManager interface {
 
 	StorageManagerWriter
 
-	LastKvIndex() (uint64, error)
+	LastKvIndex() uint64
 
 	DecodeKV(kvIdx uint64, b []byte, hash common.Hash, providerAddr common.Address, encodeType uint64) ([]byte, bool, error)
+
+	DownloadAllMetas(batchSize uint64) error
 }
 
 type SyncClient struct {
@@ -182,7 +185,7 @@ type SyncClient struct {
 }
 
 func NewSyncClient(log log.Logger, cfg *rollup.EsConfig, newStream newStreamFn, storageManager StorageManager, params *SyncerParams,
-	db ethdb.Database, metrics SyncClientMetrics, mux *event.Feed) *SyncClient {
+	db ethdb.Database, m SyncClientMetrics, mux *event.Feed) *SyncClient {
 	ctx, cancel := context.WithCancel(context.Background())
 	maxFillEmptyTaskTreads = int32(runtime.NumCPU() - 2)
 	if maxFillEmptyTaskTreads < 1 {
@@ -190,8 +193,8 @@ func NewSyncClient(log log.Logger, cfg *rollup.EsConfig, newStream newStreamFn, 
 	}
 	maxKvCountPerReq = params.MaxRequestSize / storageManager.MaxKvSize()
 	shardCount := len(storageManager.Shards())
-	if metrics == nil {
-		metrics = NoopMetrics
+	if m == nil {
+		m = metrics.NoopMetrics
 	}
 
 	c := &SyncClient{
@@ -199,7 +202,7 @@ func NewSyncClient(log log.Logger, cfg *rollup.EsConfig, newStream newStreamFn, 
 		mux:                        mux,
 		cfg:                        cfg,
 		db:                         db,
-		metrics:                    metrics,
+		metrics:                    m,
 		newStreamFn:                newStream,
 		idlerPeers:                 make(map[peer.ID]struct{}),
 		peers:                      make(map[peer.ID]*Peer),
@@ -277,12 +280,7 @@ func (s *SyncClient) loadSyncStatus() {
 	}
 
 	// create tasks
-	lastKvIndex, err := s.storageManager.LastKvIndex()
-	if err != nil {
-		// TODO: panic?
-		log.Info("LoadSyncStatus failed: get lastKvIdx")
-		lastKvIndex = 0
-	}
+	lastKvIndex := s.storageManager.LastKvIndex()
 	for _, sid := range s.storageManager.Shards() {
 		exist := false
 		for _, task := range progress.Tasks {
@@ -448,7 +446,7 @@ func (s *SyncClient) cleanTasks() {
 	}
 }
 
-func (s *SyncClient) Start() {
+func (s *SyncClient) Start() error {
 	if s.startTime == (time.Time{}) {
 		s.startTime = time.Now()
 		s.logTime = time.Now()
@@ -459,6 +457,8 @@ func (s *SyncClient) Start() {
 
 	s.wg.Add(1)
 	go s.mainLoop()
+
+	return nil
 }
 
 func (s *SyncClient) AddPeer(id peer.ID, shards map[common.Address][]uint64) bool {
@@ -561,6 +561,15 @@ func (s *SyncClient) RequestL2List(indexes []uint64) (uint64, error) {
 
 func (s *SyncClient) mainLoop() {
 	defer s.wg.Done()
+
+	s.cleanTasks()
+	if !s.syncDone {
+		err := s.storageManager.DownloadAllMetas(s.syncerParams.MetaDownloadBatchSize)
+		if err != nil {
+			log.Error("Download blob metadata failed", "error", err)
+			return
+		}
+	}
 
 	for {
 		// Remove all completed tasks and terminate sync if everything's done
@@ -999,14 +1008,12 @@ func (s *SyncClient) FillFileWithEmptyBlob(start, limit uint64) (uint64, error) 
 		next     = start
 	)
 	defer s.metrics.ClientFillEmptyBlobsEvent(inserted, time.Since(st))
-	lastBlobIdx, err := s.storageManager.LastKvIndex()
-	if err != nil {
-		return start, fmt.Errorf("get lastBlobIdx for FillEmptyKV fail, err: %s", err.Error())
-	}
+	lastBlobIdx := s.storageManager.LastKvIndex()
+
 	if start < lastBlobIdx {
 		start = lastBlobIdx
 	}
-	inserted, next, err = s.storageManager.CommitEmptyBlobs(start, limit)
+	inserted, next, err := s.storageManager.CommitEmptyBlobs(start, limit)
 
 	return next, err
 }

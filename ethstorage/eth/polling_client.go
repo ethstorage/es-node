@@ -270,4 +270,3 @@ func (w *PollingClient) GetKvMetas(kvIndices []uint64, blockNumber int64) ([][32
 
 	return res[0].([][32]byte), nil
 }
-

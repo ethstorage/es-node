@@ -57,11 +57,7 @@ func setup(t *testing.T) {
 
 func TestStorageManager_LastKvIndex(t *testing.T) {
 	setup(t)
-	idx, err := storageManager.LastKvIndex()
-	if err != nil {
-		t.Fatal("failed to get lastKvIndex", err)
-	}
-
+	idx := storageManager.LastKvIndex()
 	t.Log("lastKvIndex", idx)
 }
 

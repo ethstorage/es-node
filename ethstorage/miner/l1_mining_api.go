@@ -52,9 +52,9 @@ func (m *l1MiningAPI) GetMiningInfo(ctx context.Context, contract common.Address
 		return nil, err
 	}
 	mi := &miningInfo{
-		lastMineTime: res[0].(*big.Int).Uint64(),
-		difficulty:   res[1].(*big.Int),
-		blockMined:   res[2].(*big.Int),
+		LastMineTime: res[0].(*big.Int).Uint64(),
+		Difficulty:   res[1].(*big.Int),
+		BlockMined:   res[2].(*big.Int),
 	}
 	return mi, nil
 }
