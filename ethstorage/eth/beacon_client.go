@@ -14,15 +14,15 @@ import (
 )
 
 type BeaconClient struct {
-	beaconURL   string
-	basedTime   uint64
-	basedSlot   uint64
-	slotTime    uint64
+	beaconURL string
+	basedTime uint64
+	basedSlot uint64
+	slotTime  uint64
 }
 
 type Blob struct {
-	VersionedHash	common.Hash
-	Data            []byte
+	VersionedHash common.Hash
+	Data          []byte
 }
 
 type beaconBlobs struct {
@@ -45,13 +45,13 @@ func NewBeaconClient(url string, basedTime uint64, basedSlot uint64, slotTime ui
 		beaconURL: url,
 		basedTime: basedTime,
 		basedSlot: basedSlot,
-		slotTime: slotTime,
+		slotTime:  slotTime,
 	}
 	return res
 }
 
 func (c *BeaconClient) Timestamp2Slot(time uint64) uint64 {
-	return (time - c.basedTime) / c.slotTime + c.basedSlot
+	return (time-c.basedTime)/c.slotTime + c.basedSlot
 }
 
 func (c *BeaconClient) DownloadBlobs(slot uint64) (map[common.Hash]Blob, error) {
@@ -82,19 +82,19 @@ func (c *BeaconClient) DownloadBlobs(slot uint64) (map[common.Hash]Blob, error) 
 		if err != nil {
 			return nil, err
 		}
-		res[hash] = Blob{VersionedHash: hash, Data:asciiBytes}
+		res[hash] = Blob{VersionedHash: hash, Data: asciiBytes}
 	}
 
 	return res, nil
 }
 
 func kzgToVersionedHash(commit string) (common.Hash, error) {
-	b, err := hex.DecodeString(commit[2:]); 
+	b, err := hex.DecodeString(commit[2:])
 	if err != nil {
 		return common.Hash{}, err
 	}
 
 	c := [48]byte{}
-	copy(c[:], b[:])  
+	copy(c[:], b[:])
 	return common.Hash(eth.KZGToVersionedHash(c)), nil
 }
