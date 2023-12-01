@@ -64,6 +64,7 @@ func (conf *Config) Discovery(log log.Logger, l1ChainID uint64, tcpPort uint16, 
 			localNode.SetStaticIP(ip)
 			break
 		}
+		// TODO: if no external IP found, use NAT protocol to find external IP
 	}
 	if conf.AdvertiseUDPPort != 0 { // explicitly advertised port gets priority
 		localNode.SetFallbackUDP(int(conf.AdvertiseUDPPort))
