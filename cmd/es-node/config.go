@@ -90,11 +90,11 @@ func NewConfig(ctx *cli.Context, log log.Logger) (*node.Config, error) {
 			ListenPort: ctx.GlobalInt(flags.RPCListenPort.Name),
 			ESCallURL:  ctx.GlobalString(flags.RPCESCallURL.Name),
 		},
-		// Metrics: node.MetricsConfig{
-		// 	Enabled:    ctx.GlobalBool(flags.MetricsEnabledFlag.Name),
-		// 	ListenAddr: ctx.GlobalString(flags.MetricsAddrFlag.Name),
-		// 	ListenPort: ctx.GlobalInt(flags.MetricsPortFlag.Name),
-		// },
+		// 	Metrics: node.MetricsConfig{
+		// 		Enabled:    ctx.GlobalBool(flags.MetricsEnabledFlag.Name),
+		// 		ListenAddr: ctx.GlobalString(flags.MetricsAddrFlag.Name),
+		// 		ListenPort: ctx.GlobalInt(flags.MetricsPortFlag.Name),
+		// 	},
 		Pprof: oppprof.CLIConfig{
 			Enabled:    ctx.GlobalBool(flags.PprofEnabledFlag.Name),
 			ListenAddr: ctx.GlobalString(flags.PprofAddrFlag.Name),
