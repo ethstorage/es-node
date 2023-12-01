@@ -3,6 +3,11 @@ on:
   push:
     branches:
       - main
+      - merge
+  pull_request:
+    branches:
+      - main
+      - merge
 
 permissions:
   contents: read
@@ -52,3 +57,9 @@ jobs:
 
           # Optional: The mode to install golangci-lint. It can be 'binary' or 'goinstall'.
           # install-mode: "goinstall"
+
+      - name: Check fmt results
+        if: failure()
+        run: |
+          echo "FMT check failed. Please fix the issues before merging."
+          exit 1

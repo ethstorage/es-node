@@ -4,7 +4,13 @@ name: GitHub Actions ES
 run-name: ${{ github.actor }} is push code to main 🚀
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
+      - merge
+  pull_request:
+    branches:
+      - main
+      - merge
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -21,3 +27,9 @@ jobs:
 
       - name: Test
         run: go test -v ./... -tags ci
+
+      - name: Check build and test results
+        if: failure()
+        run: |
+          echo "FMT build and test failed. Please fix the issues before merging."
+          exit 1
