@@ -13,6 +13,7 @@ import (
 	ophttp "github.com/ethereum-optimism/optimism/op-node/http"
 	"github.com/ethereum-optimism/optimism/op-service/metrics"
 	pb "github.com/libp2p/go-libp2p-pubsub/pb"
+	libp2pmetrics "github.com/libp2p/go-libp2p/core/metrics"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -46,6 +47,8 @@ type Metricer interface {
 	Document() []metrics.DocumentedMetric
 	RecordGossipEvent(evType int32)
 	SetPeerScores(map[string]float64)
+
+	RecordBandwidth(ctx context.Context, bwc *libp2pmetrics.BandwidthCounter)
 	RecordUp()
 	RecordInfo(version string)
 	Serve(ctx context.Context, hostname string, port int) error
@@ -78,8 +81,9 @@ type Metrics struct {
 	SyncClientPerfCallTotal           *prometheus.CounterVec
 	SyncClientPerfCallDurationSeconds *prometheus.HistogramVec
 
-	PeerCount     prometheus.Gauge
-	DropPeerCount prometheus.Counter
+	PeerCount      prometheus.Gauge
+	DropPeerCount  prometheus.Counter
+	BandwidthTotal *prometheus.GaugeVec
 
 	SyncServerHandleReqTotal                  *prometheus.CounterVec
 	SyncServerHandleReqDurationSeconds        *prometheus.HistogramVec
@@ -540,6 +544,22 @@ func (m *Metrics) ServerRecordTimeUsed(method string) func() {
 	}
 }
 
+func (m *Metrics) RecordBandwidth(ctx context.Context, bwc *libp2pmetrics.BandwidthCounter) {
+	tick := time.NewTicker(10 * time.Second)
+	defer tick.Stop()
+
+	for {
+		select {
+		case <-tick.C:
+			bwTotals := bwc.GetBandwidthTotals()
+			m.BandwidthTotal.WithLabelValues("in").Set(float64(bwTotals.TotalIn))
+			m.BandwidthTotal.WithLabelValues("out").Set(float64(bwTotals.TotalOut))
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
 // RecordInfo sets a pseudo-metric that contains versioning and
 // config info for the es node.
 func (m *Metrics) RecordInfo(version string) {
@@ -616,6 +636,9 @@ func (m *noopMetricer) RecordGossipEvent(evType int32) {
 }
 
 func (m *noopMetricer) SetPeerScores(scores map[string]float64) {
+}
+
+func (n *noopMetricer) RecordBandwidth(ctx context.Context, bwc *libp2pmetrics.BandwidthCounter) {
 }
 
 func (n *noopMetricer) RecordInfo(version string) {
