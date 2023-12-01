@@ -4,7 +4,7 @@ name: GitHub Actions ES
 run-name: ${{ github.actor }} is push code to main 🚀
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "ci-merge" ]
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -21,3 +21,13 @@ jobs:
 
       - name: Test
         run: go test -v ./... -tags ci
+
+      - name: Check build and test results
+        run: |
+          if [ ${{ job.status }} == 'failure' ]; then
+            echo "Tests failed. Blocking merge."
+            exit 1
+          else
+            echo "Tests passed. Allowing merge."
+            exit 0
+          fi

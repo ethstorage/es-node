@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+      - ci-merge
 
 permissions:
   contents: read
@@ -52,3 +53,13 @@ jobs:
 
           # Optional: The mode to install golangci-lint. It can be 'binary' or 'goinstall'.
           # install-mode: "goinstall"
+
+      - name: Check fmt results
+        run: |
+            if [ ${{ job.status }} == 'failure' ]; then
+              echo "Tests failed. Blocking merge."
+              exit 1
+            else
+              echo "Tests passed. Allowing merge."
+              exit 0
+            fi
