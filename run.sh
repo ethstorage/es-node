@@ -26,7 +26,7 @@ fi
 # download blob_poseidon.zkey if not yet
 zkey_file="./snarkjs/blob_poseidon.zkey"
 if [ ! -e  ${zkey_file} ]; then
-  echo "${zkey_file} not found. Start downloading..."
+  echo "${zkey_file} not found, start downloading..."
   if [ ! -d snarkjs ]; then
     mkdir snarkjs
   fi
@@ -34,7 +34,6 @@ if [ ! -e  ${zkey_file} ]; then
   file_id="1ZLfhYeCXMnbk6wUiBADRAn1mZ8MI_zg-"
   html=`curl -c ./cookie -s -L "https://drive.google.com/uc?export=download&id=${file_id}"`
   curl -Lb ./cookie "https://drive.google.com/uc?export=download&`echo ${html}|grep -Po '(confirm=[a-zA-Z0-9\-_]+)'`&id=${file_id}" -o ${zkey_file}
-  echo "downloaded ${zkey_file}"
 fi
 
 executable="./es-node"
@@ -71,9 +70,9 @@ es_node_start=" --network devnet \
 # create data file for shard 0 if not yet
 if [ ! -e $storage_file_0 ]; then
   if $executable $es_node_init $common_flags ; then
-    echo "initialized ${storage_file_0} successfully"
+    echo "Initialized ${storage_file_0} successfully"
   else
-    echo "failed to initialize ${storage_file_0}"
+    echo "Error: failed to initialize ${storage_file_0}"
     exit 1
   fi
 fi
