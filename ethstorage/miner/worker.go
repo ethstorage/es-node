@@ -222,6 +222,7 @@ func (w *worker) assignTasks(task task, block eth.L1BlockRef, reqDiff *big.Int) 
 			w.lg.Debug("Mining task queued", "shard", ti.shardIdx, "thread", ti.thread, "block", ti.blockNumber, "blockTime", block.Time, "now", uint64(time.Now().Unix()))
 		}
 	}
+	w.lg.Info("Mining tasks assigned", "shard", task.shardIdx, "threads", w.config.ThreadsPerShard, "block", block.Number, "nonces", w.config.NonceLimit)
 }
 
 func (w *worker) updateDifficulty(shardIdx, blockTime uint64) (*big.Int, error) {
@@ -352,26 +353,26 @@ func (w *worker) checkTxStatus(txHash common.Hash, miner common.Address) {
 func (w *worker) mineTask(t *taskItem) (bool, error) {
 	startTime := time.Now()
 	nonce := t.nonceStart
-	if t.thread == 0 {
-		w.lg.Info("Mining task started", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonce", fmt.Sprintf("%d~%d", t.nonceStart, t.nonceEnd))
-	} else {
-		w.lg.Debug("Mining task started", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonce", fmt.Sprintf("%d~%d", t.nonceStart, t.nonceEnd))
-	}
+	w.lg.Debug("Mining task started", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonces", fmt.Sprintf("%d~%d", t.nonceStart, t.nonceEnd))
 	for w.isRunning() {
 		if time.Since(startTime).Seconds() > mineTimeOut {
-			w.lg.Warn("Mining task timed out", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "noncesTried", nonce-t.nonceStart)
+			if t.thread == 0 {
+				nonceTriedTotal := (nonce - t.nonceStart) * w.config.ThreadsPerShard
+				w.lg.Warn("Mining tasks timed out", "shard", t.shardIdx, "block", t.blockNumber,
+					"noncesTried", fmt.Sprintf("%d(%.1f%%)", nonceTriedTotal, float64(nonceTriedTotal*100)/float64(w.config.NonceLimit)),
+				)
+			}
+			w.lg.Debug("Mining task timed out", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "noncesTried", nonce-t.nonceStart)
 			break
 		}
 		if nonce >= t.nonceEnd {
 			if t.thread == 0 {
 				w.lg.Info("The nonces are exhausted in this slot, waiting for the next block",
-					"samplingTime", fmt.Sprintf("%.1fs", time.Since(startTime).Seconds()),
-					"shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonce", nonce)
-			} else {
-				w.lg.Debug("The nonces are exhausted in this slot, waiting for the next block",
-					"samplingTime", fmt.Sprintf("%.1fs", time.Since(startTime).Seconds()),
-					"shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonce", nonce)
+					"samplingTime", fmt.Sprintf("%.1fs", time.Since(startTime).Seconds()), "shard", t.shardIdx, "block", t.blockNumber)
 			}
+			w.lg.Debug("The nonces are exhausted in this slot, waiting for the next block",
+				"samplingTime", fmt.Sprintf("%.1fs", time.Since(startTime).Seconds()),
+				"shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonceEnd", nonce)
 			break
 		}
 		hash0 := initHash(t.miner, t.blockHash, nonce)

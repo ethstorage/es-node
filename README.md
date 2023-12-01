@@ -40,7 +40,7 @@ _Note: You need to have some ETH balance in the account of the private key as th
 #### Environment
 Please make sure that the following packages are pre-installed.
 
-* go 1.20 or above
+* go 1.20.* (can't be built on Go 1.21 yet)
 * node 16 or above
 
 Also, you will need to install `snarkjs` for the generation of zk proof.

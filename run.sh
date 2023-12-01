@@ -4,12 +4,22 @@
 # env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> ./run.sh
 
 if [ -z "$ES_NODE_STORAGE_MINER" ]; then
-  echo "Please provide 'ES_NODE_STORAGE_MINER' as environment variable"
+  echo "Please provide 'ES_NODE_STORAGE_MINER' as an environment variable"
+  exit 1
+fi
+
+if [ ${#ES_NODE_STORAGE_MINER} -ne 42 ] || case $ES_NODE_STORAGE_MINER in 0x*) false;; *) true;; esac; then
+  echo "Error: ES_NODE_STORAGE_MINER should be prefixed with '0x' and have a total length of 42"
   exit 1
 fi
 
 if [ -z "$ES_NODE_SIGNER_PRIVATE_KEY" ]; then
-  echo "Please provide 'ES_NODE_SIGNER_PRIVATE_KEY' as environment variable"
+  echo "Please provide 'ES_NODE_SIGNER_PRIVATE_KEY' as an environment variable"
+  exit 1
+fi
+
+if [ ${#ES_NODE_SIGNER_PRIVATE_KEY} -ne 64 ]; then
+  echo "Error: ES_NODE_SIGNER_PRIVATE_KEY should have a length of 64"
   exit 1
 fi
 
@@ -30,7 +40,8 @@ storage_file_0="$data_dir/shard-0.dat"
 common_flags=" --datadir $data_dir \
   --l1.rpc http://65.108.236.27:8545 \
   --storage.l1contract 0x9f9F5Fd89ad648f2C000C954d8d9C87743243eC5 \
-  --storage.miner $ES_NODE_STORAGE_MINER"
+  --storage.miner $ES_NODE_STORAGE_MINER \
+  $@"
 
 # init shard 0
 es_node_init="init --shard_index 0"
@@ -55,8 +66,12 @@ es_node_start=" --network devnet \
 "
 # create data file for shard 0 if not yet
 if [ ! -e $storage_file_0 ]; then
-  $executable $es_node_init $common_flags
-  echo "initialized ${storage_file_0}"
+  if $executable $es_node_init $common_flags ; then
+    echo "initialized ${storage_file_0} successfully"
+  else
+    echo "failed to initialize ${storage_file_0}"
+    exit 1
+  fi
 fi
 
 # start es-node

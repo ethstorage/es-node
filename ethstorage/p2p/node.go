@@ -225,8 +225,8 @@ func (n *NodeP2P) ConnectionManager() connmgr.ConnManager {
 	return n.connMgr
 }
 
-func (n *NodeP2P) Start() {
-	n.syncCl.Start()
+func (n *NodeP2P) Start() error {
+	return n.syncCl.Start()
 }
 
 func (n *NodeP2P) Close() error {
