@@ -341,6 +341,27 @@ func initDataShard() *es.DataShard {
 	return ds
 }
 
+func initDataShardDirectIO() *es.DataShard {
+	ds := es.NewDataShard(*shardIdx, *kvSize, *kvEntries, *chunkSize)
+	for _, filename := range *filenames {
+		var err error
+		var df *es.DataFile
+		df, err = es.OpenDataFileDirectIO(filename)
+		if err != nil {
+			log.Crit("Open failed", "error", err)
+		}
+		err = ds.AddDataFile(df)
+		if err != nil {
+			log.Crit("Open failed", "error", err)
+		}
+	}
+
+	if !ds.IsComplete() {
+		log.Warn("Shard is not completed")
+	}
+	return ds
+}
+
 func runShardWrite(cmd *cobra.Command, args []string) {
 	setupLogger()
 
@@ -362,9 +383,9 @@ func runShardWrite(cmd *cobra.Command, args []string) {
 func runSampleRead(cmd *cobra.Command, args []string) {
 	setupLogger()
 
-	ds := initDataShard()
+	ds := initDataShardDirectIO()
 
-	b, err := ds.ReadSample(*sampleIdx)
+	b, err := ds.ReadSampleDirectly(*sampleIdx)
 	if err != nil {
 		log.Crit("Read failed", "error", err)
 	}

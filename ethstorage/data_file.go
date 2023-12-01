@@ -7,10 +7,12 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/detailyang/go-fallocate"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ncw/directio"
 )
 
 const (
@@ -122,6 +124,17 @@ func OpenDataFile(filename string) (*DataFile, error) {
 	return dataFile, dataFile.readHeader()
 }
 
+func OpenDataFileDirectIO(filename string) (*DataFile, error) {
+	file, err := directio.OpenFile(filename, os.O_RDWR, 0755)
+	if err != nil {
+		return nil, err
+	}
+	dataFile := &DataFile{
+		file: file,
+	}
+	return dataFile, dataFile.readHeader()
+}
+
 func (df *DataFile) Contains(chunkIdx uint64) bool {
 	return chunkIdx >= df.chunkIdxStart && chunkIdx < df.ChunkIdxEnd()
 }
@@ -177,6 +190,26 @@ func (df *DataFile) ReadSample(sampleIdx uint64) (common.Hash, error) {
 
 	md := make([]byte, 32)
 	n, err := df.file.ReadAt(md, HEADER_SIZE+int64(sampleIdx*32)-int64(df.chunkIdxStart*df.chunkSize))
+	if err != nil {
+		return common.Hash{}, err
+	}
+	if n != 32 {
+		return common.Hash{}, fmt.Errorf("not full read")
+	}
+	return common.BytesToHash(md), nil
+}
+
+// Read raw sample data from the storage file using directIO.
+func (df *DataFile) ReadSampleDirectly(sampleIdx uint64) (common.Hash, error) {
+	if !df.ContainsSample(sampleIdx) {
+		return common.Hash{}, fmt.Errorf("sample not found")
+	}
+	_, err := df.file.Seek(int64(HEADER_SIZE+sampleIdx*32-df.chunkIdxStart*df.chunkSize), io.SeekStart)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	md := directio.AlignedBlock(32)
+	n, err := io.ReadFull(df.file, md)
 	if err != nil {
 		return common.Hash{}, err
 	}

@@ -58,6 +58,7 @@ require (
 	github.com/jackpal/go-nat-pmp v1.0.2 // indirect
 	github.com/kilic/bls12-381 v0.1.1-0.20220929213557-ca162e8a70f4 // indirect
 	github.com/libp2p/go-mplex v0.7.0 // indirect
+	github.com/ncw/directio v1.0.5 // indirect
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
 	github.com/rivo/uniseg v0.4.3 // indirect
 	github.com/rs/cors v1.8.2 // indirect

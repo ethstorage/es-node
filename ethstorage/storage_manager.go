@@ -535,7 +535,7 @@ func (s *StorageManager) Shards() []uint64 {
 
 func (s *StorageManager) ReadSampleUnlocked(shardIdx, sampleIdx uint64) (common.Hash, error) {
 	if ds, ok := s.shardManager.shardMap[shardIdx]; ok {
-		return ds.ReadSample(sampleIdx)
+		return ds.ReadSampleDirectly(sampleIdx)
 	}
 	return common.Hash{}, errors.New("shard not found")
 }
