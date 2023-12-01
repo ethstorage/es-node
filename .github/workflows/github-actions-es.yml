@@ -27,24 +27,3 @@ jobs:
 
       - name: Test
         run: go test -v ./... -tags ci
-
-      - name: Check build and test results
-        uses: actions/github-script@v4
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const { data: pr } = await github.pulls.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.issue.number
-            });
-
-            if (job.status === 'failure') {
-              await github.pulls.updateBranch({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                pull_number: context.issue.number,
-                expected_head_sha: pr.head.sha,
-                status: 'behind'
-              });
-            }
