@@ -130,9 +130,11 @@ type StorageManager interface {
 
 	StorageManagerWriter
 
-	LastKvIndex() (uint64, error)
+	LastKvIndex() uint64
 
 	DecodeKV(kvIdx uint64, b []byte, hash common.Hash, providerAddr common.Address, encodeType uint64) ([]byte, bool, error)
+
+	DownloadAllMetas(batchSize uint64) error
 }
 
 type SyncClient struct {
@@ -278,12 +280,7 @@ func (s *SyncClient) loadSyncStatus() {
 	}
 
 	// create tasks
-	lastKvIndex, err := s.storageManager.LastKvIndex()
-	if err != nil {
-		// TODO: panic?
-		log.Info("LoadSyncStatus failed: get lastKvIdx")
-		lastKvIndex = 0
-	}
+	lastKvIndex := s.storageManager.LastKvIndex()
 	for _, sid := range s.storageManager.Shards() {
 		exist := false
 		for _, task := range progress.Tasks {
@@ -449,7 +446,7 @@ func (s *SyncClient) cleanTasks() {
 	}
 }
 
-func (s *SyncClient) Start() {
+func (s *SyncClient) Start() error {
 	if s.startTime == (time.Time{}) {
 		s.startTime = time.Now()
 		s.logTime = time.Now()
@@ -460,6 +457,8 @@ func (s *SyncClient) Start() {
 
 	s.wg.Add(1)
 	go s.mainLoop()
+
+	return nil
 }
 
 func (s *SyncClient) AddPeer(id peer.ID, shards map[common.Address][]uint64) bool {
@@ -562,6 +561,15 @@ func (s *SyncClient) RequestL2List(indexes []uint64) (uint64, error) {
 
 func (s *SyncClient) mainLoop() {
 	defer s.wg.Done()
+
+	s.cleanTasks()
+	if !s.syncDone {
+		err := s.storageManager.DownloadAllMetas(s.syncerParams.MetaDownloadBatchSize)
+		if err != nil {
+			log.Error("Download blob metadata failed", "error", err)
+			return
+		}
+	}
 
 	for {
 		// Remove all completed tasks and terminate sync if everything's done
@@ -1000,14 +1008,12 @@ func (s *SyncClient) FillFileWithEmptyBlob(start, limit uint64) (uint64, error) 
 		next     = start
 	)
 	defer s.metrics.ClientFillEmptyBlobsEvent(inserted, time.Since(st))
-	lastBlobIdx, err := s.storageManager.LastKvIndex()
-	if err != nil {
-		return start, fmt.Errorf("get lastBlobIdx for FillEmptyKV fail, err: %s", err.Error())
-	}
+	lastBlobIdx := s.storageManager.LastKvIndex()
+
 	if start < lastBlobIdx {
 		start = lastBlobIdx
 	}
-	inserted, next, err = s.storageManager.CommitEmptyBlobs(start, limit)
+	inserted, next, err := s.storageManager.CommitEmptyBlobs(start, limit)
 
 	return next, err
 }
