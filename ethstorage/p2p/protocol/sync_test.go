@@ -518,7 +518,8 @@ func TestSync_RequestL2Range(t *testing.T) {
 		shards       = make(map[common.Address][]uint64)
 		m            = metrics.NewMetrics("sync_test")
 		rollupCfg    = &rollup.EsConfig{
-			L2ChainID: new(big.Int).SetUint64(3333),
+			L2ChainID:     new(big.Int).SetUint64(3333),
+			MetricsEnable: false,
 		}
 	)
 	defer cancel()
@@ -584,7 +585,8 @@ func TestSync_RequestL2List(t *testing.T) {
 		shards       = make(map[common.Address][]uint64)
 		m            = metrics.NewMetrics("sync_test")
 		rollupCfg    = &rollup.EsConfig{
-			L2ChainID: new(big.Int).SetUint64(3333),
+			L2ChainID:     new(big.Int).SetUint64(3333),
+			MetricsEnable: false,
 		}
 	)
 	defer cancel()
@@ -652,7 +654,8 @@ func TestSaveAndLoadSyncStatus(t *testing.T) {
 		m                = metrics.NewMetrics("sync_test")
 		expectedTimeUsed = time.Second * 10
 		rollupCfg        = &rollup.EsConfig{
-			L2ChainID: new(big.Int).SetUint64(3333),
+			L2ChainID:     new(big.Int).SetUint64(3333),
+			MetricsEnable: true,
 		}
 	)
 	// create ethstorage and generate data
@@ -748,7 +751,8 @@ func testSync(t *testing.T, chunkSize, kvSize, kvEntries uint64, localShards []u
 		localShardMap = make(map[common.Address][]uint64)
 		m             = metrics.NewMetrics("sync_test")
 		rollupCfg     = &rollup.EsConfig{
-			L2ChainID: new(big.Int).SetUint64(3333),
+			L2ChainID:     new(big.Int).SetUint64(3333),
+			MetricsEnable: true,
 		}
 	)
 
@@ -975,7 +979,8 @@ func TestAddPeerDuringSyncing(t *testing.T) {
 		excludedList = getRandomU64InRange(make(map[uint64]struct{}), 0, 15, 3)
 		m            = metrics.NewMetrics("sync_test")
 		rollupCfg    = &rollup.EsConfig{
-			L2ChainID: new(big.Int).SetUint64(3333),
+			L2ChainID:     new(big.Int).SetUint64(3333),
+			MetricsEnable: true,
 		}
 	)
 
@@ -1056,7 +1061,8 @@ func TestCloseSyncWhileFillEmpty(t *testing.T) {
 		shardMap    = make(map[common.Address][]uint64)
 		m           = metrics.NewMetrics("sync_test")
 		rollupCfg   = &rollup.EsConfig{
-			L2ChainID: new(big.Int).SetUint64(3333),
+			L2ChainID:     new(big.Int).SetUint64(3333),
+			MetricsEnable: true,
 		}
 	)
 
@@ -1109,7 +1115,8 @@ func TestAddPeerAfterSyncDone(t *testing.T) {
 		excludedList = make(map[uint64]struct{})
 		m            = metrics.NewMetrics("sync_test")
 		rollupCfg    = &rollup.EsConfig{
-			L2ChainID: new(big.Int).SetUint64(3333),
+			L2ChainID:     new(big.Int).SetUint64(3333),
+			MetricsEnable: true,
 		}
 	)
 

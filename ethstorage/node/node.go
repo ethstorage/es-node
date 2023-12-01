@@ -28,12 +28,11 @@ import (
 type EsNode struct {
 	log        log.Logger
 	appVersion string
-	metrics    metrics.Metricer
+	metrics    *metrics.Metricer
 
-	l1HeadsSub       ethereum.Subscription // Subscription to get L1 heads (automatically re-subscribes on error)
-	l1SafeSub        ethereum.Subscription // Subscription to get L1 safe blocks, a.k.a. justified data (polling)
-	l1FinalizedSub   ethereum.Subscription // Subscription to get L1 Finalized blocks, a.k.a. justified data (polling)
-	l1LatestBlockSub ethereum.Subscription // Subscription to get L1 latest blocks, a.k.a. justified data (polling)
+	l1HeadsSub     ethereum.Subscription // Subscription to get L1 heads (automatically re-subscribes on error)
+	l1SafeSub      ethereum.Subscription // Subscription to get L1 safe blocks, a.k.a. justified data (polling)
+	l1FinalizedSub ethereum.Subscription // Subscription to get L1 Finalized blocks, a.k.a. justified data (polling)
 
 	l1Source   *eth.PollingClient     // L1 Client to fetch data from
 	l1Beacon   *eth.BeaconClient      // L1 Beacon Chain to fetch blobs from
@@ -57,15 +56,14 @@ type EsNode struct {
 	feed *event.Feed
 }
 
-func New(ctx context.Context, cfg *Config, log log.Logger, appVersion string, m metrics.Metricer) (*EsNode, error) {
-	if err := cfg.Check(); err != nil {
-		return nil, err
-	}
+func New(ctx context.Context, cfg *Config, log log.Logger, appVersion string) (*EsNode, error) {
+	// if err := cfg.Check(); err != nil {
+	// 	return nil, err
+	// }
 
 	n := &EsNode{
 		log:        log,
 		appVersion: appVersion,
-		metrics:    m,
 	}
 	// not a context leak, gossipsub is closed with a context.
 	n.resourcesCtx, n.resourcesClose = context.WithCancel(context.Background())
@@ -115,9 +113,9 @@ func (n *EsNode) init(ctx context.Context, cfg *Config) error {
 	if err := n.initRPCServer(ctx, cfg); err != nil {
 		return err
 	}
-	if err := n.initMetricsServer(ctx, cfg); err != nil {
-		return err
-	}
+	// if err := n.initMetricsServer(ctx, cfg); err != nil {
+	// 	return err
+	// }
 	return nil
 }
 
@@ -226,20 +224,6 @@ func (n *EsNode) initRPCServer(ctx context.Context, cfg *Config) error {
 		return fmt.Errorf("unable to start RPC server: %w", err)
 	}
 	n.server = server
-	return nil
-}
-
-func (n *EsNode) initMetricsServer(ctx context.Context, cfg *Config) error {
-	if !cfg.Metrics.Enabled {
-		n.log.Info("Metrics disabled")
-		return nil
-	}
-	n.log.Info("Starting metrics server", "addr", cfg.Metrics.ListenAddr, "port", cfg.Metrics.ListenPort)
-	go func() {
-		if err := n.metrics.Serve(ctx, cfg.Metrics.ListenAddr, cfg.Metrics.ListenPort); err != nil {
-			log.Crit("Error starting metrics server", "err", err)
-		}
-	}()
 	return nil
 }
 

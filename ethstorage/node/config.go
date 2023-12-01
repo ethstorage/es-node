@@ -4,9 +4,7 @@
 package node
 
 import (
-	"errors"
 	"fmt"
-	"math"
 	"path/filepath"
 	"time"
 
@@ -43,7 +41,7 @@ type Config struct {
 
 	Storage storage.StorageConfig
 
-	Metrics MetricsConfig
+	// Metrics MetricsConfig
 
 	Pprof oppprof.CLIConfig
 
@@ -54,24 +52,6 @@ type Config struct {
 	// Tracer    Tracer
 	// Heartbeat HeartbeatConfig
 	Mining *miner.Config
-}
-
-type MetricsConfig struct {
-	Enabled    bool
-	ListenAddr string
-	ListenPort int
-}
-
-func (m MetricsConfig) Check() error {
-	if !m.Enabled {
-		return nil
-	}
-
-	if m.ListenPort < 0 || m.ListenPort > math.MaxUint16 {
-		return errors.New("invalid metrics port")
-	}
-
-	return nil
 }
 
 type RPCConfig struct {
@@ -91,9 +71,9 @@ func (cfg *Config) Check() error {
 	// if err := cfg.Rollup.Check(); err != nil {
 	// 	return fmt.Errorf("rollup config error: %w", err)
 	// }
-	if err := cfg.Metrics.Check(); err != nil {
-		return fmt.Errorf("metrics config error: %w", err)
-	}
+	// if err := cfg.Metrics.Check(); err != nil {
+	// 	return fmt.Errorf("metrics config error: %w", err)
+	// }
 	if err := cfg.Pprof.Check(); err != nil {
 		return fmt.Errorf("pprof config error: %w", err)
 	}

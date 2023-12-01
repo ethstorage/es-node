@@ -90,11 +90,11 @@ func NewConfig(ctx *cli.Context, log log.Logger) (*node.Config, error) {
 			ListenPort: ctx.GlobalInt(flags.RPCListenPort.Name),
 			ESCallURL:  ctx.GlobalString(flags.RPCESCallURL.Name),
 		},
-		Metrics: node.MetricsConfig{
-			Enabled:    ctx.GlobalBool(flags.MetricsEnabledFlag.Name),
-			ListenAddr: ctx.GlobalString(flags.MetricsAddrFlag.Name),
-			ListenPort: ctx.GlobalInt(flags.MetricsPortFlag.Name),
-		},
+		// Metrics: node.MetricsConfig{
+		// 	Enabled:    ctx.GlobalBool(flags.MetricsEnabledFlag.Name),
+		// 	ListenAddr: ctx.GlobalString(flags.MetricsAddrFlag.Name),
+		// 	ListenPort: ctx.GlobalInt(flags.MetricsPortFlag.Name),
+		// },
 		Pprof: oppprof.CLIConfig{
 			Enabled:    ctx.GlobalBool(flags.PprofEnabledFlag.Name),
 			ListenAddr: ctx.GlobalString(flags.PprofAddrFlag.Name),
@@ -182,7 +182,8 @@ func NewRollupConfig(ctx *cli.Context) (*rollup.EsConfig, error) {
 		// 	return nil, err
 		// }
 		config := rollup.EsConfig{
-			L2ChainID: new(big.Int).SetUint64(ctx.GlobalUint64(flags.L2ChainId.Name)),
+			L2ChainID:     new(big.Int).SetUint64(ctx.GlobalUint64(flags.L2ChainId.Name)),
+			MetricsEnable: ctx.Bool(flags.MetricsEnable.Name),
 		}
 
 		return &config, nil
