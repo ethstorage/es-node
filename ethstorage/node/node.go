@@ -30,10 +30,9 @@ type EsNode struct {
 	appVersion string
 	metrics    metrics.Metricer
 
-	l1HeadsSub       ethereum.Subscription // Subscription to get L1 heads (automatically re-subscribes on error)
-	l1SafeSub        ethereum.Subscription // Subscription to get L1 safe blocks, a.k.a. justified data (polling)
-	l1FinalizedSub   ethereum.Subscription // Subscription to get L1 Finalized blocks, a.k.a. justified data (polling)
-	l1LatestBlockSub ethereum.Subscription // Subscription to get L1 latest blocks, a.k.a. justified data (polling)
+	l1HeadsSub     ethereum.Subscription // Subscription to get L1 heads (automatically re-subscribes on error)
+	l1SafeSub      ethereum.Subscription // Subscription to get L1 safe blocks, a.k.a. justified data (polling)
+	l1FinalizedSub ethereum.Subscription // Subscription to get L1 Finalized blocks, a.k.a. justified data (polling)
 
 	l1Source   *eth.PollingClient     // L1 Client to fetch data from
 	l1Beacon   *eth.BeaconClient      // L1 Beacon Chain to fetch blobs from
