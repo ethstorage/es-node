@@ -27,8 +27,9 @@ const (
 )
 
 type Metricer interface {
-	SetLastKVIndexAndMaxShardId(lastKVIndex uint64, maxShardId uint64)
+	SetLastKVIndexAndMaxShardId(lastL1Block, lastKVIndex uint64, maxShardId uint64)
 	SetMiningInfo(shardId uint64, difficulty, minedTime, blockMined uint64)
+
 	ClientGetBlobsByRangeEvent(peerID string, resultCode byte, duration time.Duration)
 	ClientGetBlobsByListEvent(peerID string, resultCode byte, duration time.Duration)
 	ClientFillEmptyBlobsEvent(count uint64, duration time.Duration)
@@ -50,14 +51,18 @@ type Metricer interface {
 	Serve(ctx context.Context, hostname string, port int) error
 }
 
-// Metrics tracks all the metrics for the op-node.
+// Metrics tracks all the metrics for the es-node.
 type Metrics struct {
+	lastSubmissionTimes map[uint64]uint64
+
 	// Contract Status
-	LastKVIndex  prometheus.Gauge
-	Shards       prometheus.Gauge
-	Difficulties *prometheus.GaugeVec
-	MinedTime    *prometheus.GaugeVec
-	BlockMined   *prometheus.GaugeVec
+	LastL1Block        prometheus.Gauge
+	LastKVIndex        prometheus.Gauge
+	Shards             prometheus.Gauge
+	Difficulties       *prometheus.GaugeVec
+	LastSubmissionTime *prometheus.GaugeVec
+	MinedTime          *prometheus.GaugeVec
+	BlockMined         *prometheus.GaugeVec
 
 	// P2P Metrics
 	PeerScores        *prometheus.GaugeVec
@@ -106,6 +111,14 @@ func NewMetrics(procName string) *Metrics {
 	registry.MustRegister(collectors.NewGoCollector())
 	factory := metrics.With(registry)
 	return &Metrics{
+		lastSubmissionTimes: make(map[uint64]uint64),
+		LastL1Block: factory.NewGauge(prometheus.GaugeOpts{
+			Namespace: ns,
+			Subsystem: ContractMetrics,
+			Name:      "last_l1_block",
+			Help:      "the last l1 block monitored",
+		}),
+
 		LastKVIndex: factory.NewGauge(prometheus.GaugeOpts{
 			Namespace: ns,
 			Subsystem: ContractMetrics,
@@ -129,13 +142,23 @@ func NewMetrics(procName string) *Metrics {
 			"shard_id",
 		}),
 
+		LastSubmissionTime: factory.NewGaugeVec(prometheus.GaugeOpts{
+			Namespace: ns,
+			Subsystem: ContractMetrics,
+			Name:      "last_submission_time_of_shards",
+			Help:      "The last time of shards in the l1 miner contract",
+		}, []string{
+			"shard_id",
+		}),
+
 		MinedTime: factory.NewGaugeVec(prometheus.GaugeOpts{
 			Namespace: ns,
 			Subsystem: ContractMetrics,
 			Name:      "last_mined_time_of_shards",
-			Help:      "The last mined time of shards in the l1 miner contract",
+			Help:      "The time used by mining of shards in the l1 miner contract",
 		}, []string{
 			"shard_id",
+			"block_mined",
 		}),
 
 		BlockMined: factory.NewGaugeVec(prometheus.GaugeOpts{
@@ -354,7 +377,7 @@ func NewMetrics(procName string) *Metrics {
 		Up: factory.NewGauge(prometheus.GaugeOpts{
 			Namespace: ns,
 			Name:      "up",
-			Help:      "1 if the op node has finished starting up",
+			Help:      "1 if the es node has finished starting up",
 		}),
 
 		registry: registry,
@@ -382,15 +405,20 @@ func (m *Metrics) Serve(ctx context.Context, hostname string, port int) error {
 	return server.ListenAndServe()
 }
 
-func (m *Metrics) SetLastKVIndexAndMaxShardId(lastKVIndex uint64, maxShardId uint64) {
+func (m *Metrics) SetLastKVIndexAndMaxShardId(lastL1Block, lastKVIndex uint64, maxShardId uint64) {
+	m.LastL1Block.Set(float64(lastL1Block))
 	m.LastKVIndex.Set(float64(lastKVIndex))
 	m.Shards.Set(float64(maxShardId))
 }
 
 func (m *Metrics) SetMiningInfo(shardId uint64, difficulty, minedTime, blockMined uint64) {
 	m.Difficulties.WithLabelValues(fmt.Sprintf("%d", shardId)).Set(float64(difficulty))
-	m.MinedTime.WithLabelValues(fmt.Sprintf("%d", shardId)).Set(float64(minedTime))
+	m.LastSubmissionTime.WithLabelValues(fmt.Sprintf("%d", shardId)).Set(float64(minedTime))
 	m.BlockMined.WithLabelValues(fmt.Sprintf("%d", shardId)).Set(float64(blockMined))
+	if t, ok := m.lastSubmissionTimes[shardId]; ok && t != minedTime {
+		m.MinedTime.WithLabelValues(fmt.Sprintf("%d", shardId), fmt.Sprintf("%d", blockMined)).Set(float64(minedTime - t))
+	}
+	m.lastSubmissionTimes[shardId] = minedTime
 }
 
 func (m *Metrics) RecordGossipEvent(evType int32) {
@@ -513,7 +541,7 @@ func (m *Metrics) ServerRecordTimeUsed(method string) func() {
 }
 
 // RecordInfo sets a pseudo-metric that contains versioning and
-// config info for the opnode.
+// config info for the es node.
 func (m *Metrics) RecordInfo(version string) {
 	m.Info.WithLabelValues(version).Set(1)
 }
@@ -536,7 +564,7 @@ func (m *noopMetricer) Serve(ctx context.Context, hostname string, port int) err
 	return nil
 }
 
-func (m *noopMetricer) SetLastKVIndexAndMaxShardId(lastKVIndex uint64, maxShardId uint64) {
+func (m *noopMetricer) SetLastKVIndexAndMaxShardId(lastL1Block, lastKVIndex uint64, maxShardId uint64) {
 }
 
 func (m *noopMetricer) SetMiningInfo(shardId uint64, difficulty, minedTime, blockMined uint64) {
