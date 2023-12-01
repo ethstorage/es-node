@@ -186,15 +186,15 @@ func EsNodeInit(ctx *cli.Context) error {
 	if ctx.IsSet(encodingTypeFlagName) {
 		encodingType = ctx.Int(encodingTypeFlagName)
 		log.Info("Read flag", "name", encodingTypeFlagName, "value", encodingType)
-		if encodingType > 3 || encodingType < 0 {
+		if encodingType>3 || encodingType < 0 {
 			return fmt.Errorf("encoding_type must be an integer between 0 and 3")
 		}
 	}
 	if encodingType != ethstorage.NO_ENCODE {
-		miner = readRequiredFlag(ctx, flags.StorageMiner.Name)
+		  miner = readRequiredFlag(ctx, flags.StorageMiner.Name)
 		if !common.IsHexAddress(miner) {
 			return fmt.Errorf("invalid miner address %s", miner)
-		}
+	  }
 	}
 	shardIndexes := ctx.Int64Slice(shardIndexFlagName)
 	log.Info("Read flag", "name", shardIndexFlagName, "value", shardIndexes)
