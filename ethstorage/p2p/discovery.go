@@ -23,6 +23,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/libp2p/go-libp2p/p2p/net/nat"
 	"github.com/multiformats/go-multiaddr"
 	ma "github.com/multiformats/go-multiaddr"
 )
@@ -49,23 +50,6 @@ func (conf *Config) Discovery(log log.Logger, l1ChainID uint64, tcpPort uint16, 
 	// use the geth curve definition. Same crypto, but geth needs to detect it as *their* definition of the curve.
 	priv.Curve = gcrypto.S256()
 	localNode := enode.NewLocalNode(conf.DiscoveryDB, priv)
-	if conf.AdvertiseIP != nil {
-		localNode.SetStaticIP(conf.AdvertiseIP)
-	} else {
-		for _, addr := range addrs {
-			ipStr, err := addr.ValueForProtocol(4)
-			if err != nil {
-				continue
-			}
-			ip := net.ParseIP(ipStr)
-			if ip.IsPrivate() || ip.IsLoopback() {
-				continue
-			}
-			localNode.SetStaticIP(ip)
-			break
-		}
-		// TODO: if no external IP found, use NAT protocol to find external IP
-	}
 	if conf.AdvertiseUDPPort != 0 { // explicitly advertised port gets priority
 		localNode.SetFallbackUDP(int(conf.AdvertiseUDPPort))
 	} else if conf.ListenUDPPort != 0 { // otherwise default to the port we configured it to listen on
@@ -79,6 +63,41 @@ func (conf *Config) Discovery(log log.Logger, l1ChainID uint64, tcpPort uint16, 
 		localNode.Set(enr.TCP(conf.ListenTCPPort))
 	} else {
 		return nil, nil, fmt.Errorf("no TCP port to put in discovery record")
+	}
+	if conf.AdvertiseIP != nil {
+		localNode.SetStaticIP(conf.AdvertiseIP)
+	} else {
+		for _, addr := range addrs {
+			ipStr, err := addr.ValueForProtocol(4)
+			if err != nil {
+				continue
+			}
+			ip := net.ParseIP(ipStr)
+			if ip.IsPrivate() || ip.IsLoopback() {
+				continue
+			}
+			localNode.SetStaticIP(ip)
+			goto end
+		}
+		if n, err := nat.DiscoverNAT(context.Background()); err == nil {
+			if mapping, err := n.NewMapping("tcp", localNode.Node().TCP()); err == nil {
+				if addr, err := mapping.ExternalAddr(); err == nil {
+					ip := net.ParseIP(addr.String())
+					port := mapping.ExternalPort()
+					localNode.SetStaticIP(ip)
+					localNode.Set(enr.TCP(port))
+					log.Info("Add mapping to NAT", "external IP", addr.String(), "internal port",
+						mapping.InternalPort(), "external port", port)
+				} else {
+					log.Warn("Get external IP from NAT mapping fail", "error", err.Error())
+				}
+			} else {
+				log.Warn("Fail to add mapping to NAT", "error", err.Error())
+			}
+		} else {
+			log.Warn("No external address set to ENR as no NAT service found", "error", err.Error())
+		}
+	end:
 	}
 	dat := protocol.EthStorageENRData{
 		ChainID: l1ChainID,
