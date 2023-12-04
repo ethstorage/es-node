@@ -57,3 +57,10 @@ jobs:
 
           # Optional: The mode to install golangci-lint. It can be 'binary' or 'goinstall'.
           # install-mode: "goinstall"
+
+      - name: Verify execution results
+        run: |
+          if [ $? -ne 0 ]; then
+            echo "Verification failed, blocking merge"
+            exit 1
+          fi

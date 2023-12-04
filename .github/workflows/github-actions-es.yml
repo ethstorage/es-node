@@ -27,3 +27,10 @@ jobs:
 
       - name: Test
         run: go test -v ./... -tags ci
+
+      - name: Verify execution results
+        run: |
+          if [ $? -ne 0 ]; then
+            echo "Verification failed, blocking merge"
+            exit 1
+          fi
