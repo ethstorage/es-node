@@ -52,7 +52,7 @@ func (s *SignerClient) pingVersion() (string, error) {
 }
 
 func (s *SignerClient) SignTransaction(ctx context.Context, chainId *big.Int, from common.Address, tx *types.Transaction) (*types.Transaction, error) {
-	args := NewTransactionArgsFromTransaction(chainId, from, tx) 
+	args := NewTransactionArgsFromTransaction(chainId, from, tx)
 	signed := &signTransactionResult{}
 	if err := s.client.CallContext(ctx, &signed, "account_signTransaction", args); err != nil {
 		return nil, fmt.Errorf("account_signTransaction failed: %w", err)

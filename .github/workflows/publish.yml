@@ -1,0 +1,42 @@
+# This workflow will publish an es-node release with a pre-build executable
+
+name: Publish
+run-name: ${{ github.actor }} is publishing a release 🚀
+on:
+  push:
+    tags: 
+      - 'v*'
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.20'
+
+      - name: Build
+        run: |
+          make TARGETOS=linux TARGETARCH=amd64
+          mv cmd/es-node/es-node es-node.${{github.ref_name}}.linux-amd64
+          make TARGETOS=darwin TARGETARCH=amd64
+          mv cmd/es-node/es-node es-node.${{github.ref_name}}.darwin-amd64
+          make TARGETOS=darwin TARGETARCH=arm64
+          mv cmd/es-node/es-node es-node.${{github.ref_name}}.darwin-arm64
+          make TARGETOS=windows TARGETARCH=amd64
+          mv cmd/es-node/es-node es-node.${{github.ref_name}}.windows-amd64
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref }}
+          name: Release ${{github.ref_name}}
+          files: |
+            es-node.${{github.ref_name}}.linux-amd64
+            es-node.${{github.ref_name}}.darwin-amd64
+            es-node.${{github.ref_name}}.darwin-arm64
+            es-node.${{github.ref_name}}.windows-amd64
+          generate_release_notes: true

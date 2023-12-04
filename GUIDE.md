@@ -115,7 +115,7 @@ npm install -g snarkjs@0.7.0
 
 - Use the following command to build es-node:
 ```sh
-make 
+cd cmd/es-node && go build && cd ../..
 ```
 - Alternatively, you can download the pre-built executable of the specific version from  [the releases page](https://github.com/ethstorage/es-node/releases), such as es-node.v0.1.2.ubuntu, and then rename it using the following command:
 ```sh
