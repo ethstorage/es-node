@@ -24,6 +24,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/multiformats/go-multiaddr"
+	ma "github.com/multiformats/go-multiaddr"
 )
 
 const (
@@ -40,7 +41,7 @@ const (
 	p2pVersion             = 0
 )
 
-func (conf *Config) Discovery(log log.Logger, l1ChainID uint64, tcpPort uint16) (*enode.LocalNode, *discover.UDPv5, error) {
+func (conf *Config) Discovery(log log.Logger, l1ChainID uint64, tcpPort uint16, addrs []ma.Multiaddr) (*enode.LocalNode, *discover.UDPv5, error) {
 	if conf.NoDiscovery {
 		return nil, nil, nil
 	}
@@ -50,6 +51,20 @@ func (conf *Config) Discovery(log log.Logger, l1ChainID uint64, tcpPort uint16) 
 	localNode := enode.NewLocalNode(conf.DiscoveryDB, priv)
 	if conf.AdvertiseIP != nil {
 		localNode.SetStaticIP(conf.AdvertiseIP)
+	} else {
+		for _, addr := range addrs {
+			ipStr, err := addr.ValueForProtocol(4)
+			if err != nil {
+				continue
+			}
+			ip := net.ParseIP(ipStr)
+			if ip.IsPrivate() || ip.IsLoopback() {
+				continue
+			}
+			localNode.SetStaticIP(ip)
+			break
+		}
+		// TODO: if no external IP found, use NAT protocol to find external IP
 	}
 	if conf.AdvertiseUDPPort != 0 { // explicitly advertised port gets priority
 		localNode.SetFallbackUDP(int(conf.AdvertiseUDPPort))
