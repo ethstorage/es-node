@@ -20,12 +20,12 @@ import (
 // It also manages the encoding/decoding, tranlation from KV read/write to chunk read/write,
 // and sanity check of the data files.
 type DataShard struct {
-	shardIdx     uint64
+	shardIdx    uint64
 	kvSize      uint64
-	chunksPerKv  uint64
+	chunksPerKv uint64
 	kvEntries   uint64
-	dataFiles    []*DataFile
-	chunkSize       uint64
+	dataFiles   []*DataFile
+	chunkSize   uint64
 }
 
 func NewDataShard(shardIdx uint64, kvSize uint64, kvEntries uint64, chunkSize uint64) *DataShard {
