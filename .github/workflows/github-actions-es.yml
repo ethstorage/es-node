@@ -4,9 +4,15 @@ name: GitHub Actions ES
 run-name: ${{ github.actor }} is push code to main 🚀
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+      - merge
 jobs:
   build:
+    name: build-and-test
     runs-on: ubuntu-latest
 
     steps:
