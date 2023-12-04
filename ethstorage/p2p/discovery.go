@@ -67,6 +67,7 @@ func (conf *Config) Discovery(log log.Logger, l1ChainID uint64, tcpPort uint16, 
 	if conf.AdvertiseIP != nil {
 		localNode.SetStaticIP(conf.AdvertiseIP)
 	} else {
+		end := false
 		for _, addr := range addrs {
 			ipStr, err := addr.ValueForProtocol(4)
 			if err != nil {
@@ -77,27 +78,21 @@ func (conf *Config) Discovery(log log.Logger, l1ChainID uint64, tcpPort uint16, 
 				continue
 			}
 			localNode.SetStaticIP(ip)
-			goto end
+			end = true
+			break
 		}
-		if n, err := nat.DiscoverNAT(context.Background()); err == nil {
-			if mapping, err := n.NewMapping("tcp", localNode.Node().TCP()); err == nil {
-				if addr, err := mapping.ExternalAddr(); err == nil {
-					ip := net.ParseIP(addr.String())
-					port := mapping.ExternalPort()
-					localNode.SetStaticIP(ip)
-					localNode.Set(enr.TCP(port))
-					log.Info("Add mapping to NAT", "external IP", addr.String(), "internal port",
-						mapping.InternalPort(), "external port", port)
-				} else {
-					log.Warn("Get external IP from NAT mapping fail", "error", err.Error())
-				}
+
+		if !end {
+			internalPort := localNode.Node().TCP()
+			ip, port, err := addNATMapping(internalPort)
+			if err == nil {
+				localNode.SetStaticIP(ip)
+				localNode.Set(enr.TCP(port))
+				log.Info("Add mapping to NAT", "external IP", ip.String(), "internal port", internalPort, "external port", port)
 			} else {
-				log.Warn("Fail to add mapping to NAT", "error", err.Error())
+				log.Warn("", "error", err.Error())
 			}
-		} else {
-			log.Warn("No external address set to ENR as no NAT service found", "error", err.Error())
 		}
-	end:
 	}
 	dat := protocol.EthStorageENRData{
 		ChainID: l1ChainID,
@@ -166,6 +161,26 @@ func (v *Secp256k1) DecodeRLP(s *rlp.Stream) error {
 	}
 	*v = (Secp256k1)(*pk)
 	return nil
+}
+
+func addNATMapping(internalPort int) (net.IP, int, error) {
+	n, err := nat.DiscoverNAT(context.Background())
+	if err != nil {
+		return nil, 0, fmt.Errorf("no external address set to ENR as no NAT service found: %s", err.Error())
+	}
+	mapping, err := n.NewMapping("tcp", internalPort)
+	if err != nil {
+		return nil, 0, fmt.Errorf("fail to add mapping to NAT: %s", err.Error())
+	}
+	addr, err := mapping.ExternalAddr()
+	if err != nil {
+		return nil, 0, fmt.Errorf("get external IP from NAT mapping fail: %s", err.Error())
+	}
+	tcpAddr, err := net.ResolveTCPAddr("tcp", addr.String())
+	if err != nil {
+		return nil, 0, fmt.Errorf("fail to resolve external address: %s", err.Error())
+	}
+	return tcpAddr.IP, mapping.ExternalPort(), nil
 }
 
 func enrToAddrInfo(r *enode.Node) (*peer.AddrInfo, *crypto.Secp256k1PublicKey, error) {
