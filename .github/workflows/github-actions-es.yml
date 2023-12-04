@@ -3,9 +3,6 @@
 name: GitHub Actions ES
 run-name: ${{ github.actor }} is push code to main 🚀
 on:
-  push:
-    branches:
-      - main
   pull_request:
     branches:
       - main
