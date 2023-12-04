@@ -89,6 +89,13 @@ func main() {
 					Name:  shardIndexFlagName,
 					Usage: "Indexes of shards to mine. Will create one data file per shard.",
 				},
+				cli.StringSliceFlag{
+					Name: shardConfigFlagName,
+					Usage: `Specify the shard indexes, their respective files, and the blob index range included in each file. 
+							For instance, for a 2TB shard with index 0 containing 16777216 blobs: 
+							0:/home/user1/drive1/shard0file0.dat=0-129,/home/user1/drive2/shard0file1.dat=130-1223,...,/some/other/path/file=33333-16777215. 
+							Please ensure that the blob ranges are continuous and in ascending order.`,
+				},
 				flags.DataDir,
 				flags.L1NodeAddr,
 				flags.StorageL1Contract,
@@ -196,17 +203,7 @@ func EsNodeInit(ctx *cli.Context) error {
 			return fmt.Errorf("invalid miner address %s", miner)
 		}
 	}
-	shardIndexes := ctx.Int64Slice(shardIndexFlagName)
-	log.Info("Read flag", "name", shardIndexFlagName, "value", shardIndexes)
-	shardLen := 0
-	if len(shardIndexes) == 0 {
-		shards := ctx.Int(shardLenFlagName)
-		log.Info("Read flag", "name", shardLenFlagName, "value", shards)
-		if shards == 0 {
-			return fmt.Errorf("shard_len or shard_index must be specified")
-		}
-		shardLen = shards
-	}
+
 	cctx := context.Background()
 	client, err := ethclient.DialContext(cctx, l1Rpc)
 	if err != nil {
@@ -222,44 +219,131 @@ func EsNodeInit(ctx *cli.Context) error {
 		return err
 	}
 	log.Info("Storage config loaded", "storageCfg", storageCfg)
-	var shardIdxList []uint64
-	if len(shardIndexes) > 0 {
-		// check existense of shard indexes but add shard 0 anyway
-		for i := 0; i < len(shardIndexes); i++ {
-			shard := uint64(shardIndexes[i])
-			if shard > 0 {
-				diff, err := getDifficulty(cctx, client, l1Contract, shard)
-				if err != nil {
-					log.Error("Failed to get shard info from contract", "error", err)
-					return err
+
+	shardConfigs := ctx.StringSlice(shardConfigFlagName)
+	if shardConfigs != nil {
+		log.Info("Will create data files with shard details specified", "shard_config", shardConfigs)
+		shardFilesMap := make(map[uint64]map[string]BlobRange)
+		blobsPerShard := int(storageCfg.KvEntriesPerShard)
+		for _, config := range shardConfigs {
+			parts := strings.Split(config, ":")
+			shardIndex, err := strconv.Atoi(parts[0])
+			if err != nil {
+				return fmt.Errorf("invalid shard index %s", parts[0])
+			}
+			fileBlobPairs := strings.Split(parts[1], ",")
+			blobs := make(map[string]BlobRange)
+			if len(fileBlobPairs) == 1 {
+				if !strings.Contains(fileBlobPairs[0], "=") {
+					// consider all blobs are in the only file if blob range is not specified
+					blobs[fileBlobPairs[0]] = BlobRange{Start: 0, End: blobsPerShard - 1}
+				} else {
+					// otherwise should specified as 0-16777215
+					fileBlob := strings.Split(fileBlobPairs[0], "=")
+					if len(fileBlob) != 2 {
+						return fmt.Errorf("invalid file blob config for shard %d: %s", shardIndex, fileBlobPairs[0])
+					}
+					blobRange := strings.Split(fileBlob[1], "-")
+					startBlob, _ := strconv.Atoi(blobRange[0])
+					endBlob, _ := strconv.Atoi(blobRange[1])
+					if startBlob != 0 || endBlob != blobsPerShard-1 {
+						return fmt.Errorf("invalid blob range %s for file %s for shard %d", blobRange, fileBlob[0], shardIndex)
+					}
+					blobs[fileBlob[0]] = BlobRange{Start: startBlob, End: endBlob}
 				}
-				if diff != nil && diff.Cmp(big.NewInt(0)) == 0 {
-					return fmt.Errorf("Shard not exist: %d", shard)
+			} else {
+				var blobCount int
+				for i, pair := range fileBlobPairs {
+					fileBlob := strings.Split(pair, "=")
+					if len(fileBlob) != 2 {
+						return fmt.Errorf("invalid file blob config for shard %d: %s", shardIndex, fileBlobPairs[0])
+					}
+					blobRange := strings.Split(fileBlob[1], "-")
+					startBlob, _ := strconv.Atoi(blobRange[0])
+					endBlob, _ := strconv.Atoi(blobRange[1])
+					if startBlob < 0 || endBlob >= blobsPerShard || startBlob > endBlob {
+						return fmt.Errorf("invalid blob range %s for file %s for shard %d", blobRange, fileBlob[0], shardIndex)
+					}
+					// check the next blob pair to make sure the blob range is continuous
+					if i < len(fileBlobPairs)-1 {
+						nextFileBlob := strings.Split(fileBlobPairs[i+1], "=")
+						nextFileBlobStart, _ := strconv.Atoi(strings.Split(nextFileBlob[1], "-")[0])
+						if endBlob+1 != nextFileBlobStart {
+							return fmt.Errorf("invalid blob range for file blobs: not continuous between %s and %s", pair, fileBlobPairs[i+1])
+						}
+					}
+					blobCount += endBlob - startBlob + 1
+					log.Info("Test", "pair", pair, "startBlob", startBlob, "endBlob", endBlob, "blobCount", blobCount)
+					blobs[fileBlob[0]] = BlobRange{Start: startBlob, End: endBlob}
+				}
+				if blobCount != blobsPerShard {
+					return fmt.Errorf("invalid blob range for file blobs: total blobs in flags is %d, blobs per shard should be %d", blobCount, blobsPerShard)
 				}
 			}
-			shardIdxList = append(shardIdxList, shard)
+			shardFilesMap[uint64(shardIndex)] = blobs
 		}
-	} else {
-		// get shard indexes of length shardLen from contract
-		shardList, err := getShardList(cctx, client, l1Contract, shardLen)
+		files, err := createDataFileAdvanced(storageCfg, shardFilesMap, datadir, encodingType)
 		if err != nil {
-			log.Error("Failed to get shard indexes from contract", "error", err)
+			log.Error("Failed to create data file", "error", err)
 			return err
 		}
-		if len(shardList) == 0 {
-			return fmt.Errorf("No shard indexes found")
+		if len(files) > 0 {
+			log.Info("Data files created", "files", strings.Join(files, ","))
+		} else {
+			log.Warn("No data files created")
 		}
-		shardIdxList = shardList
-	}
-	files, err := createDataFile(storageCfg, shardIdxList, datadir, encodingType)
-	if err != nil {
-		log.Error("Failed to create data file", "error", err)
-		return err
-	}
-	if len(files) > 0 {
-		log.Info("Data files created", "files", strings.Join(files, ","))
 	} else {
-		log.Warn("No data files created")
+		shardIndexes := ctx.Int64Slice(shardIndexFlagName)
+		log.Info("Read flag", "name", shardIndexFlagName, "value", shardIndexes)
+		shardLen := 0
+		if len(shardIndexes) == 0 {
+			shards := ctx.Int(shardLenFlagName)
+			log.Info("Read flag", "name", shardLenFlagName, "value", shards)
+			if shards == 0 {
+				return fmt.Errorf("shard_len or shard_index must be specified")
+			}
+			shardLen = shards
+		}
+		var shardIdxList []uint64
+		if len(shardIndexes) > 0 {
+			// check existense of shard indexes but add shard 0 anyway
+			for i := 0; i < len(shardIndexes); i++ {
+				shard := uint64(shardIndexes[i])
+				if shard > 0 {
+					diff, err := getDifficulty(cctx, client, l1Contract, shard)
+					if err != nil {
+						log.Error("Failed to get shard info from contract", "error", err)
+						return err
+					}
+					if diff != nil && diff.Cmp(big.NewInt(0)) == 0 {
+						return fmt.Errorf("shard not exist: %d", shard)
+					}
+				}
+				shardIdxList = append(shardIdxList, shard)
+			}
+		} else {
+			// get shard indexes of length shardLen from contract
+			shardList, err := getShardList(cctx, client, l1Contract, shardLen)
+			if err != nil {
+				log.Error("Failed to get shard indexes from contract", "error", err)
+				return err
+			}
+			if len(shardList) == 0 {
+				return fmt.Errorf("no shard indexes found")
+			}
+			shardIdxList = shardList
+		}
+		files, err := createDataFile(storageCfg, shardIdxList, datadir, encodingType)
+		if err != nil {
+			log.Error("Failed to create data file", "error", err)
+			return err
+		}
+		if len(files) > 0 {
+			log.Info("Data files created", "files", strings.Join(files, ","))
+		} else {
+			log.Warn("No data files created")
+		}
 	}
+
 	return nil
 }
