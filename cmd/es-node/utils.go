@@ -26,8 +26,14 @@ const (
 	fileName             = "shard-%d.dat"
 	shardLenFlagName     = "shard_len"
 	shardIndexFlagName   = "shard_index"
+	shardConfigFlagName  = "shard_config"
 	encodingTypeFlagName = "encoding_type"
 )
+
+type BlobRange struct {
+	Start int
+	End   int
+}
 
 func initStorageConfig(ctx context.Context, client *ethclient.Client, l1Contract, miner common.Address) (*storage.StorageConfig, error) {
 	maxKvSizeBits, err := readUintFromContract(ctx, client, l1Contract, "maxKvSizeBits")
@@ -56,7 +62,7 @@ func readSlotFromContract(ctx context.Context, client *ethclient.Client, l1Contr
 	}
 	bs, err := client.CallContract(ctx, msg, nil)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to get %s from contract: %v", fieldName, err)
+		return nil, fmt.Errorf("failed to get %s from contract: %v", fieldName, err)
 	}
 	return bs, nil
 }
@@ -168,13 +174,51 @@ func createDataFile(cfg *storage.StorageConfig, shardIdxList []uint64, datadir s
 		chunkIdxLen := chunkPerKv * cfg.KvEntriesPerShard
 		log.Info("Creating data file", "chunkIdxStart", startChunkId, "chunkIdxLen", chunkIdxLen, "chunkSize", cfg.ChunkSize, "miner", cfg.Miner, "encodeType", encodingType)
 
-		df, err := es.Create(dataFile, startChunkId, chunkPerKv*cfg.KvEntriesPerShard, 0, cfg.KvSize, uint64(encodingType), cfg.Miner, cfg.ChunkSize)
+		df, err := es.Create(dataFile, startChunkId, chunkIdxLen, 0, cfg.KvSize, uint64(encodingType), cfg.Miner, cfg.ChunkSize)
 		if err != nil {
 			log.Error("Creating data file", "error", err)
 			return nil, err
 		}
 		log.Info("Data file created", "shard", shardIdx, "file", dataFile, "kvIdxStart", df.KvIdxStart(), "kvIdxEnd", df.KvIdxEnd(), "miner", df.Miner())
 		files = append(files, dataFile)
+	}
+	return files, nil
+}
+
+func createDataFileAdvanced(cfg *storage.StorageConfig, shardFileMap map[uint64]map[string]BlobRange, datadir string, encodingType int) ([]string, error) {
+	log.Info("Creating data files", "dataDir", datadir, "miner", cfg.Miner, "encodeType", encodingType, "chunkSize", cfg.ChunkSize, "shardFileMap", shardFileMap)
+	if _, err := os.Stat(datadir); os.IsNotExist(err) {
+		if err := os.Mkdir(datadir, 0755); err != nil {
+			log.Error("Creating data directory", "error", err)
+			return nil, err
+		}
+	}
+	var files []string
+
+	for shardIdx, file2Blobs := range shardFileMap {
+		for dataFile, blobRange := range file2Blobs {
+			if _, err := os.Stat(dataFile); err == nil {
+				log.Error("Creating data file", "error", "file already exists, will not overwrite", "file", dataFile)
+				return nil, err
+			}
+			if cfg.ChunkSize == 0 {
+				return nil, fmt.Errorf("chunk size should not be 0")
+			}
+			if cfg.KvSize%cfg.ChunkSize != 0 {
+				return nil, fmt.Errorf("max kv size %% chunk size should be 0")
+			}
+			chunkPerKv := cfg.KvSize / cfg.ChunkSize
+			startChunkId := uint64(blobRange.Start) * chunkPerKv
+			chunkIdxLen := chunkPerKv * uint64(blobRange.End-blobRange.Start+1)
+			log.Info("Creating data file", "chunkIdxStart", startChunkId, "chunkIdxLen", chunkIdxLen)
+			df, err := es.Create(dataFile, startChunkId, chunkIdxLen, 0, cfg.KvSize, uint64(encodingType), cfg.Miner, cfg.ChunkSize)
+			if err != nil {
+				log.Error("Creating data file", "error", err)
+				return nil, err
+			}
+			log.Info("Data file created", "shard", shardIdx, "file", dataFile, "kvIdxStart", df.KvIdxStart(), "kvIdxEnd", df.KvIdxEnd())
+			files = append(files, dataFile)
+		}
 	}
 	return files, nil
 }
