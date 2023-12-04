@@ -6,11 +6,9 @@ on:
   push:
     branches:
       - main
-      - merge
   pull_request:
     branches:
       - main
-      - merge
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -27,9 +25,3 @@ jobs:
 
       - name: Test
         run: go test -v ./... -tags ci
-
-      - name: Verify execution results
-        if: failure()
-        run: |
-            echo "Previous steps failed. Cannot merge pull request."
-            exit 1
