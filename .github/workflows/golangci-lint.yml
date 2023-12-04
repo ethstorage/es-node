@@ -59,8 +59,7 @@ jobs:
           # install-mode: "goinstall"
 
       - name: Verify execution results
+        if: failure()
         run: |
-          if [ $? -ne 0 ]; then
-            echo "Verification failed, blocking merge"
-            exit 1
-          fi
+          echo "Previous steps failed. Cannot merge pull request."
+          exit 1

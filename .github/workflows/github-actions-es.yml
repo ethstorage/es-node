@@ -29,8 +29,7 @@ jobs:
         run: go test -v ./... -tags ci
 
       - name: Verify execution results
+        if: failure()
         run: |
-          if [ $? -ne 0 ]; then
-            echo "Verification failed, blocking merge"
+            echo "Previous steps failed. Cannot merge pull request."
             exit 1
-          fi
