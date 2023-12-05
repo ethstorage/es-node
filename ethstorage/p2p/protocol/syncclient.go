@@ -633,6 +633,10 @@ func (s *SyncClient) assignBlobRangeTasks() {
 		maxRange := s.syncerParams.MaxRequestSize / ethstorage.ContractToShardManager[t.Contract].MaxKvSize() * 2
 		subTaskCount := len(t.SubTasks)
 		for idx := 0; idx < subTaskCount; idx++ {
+			pr := s.getIdlePeerForTask(t)
+			if pr == nil {
+				break
+			}
 			t.nextIdx = t.nextIdx % subTaskCount
 			st := t.SubTasks[t.nextIdx]
 			t.nextIdx++
@@ -641,13 +645,6 @@ func (s *SyncClient) assignBlobRangeTasks() {
 			}
 			// Skip any tasks already running
 			if st.isRunning {
-				continue
-			}
-			if len(s.idlerPeers) == 0 {
-				break
-			}
-			pr := s.getIdlePeerForTask(t)
-			if pr == nil {
 				continue
 			}
 
