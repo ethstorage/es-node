@@ -57,7 +57,7 @@ func SendBlobTx(
 
 	h := crypto.Keccak256Hash([]byte(`upfrontPayment()`))
 	callMsg := ethereum.CallMsg{
-		To: &to,
+		To:   &to,
 		Data: h[:],
 	}
 	bs, err := client.CallContract(context.Background(), callMsg, new(big.Int).SetInt64(-2))
@@ -76,8 +76,8 @@ func SendBlobTx(
 		log.Crit("Invalid value param")
 	}
 
-	if res[0].(* big.Int).Cmp(val) == 1 {
-		val = res[0].(* big.Int)
+	if res[0].(*big.Int).Cmp(val) == 1 {
+		val = res[0].(*big.Int)
 	}
 
 	value256, overflow := uint256.FromBig(val)
@@ -320,10 +320,10 @@ func UploadBlobs(
 		needEncoding,
 		-1,
 		value,
-		1000000,
+		5000000,
 		"",
-		"400000000",
-		"4000000000",
+		"",
+		"30000000000",
 		chainID,
 		calldata,
 	)

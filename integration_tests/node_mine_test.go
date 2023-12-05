@@ -2,6 +2,7 @@
 // For license information, see https://github.com/ethstorage/es-node/blob/main/LICENSE
 
 //go:build !ci
+
 package integration
 
 import (
@@ -33,19 +34,17 @@ import (
 )
 
 const (
-	kvEntriesPerShard = 8192
-	kvSize            = 128 * 1024
-	chunkSize         = 128 * 1024
-	maxBlobsPerTx     = 4
-	dataFileName      = "shard-%d.dat"
+	maxBlobsPerTx = 4
+	dataFileName  = "shard-%d.dat"
 )
 
-var shardIds = []uint64{0, 1}
+var shardIds = []uint64{0}
 
 // to use a new contract and override data files:
 // go test -run ^TestMining$ github.com/ethstorage/go-ethstorage/ethstorage/node -v count=1 -contract=0x9BE8dEbb712A3c0dD163Da85D3aF867793Aef3E6 -init=true
 func TestMining(t *testing.T) {
 	contract := contractAddr1GB
+	// contract := common.HexToAddress("0xf8928E47ab82912025FD45589f2444fF3a0FDa73")
 	flagContract := getArg("-contract")
 	if flagContract != "" {
 		contract = common.HexToAddress(flagContract)
@@ -75,22 +74,24 @@ func TestMining(t *testing.T) {
 		intialized = true
 		lg.Info("Data files already exist, will start mining")
 	}
-	if existFile == 1 {
-		lg.Crit("One of the data files is missing, please check")
-	}
+	// if existFile == 1 {
+	// 	lg.Crit("One of the data files is missing, please check")
+	// }
 	if existFile == 0 {
 		lg.Info("Will initialize the data files, please make sure you use a new contract")
 	}
-	storConfig := storage.StorageConfig{
-		KvSize:            kvSize,
-		ChunkSize:         chunkSize,
-		KvEntriesPerShard: kvEntriesPerShard,
-		L1Contract:        contract,
-		Miner:             minerAddr,
+
+	pClient, err := eth.Dial(l1Endpoint, contract, lg)
+	if err != nil {
+		t.Fatalf("Failed to connect to the Ethereum client: %v", err)
+	}
+	storConfig, err := initStorageConfig(context.Background(), pClient.Client, contract, minerAddr)
+	if err != nil {
+		t.Fatalf("Failed to init storage client: %v", err)
 	}
 	var files []string
 	if !intialized {
-		f, err := CreateDataFiles(&storConfig)
+		f, err := CreateDataFiles(storConfig)
 		if err != nil {
 			t.Fatalf("Create data files error: %v", err)
 		}
@@ -102,7 +103,9 @@ func TestMining(t *testing.T) {
 		}
 	}
 	storConfig.Filenames = files
-
+	if os.Getenv(pkName) == "" {
+		t.Fatal("No private key in env", pkName)
+	}
 	signerCfg := signer.CLIConfig{
 		PrivateKey: os.Getenv(pkName),
 	}
@@ -119,11 +122,7 @@ func TestMining(t *testing.T) {
 	}
 	miningConfig.ZKWorkingDir = zkWorkingDir
 
-	pClient, err := eth.Dial(l1Endpoint, contractAddr1GB, lg)
-	if err != nil {
-		t.Fatalf("Failed to connect to the Ethereum client: %v", err)
-	}
-	shardManager, err := initShardManager(storConfig)
+	shardManager, err := initShardManager(*storConfig)
 	if err != nil {
 		t.Fatalf("init shard manager error: %v", err)
 	}
@@ -149,22 +148,9 @@ func TestMining(t *testing.T) {
 			}
 		})
 	})
-	// l1 := &eth.L1EndpointConfig{
-	// 	L1NodeAddr: l1Endpoint,
-	// }
-	// cfg := &node.Config{
-	// 	Storage:             storConfig,
-	// 	L1:                  *l1,
-	// 	L1EpochPollInterval: time.Second * 10,
-	// 	Mining:              miningConfig,
-	// }
-	// n, err := node.New(context.Background(), cfg, lg, "")
-	// if err != nil {
-	// 	t.Fatalf("Create new node failed %v", err)
-	// }
 	if !intialized {
-		// prepareData(t, n, contract)
-		fillEmpty(t, pClient, storageManager)
+		prepareData(t, pClient, storageManager)
+		// fillEmpty(t, pClient, storageManager)
 	}
 	mnr.Start()
 	feed.Send(protocol.EthStorageSyncDone{
@@ -238,7 +224,7 @@ func prepareData(t *testing.T, l1Client *eth.PollingClient, storageMgr *ethstora
 	var hashs []common.Hash
 	var ids []uint64
 
-	value := hexutil.EncodeUint64(10000000000000)
+	value := hexutil.EncodeUint64(500000000000000)
 	txs := len(blobs) / maxBlobsPerTx
 	last := len(blobs) % maxBlobsPerTx
 	if last > 0 {
@@ -278,7 +264,7 @@ func prepareData(t *testing.T, l1Client *eth.PollingClient, storageMgr *ethstora
 		t.Fatalf("Failed to get block number %v", err)
 	}
 	storageMgr.Reset(int64(block))
-	for i := 0; i < len(shardIds)*kvEntriesPerShard; i++ {
+	for i := 0; i < len(shardIds)*int(storageMgr.KvEntries()); i++ {
 		err := storageMgr.CommitBlob(ids[i], blobs[i][:], hashs[i])
 		if err != nil {
 			t.Fatalf("Failed to commit blob: id %d, error: %v", ids[i], err)
