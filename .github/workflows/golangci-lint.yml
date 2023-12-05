@@ -1,6 +1,6 @@
-name: golangci-lint
+name: GoLang CI Lint
 on:
-  push:
+  pull_request:
     branches:
       - main
 
