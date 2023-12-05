@@ -4,13 +4,13 @@ go 1.20
 
 require (
 	github.com/consensys/gnark-crypto v0.12.1
-	github.com/crate-crypto/go-kzg-4844 v0.6.1-0.20231019121413-3621cc59f0c7
+	github.com/crate-crypto/go-kzg-4844 v0.7.0
 	github.com/crate-crypto/go-proto-danksharding-crypto v0.0.0-20230312204821-9a244123c812
 	github.com/detailyang/go-fallocate v0.0.0-20180908115635-432fa640bd2e
 	github.com/edsrzf/mmap-go v1.1.0
 	github.com/ethereum-optimism/go-ethereum-hdwallet v0.1.3
 	github.com/ethereum-optimism/optimism v1.0.9
-	github.com/ethereum/go-ethereum v1.11.6
+	github.com/ethereum/go-ethereum v1.13.5
 	github.com/golang/snappy v0.0.5-0.20220116011046-fa5810519dcb
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d
 	github.com/holiman/uint256 v1.2.3
@@ -42,7 +42,7 @@ require (
 	github.com/cockroachdb/tokenbucket v0.0.0-20230807174530-cc333fc44b06 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/deckarep/golang-set/v2 v2.1.0 // indirect
-	github.com/ethereum/c-kzg-4844 v0.3.2-0.20231019020040-748283cced54 // indirect
+	github.com/ethereum/c-kzg-4844 v0.4.0 // indirect
 	github.com/fjl/memsize v0.0.1 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/go-stack/stack v1.8.1 // indirect
@@ -185,5 +185,3 @@ require (
 )
 
 replace github.com/iden3/go-iden3-crypto => github.com/ethstorage/go-iden3-crypto v0.0.0-20230406080944-d89aec086425
-
-replace github.com/ethereum/go-ethereum => github.com/lightclient/go-ethereum v1.10.10-0.20231019143932-4d161dee0c4c

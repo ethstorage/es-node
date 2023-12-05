@@ -22,6 +22,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/p2p/net/conngater"
 	cmgr "github.com/libp2p/go-libp2p/p2p/net/connmgr"
+	ma "github.com/multiformats/go-multiaddr"
 )
 
 var DefaultBootnodes = []*enode.Node{
@@ -47,7 +48,7 @@ type SetupP2P interface {
 	// Host creates a libp2p host service. Returns nil, nil if p2p is disabled.
 	Host(log log.Logger, reporter metrics.Reporter) (host.Host, error)
 	// Discovery creates a disc-v5 service. Returns nil, nil, nil if discovery is disabled.
-	Discovery(log log.Logger, l1ChainID uint64, tcpPort uint16) (*enode.LocalNode, *discover.UDPv5, error)
+	Discovery(log log.Logger, l1ChainID uint64, tcpPort uint16, ips []ma.Multiaddr) (*enode.LocalNode, *discover.UDPv5, error)
 	TargetPeers() uint
 	SyncerParams() *protocol.SyncerParams
 	GossipSetupConfigurables
