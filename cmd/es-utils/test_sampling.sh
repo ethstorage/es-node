@@ -14,6 +14,9 @@ a=$(./es-utils sample_read --filename test.dat --sample_idx=84 --kv_entries=1 --
 # obtain from zk-decoder with 128K blob
 [[ $a == 26a667ded2e63fc1ebb6824c863e5b120df5d28c3f20cc9a3dd04294e738fb5c ]] || (echo "cmp failed" && exit 1)
 
+b=$(./es-utils sample_read_directio --filename test.dat --sample_idx=84 --kv_entries=1 --kv_size 131072 --chunk_size 131072 | xxd -p -c 32)
+[[ $a == $b ]] || (echo "directio failed" && exit 1)
+
 rm blob.tmp test.dat
 
 echo "All tests passed"

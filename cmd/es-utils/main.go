@@ -105,6 +105,12 @@ var SampleReadCmd = &cobra.Command{
 	Run:   runSampleRead,
 }
 
+var SampleReadDirectCmd = &cobra.Command{
+	Use:   "sample_read_directio",
+	Short: "Read a sample to a data shard using DirectIO",
+	Run:   runSampleReadDirect,
+}
+
 var BlobWriteCmd = &cobra.Command{
 	Use:   "blob_write",
 	Short: "Write a blob to a data shard",
@@ -346,6 +352,7 @@ func initDataShardDirectIO() *es.DataShard {
 	for _, filename := range *filenames {
 		var err error
 		var df *es.DataFile
+		log.Info("Opening file with directIO", "file", filename)
 		df, err = es.OpenDataFileDirectIO(filename)
 		if err != nil {
 			log.Crit("Open failed", "error", err)
@@ -383,8 +390,20 @@ func runShardWrite(cmd *cobra.Command, args []string) {
 func runSampleRead(cmd *cobra.Command, args []string) {
 	setupLogger()
 
-	ds := initDataShardDirectIO()
+	ds := initDataShard()
+	log.Info("Reading sample", "sampleIdx", *sampleIdx)
+	b, err := ds.ReadSample(*sampleIdx)
+	if err != nil {
+		log.Crit("Read failed", "error", err)
+	}
+	os.Stdout.Write(b.Bytes())
+}
 
+func runSampleReadDirect(cmd *cobra.Command, args []string) {
+	setupLogger()
+
+	ds := initDataShardDirectIO()
+	log.Info("Reading sample with DirectIO", "sampleIdx", *sampleIdx)
 	b, err := ds.ReadSampleDirectly(*sampleIdx)
 	if err != nil {
 		log.Crit("Read failed", "error", err)
@@ -548,6 +567,7 @@ func init() {
 	rootCmd.AddCommand(ShardReadCmd)
 	rootCmd.AddCommand(ShardWriteCmd)
 	rootCmd.AddCommand(SampleReadCmd)
+	rootCmd.AddCommand(SampleReadDirectCmd)
 	rootCmd.AddCommand(MetaReadCmd)
 	rootCmd.AddCommand(BlobWriteCmd)
 	rootCmd.AddCommand(BlobUploadCmd)
