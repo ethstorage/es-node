@@ -13,6 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethstorage/go-ethstorage/ethstorage"
+	me "github.com/ethstorage/go-ethstorage/ethstorage/metrics"
 	"github.com/ethstorage/go-ethstorage/ethstorage/p2p/protocol"
 	"github.com/ethstorage/go-ethstorage/ethstorage/rollup"
 	"github.com/hashicorp/go-multierror"
@@ -87,9 +88,9 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 			n.gater = extra.ConnectionGater()
 			n.connMgr = extra.ConnectionManager()
 		}
-		m := (protocol.Metricer)(nil)
+		m := (me.Metricer)(nil)
 		if rollupCfg.MetricsEnable {
-			m = protocol.NewMetrics("sync")
+			m = me.NewMetrics("sync")
 		}
 		// Activate the P2P req-resp sync
 		n.syncCl = protocol.NewSyncClient(log, rollupCfg, n.host.NewStream, storageManager, setup.SyncerParams(), db, m, feed)
@@ -178,7 +179,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 		}
 
 		// All nil if disabled.
-		n.dv5Local, n.dv5Udp, err = setup.Discovery(log.New("p2p", "discv5"), l1ChainID, tcpPort)
+		n.dv5Local, n.dv5Udp, err = setup.Discovery(log.New("p2p", "discv5"), l1ChainID, tcpPort, n.host.Addrs())
 		if err != nil {
 			return fmt.Errorf("failed to start discv5: %w", err)
 		}
@@ -234,8 +235,8 @@ func (n *NodeP2P) ConnectionManager() connmgr.ConnManager {
 	return n.connMgr
 }
 
-func (n *NodeP2P) Start() {
-	n.syncCl.Start()
+func (n *NodeP2P) Start() error {
+	return n.syncCl.Start()
 }
 
 func (n *NodeP2P) Close() error {

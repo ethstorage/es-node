@@ -42,20 +42,20 @@ func NewESAPI(config *RPCConfig, sm *ethstorage.StorageManager, dl *downloader.D
 
 func (api *esAPI) GetBlob(kvIndex uint64, blobHash common.Hash, decodeType DecodeType, off, size uint64) (hexutil.Bytes, error) {
 	blob := api.dl.Cache.GetKeyValueByIndex(kvIndex, blobHash)
-	
+
 	if blob == nil {
 		commit, _, err := api.sm.TryReadMeta(kvIndex)
 		if err != nil {
 			return nil, err
 		}
-	
+
 		if !bytes.Equal(commit[0:ethstorage.HashSizeInContract], blobHash[0:ethstorage.HashSizeInContract]) {
 			return nil, errors.New("commits not same")
 		}
-	
+
 		readCommit := common.Hash{}
 		copy(readCommit[0:ethstorage.HashSizeInContract], blobHash[0:ethstorage.HashSizeInContract])
-		
+
 		var found bool
 		blob, found, err = api.sm.TryRead(kvIndex, int(api.sm.MaxKvSize()), readCommit)
 		if err != nil {
@@ -72,9 +72,9 @@ func (api *esAPI) GetBlob(kvIndex uint64, blobHash common.Hash, decodeType Decod
 		ret = utils.DecodeBlob(blob)
 	}
 
-	if len(ret) < int(off + size) {
+	if len(ret) < int(off+size) {
 		return nil, errors.New("beyond the range of blob size")
 	}
 
-	return ret[off:off+size], nil
+	return ret[off : off+size], nil
 }

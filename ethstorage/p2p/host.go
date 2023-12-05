@@ -247,7 +247,6 @@ func YamuxC() libp2p.Option {
 	return libp2p.Muxer("/yamux/1.0.0", yamux.DefaultTransport)
 }
 
-
 func NoiseC() libp2p.Option {
 	return libp2p.Security(noise.ID, noise.New)
 }
