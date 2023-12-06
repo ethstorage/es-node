@@ -23,19 +23,20 @@ jobs:
 
       - name: Create package
         run: |
-          mkdir ${{ env.BUILD_DIR }}
+          mkdir -p ${{ env.BUILD_DIR }}/build/bin/snarkbuild
+          cp -r ethstorage/prover/snarkjs build/bin
           cp run.sh ${{ env.BUILD_DIR }}
 
       - name: Build
         run: |
-          make TARGETOS=linux TARGETARCH=amd64
-          mv build/bin ${{ env.BUILD_DIR }}
+          make build TARGETOS=linux TARGETARCH=amd64
+          mv build/bin/es-node ${{ env.BUILD_DIR }}/build/bin/
           tar -czvf es-node.${{ github.ref_name }}.linux-amd64.tar.gz ${{ env.BUILD_DIR }}
-          make TARGETOS=darwin TARGETARCH=amd64
-          mv build/bin ${{ env.BUILD_DIR }}
+          make build TARGETOS=darwin TARGETARCH=amd64
+          mv build/bin/es-node ${{ env.BUILD_DIR }}/build/bin/
           tar -czvf es-node.${{ github.ref_name }}.darwin-amd64.tar.gz ${{ env.BUILD_DIR }}
-          make TARGETOS=darwin TARGETARCH=arm64
-          mv build/bin ${{ env.BUILD_DIR }}
+          make build TARGETOS=darwin TARGETARCH=arm64
+          mv build/bin/es-node ${{ env.BUILD_DIR }}/build/bin/
           tar -czvf es-node.${{ github.ref_name }}.darwin-arm64.tar.gz ${{ env.BUILD_DIR }}
 
       - name: Create Release
