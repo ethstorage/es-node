@@ -29,13 +29,13 @@ jobs:
       - name: Build
         run: |
           make TARGETOS=linux TARGETARCH=amd64
-          mv bin/build -r ${{ env.BUILD_DIR }}
+          mv bin/build ${{ env.BUILD_DIR }}
           tar -czvf es-node.${{ github.ref_name }}.linux-amd64.tar.gz ${{ env.BUILD_DIR }}
           make TARGETOS=darwin TARGETARCH=amd64
-          mv bin/build -r ${{ env.BUILD_DIR }}
+          mv bin/build ${{ env.BUILD_DIR }}
           tar -czvf es-node.${{ github.ref_name }}.darwin-amd64.tar.gz ${{ env.BUILD_DIR }}
           make TARGETOS=darwin TARGETARCH=arm64
-          mv bin/build -r ${{ env.BUILD_DIR }}
+          mv bin/build ${{ env.BUILD_DIR }}
           tar -czvf es-node.${{ github.ref_name }}.darwin-arm64.tar.gz ${{ env.BUILD_DIR }}
 
       - name: Create Release
