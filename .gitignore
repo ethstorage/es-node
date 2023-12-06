@@ -23,6 +23,8 @@ build/_vendor/pkg
 .settings
 
 # executable
+es-node*
+/es-node*
 /build
 /es-node
 /cmd/es-node/es-node*
