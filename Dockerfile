@@ -10,13 +10,11 @@ RUN make
 
 # Pull ES node into a second stage deploy alpine container
 FROM node:16-alpine
-COPY --from=builder /es-node/es-node /es-node/
+COPY --from=builder /es-node/build/ /es-node/build/
 
 # For zk proof
 RUN npm install -g snarkjs@0.7.0
 RUN apk add --no-cache curl grep
-RUN mkdir -p /es-node/snarkbuild
-COPY --from=builder /es-node/ethstorage/prover/snarkjs /es-node/snarkjs
 
 # Entrypoint
 COPY --from=builder /es-node/run.sh /es-node/

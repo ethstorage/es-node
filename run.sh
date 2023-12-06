@@ -26,13 +26,13 @@ fi
 # download blob_poseidon.zkey if not yet
 zkey_file="./snarkjs/blob_poseidon.zkey"
 if [ ! -e  ${zkey_file} ]; then
-  echo "${zkey_file} not found, start downloading..."
-  file_id="1ZLfhYeCXMnbk6wUiBADRAn1mZ8MI_zg-"
-  html=`curl -c ./cookie -s -L "https://drive.google.com/uc?export=download&id=${file_id}"`
-  curl -Lb ./cookie "https://drive.google.com/uc?export=download&`echo ${html}|grep -Po '(confirm=[a-zA-Z0-9\-_]+)'`&id=${file_id}" -o ${zkey_file}
+echo "${zkey_file} not found, start downloading..."
+file_id="1ZLfhYeCXMnbk6wUiBADRAn1mZ8MI_zg-"
+html=`curl -c ./cookie -s -L "https://drive.google.com/uc?export=download&id=${file_id}"`
+curl -Lb ./cookie "https://drive.google.com/uc?export=download&`echo ${html}|grep -Po '(confirm=[a-zA-Z0-9\-_]+)'`&id=${file_id}" -o ${zkey_file}
 fi
 
-executable="./es-node"
+executable="./build/bin/es-node"
 data_dir="./es-data"
 storage_file_0="$data_dir/shard-0.dat"
 
@@ -61,8 +61,8 @@ es_node_start=" --network devnet \
   --download.thread 32 \
   --p2p.max.request.size 4194304 \
   --p2p.max.concurrency 32 \
-  --p2p.bootnodes enr:-Li4QPFCNc7mLPqxoVrk1eKB0qa5hb8H75IBwhvdSGGdamx1egKibkKO1v1rtLt7r3pJvoVxv95ITlpSphYCAsunU6qGAYwkwuOpimV0aHN0b3JhZ2XbAYDY15S0tGvaqDX45LTY4gi2VZzSZ4UQUcGAgmlkgnY0gmlwhEFtcySJc2VjcDI1NmsxoQM9rkUZ7qWoJQT2UVrPzDRzmLqDrxCSR4zC4db-lgz1bYN0Y3CCJAaDdWRwgnZh \
-"
+--p2p.bootnodes enr:-Li4QPFCNc7mLPqxoVrk1eKB0qa5hb8H75IBwhvdSGGdamx1egKibkKO1v1rtLt7r3pJvoVxv95ITlpSphYCAsunU6qGAYwkwuOpimV0aHN0b3JhZ2XbAYDY15S0tGvaqDX45LTY4gi2VZzSZ4UQUcGAgmlkgnY0gmlwhEFtcySJc2VjcDI1NmsxoQM9rkUZ7qWoJQT2UVrPzDRzmLqDrxCSR4zC4db-lgz1bYN0Y3CCJAaDdWRwgnZh \
+  "
 # create data file for shard 0 if not yet
 if [ ! -e $storage_file_0 ]; then
   if $executable $es_node_init $common_flags ; then
