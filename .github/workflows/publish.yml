@@ -33,9 +33,11 @@ jobs:
           make build TARGETOS=linux TARGETARCH=amd64
           mv build/bin/es-node ${{ env.BIN_DIR }}/
           tar -czvf es-node.${{ github.ref_name }}.linux-amd64.tar.gz ${{ env.BUILD_DIR }}
+          make clean
           make build TARGETOS=darwin TARGETARCH=amd64
           mv build/bin/es-node ${{ env.BIN_DIR }}/
           tar -czvf es-node.${{ github.ref_name }}.darwin-amd64.tar.gz ${{ env.BUILD_DIR }}
+          make clean
           make build TARGETOS=darwin TARGETARCH=arm64
           mv build/bin/es-node ${{ env.BIN_DIR }}/
           tar -czvf es-node.${{ github.ref_name }}.darwin-arm64.tar.gz ${{ env.BUILD_DIR }}
