@@ -24,7 +24,7 @@ if [ ${#ES_NODE_SIGNER_PRIVATE_KEY} -ne 64 ]; then
 fi
 
 # download blob_poseidon.zkey if not yet
-zkey_file="./snarkjs/blob_poseidon.zkey"
+zkey_file="./build/bin/snarkjs/blob_poseidon.zkey"
 if [ ! -e  ${zkey_file} ]; then
 echo "${zkey_file} not found, start downloading..."
 file_id="1ZLfhYeCXMnbk6wUiBADRAn1mZ8MI_zg-"
