@@ -12,6 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       BUILD_DIR: es-node.${{ github.ref_name }}
+      BIN_DIR: es-node.${{ github.ref_name }}/build/bin
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -23,20 +24,20 @@ jobs:
 
       - name: Create package
         run: |
-          mkdir -p ${{ env.BUILD_DIR }}/build/bin/snarkbuild
-          cp -r ethstorage/prover/snarkjs build/bin
+          mkdir -p ${{ env.BIN_DIR }}/snarkbuild
+          cp -r ethstorage/prover/snarkjs ${{ env.BIN_DIR }}
           cp run.sh ${{ env.BUILD_DIR }}
 
       - name: Build
         run: |
           make build TARGETOS=linux TARGETARCH=amd64
-          mv build/bin/es-node ${{ env.BUILD_DIR }}/build/bin/
+          mv build/bin/es-node ${{ env.BIN_DIR }}/
           tar -czvf es-node.${{ github.ref_name }}.linux-amd64.tar.gz ${{ env.BUILD_DIR }}
           make build TARGETOS=darwin TARGETARCH=amd64
-          mv build/bin/es-node ${{ env.BUILD_DIR }}/build/bin/
+          mv build/bin/es-node ${{ env.BIN_DIR }}/
           tar -czvf es-node.${{ github.ref_name }}.darwin-amd64.tar.gz ${{ env.BUILD_DIR }}
           make build TARGETOS=darwin TARGETARCH=arm64
-          mv build/bin/es-node ${{ env.BUILD_DIR }}/build/bin/
+          mv build/bin/es-node ${{ env.BIN_DIR }}/
           tar -czvf es-node.${{ github.ref_name }}.darwin-arm64.tar.gz ${{ env.BUILD_DIR }}
 
       - name: Create Release
