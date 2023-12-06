@@ -14,7 +14,7 @@ es-node:
 	mkdir -p build/bin/snarkbuild
 
 clean:
-	rm ./build/bin/*
+	rm build -r
 
 test:
 	go test -v ./...

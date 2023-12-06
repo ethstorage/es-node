@@ -23,6 +23,7 @@ build/_vendor/pkg
 .settings
 
 # executable
+/build
 /es-node
 /cmd/es-node/es-node*
 /cmd/es-node/esnode_discovery_db/
