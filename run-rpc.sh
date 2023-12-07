@@ -3,7 +3,7 @@
 # usage:
 # ./run_rpc.sh
 
-executable="./cmd/es-node/es-node"
+executable="./es-node"
 data_dir="./es-data"
 storage_file_0="$data_dir/shard-0.dat"
 
