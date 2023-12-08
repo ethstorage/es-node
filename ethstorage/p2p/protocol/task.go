@@ -16,6 +16,7 @@ type task struct {
 	Contract      common.Address // Contract address
 	ShardId       uint64         // ShardId
 	SubTasks      []*subTask
+	nextIdx       int
 	healTask      *healTask
 	SubEmptyTasks []*subEmptyTask
 

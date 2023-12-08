@@ -131,7 +131,7 @@ func readXIn(buildDir string) (string, error) {
 	}
 	defer f.Close()
 	var input InputPair
-	var decoder *json.Decoder = json.NewDecoder(f)
+	var decoder = json.NewDecoder(f)
 	err = decoder.Decode(&input)
 	if err != nil {
 		return "", err
@@ -162,7 +162,7 @@ func verifyDecodeSample(proof ZKProof, trunkIdx uint64, encodingKey, mask common
 	defer client.Close()
 
 	encodingKeyBN := new(big.Int).SetBytes(encodingKey[:])
-	indexBN := new(big.Int).SetInt64((int64(trunkIdx)))
+	indexBN := new(big.Int).SetInt64(int64(trunkIdx))
 	maskBN := new(big.Int).SetBytes(mask[:])
 
 	h := crypto.Keccak256Hash([]byte("decodeSample(((uint256,uint256),(uint256[2],uint256[2]),(uint256,uint256)),uint256,uint256,uint256)"))
