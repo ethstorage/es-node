@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"io"
 	"os"
 
 	"github.com/detailyang/go-fallocate"
@@ -204,12 +203,8 @@ func (df *DataFile) ReadSampleDirectly(sampleIdx uint64) (common.Hash, error) {
 	if !df.ContainsSample(sampleIdx) {
 		return common.Hash{}, fmt.Errorf("sample not found")
 	}
-	_, err := df.file.Seek(int64(HEADER_SIZE+sampleIdx*32-df.chunkIdxStart*df.chunkSize), io.SeekStart)
-	if err != nil {
-		return common.Hash{}, err
-	}
 	md := directio.AlignedBlock(directio.BlockSize)
-	n, err := io.ReadFull(df.file, md)
+	n, err := df.file.ReadAt(md, HEADER_SIZE+int64(sampleIdx*32)-int64(df.chunkIdxStart*df.chunkSize))
 	if err != nil {
 		return common.Hash{}, err
 	}
