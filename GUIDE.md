@@ -111,21 +111,23 @@ docker logs -f es
 
 Before running es-node from the pre-built executables, ensure that you have installed [Node.js](#install-nodejs) and [snarkjs](#install-snarkjs).
 
-Support platforms so far:
-
-- linux-amd64
-- darwin-amd64
-- darwin-arm64
-
-Take `linux-amd64` as example:
+Download the pre-built package suitable for your platform:
 
 ```sh
-# download the pre-built package suitable for your platform
+# linux-amd64
 curl -L https://github.com/ethstorage/es-node/releases/download/v0.1.2/es-node.v0.1.2.linux-amd64.tar.gz | tar -xz
-
+```
+```sh
+# darwin-amd64
+curl -L https://github.com/ethstorage/es-node/releases/download/v0.1.2/es-node.v0.1.2.darwin-amd64.tar.gz | tar -xz
+```
+```sh
+# darwin-arm64
+curl -L https://github.com/ethstorage/es-node/releases/download/v0.1.2/es-node.v0.1.2.darwin-arm64.tar.gz | tar -xz
+```
+Run es-node
+```
 cd es-node.v0.1.2
-
-# run es-node
 env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> ./run.sh
 ```
 
