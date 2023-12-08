@@ -113,16 +113,16 @@ Before running es-node from the pre-built executables, ensure that you have inst
 
 Download the pre-built package suitable for your platform:
 
+Linux x86-64 or AMD64:
 ```sh
-# linux-amd64
 curl -L https://github.com/ethstorage/es-node/releases/download/v0.1.2/es-node.v0.1.2.linux-amd64.tar.gz | tar -xz
 ```
+MacOS x86-64 or AMD64:
 ```sh
-# darwin-amd64
 curl -L https://github.com/ethstorage/es-node/releases/download/v0.1.2/es-node.v0.1.2.darwin-amd64.tar.gz | tar -xz
 ```
+MacOS ARM64:
 ```sh
-# darwin-arm64
 curl -L https://github.com/ethstorage/es-node/releases/download/v0.1.2/es-node.v0.1.2.darwin-arm64.tar.gz | tar -xz
 ```
 Run es-node
