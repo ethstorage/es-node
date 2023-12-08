@@ -208,15 +208,15 @@ func (df *DataFile) ReadSampleDirectly(sampleIdx uint64) (common.Hash, error) {
 	if err != nil {
 		return common.Hash{}, err
 	}
-	md := directio.AlignedBlock(32)
+	md := directio.AlignedBlock(directio.BlockSize)
 	n, err := io.ReadFull(df.file, md)
 	if err != nil {
 		return common.Hash{}, err
 	}
-	if n != 32 {
+	if n != directio.BlockSize {
 		return common.Hash{}, fmt.Errorf("not full read")
 	}
-	return common.BytesToHash(md), nil
+	return common.BytesToHash(md[:32]), nil
 }
 
 // Write the chunk bytes to the file.
