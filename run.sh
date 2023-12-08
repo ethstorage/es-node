@@ -29,7 +29,7 @@ if [ ! -e  ${zkey_file} ]; then
   echo "${zkey_file} not found, start downloading..."
   file_id="1ZLfhYeCXMnbk6wUiBADRAn1mZ8MI_zg-"
   html=`curl -c ./cookie -s -L "https://drive.google.com/uc?export=download&id=${file_id}"`
-  curl -Lb ./cookie "https://drive.google.com/uc?export=download&`echo ${html}|grep -Po '(confirm=[a-zA-Z0-9\-_]+)'`&id=${file_id}" -o ${zkey_file}
+  curl -Lb ./cookie "https://drive.google.com/uc?export=download&`echo ${html}|grep -o '(confirm=[a-zA-Z0-9\-_]+)'`&id=${file_id}" -o ${zkey_file}
 fi
 
 executable="./build/bin/es-node"
