@@ -16,14 +16,14 @@ To get ready to generate and submit the proof of storage, you need to prepare a 
 
 ## Minimum Hardware Requirements 
 
-The minimum requirements of hardware for an es-node are as follows:
+The minimum hardware requirements for an es-node are as follows:
 
- - CPU: at least 4 core 8 threads
- - 4GB RAM
+ - CPU: A minimum of 4 cores and 8 threads
+ - 4GB of RAM
  - Disk: 
-    - suggest to be NVMe disk to provide full sampling speed
-    - at least 2.2TB **free** storage space for the runtime and sync of one data shard
- - 8 MBit/sec download Internet service
+    - We recommend using an NVMe disk to support the full speed of sampling
+    - At least 2.2TB of available storage space for the runtime and sync of one data shard
+ - Internet service: At least 8 MBit/sec download speed
 
 ## Getting started
 
