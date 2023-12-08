@@ -14,6 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethstorage/go-ethstorage/ethstorage"
+	"github.com/ethstorage/go-ethstorage/ethstorage/metrics"
 	"github.com/ethstorage/go-ethstorage/ethstorage/rollup"
 	"github.com/hashicorp/golang-lru/v2/simplelru"
 	"github.com/libp2p/go-libp2p/core/network"
@@ -67,7 +68,7 @@ type SyncServer struct {
 	globalRequestsRL *rate.Limiter
 }
 
-func NewSyncServer(cfg *rollup.EsConfig, storageManager StorageManagerReader, metrics SyncServerMetrics) *SyncServer {
+func NewSyncServer(cfg *rollup.EsConfig, storageManager StorageManagerReader, m SyncServerMetrics) *SyncServer {
 	// We should never allow over 1000 different peers to churn through quickly,
 	// so it's fine to prune rate-limit details past this.
 
@@ -75,13 +76,13 @@ func NewSyncServer(cfg *rollup.EsConfig, storageManager StorageManagerReader, me
 	// 3 sync requests per second, with 2 burst
 	globalRequestsRL := rate.NewLimiter(globalServerBlocksRateLimit, globalServerBlocksBurst)
 
-	if metrics == nil {
-		metrics = NoopMetrics
+	if m == nil {
+		m = metrics.NoopMetrics
 	}
 	return &SyncServer{
 		cfg:              cfg,
 		storageManager:   storageManager,
-		metrics:          metrics,
+		metrics:          m,
 		peerRateLimits:   peerRateLimits,
 		globalRequestsRL: globalRequestsRL,
 	}

@@ -187,10 +187,7 @@ func fillEmpty(t *testing.T, n *EsNode, contract common.Address) {
 		t.Fatalf("Failed to get block number %v", err)
 	}
 	n.storageManager.Reset(int64(block))
-	lastBlobIdx, err := n.storageManager.LastKvIndex()
-	if err != nil {
-		t.Fatalf("get lastBlobIdx for FillEmptyKV fail, err: %s", err.Error())
-	}
+	lastBlobIdx := n.storageManager.LastKvIndex()
 	limit := n.storageManager.KvEntries() * uint64(len(shardIds))
 	for idx := lastBlobIdx; idx < limit; idx++ {
 		err = n.storageManager.CommitBlob(idx, empty, common.Hash{})
