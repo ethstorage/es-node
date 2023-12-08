@@ -560,6 +560,12 @@ func TestSync_RequestL2Range(t *testing.T) {
 	// create local and remote hosts, set up sync client and server
 	localHost, syncCl := createLocalHostAndSyncClient(t, testLog, rollupCfg, db, sm, m, mux)
 	syncCl.loadSyncStatus()
+	sm.Reset(0)
+	err = sm.DownloadAllMetas(16)
+	if err != nil {
+		t.Fatal("Download blob metadata failed", "error", err)
+		return
+	}
 	remoteHost := createRemoteHost(t, ctx, rollupCfg, smr, m, testLog)
 	connect(t, localHost, remoteHost, shards, shards)
 
@@ -627,6 +633,12 @@ func TestSync_RequestL2List(t *testing.T) {
 	// create local and remote hosts, set up sync client and server
 	localHost, syncCl := createLocalHostAndSyncClient(t, testLog, rollupCfg, db, sm, m, mux)
 	syncCl.loadSyncStatus()
+	sm.Reset(0)
+	err = sm.DownloadAllMetas(16)
+	if err != nil {
+		t.Fatal("Download blob metadata failed", "error", err)
+		return
+	}
 	remoteHost := createRemoteHost(t, ctx, rollupCfg, smr, m, testLog)
 	connect(t, localHost, remoteHost, shards, shards)
 
@@ -672,6 +684,7 @@ func TestSaveAndLoadSyncStatus(t *testing.T) {
 
 	l1 := NewMockL1Source(lastKvIndex, metafileName)
 	sm := ethstorage.NewStorageManager(shardManager, l1)
+	sm.Reset(0)
 	_, syncCl := createLocalHostAndSyncClient(t, testLog, rollupCfg, db, sm, m, mux)
 	syncCl.loadSyncStatus()
 	indexes := []uint64{30, 5, 8}
@@ -779,6 +792,7 @@ func testSync(t *testing.T, chunkSize, kvSize, kvEntries uint64, localShards []u
 
 	l1 := NewMockL1Source(lastKvIndex, metafileName)
 	sm := ethstorage.NewStorageManager(shardManager, l1)
+	sm.Reset(0)
 	data := makeKVStorage(contract, localShards, chunkSize, kvSize, kvEntries, lastKvIndex, common.Address{}, encodeType, metafile)
 	localHost, syncCl := createLocalHostAndSyncClient(t, testLog, rollupCfg, db, sm, m, mux)
 	syncCl.Start()
