@@ -156,7 +156,7 @@ func (df *DataFile) Read(chunkIdx uint64, len int) ([]byte, error) {
 		return nil, fmt.Errorf("chunk not found")
 	}
 	if len > int(df.chunkSize) {
-		return nil, fmt.Errorf(("read too large"))
+		return nil, fmt.Errorf("read too large")
 	}
 	md := make([]byte, len)
 	n, err := df.file.ReadAt(md, HEADER_SIZE+int64(chunkIdx-df.chunkIdxStart)*int64(df.chunkSize))
