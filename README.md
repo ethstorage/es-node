@@ -18,11 +18,11 @@ To get ready to generate and submit the proof of storage, you need to prepare a 
 
 The minimum requirements of hardware for an es-node are as follows:
 
- - CPU: at least 4 core 8 threads, otherwise the syncing process will be super long
+ - CPU: at least 4 core 8 threads
  - 4GB RAM
  - Disk: 
-    - needs to be NVMe disk to provide full sampling speed
-    - at least 1.2TB **free** storage space for the runtime and sync of one data shard
+    - suggest to be NVMe disk to provide full sampling speed
+    - at least 2.2TB **free** storage space for the runtime and sync of one data shard
  - 8 MBit/sec download Internet service
 
 ## Getting started
@@ -81,8 +81,8 @@ The full list of options that you can use to configure an es-node are as follows
 |`--miner.enabled`|Storage mining enabled|||
 |`--miner.gas-price`|Gas price for mining transactions|||
 |`--miner.priority-gas-price`|Priority gas price for mining transactions|||
-|`--miner.threads-per-shard`|Number of threads per shard|`runtime.NumCPU()`||
-|`--miner.zk-working-dir`|Path to the snarkjs folder|`ethstorage\prover`||
+|`--miner.threads-per-shard`|Number of threads per shard|`runtime.NumCPU() x 2`||
+|`--miner.zk-working-dir`|Path to the snarkjs folder|`build/bin`||
 |`--miner.zkey`|zkey file name which should be put in the snarkjs folder|`blob_poseidon.zkey`||
 |`--network`|Predefined L1 network selection. Available networks: devnet|||
 |`--p2p.advertise.ip`|The IP address to advertise in Discv5, put into the ENR of the node. This may also be a hostname / domain name to resolve to an IP.|||

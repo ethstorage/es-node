@@ -6,9 +6,9 @@ To setup a new private EthStorage testnet, please refer to this [guide](/SETUP.m
 For a detailed explanation for es-node please refer to the [README](/README.md). 
 
 ## Testnet spec
-- Layer 1: [dencun-devnet-11](https://dencun-devnet-11.ethpandaops.io/)
+- Layer 1: [dencun-devnet-12](https://dencun-devnet-12.ethpandaops.io/)
 - storage-contracts-v1: v0.1.0
-- es-node: v0.1.1
+- es-node: v0.1.2
 
 ## Minimum Hardware Requirements 
 
@@ -26,17 +26,19 @@ _Note: It is assumed that you are using the `root` _user in all the command_ lin
 ## Prepare miner and signer account
 It is suggested to prepare two Ethereum accounts specifically for this test, one of which needs to have some test ETH balance to be used as a transaction signer.
 
-The test ETH can be requested from [https://faucet.dencun-devnet-11.ethpandaops.io/](https://faucet.dencun-devnet-11.ethpandaops.io/). 
+The test ETH can be requested from [https://faucet.dencun-devnet-12.ethpandaops.io/](https://faucet.dencun-devnet-12.ethpandaops.io/). 
 
 Remember to use the signer's private key (with ETH balance) to replace `<private_key>` in the following steps. And use the other address to replace `<miner>`.
 
 ## Options to run es-node
 
-You can run es-node directly, or in a Docker container.
+You can run es-node from a pre-built release, from source code, or in a Docker container.
 
-If you choose to run es-node directly on a machine, you need to manually install some dependencies such as nodejs, snarkjs, etc. 
-If you choose to build from source code other than download pre-built, you also need to install go. 
-If you choose to run es-node in a Docker container, you will have Docker version 24.0.5 or above installed. 
+If you choose the pre-built es-node, you will need to manually install some dependencies such as nodejs, snarkjs, etc. 
+
+If you prefer to build from the source code, you will also need to install go. 
+
+If you decide to run es-node in a Docker container, you will need to have Docker version 24.0.5 or above installed.
 
 ### Download source code
 
