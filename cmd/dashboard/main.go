@@ -10,26 +10,46 @@ import (
 	"math"
 	"math/big"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/log"
 	ethRPC "github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
 	"github.com/ethstorage/go-ethstorage/ethstorage/metrics"
-	"github.com/ethstorage/go-ethstorage/ethstorage/miner"
+)
+
+const (
+	dbKey = "FetchStatus"
+	step  = 100
 )
 
 var (
-	listenAddrFlag = flag.String("address", "0.0.0.0", "Listener address")
-	portFlag       = flag.Int("port", 8300, "Listener port for the devp2p connection")
-	rpcURLFlag     = flag.String("rpcurl", "http://65.108.236.27:8545", "L1 RPC URL")
-	l1ContractFlag = flag.String("l1contract", "", "Storage contract address on l1")
-	logFlag        = flag.Int("loglevel", 3, "Log level to use for Ethereum and the faucet")
+	listenAddrFlag  = flag.String("address", "0.0.0.0", "Listener address")
+	portFlag        = flag.Int("port", 8300, "Listener port for the devp2p connection")
+	rpcURLFlag      = flag.String("rpcurl", "http://65.109.115.36:8545", "L1 RPC URL")
+	l1ContractFlag  = flag.String("l1contract", "", "Storage contract address on l1")
+	startNumberFlag = flag.Uint64("startnumber", 1, "The block number start to filter contract event")
+	dataPath        = flag.String("datadir", "./es-data", "Data directory for the databases")
+	logFlag         = flag.Int("loglevel", 3, "Log level to use for Ethereum and the faucet")
 )
+
+type miningEvent struct {
+	ShardId      uint64
+	LastMineTime uint64
+	Difficulty   *big.Int
+	BlockMined   *big.Int
+	Miner        common.Address
+	GasFee       uint64
+	Reward       uint64
+}
 
 type dashboard struct {
 	ctx        context.Context
@@ -37,7 +57,12 @@ type dashboard struct {
 	m          metrics.Metricer
 	l1Contract common.Address
 	kvEntries  uint64
-	logger     log.Logger
+
+	maxShardIdx uint64
+	startBlock  uint64
+	endBlock    uint64
+	db          ethdb.Database
+	logger      log.Logger
 }
 
 func newDashboard(rpcURL string, l1Contract common.Address) (*dashboard, error) {
@@ -52,6 +77,35 @@ func newDashboard(rpcURL string, l1Contract common.Address) (*dashboard, error) 
 		log.Crit("Failed to create L1 source", "err", err)
 	}
 
+	db, err := rawdb.Open(rawdb.OpenOptions{
+		Type:              "leveldb",
+		Directory:         *dataPath,
+		AncientsDirectory: filepath.Join(*dataPath, "ancient"),
+		Namespace:         "es-data/db/dashboard/",
+		Cache:             2048,
+		Handles:           8196,
+		ReadOnly:          false,
+	})
+	if err != nil {
+		log.Crit("Failed to create db", "err", err)
+	}
+
+	start := *startNumberFlag
+	if status, _ := db.Get([]byte(dbKey)); status != nil {
+		start = new(big.Int).SetBytes(status).Uint64()
+	}
+
+	if start == 0 {
+		block, err := l1.BlockByNumber(ctx, new(big.Int).SetInt64(ethRPC.LatestBlockNumber.Int64()))
+		if err != nil {
+			log.Crit("Failed to fetch start block", "err", err)
+		}
+		start = block.NumberU64()
+		if start == 0 {
+			log.Crit("Start block should not be 0")
+		}
+	}
+
 	shardEntryBits, err := readUintFromContract(ctx, l1.Client, l1Contract, "shardEntryBits")
 	if err != nil {
 		return nil, err
@@ -63,11 +117,14 @@ func newDashboard(rpcURL string, l1Contract common.Address) (*dashboard, error) 
 		m:          m,
 		l1Contract: l1Contract,
 		kvEntries:  1 << shardEntryBits,
+		db:         db,
+		startBlock: start,
+		endBlock:   start - 1,
 		logger:     logger,
 	}, nil
 }
 
-func (d *dashboard) RefreshContractMetrics(ctx context.Context, sig eth.L1BlockRef) {
+func (d *dashboard) RefreshBlobsMetrics(ctx context.Context, sig eth.L1BlockRef) {
 	lastKVIndex, err := d.l1Source.GetStorageLastBlobIdx(int64(sig.Number))
 	if err != nil {
 		log.Warn("Refresh contract metrics (last kv index) failed", "err", err.Error())
@@ -75,18 +132,95 @@ func (d *dashboard) RefreshContractMetrics(ctx context.Context, sig eth.L1BlockR
 	}
 	maxShardIdx := lastKVIndex / d.kvEntries
 	d.m.SetLastKVIndexAndMaxShardId(sig.Number, lastKVIndex, maxShardIdx)
-	d.logger.Info("RefreshContractMetrics", "lastKvIndex", lastKVIndex, "maxShardIdx", maxShardIdx)
+	d.logger.Info("RefreshBlobMetrics", "block number", sig.Number, "lastKvIndex", lastKVIndex, "maxShardIdx", maxShardIdx)
+	d.maxShardIdx = maxShardIdx
+	if sig.Number > d.endBlock {
+		d.endBlock = sig.Number
+	}
+}
 
-	l1api := miner.NewL1MiningAPI(d.l1Source, d.logger)
-	for sid := uint64(0); sid <= maxShardIdx; sid++ {
-		info, err := l1api.GetMiningInfo(ctx, d.l1Contract, sid)
+func (d *dashboard) FilterEventAndReport() error {
+	d.RefreshMiningMetrics()
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			d.RefreshMiningMetrics()
+		case <-d.ctx.Done():
+			return d.ctx.Err()
+		}
+	}
+}
+
+func (d *dashboard) RefreshMiningMetrics() {
+	if d.startBlock > d.endBlock {
+		return
+	}
+
+	start, end := d.startBlock, d.endBlock
+	if end > start+step {
+		end = start + step
+	}
+
+	events, next, err := d.FetchMiningEvents(start, end)
+	if err != nil {
+		log.Warn("FetchMiningEvents fail", "start", start, "end", end, "err", err.Error())
+		return
+	}
+
+	for _, event := range events {
+		d.m.SetMiningInfo(event.ShardId, event.Difficulty.Uint64(), event.LastMineTime, event.BlockMined.Uint64(), event.Miner, event.GasFee, event.Reward)
+		d.logger.Info("Refresh mining info", "blockMined", event.BlockMined, "lastMineTime", event.LastMineTime,
+			"Difficulty", event.Difficulty, "Miner", event.Miner, "GasFee", event.GasFee, "Reward", event.Reward)
+	}
+	d.startBlock = next
+	d.db.Put([]byte(dbKey), new(big.Int).SetUint64(d.startBlock).Bytes())
+}
+
+func (d *dashboard) FetchMiningEvents(start, end uint64) ([]*miningEvent, uint64, error) {
+	logs, err := d.l1Source.FilterLogsByBlockRange(new(big.Int).SetUint64(start), new(big.Int).SetUint64(end), eth.MinedBlockEvent)
+	if err != nil {
+		return nil, start, fmt.Errorf("FilterLogsByBlockRange: %s", err.Error())
+	}
+
+	events := make([]*miningEvent, 0)
+	for _, l := range logs {
+		tx, err := d.GetTransactionByHash(l.TxHash)
 		if err != nil {
-			log.Warn("Get mining info for metrics fail", "shardId", sid, "err", err.Error())
+			// TODO: should we cancel this fetch?
+			log.Warn("GetTransactionByHash fail", "tx hash", l.TxHash, "error", err.Error())
 			continue
 		}
-		d.m.SetMiningInfo(sid, info.Difficulty.Uint64(), info.LastMineTime, info.BlockMined.Uint64())
-		d.logger.Info("Refresh mining info", "blockMined", info.BlockMined, "lastMineTime", info.LastMineTime, "Difficulty", info.Difficulty)
+
+		// TODO: update when new version contract deployed, use the reward in the new MinedBlock event
+		balance, _ := d.l1Source.BalanceAt(d.ctx, d.l1Contract, new(big.Int).SetUint64(l.BlockNumber))
+		balanceBefore, _ := d.l1Source.BalanceAt(d.ctx, d.l1Contract, new(big.Int).SetUint64(l.BlockNumber-1))
+		reward := new(big.Int).Sub(balanceBefore, balance)
+
+		events = append(events, &miningEvent{
+			ShardId:      new(big.Int).SetBytes(l.Topics[1].Bytes()).Uint64(),
+			Difficulty:   new(big.Int).SetBytes(l.Topics[2].Bytes()),
+			BlockMined:   new(big.Int).SetBytes(l.Topics[3].Bytes()),
+			LastMineTime: new(big.Int).SetBytes(l.Data[:32]).Uint64(),
+			// TODO: update when new version contract deployed, use the miner in the new MinedBlock event
+			Miner:  common.BytesToAddress(tx.Data()[80:100]),
+			Reward: reward.Uint64() / 10000000000,
+			GasFee: tx.Gas() * tx.GasPrice().Uint64() / 10000000000,
+		})
 	}
+	return events, end + 1, nil
+}
+
+func (d *dashboard) GetTransactionByHash(hash common.Hash) (*types.Transaction, error) {
+	tx, _, err := d.l1Source.TransactionByHash(context.Background(), hash)
+	if err != nil {
+		return nil, err
+	}
+	if len(tx.Data()) < 100 {
+		return nil, fmt.Errorf("invalid data len for tx %d", len(tx.Data()))
+	}
+	return tx, nil
 }
 
 func readSlotFromContract(ctx context.Context, client *ethclient.Client, l1Contract common.Address, fieldName string) ([]byte, error) {
@@ -124,9 +258,12 @@ func main() {
 	if err != nil {
 		log.Crit("New dashboard fail", "err", err)
 	}
-	l1LatestBlockSub := eth.PollBlockChanges(d.ctx, d.logger, d.l1Source, d.RefreshContractMetrics, ethRPC.LatestBlockNumber,
+
+	l1LatestBlockSub := eth.PollBlockChanges(d.ctx, d.logger, d.l1Source, d.RefreshBlobsMetrics, ethRPC.LatestBlockNumber,
 		10*time.Second, time.Second*10)
 	defer l1LatestBlockSub.Unsubscribe()
+
+	go d.FilterEventAndReport()
 
 	if err := d.m.Serve(d.ctx, *listenAddrFlag, *portFlag); err != nil {
 		log.Crit("Error starting metrics server", "err", err)
