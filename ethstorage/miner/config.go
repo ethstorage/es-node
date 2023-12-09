@@ -38,6 +38,6 @@ var DefaultConfig = Config{
 	GasPrice:         nil,
 	PriorityGasPrice: nil,
 	ZKeyFileName:     "blob_poseidon.zkey",
-	ZKWorkingDir:     filepath.Join("ethstorage", "prover"),
+	ZKWorkingDir:     filepath.Join("build", "bin"),
 	ThreadsPerShard:  uint64(2 * runtime.NumCPU()),
 }
