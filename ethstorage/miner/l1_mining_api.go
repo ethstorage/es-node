@@ -142,6 +142,18 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 		return common.Hash{}, fmt.Errorf("failed to estimate gas: %w", err)
 	}
 	m.lg.Info("Estimated gas done", "gas", estimatedGas)
+	cost := new(big.Int).Mul(new(big.Int).SetUint64(estimatedGas), gasPrice)
+	m.lg.Info("Estimated cost done", "cost(ether)", cost.Div(cost, big.NewInt(1e18)))
+	reward, err := calculateReward(rst.startShardId, rst.blockNumber)
+	if err != nil {
+		m.lg.Error("Calculate reward failed", "error", err.Error())
+		return common.Hash{}, err
+	}
+	m.lg.Info("Estimated reward done", "reward(ether)", reward.Div(reward, big.NewInt(1e18)))
+	if new(big.Int).Sub(reward, cost).Cmp(cfg.MinimumProfit) == -1 {
+		return common.Hash{}, fmt.Errorf("reward is less than cost")
+	}
+
 	gas := uint64(float64(estimatedGas) * gasBufferRatio)
 	rawTx := &types.DynamicFeeTx{
 		ChainID:   chainID,
@@ -166,4 +178,8 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 	m.lg.Info("Submit mined result done", "shard", rst.startShardId, "block", rst.blockNumber,
 		"nonce", rst.nonce, "txSigner", cfg.SignerAddr.Hex(), "hash", signedTx.Hash().Hex())
 	return signedTx.Hash(), nil
+}
+
+func calculateReward(u uint64, int *big.Int) (*big.Int, error) {
+	panic("unimplemented")
 }

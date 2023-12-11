@@ -26,6 +26,7 @@ type Config struct {
 	ThreadsPerShard  uint64
 	SignerFnFactory  signer.SignerFactory
 	SignerAddr       common.Address
+	MinimumProfit    *big.Int
 }
 
 var DefaultConfig = Config{
@@ -40,4 +41,5 @@ var DefaultConfig = Config{
 	ZKeyFileName:     "blob_poseidon.zkey",
 	ZKWorkingDir:     filepath.Join("build", "bin"),
 	ThreadsPerShard:  uint64(2 * runtime.NumCPU()),
+	MinimumProfit:    common.Big0,
 }
