@@ -132,7 +132,7 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 	m.lg.Info("Estimated gas done", "gas", estimatedGas)
 	cost := new(big.Int).Mul(new(big.Int).SetUint64(estimatedGas), gasPrice)
 	m.lg.Info("Estimated cost done", "cost(ether)", cost.Div(cost, big.NewInt(1e18)))
-	reward, err := m.calculateReward(ctx, contract, rst.startShardId, rst.blockNumber)
+	reward, err := m.calculateReward(ctx, cfg, contract, rst.startShardId, rst.blockNumber)
 	if err != nil {
 		m.lg.Error("Calculate reward failed", "error", err.Error())
 		return common.Hash{}, err
@@ -180,46 +180,7 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 	return signedTx.Hash(), nil
 }
 
-func (m *l1MiningAPI) calculateReward(ctx context.Context, contract common.Address, shard uint64, block *big.Int) (*big.Int, error) {
-	// load storage configurations from contract
-	dcff, err := m.ReadContractField("dcfFactor")
-	if err != nil {
-		m.lg.Error("Failed to read dcfFactor", "error", err.Error())
-		return nil, err
-	}
-	base := new(big.Int).Exp(big.NewInt(2), big.NewInt(128), nil)
-	dcf := new(big.Rat).SetFrac(new(big.Int).SetBytes(dcff), base)
-	fmt.Println("dcf in sec", dcf.FloatString(10))
-	// dcf := new(big.Float).SetRat(dcfr)
-
-	st, err := m.ReadContractField("startTime")
-	if err != nil {
-		m.lg.Error("Failed to read startTime", "error", err.Error())
-		return nil, err
-	}
-	startTime := new(big.Int).SetBytes(st).Uint64()
-
-	seb, err := m.ReadContractField("shardEntryBits")
-	if err != nil {
-		m.lg.Error("Failed to read shardEntryBits", "error", err.Error())
-		return nil, err
-	}
-	shardEntryBits := new(big.Int).SetBytes(seb).Uint64()
-	shardEntry := new(big.Int).Lsh(big.NewInt(1), uint(shardEntryBits))
-
-	sc, err := m.ReadContractField("storageCost")
-	if err != nil {
-		m.lg.Error("Failed to read storageCost", "error", err.Error())
-		return nil, err
-	}
-	storageCost := new(big.Int).SetBytes(sc)
-
-	pa, err := m.ReadContractField("prepaidAmount")
-	if err != nil {
-		m.lg.Error("Failed to read prepaidAmount", "error", err.Error())
-		return nil, err
-	}
-	prepaidAmount := new(big.Int).SetBytes(pa)
+func (m *l1MiningAPI) calculateReward(ctx context.Context, cfg Config, contract common.Address, shard uint64, block *big.Int) (*big.Int, error) {
 
 	lastKv, err := m.PollingClient.GetStorageLastBlobIdx(rpc.LatestBlockNumber.Int64())
 	if err != nil {
@@ -242,7 +203,7 @@ func (m *l1MiningAPI) calculateReward(ctx context.Context, contract common.Addre
 
 	var lastShard uint64
 	if lastKv > 0 {
-		lastShard = (lastKv - 1) >> shardEntryBits
+		lastShard = (lastKv - 1) / cfg.ShardEntry
 	}
 	curBlock, err := m.HeaderByNumber(ctx, big.NewInt(rpc.LatestBlockNumber.Int64()))
 	if err != nil {
@@ -254,14 +215,14 @@ func (m *l1MiningAPI) calculateReward(ctx context.Context, contract common.Addre
 
 	var reward *big.Int
 	if shard < lastShard {
-		basePayment := new(big.Int).Mul(storageCost, shardEntry)
-		reward = paymentIn(basePayment, dcf, lastMineTime, minedTs, startTime)
+		basePayment := new(big.Int).Mul(cfg.StorageCost, new(big.Int).SetUint64(cfg.ShardEntry))
+		reward = paymentIn(basePayment, cfg.DcfFactor, lastMineTime, minedTs, cfg.StartTime)
 	} else if shard == lastShard {
-		basePayment := new(big.Int).Mul(storageCost, new(big.Int).Mod(new(big.Int).SetUint64(lastKv), shardEntry))
-		reward = paymentIn(basePayment, dcf, lastMineTime, minedTs, startTime)
+		basePayment := new(big.Int).Mul(cfg.StorageCost, new(big.Int).SetUint64(lastKv%cfg.ShardEntry))
+		reward = paymentIn(basePayment, cfg.DcfFactor, lastMineTime, minedTs, cfg.StartTime)
 		// Additional prepaid for the last shard
 		if prepaidLastMineTime < minedTs {
-			additionalReward := paymentIn(prepaidAmount, dcf, prepaidLastMineTime, minedTs, startTime)
+			additionalReward := paymentIn(cfg.PrepaidAmount, cfg.DcfFactor, prepaidLastMineTime, minedTs, cfg.StartTime)
 			reward = new(big.Int).Add(reward, additionalReward)
 		}
 	}

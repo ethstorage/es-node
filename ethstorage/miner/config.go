@@ -13,12 +13,19 @@ import (
 )
 
 type Config struct {
+	// contract
 	RandomChecks   uint64
 	NonceLimit     uint64
+	StartTime      uint64
+	ShardEntry     uint64
 	MinimumDiff    *big.Int
 	Cutoff         *big.Int
 	DiffAdjDivisor *big.Int
+	StorageCost    *big.Int
+	PrepaidAmount  *big.Int
+	DcfFactor      *big.Rat
 
+	// cli
 	GasPrice         *big.Int
 	PriorityGasPrice *big.Int
 	ZKeyFileName     string
