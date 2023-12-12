@@ -162,7 +162,7 @@ func NewMinerConfig(ctx *cli.Context, client *ethclient.Client, l1Contract commo
 	}
 	base := new(big.Int).Exp(big.NewInt(2), big.NewInt(128), nil)
 	dcf := new(big.Rat).SetFrac(dcff, base)
-	fmt.Println("dcf in sec", dcf.FloatString(10))
+	log.Info("Read big int from contract", "dcfInSecond", dcf.FloatString(10))
 	minerConfig.DcfFactor = dcf
 
 	startTime, err := readUintFromContract(cctx, client, l1Contract, "startTime")
