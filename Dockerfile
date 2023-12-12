@@ -1,24 +1,23 @@
 # Build ES node in a stock Go builder container
 FROM golang:1.20-alpine as builder
 
-RUN apk add --no-cache gcc musl-dev linux-headers
+RUN apk add --no-cache gcc musl-dev linux-headers make
 
-# Get dependencies - will also be cached if we won't change go.mod/go.sum
-COPY go.mod /es-node/
-COPY go.sum /es-node/
-RUN cd /es-node && go mod download
-
+# build
 ADD . /es-node
-RUN cd /es-node/cmd/es-node && go build
-RUN cd /es-node/cmd/es-utils && go build
+WORKDIR /es-node
+RUN make
 
 # Pull ES node into a second stage deploy alpine container
 FROM node:16-alpine
+COPY --from=builder /es-node/build/ /es-node/build/
 
-# For file download
-RUN apk add --no-cache curl grep
+# For zk proof
 RUN npm install -g snarkjs@0.7.0
-COPY --from=builder /es-node/ /es-node/
+RUN apk add --no-cache curl grep
+
+# Entrypoint
+COPY --from=builder /es-node/run.sh /es-node/
 RUN chmod +x /es-node/run.sh
 WORKDIR /es-node
 
