@@ -45,7 +45,7 @@ You can run es-node from a pre-built Docker image, a pre-built executable, or fr
 
 ## Install dependencies
 
-_Please note that not all steps in this section are required; they depend on your [choice](#options-to-run-es-node)._
+_Please note that not all steps in this section are required; they depend on your [choice](#options-for-running-es-node)._
 
 ### Install Go
 
