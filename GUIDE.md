@@ -37,11 +37,11 @@ Remember to use the signer's private key (with ETH balance) to replace `<private
 
 You can run es-node from a pre-built Docker image, a pre-built executable, or from the source code.
 
- - If you have Docker version 24.0.5 or above installed, the quickest way to get started is by [using a pre-built Docker image](#from-a-docker-image). However, this approach sacrifices the convenience of modifying configurations.
+ - If you choose [the pre-built es-node executable](#from-pre-built-executables), you will need to manually install some dependencies such as Node.js and snarkjs.
 
- - If you choose [the pre-built es-node executable](#from-pre-built-executables), you will need to manually install some dependencies such as Node.js, snarkjs, etc. 
-
- - If you prefer to build [from the source code](#from-source-code), you will also need to install Go. 
+ - If you have Docker version 24.0.5 or above installed, the quickest way to get started is by [using a pre-built Docker image](#from-a-docker-image).
+ 
+ - If you prefer to build [from the source code](#from-source-code), you will also need to install Go besides Node.js and snarkjs.
 
 ## From pre-built executables
 
