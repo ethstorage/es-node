@@ -131,15 +131,16 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 	}
 	m.lg.Info("Estimated gas done", "gas", estimatedGas)
 	cost := new(big.Int).Mul(new(big.Int).SetUint64(estimatedGas), gasPrice)
-	m.lg.Info("Estimated cost done", "cost(ether)", cost.Div(cost, big.NewInt(1e18)))
+	m.lg.Info("Estimated cost done", "cost", cost, "gasPrice", gasPrice)
 	reward, err := m.calculateReward(ctx, cfg, contract, rst.startShardId, rst.blockNumber)
 	if err != nil {
 		m.lg.Error("Calculate reward failed", "error", err.Error())
 		return common.Hash{}, err
 	}
-	m.lg.Info("Estimated reward done", "reward(ether)", reward.Div(reward, big.NewInt(1e18)))
-	if new(big.Int).Sub(reward, cost).Cmp(cfg.MinimumProfit) == -1 {
-		return common.Hash{}, fmt.Errorf("reward is less than cost")
+	profit := new(big.Int).Sub(reward, cost)
+	m.lg.Info("Estimated reward done", "reward", reward, "profit", profit)
+	if profit.Cmp(cfg.MinimumProfit) == -1 {
+		return common.Hash{}, fmt.Errorf("tx quit: the profit(%s) will not meet the minimum expectation(%s)", profit, cfg.MinimumProfit)
 	}
 
 	chainID, err := m.NetworkID(ctx)
@@ -210,9 +211,8 @@ func (m *l1MiningAPI) calculateReward(ctx context.Context, cfg Config, contract 
 		m.lg.Error("Failed to get latest block", "error", err.Error())
 		return nil, err
 	}
-	// most optimistic block number to confirm the tx is latest block + 1
-	minedTs := curBlock.Time - (new(big.Int).Sub(curBlock.Number, block).Uint64()+1)*12
 
+	minedTs := curBlock.Time - (new(big.Int).Sub(curBlock.Number, block).Uint64())*12
 	var reward *big.Int
 	if shard < lastShard {
 		basePayment := new(big.Int).Mul(cfg.StorageCost, new(big.Int).SetUint64(cfg.ShardEntry))
