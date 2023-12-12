@@ -27,6 +27,7 @@ lint:
 
 .PHONY: \
 	es-node \
+	build \
 	clean \
 	test \
 	lint
