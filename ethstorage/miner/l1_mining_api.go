@@ -143,9 +143,12 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 		return common.Hash{}, err
 	}
 	profit := new(big.Int).Sub(reward, cost)
-	m.lg.Info("Estimated reward done", "reward", reward, "profit", profit)
+	m.lg.Info("Estimated reward done (in ether)", "reward", weiToEther(reward), "cost", weiToEther(cost), "profit", weiToEther(profit))
 	if profit.Cmp(cfg.MinimumProfit) == -1 {
-		m.lg.Warn("Will quit the tx: the profit will not meet expectation", "profitEstimated", profit, "minimumProfit", cfg.MinimumProfit)
+		m.lg.Warn("Will quit the tx: the profit will not meet expectation",
+			"profitEstimated", weiToEther(profit),
+			"minimumProfit", weiToEther(cfg.MinimumProfit),
+		)
 		return common.Hash{}, fmt.Errorf("quit: not enough profit")
 	}
 

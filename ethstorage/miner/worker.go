@@ -358,7 +358,7 @@ func (w *worker) checkTxStatus(txHash common.Hash, miner common.Address) {
 				reward = new(big.Int).SetBytes(rLog.Data[64:])
 			}
 		}
-		log.Info("Mining transaction accounting (in ether)", "cost", weiToEther(cost), "reward", weiToEther(reward), "profit", weiToEther(new(big.Int).Sub(reward, cost)))
+		log.Info("Mining transaction accounting (in ether)", "reward", weiToEther(reward), "cost", weiToEther(cost), "profit", weiToEther(new(big.Int).Sub(reward, cost)))
 	} else if receipt.Status == 0 {
 		log.Warn("Mining transaction failed!      ×", "txHash", txHash)
 	}
