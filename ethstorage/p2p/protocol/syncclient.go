@@ -59,7 +59,8 @@ var (
 	maxKvCountPerReq            = uint64(16)
 	syncStatusKey               = []byte("SyncStatus")
 	maxFillEmptyTaskTreads      int32
-	requestTimeoutInMillisecond = 1000 * time.Millisecond // Millisecond
+	requestTimeoutInMillisecond = 1000 * time.Millisecond  // Millisecond
+	printingLoopInterval        = 10000 * time.Millisecond // Millisecond
 )
 
 func GetProtocolID(format string, l2ChainID *big.Int) protocol.ID {
@@ -459,8 +460,9 @@ func (s *SyncClient) Start() error {
 	// Retrieve the previous sync status from LevelDB and abort if already synced
 	s.loadSyncStatus()
 
-	s.wg.Add(1)
+	s.wg.Add(2)
 	go s.mainLoop()
+	go s.printP2PInfoLoop()
 
 	return nil
 }
@@ -562,6 +564,22 @@ func (s *SyncClient) RequestL2List(indexes []uint64) (uint64, error) {
 		return id, nil
 	}
 	return 0, fmt.Errorf("no peer can be used to send requests")
+}
+
+func (s *SyncClient) printP2PInfoLoop() {
+	defer s.wg.Done()
+
+	for {
+		select {
+		case <-time.After(printingLoopInterval):
+			if s.syncDone {
+				log.Info("P2P info", "peerCount", len(s.peers))
+			}
+		case <-s.resCtx.Done():
+			s.log.Info("Stopped P2P info printing")
+			return
+		}
+	}
 }
 
 func (s *SyncClient) mainLoop() {
