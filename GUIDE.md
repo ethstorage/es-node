@@ -37,15 +37,89 @@ Remember to use the signer's private key (with ETH balance) to replace `<private
 
 You can run es-node from a pre-built Docker image, a pre-built executable, or from the source code.
 
- - If you have Docker version 24.0.5 or above installed, the fast way to start is [from a pre-built Docker image](#from-docker-image).
+ - If you choose [the pre-built es-node executable](#from-pre-built-executables), you will need to manually install some dependencies such as Node.js and snarkjs.
 
- - If you choose [the pre-built es-node executable](#from-pre-built-executables), you will need to manually install some dependencies such as Node.js, snarkjs, etc. 
+ - If you have Docker version 24.0.5 or above installed, the quickest way to get started is by [using a pre-built Docker image](#from-a-docker-image).
+ 
+ - If you prefer to build [from the source code](#from-source-code), you will also need to install Go besides Node.js and snarkjs.
 
- - If you prefer to build [from the source code](#from-source-code), you will also need to install Go. 
+## From pre-built executables
+
+Before running es-node from the pre-built executables, ensure that you have installed [Node.js](#install-nodejs) and [snarkjs](#install-snarkjs).
+
+Download the pre-built package suitable for your platform:
+
+Linux x86-64 or AMD64:
+```sh
+curl -L https://github.com/ethstorage/es-node/releases/download/v0.1.2/es-node.v0.1.2.linux-amd64.tar.gz | tar -xz
+```
+MacOS x86-64 or AMD64:
+```sh
+curl -L https://github.com/ethstorage/es-node/releases/download/v0.1.2/es-node.v0.1.2.darwin-amd64.tar.gz | tar -xz
+```
+MacOS ARM64:
+```sh
+curl -L https://github.com/ethstorage/es-node/releases/download/v0.1.2/es-node.v0.1.2.darwin-arm64.tar.gz | tar -xz
+```
+Run es-node
+```
+cd es-node.v0.1.2
+env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> ./run.sh
+```
+
+## From a Docker image
+
+Run an es-node container in one step:
+```sh
+docker run --name es  -d  \
+          -v ./es-data:/es-node/es-data \
+          -e ES_NODE_STORAGE_MINER=<miner> \
+          -e ES_NODE_SIGNER_PRIVATE_KEY=<private_key> \
+          -p 9545:9545 \
+          -p 9222:9222 \
+          -p 30305:30305/udp \
+          --entrypoint /es-node/run.sh \
+          ghcr.io/ethstorage/es-node
+```
+
+You can check docker logs using the following command:
+```sh
+docker logs -f es 
+```
+## From source code
+
+You will need to [install Go](#install-go) to build es-node from source code, and install [Node.js](#install-nodejs) and [snarkjs](#install-snarkjs) to run es-node.
+
+Download source code and switch to the latest release branch:
+```sh
+git clone https://github.com/ethstorage/es-node.git
+cd es-node
+git checkout v0.1.2
+```
+Build es-node:
+```sh
+make
+```
+
+Start es-node
+```sh
+chmod +x run.sh && env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> ./run.sh
+```
+
+With source code, you also have the option to build a Docker image by yourself and run an es-node container:
+
+```sh
+env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> docker compose up 
+```
+If you want to run Docker container in the background and keep all the logs:
+```sh
+env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> ./run-docker.sh
+```
+
 
 ## Install dependencies
 
-_Please note that not all steps in this section are required; they depend on your [choice](#options-to-run-es-node)._
+_Please note that not all steps in this section are required; they depend on your [choice](#options-for-running-es-node)._
 
 ### Install Go
 
@@ -86,77 +160,4 @@ nvm use 20
 ### Install snarkjs
 ```sh
 npm install -g snarkjs@0.7.0
-```
-
-## From a Docker image
-
-Run an es-node container in one step:
-```sh
-docker run --name es  -d  \
-          -v ./es-data:/es-node/es-data \
-          -e ES_NODE_STORAGE_MINER=<miner> \
-          -e ES_NODE_SIGNER_PRIVATE_KEY=<private_key> \
-          -p 9545:9545 \
-          -p 9222:9222 \
-          -p 30305:30305/udp \
-          --entrypoint /es-node/run.sh \
-          ghcr.io/ethstorage/es-node
-```
-
-You can check docker logs using the following command:
-```sh
-docker logs -f es 
-```
-## From pre-built executables
-
-Before running es-node from the pre-built executables, ensure that you have installed [Node.js](#install-nodejs) and [snarkjs](#install-snarkjs).
-
-Download the pre-built package suitable for your platform:
-
-Linux x86-64 or AMD64:
-```sh
-curl -L https://github.com/ethstorage/es-node/releases/download/v0.1.2/es-node.v0.1.2.linux-amd64.tar.gz | tar -xz
-```
-MacOS x86-64 or AMD64:
-```sh
-curl -L https://github.com/ethstorage/es-node/releases/download/v0.1.2/es-node.v0.1.2.darwin-amd64.tar.gz | tar -xz
-```
-MacOS ARM64:
-```sh
-curl -L https://github.com/ethstorage/es-node/releases/download/v0.1.2/es-node.v0.1.2.darwin-arm64.tar.gz | tar -xz
-```
-Run es-node
-```
-cd es-node.v0.1.2
-env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> ./run.sh
-```
-
-## From source code
-
-You will need to [install Go](#install-go) to build es-node from source code, and install [Node.js](#install-nodejs) and [snarkjs](#install-snarkjs) to run es-node.
-
-Download source code and switch to the latest release branch:
-```sh
-git clone https://github.com/ethstorage/es-node.git
-cd es-node
-git checkout v0.1.2
-```
-Build es-node:
-```sh
-make
-```
-
-Start es-node
-```sh
-chmod +x run.sh && env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> ./run.sh
-```
-
-With source code, you also have the option to build a Docker image by yourself and run an es-node container:
-
-```sh
-env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> docker compose up 
-```
-If you want to run Docker container in the background and keep all the logs:
-```sh
-env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> ./run-docker.sh
 ```

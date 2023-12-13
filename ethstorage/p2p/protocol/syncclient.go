@@ -477,6 +477,7 @@ func (s *SyncClient) AddPeer(id peer.ID, shards map[common.Address][]uint64) boo
 		return false
 	}
 	if !s.needThisPeer(shards) {
+		s.log.Info("No need this peer, the connection would be closed later", "peer", id.String(), "shards", shards)
 		s.metrics.IncDropPeerCount()
 		s.lock.Unlock()
 		return false
@@ -499,7 +500,7 @@ func (s *SyncClient) RemovePeer(id peer.ID) {
 	defer s.lock.Unlock()
 	pr, ok := s.peers[id]
 	if !ok {
-		s.log.Warn("Cannot remove peer from sync duties, peer was not registered", "peer", id)
+		s.log.Info("Cannot remove peer from sync duties, peer was not registered", "peer", id)
 		return
 	}
 	pr.resCancel() // once loop exits
@@ -687,7 +688,7 @@ func (s *SyncClient) assignBlobRangeTasks() {
 				s.lock.Unlock()
 
 				if err != nil {
-					log.Warn("Failed to request blobs", "err", err)
+					log.Warn("Failed to request blobs", "peer", pr.id.String(), "err", err)
 					return
 				}
 
@@ -770,7 +771,7 @@ func (s *SyncClient) assignBlobHealTasks() {
 			s.lock.Unlock()
 
 			if err != nil {
-				log.Warn("Failed to request packet", "err", err)
+				log.Warn("Failed to request packet", "peer", pr.id.String(), "err", err)
 				return
 			}
 			if req.id != packet.ID || req.contract != packet.Contract || req.shardId != packet.ShardId {
