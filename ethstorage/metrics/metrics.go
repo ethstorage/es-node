@@ -458,7 +458,7 @@ func (m *Metrics) SetMiningInfo(shardId uint64, difficulty, minedTime, blockMine
 	m.GasFee.WithLabelValues(fmt.Sprintf("%d", shardId), miner.Hex(), fmt.Sprintf("%d", blockMined)).Set(float64(gasFee))
 	m.MiningReward.WithLabelValues(fmt.Sprintf("%d", shardId), miner.Hex(), fmt.Sprintf("%d", blockMined)).Set(float64(reward))
 
-	if t, ok := m.lastSubmissionTimes[shardId]; ok && t != minedTime {
+	if t, ok := m.lastSubmissionTimes[shardId]; ok && t <= minedTime {
 		m.MinedTime.WithLabelValues(fmt.Sprintf("%d", shardId), fmt.Sprintf("%d", blockMined)).Set(float64(minedTime - t))
 	}
 	m.lastSubmissionTimes[shardId] = minedTime
