@@ -183,6 +183,7 @@ func NewMetrics(procName string) *Metrics {
 		}, []string{
 			"shard_id",
 			"miner",
+			"block_mined",
 		}),
 
 		MiningReward: factory.NewGaugeVec(prometheus.GaugeOpts{
@@ -453,7 +454,7 @@ func (m *Metrics) SetMiningInfo(shardId uint64, difficulty, minedTime, blockMine
 	m.LastSubmissionTime.WithLabelValues(fmt.Sprintf("%d", shardId)).Set(float64(minedTime))
 	m.BlockMined.WithLabelValues(fmt.Sprintf("%d", shardId)).Set(float64(blockMined))
 
-	m.LastMinerSubmissionTime.WithLabelValues(fmt.Sprintf("%d", shardId), miner.Hex()).Set(float64(minedTime))
+	m.LastMinerSubmissionTime.WithLabelValues(fmt.Sprintf("%d", shardId), miner.Hex(), fmt.Sprintf("%d", blockMined)).Set(float64(minedTime))
 	m.GasFee.WithLabelValues(fmt.Sprintf("%d", shardId), miner.Hex(), fmt.Sprintf("%d", blockMined)).Set(float64(gasFee))
 	m.MiningReward.WithLabelValues(fmt.Sprintf("%d", shardId), miner.Hex(), fmt.Sprintf("%d", blockMined)).Set(float64(reward))
 
