@@ -33,7 +33,7 @@ import (
 )
 
 const (
-	rpcUrl            = "http://65.108.236.27:8545"
+	rpcUrl            = "http://65.109.115.36:8545"
 	chainID           = "7011893058"
 	kvEntriesPerShard = 16
 	kvSize            = 128 * 1024

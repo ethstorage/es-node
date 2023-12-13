@@ -51,7 +51,7 @@ func TestCreateDataFile(t *testing.T) {
 			false,
 		},
 	}
-	client, err := ethclient.DialContext(context.Background(), "http://65.108.236.27:8545")
+	client, err := ethclient.DialContext(context.Background(), "http://65.109.115.36:8545")
 	if err != nil {
 		t.Fatalf("connect to L1 error: %v ", err)
 	}

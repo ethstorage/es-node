@@ -14,7 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 )
 
-const l1Endpoint = "http://65.108.236.27:8545"
+const l1Endpoint = "http://65.109.115.36:8545"
 
 func TestSignerFactoryFromConfig(t *testing.T) {
 	tests := []struct {

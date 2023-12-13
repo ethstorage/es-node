@@ -16,7 +16,7 @@ import (
 
 var (
 	contractAddress = common.HexToAddress("0x31c2078945359086152687E43F30d94A52141bEc")
-	rawURL          = "http://65.108.236.27:8545"
+	rawURL          = "http://65.109.115.36:8545"
 	filename        = "../cmd/es-node/storage.dat"
 	pc              *eth.PollingClient
 	sm              *ShardManager

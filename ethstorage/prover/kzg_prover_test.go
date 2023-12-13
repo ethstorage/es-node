@@ -27,7 +27,7 @@ import (
 )
 
 var (
-	rpc          = "http://65.108.236.27:8545"
+	rpc          = "http://65.109.115.36:8545"
 	chainID      = "7011893058"
 	prvk         = "95eb6ffd2ae0b115db4d1f0d58388216f9d026896696a5211d77b5f14eb5badf"
 	contractAddr = common.HexToAddress("0xb55D964a4a9d73460393dbB0EB9b6565DB5c1362")
