@@ -136,14 +136,13 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 	}
 	m.lg.Info("Estimated gas done", "gas", estimatedGas)
 	cost := new(big.Int).Mul(new(big.Int).SetUint64(estimatedGas), gasPrice)
-	m.lg.Info("Estimated cost done", "cost", cost, "gasPrice", gasPrice)
 	reward, err := m.estimateReward(ctx, cfg, contract, rst.startShardId, rst.blockNumber)
 	if err != nil {
 		m.lg.Error("Calculate reward failed", "error", err.Error())
 		return common.Hash{}, err
 	}
 	profit := new(big.Int).Sub(reward, cost)
-	m.lg.Info("Estimated reward done (in ether)", "reward", weiToEther(reward), "cost", weiToEther(cost), "profit", weiToEther(profit))
+	m.lg.Info("Estimated reward and cost (in ether)", "reward", weiToEther(reward), "cost", weiToEther(cost), "profit", weiToEther(profit))
 	if profit.Cmp(cfg.MinimumProfit) == -1 {
 		m.lg.Warn("Will quit the tx: the profit will not meet expectation",
 			"profitEstimated", weiToEther(profit),
@@ -242,15 +241,26 @@ func (m *l1MiningAPI) estimateReward(ctx context.Context, cfg Config, contract c
 	return minerReward, nil
 }
 
-func paymentIn(x *big.Int, dcfFactor *big.Rat, fromTs, toTs, startTime uint64) *big.Int {
-	pow0 := pow(dcfFactor, fromTs-startTime)
-	pow1 := pow(dcfFactor, toTs-startTime)
-	delta := new(big.Rat).Sub(pow0, pow1)
-	return new(big.Int).Div(new(big.Int).Mul(x, delta.Num()), delta.Denom())
+func paymentIn(x, dcfFactor *big.Int, fromTs, toTs, startTime uint64) *big.Int {
+	return new(big.Int).Rsh(
+		new(big.Int).Mul(
+			x,
+			new(big.Int).Sub(
+				pow(dcfFactor, fromTs-startTime),
+				pow(dcfFactor, toTs-startTime),
+			)),
+		128,
+	)
 }
 
-func pow(a *big.Rat, e uint64) *big.Rat {
-	aen := new(big.Int).Exp(a.Num(), new(big.Int).SetUint64(e), nil)
-	aed := new(big.Int).Exp(a.Denom(), new(big.Int).SetUint64(e), nil)
-	return new(big.Rat).SetFrac(aen, aed)
+func pow(fp *big.Int, n uint64) *big.Int {
+	v := new(big.Int).Lsh(big.NewInt(1), 128)
+	for n != 0 {
+		if (n & 1) == 1 {
+			v = new(big.Int).Rsh(new(big.Int).Mul(v, fp), 128)
+		}
+		fp = new(big.Int).Rsh(new(big.Int).Mul(fp, fp), 128)
+		n = n / 2
+	}
+	return v
 }

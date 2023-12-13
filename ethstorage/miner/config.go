@@ -24,7 +24,7 @@ type Config struct {
 	DiffAdjDivisor *big.Int
 	StorageCost    *big.Int
 	PrepaidAmount  *big.Int
-	DcfFactor      *big.Rat
+	DcfFactor      *big.Int
 
 	// cli
 	GasPrice         *big.Int

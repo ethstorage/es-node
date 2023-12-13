@@ -156,13 +156,10 @@ func NewMinerConfig(ctx *cli.Context, client *ethclient.Client, l1Contract commo
 		return nil, err
 	}
 	minerConfig.DiffAdjDivisor = diffAdjDivisor
-	dcff, err := readBigIntFromContract(cctx, client, l1Contract, "dcfFactor")
+	dcf, err := readBigIntFromContract(cctx, client, l1Contract, "dcfFactor")
 	if err != nil {
 		return nil, err
 	}
-	base := new(big.Int).Exp(big.NewInt(2), big.NewInt(128), nil)
-	dcf := new(big.Rat).SetFrac(dcff, base)
-	log.Info("Read big int from contract", "dcfInSecond", dcf.FloatString(10))
 	minerConfig.DcfFactor = dcf
 
 	startTime, err := readUintFromContract(cctx, client, l1Contract, "startTime")
