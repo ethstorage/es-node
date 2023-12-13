@@ -116,6 +116,7 @@ func NewMetrics(procName string) *Metrics {
 	factory := metrics.With(registry)
 	return &Metrics{
 		lastSubmissionTimes: make(map[uint64]uint64),
+
 		LastL1Block: factory.NewGauge(prometheus.GaugeOpts{
 			Namespace: ns,
 			Subsystem: ContractMetrics,
@@ -183,6 +184,7 @@ func NewMetrics(procName string) *Metrics {
 			"shard_id",
 			"miner",
 		}),
+
 		MiningReward: factory.NewGaugeVec(prometheus.GaugeOpts{
 			Namespace: ns,
 			Subsystem: ContractMetrics,
@@ -193,6 +195,7 @@ func NewMetrics(procName string) *Metrics {
 			"miner",
 			"block_mined",
 		}),
+
 		GasFee: factory.NewGaugeVec(prometheus.GaugeOpts{
 			Namespace: ns,
 			Subsystem: ContractMetrics,

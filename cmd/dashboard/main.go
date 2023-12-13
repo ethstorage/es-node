@@ -188,14 +188,18 @@ func (d *dashboard) FetchMiningEvents(start, end uint64) ([]*miningEvent, uint64
 	for _, l := range logs {
 		tx, err := d.GetTransactionByHash(l.TxHash)
 		if err != nil {
-			// TODO: should we cancel this fetch?
-			log.Warn("GetTransactionByHash fail", "tx hash", l.TxHash, "error", err.Error())
-			continue
+			return nil, start, fmt.Errorf("GetTransactionByHash fail, tx hash: %s, error: %s", l.TxHash.Hex(), err.Error())
 		}
 
 		// TODO: update when new version contract deployed, use the reward in the new MinedBlock event
-		balance, _ := d.l1Source.BalanceAt(d.ctx, d.l1Contract, new(big.Int).SetUint64(l.BlockNumber))
-		balanceBefore, _ := d.l1Source.BalanceAt(d.ctx, d.l1Contract, new(big.Int).SetUint64(l.BlockNumber-1))
+		balance, nErr := d.l1Source.BalanceAt(d.ctx, d.l1Contract, new(big.Int).SetUint64(l.BlockNumber))
+		if nErr != nil {
+			return nil, start, fmt.Errorf("BalanceAt fail, block: %d, error: %s", l.BlockNumber, err.Error())
+		}
+		balanceBefore, oErr := d.l1Source.BalanceAt(d.ctx, d.l1Contract, new(big.Int).SetUint64(l.BlockNumber-1))
+		if oErr != nil {
+			return nil, start, fmt.Errorf("BalanceAt fail, block: %d, error: %s", l.BlockNumber-1, err.Error())
+		}
 		reward := new(big.Int).Sub(balanceBefore, balance)
 
 		events = append(events, &miningEvent{
