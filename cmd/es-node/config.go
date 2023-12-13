@@ -175,6 +175,11 @@ func NewMinerConfig(ctx *cli.Context, client *ethclient.Client, l1Contract commo
 		return nil, err
 	}
 	minerConfig.ShardEntry = 1 << shardEntryBits
+	treasuryShare, err := readUintFromContract(cctx, client, l1Contract, "treasuryShare")
+	if err != nil {
+		return nil, err
+	}
+	minerConfig.TreasuryShare = treasuryShare
 	storageCost, err := readBigIntFromContract(cctx, client, l1Contract, "storageCost")
 	if err != nil {
 		return nil, err

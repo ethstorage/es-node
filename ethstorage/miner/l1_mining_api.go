@@ -19,7 +19,10 @@ import (
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
 )
 
-const gasBufferRatio = 1.2
+const (
+	gasBufferRatio    = 1.2
+	rewardDenominator = 10000
+)
 
 func NewL1MiningAPI(l1 *eth.PollingClient, lg log.Logger) *l1MiningAPI {
 	return &l1MiningAPI{l1, lg}
@@ -100,22 +103,24 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 	calldata := append(h[0:4], dataField...)
 
 	gasPrice := cfg.GasPrice
-	if gasPrice == nil {
-		gasPrice, err := m.SuggestGasPrice(ctx)
+	if gasPrice == nil || gasPrice.Cmp(common.Big0) == 0 {
+		suggested, err := m.SuggestGasPrice(ctx)
 		if err != nil {
 			m.lg.Error("Query gas price failed", "error", err.Error())
 			return common.Hash{}, err
 		}
-		m.lg.Debug("Query gas price done", "gasPrice", gasPrice)
+		gasPrice = suggested
+		m.lg.Info("Query gas price done", "gasPrice", gasPrice)
 	}
 	tip := cfg.PriorityGasPrice
-	if tip == nil {
-		tip, err := m.SuggestGasTipCap(ctx)
+	if tip == nil || tip.Cmp(common.Big0) == 0 {
+		suggested, err := m.SuggestGasTipCap(ctx)
 		if err != nil {
 			m.lg.Error("Query gas tip cap failed", "error", err.Error())
-			tip = common.Big0
+			suggested = common.Big0
 		}
-		m.lg.Debug("Query gas tip cap done", "gasTipGap", tip)
+		tip = suggested
+		m.lg.Info("Query gas tip cap done", "gasTipGap", tip)
 	}
 	estimatedGas, err := m.EstimateGas(ctx, ethereum.CallMsg{
 		From:      cfg.SignerAddr,
@@ -132,7 +137,7 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 	m.lg.Info("Estimated gas done", "gas", estimatedGas)
 	cost := new(big.Int).Mul(new(big.Int).SetUint64(estimatedGas), gasPrice)
 	m.lg.Info("Estimated cost done", "cost", cost, "gasPrice", gasPrice)
-	reward, err := m.calculateReward(ctx, cfg, contract, rst.startShardId, rst.blockNumber)
+	reward, err := m.estimateReward(ctx, cfg, contract, rst.startShardId, rst.blockNumber)
 	if err != nil {
 		m.lg.Error("Calculate reward failed", "error", err.Error())
 		return common.Hash{}, err
@@ -140,7 +145,8 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 	profit := new(big.Int).Sub(reward, cost)
 	m.lg.Info("Estimated reward done", "reward", reward, "profit", profit)
 	if profit.Cmp(cfg.MinimumProfit) == -1 {
-		return common.Hash{}, fmt.Errorf("tx quit: the profit(%s) will not meet the minimum expectation(%s)", profit, cfg.MinimumProfit)
+		m.lg.Warn("Will quit the tx: the profit will not meet expectation", "profitEstimated", profit, "minimumProfit", cfg.MinimumProfit)
+		return common.Hash{}, fmt.Errorf("quit: not enough profit")
 	}
 
 	chainID, err := m.NetworkID(ctx)
@@ -181,7 +187,7 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 	return signedTx.Hash(), nil
 }
 
-func (m *l1MiningAPI) calculateReward(ctx context.Context, cfg Config, contract common.Address, shard uint64, block *big.Int) (*big.Int, error) {
+func (m *l1MiningAPI) estimateReward(ctx context.Context, cfg Config, contract common.Address, shard uint64, block *big.Int) (*big.Int, error) {
 
 	lastKv, err := m.PollingClient.GetStorageLastBlobIdx(rpc.LatestBlockNumber.Int64())
 	if err != nil {
@@ -226,7 +232,11 @@ func (m *l1MiningAPI) calculateReward(ctx context.Context, cfg Config, contract 
 			reward = new(big.Int).Add(reward, additionalReward)
 		}
 	}
-	return reward, nil
+	minerReward := new(big.Int).Div(
+		new(big.Int).Mul(new(big.Int).SetUint64((rewardDenominator-cfg.TreasuryShare)), reward),
+		new(big.Int).SetUint64(rewardDenominator),
+	)
+	return minerReward, nil
 }
 
 func paymentIn(x *big.Int, dcfFactor *big.Rat, fromTs, toTs, startTime uint64) *big.Int {

@@ -18,6 +18,7 @@ type Config struct {
 	NonceLimit     uint64
 	StartTime      uint64
 	ShardEntry     uint64
+	TreasuryShare  uint64
 	MinimumDiff    *big.Int
 	Cutoff         *big.Int
 	DiffAdjDivisor *big.Int
