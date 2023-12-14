@@ -356,9 +356,16 @@ func (w *worker) checkTxStatus(txHash common.Hash, miner common.Address) {
 			if rLog.Topics[0] == minedEventSig {
 				// the last param of total unindexed 3
 				reward = new(big.Int).SetBytes(rLog.Data[64:])
+				break
 			}
 		}
-		log.Info("Mining transaction accounting (in ether)", "reward", weiToEther(reward), "cost", weiToEther(cost), "profit", weiToEther(new(big.Int).Sub(reward, cost)))
+		if reward != nil {
+			log.Info("Mining transaction accounting (in ether)",
+				"reward", weiToEther(reward),
+				"cost", weiToEther(cost),
+				"profit", weiToEther(new(big.Int).Sub(reward, cost)),
+			)
+		}
 	} else if receipt.Status == 0 {
 		log.Warn("Mining transaction failed!      ×", "txHash", txHash)
 	}
@@ -369,6 +376,9 @@ func weiToEther(wei *big.Int) *big.Float {
 	f := new(big.Float)
 	f.SetPrec(236) //  IEEE 754 octuple-precision binary floating-point format: binary256
 	f.SetMode(big.ToNearestEven)
+	if wei == nil {
+		return f.SetInt64(0)
+	}
 	fWei := new(big.Float)
 	fWei.SetPrec(236) //  IEEE 754 octuple-precision binary floating-point format: binary256
 	fWei.SetMode(big.ToNearestEven)
