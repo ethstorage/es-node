@@ -303,6 +303,7 @@ func (s *SyncClient) createTask(sid uint64, lastKvIndex uint64) *task {
 	task := task{
 		Contract:       s.storageManager.ContractAddress(),
 		ShardId:        sid,
+		nextIdx:        0,
 		statelessPeers: make(map[peer.ID]struct{}),
 		peers:          make(map[peer.ID]struct{}),
 	}
@@ -418,6 +419,9 @@ func (s *SyncClient) cleanTasks() {
 			t.SubTasks[i].First = min
 			if t.SubTasks[i].done && !exist {
 				t.SubTasks = append(t.SubTasks[:i], t.SubTasks[i+1:]...)
+				if t.nextIdx > i {
+					t.nextIdx--
+				}
 				i--
 			}
 		}
@@ -473,6 +477,7 @@ func (s *SyncClient) AddPeer(id peer.ID, shards map[common.Address][]uint64) boo
 		return false
 	}
 	if !s.needThisPeer(shards) {
+		s.log.Info("No need this peer, the connection would be closed later", "peer", id.String(), "shards", shards)
 		s.metrics.IncDropPeerCount()
 		s.lock.Unlock()
 		return false
@@ -495,7 +500,7 @@ func (s *SyncClient) RemovePeer(id peer.ID) {
 	defer s.lock.Unlock()
 	pr, ok := s.peers[id]
 	if !ok {
-		s.log.Warn("Cannot remove peer from sync duties, peer was not registered", "peer", id)
+		s.log.Info("Cannot remove peer from sync duties, peer was not registered", "peer", id)
 		return
 	}
 	pr.resCancel() // once loop exits
@@ -627,17 +632,20 @@ func (s *SyncClient) assignBlobRangeTasks() {
 	// Iterate over all the tasks and try to find a pending one
 	for _, t := range s.tasks {
 		maxRange := s.syncerParams.MaxRequestSize / ethstorage.ContractToShardManager[t.Contract].MaxKvSize() * 2
-		for _, stask := range t.SubTasks {
-			st := stask
+		subTaskCount := len(t.SubTasks)
+		for idx := 0; idx < subTaskCount; idx++ {
+			pr := s.getIdlePeerForTask(t)
+			if pr == nil {
+				break
+			}
+			t.nextIdx = t.nextIdx % subTaskCount
+			st := t.SubTasks[t.nextIdx]
+			t.nextIdx++
 			if st.done {
 				continue
 			}
 			// Skip any tasks already running
 			if st.isRunning {
-				continue
-			}
-			pr := s.getIdlePeerForTask(t)
-			if pr == nil {
 				continue
 			}
 
@@ -680,7 +688,7 @@ func (s *SyncClient) assignBlobRangeTasks() {
 				s.lock.Unlock()
 
 				if err != nil {
-					log.Warn("Failed to request blobs", "err", err)
+					log.Warn("Failed to request blobs", "peer", pr.id.String(), "err", err)
 					return
 				}
 
@@ -763,7 +771,7 @@ func (s *SyncClient) assignBlobHealTasks() {
 			s.lock.Unlock()
 
 			if err != nil {
-				log.Warn("Failed to request packet", "err", err)
+				log.Warn("Failed to request packet", "peer", pr.id.String(), "err", err)
 				return
 			}
 			if req.id != packet.ID || req.contract != packet.Contract || req.shardId != packet.ShardId {

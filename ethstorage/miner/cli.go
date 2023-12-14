@@ -78,7 +78,7 @@ func (c CLIConfig) Check() error {
 	info, err := os.Stat(filepath.Join(c.ZKWorkingDir, "snarkjs"))
 	if err != nil {
 		if os.IsNotExist(err) || !info.IsDir() {
-			return fmt.Errorf("snarkjs folder not found in ZKWorkingDir: %v\n", err)
+			return fmt.Errorf("snarkjs folder not found in ZKWorkingDir: %v", err)
 		}
 	}
 	return nil
@@ -89,7 +89,7 @@ func (c CLIConfig) ToMinerConfig() (Config, error) {
 	if !filepath.IsAbs(zkWorkingDir) {
 		dir, err := filepath.Abs(zkWorkingDir)
 		if err != nil {
-			return Config{}, fmt.Errorf("check ZKWorkingDir error: %v\n", err)
+			return Config{}, fmt.Errorf("check ZKWorkingDir error: %v", err)
 		}
 		zkWorkingDir = dir
 	}
