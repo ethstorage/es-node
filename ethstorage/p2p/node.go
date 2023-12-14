@@ -82,6 +82,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 			n.gater = extra.ConnectionGater()
 			n.connMgr = extra.ConnectionManager()
 		}
+
 		// Activate the P2P req-resp sync
 		n.syncCl = protocol.NewSyncClient(log, rollupCfg, n.host.NewStream, storageManager, setup.SyncerParams(), db, m, feed)
 		n.host.Network().Notify(&network.NotifyBundle{
@@ -116,6 +117,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 				}
 				added := n.syncCl.AddPeer(remotePeerId, shards)
 				if !added {
+					log.Info("Close connection as AddPeer fail", "peer", remotePeerId)
 					conn.Close()
 				}
 			},
@@ -169,7 +171,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 		}
 
 		// All nil if disabled.
-		n.dv5Local, n.dv5Udp, err = setup.Discovery(log.New("p2p", "discv5"), l1ChainID, tcpPort)
+		n.dv5Local, n.dv5Udp, err = setup.Discovery(log.New("p2p", "discv5"), l1ChainID, tcpPort, n.host.Addrs())
 		if err != nil {
 			return fmt.Errorf("failed to start discv5: %w", err)
 		}

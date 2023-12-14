@@ -86,7 +86,7 @@ var DisabledTopicScoreParams = func(blockTime uint64) pubsub.TopicScoreParams {
 }
 
 // TopicScoreParamsByName is a map of name to [pubsub.TopicScoreParams].
-var TopicScoreParamsByName = map[string](func(blockTime uint64) pubsub.TopicScoreParams){
+var TopicScoreParamsByName = map[string]func(blockTime uint64) pubsub.TopicScoreParams{
 	"light": LightTopicScoreParams,
 	"none":  DisabledTopicScoreParams,
 }
