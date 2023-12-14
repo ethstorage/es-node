@@ -450,15 +450,15 @@ func (m *Metrics) SetLastKVIndexAndMaxShardId(lastL1Block, lastKVIndex uint64, m
 }
 
 func (m *Metrics) SetMiningInfo(shardId uint64, difficulty, minedTime, blockMined uint64, miner common.Address, gasFee, reward uint64) {
-	m.Difficulties.WithLabelValues(fmt.Sprintf("%d", shardId)).Set(float64(difficulty))
-	m.LastSubmissionTime.WithLabelValues(fmt.Sprintf("%d", shardId)).Set(float64(minedTime))
-	m.BlockMined.WithLabelValues(fmt.Sprintf("%d", shardId)).Set(float64(blockMined))
-
-	m.LastMinerSubmissionTime.WithLabelValues(fmt.Sprintf("%d", shardId), miner.Hex(), fmt.Sprintf("%d", blockMined)).Set(float64(minedTime))
-	m.GasFee.WithLabelValues(fmt.Sprintf("%d", shardId), miner.Hex(), fmt.Sprintf("%d", blockMined)).Set(float64(gasFee))
-	m.MiningReward.WithLabelValues(fmt.Sprintf("%d", shardId), miner.Hex(), fmt.Sprintf("%d", blockMined)).Set(float64(reward))
-
 	if t, ok := m.lastSubmissionTimes[shardId]; ok && t <= minedTime {
+		m.Difficulties.WithLabelValues(fmt.Sprintf("%d", shardId)).Set(float64(difficulty))
+		m.LastSubmissionTime.WithLabelValues(fmt.Sprintf("%d", shardId)).Set(float64(minedTime))
+		m.BlockMined.WithLabelValues(fmt.Sprintf("%d", shardId)).Set(float64(blockMined))
+
+		m.LastMinerSubmissionTime.WithLabelValues(fmt.Sprintf("%d", shardId), miner.Hex(), fmt.Sprintf("%d", blockMined)).Set(float64(minedTime))
+		m.GasFee.WithLabelValues(fmt.Sprintf("%d", shardId), miner.Hex(), fmt.Sprintf("%d", blockMined)).Set(float64(gasFee))
+		m.MiningReward.WithLabelValues(fmt.Sprintf("%d", shardId), miner.Hex(), fmt.Sprintf("%d", blockMined)).Set(float64(reward))
+
 		m.MinedTime.WithLabelValues(fmt.Sprintf("%d", shardId), fmt.Sprintf("%d", blockMined)).Set(float64(minedTime - t))
 	}
 	m.lastSubmissionTimes[shardId] = minedTime
