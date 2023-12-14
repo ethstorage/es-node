@@ -6,9 +6,9 @@ import (
 	"strconv"
 	"strings"
 
-	log "github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/log"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
-	peer "github.com/libp2p/go-libp2p/core/peer"
+	"github.com/libp2p/go-libp2p/core/peer"
 )
 
 type scorer struct {
