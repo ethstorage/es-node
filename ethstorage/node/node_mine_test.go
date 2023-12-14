@@ -25,6 +25,7 @@ import (
 	es "github.com/ethstorage/go-ethstorage/ethstorage"
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
 	esLog "github.com/ethstorage/go-ethstorage/ethstorage/log"
+	"github.com/ethstorage/go-ethstorage/ethstorage/metrics"
 	"github.com/ethstorage/go-ethstorage/ethstorage/miner"
 	"github.com/ethstorage/go-ethstorage/ethstorage/p2p/protocol"
 	"github.com/ethstorage/go-ethstorage/ethstorage/signer"
@@ -141,7 +142,7 @@ func TestMining(t *testing.T) {
 		L1EpochPollInterval: time.Second * 10,
 		Mining:              miningConfig,
 	}
-	n, err := New(context.Background(), cfg, l, "")
+	n, err := New(context.Background(), cfg, l, "", metrics.NoopMetrics)
 	if err != nil {
 		t.Fatalf("Create new node failed %v", err)
 	}
