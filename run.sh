@@ -50,8 +50,6 @@ es_node_init="init --shard_index 0"
 # TODO remove --miner.priority-gas-price and --miner.gas-price when gas price query is available
 es_node_start=" --network devnet \
   --miner.enabled \
-  --miner.priority-gas-price 5000000000 \
-  --miner.gas-price 30000000000 \
   --storage.files $storage_file_0 \
   --signer.private-key $ES_NODE_SIGNER_PRIVATE_KEY \
   --l1.beacon http://65.109.115.36:5052 \
