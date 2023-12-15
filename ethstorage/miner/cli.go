@@ -18,9 +18,10 @@ const (
 	EnabledFlagName          = "miner.enabled"
 	GasPriceFlagName         = "miner.gas-price"
 	PriorityGasPriceFlagName = "miner.priority-gas-price"
-	ZKeyFileName             = "miner.zkey"
-	ZKWorkingDir             = "miner.zk-working-dir"
-	ThreadsPerShard          = "miner.threads-per-shard"
+	ZKeyFileNameFlagName     = "miner.zkey"
+	ZKWorkingDirFlagName     = "miner.zk-working-dir"
+	ThreadsPerShardFlagName  = "miner.threads-per-shard"
+	MinimumProfitFlagName    = "miner.min-profit"
 )
 
 func CLIFlags(envPrefix string) []cli.Flag {
@@ -43,20 +44,26 @@ func CLIFlags(envPrefix string) []cli.Flag {
 			Value:  DefaultConfig.PriorityGasPrice,
 			EnvVar: rollup.PrefixEnvVar(envPrefix, "PRIORITY_GAS_PRICE"),
 		},
+		&types.BigFlag{
+			Name:   MinimumProfitFlagName,
+			Usage:  "Minimum profit for mining transactions",
+			Value:  DefaultConfig.MinimumProfit,
+			EnvVar: rollup.PrefixEnvVar(envPrefix, "MIN_PROFIT"),
+		},
 		cli.StringFlag{
-			Name:   ZKeyFileName,
+			Name:   ZKeyFileNameFlagName,
 			Usage:  "zkey file name which should be put in the snarkjs folder",
 			Value:  DefaultConfig.ZKeyFileName,
 			EnvVar: rollup.PrefixEnvVar(envPrefix, "ZKEY_FILE"),
 		},
 		cli.StringFlag{
-			Name:   ZKWorkingDir,
+			Name:   ZKWorkingDirFlagName,
 			Usage:  "Path to the snarkjs folder",
 			Value:  DefaultConfig.ZKWorkingDir,
 			EnvVar: rollup.PrefixEnvVar(envPrefix, "ZK_WORKING_DIR"),
 		},
 		cli.Uint64Flag{
-			Name:   ThreadsPerShard,
+			Name:   ThreadsPerShardFlagName,
 			Usage:  "Number of threads per shard",
 			Value:  DefaultConfig.ThreadsPerShard,
 			EnvVar: rollup.PrefixEnvVar(envPrefix, "THREADS_PER_SHARD"),
@@ -69,6 +76,7 @@ type CLIConfig struct {
 	Enabled          bool
 	GasPrice         *big.Int
 	PriorityGasPrice *big.Int
+	MinimumProfit    *big.Int
 	ZKeyFileName     string
 	ZKWorkingDir     string
 	ThreadsPerShard  uint64
@@ -97,6 +105,7 @@ func (c CLIConfig) ToMinerConfig() (Config, error) {
 	cfg.ZKWorkingDir = zkWorkingDir
 	cfg.GasPrice = c.GasPrice
 	cfg.PriorityGasPrice = c.PriorityGasPrice
+	cfg.MinimumProfit = c.MinimumProfit
 	cfg.ZKeyFileName = c.ZKeyFileName
 	cfg.ThreadsPerShard = c.ThreadsPerShard
 	return cfg, nil
@@ -107,9 +116,10 @@ func ReadCLIConfig(ctx *cli.Context) CLIConfig {
 		Enabled:          ctx.GlobalBool(EnabledFlagName),
 		GasPrice:         types.GlobalBig(ctx, GasPriceFlagName),
 		PriorityGasPrice: types.GlobalBig(ctx, PriorityGasPriceFlagName),
-		ZKeyFileName:     ctx.GlobalString(ZKeyFileName),
-		ZKWorkingDir:     ctx.GlobalString(ZKWorkingDir),
-		ThreadsPerShard:  ctx.GlobalUint64(ThreadsPerShard),
+		MinimumProfit:    types.GlobalBig(ctx, MinimumProfitFlagName),
+		ZKeyFileName:     ctx.GlobalString(ZKeyFileNameFlagName),
+		ZKWorkingDir:     ctx.GlobalString(ZKWorkingDirFlagName),
+		ThreadsPerShard:  ctx.GlobalUint64(ThreadsPerShardFlagName),
 	}
 	return cfg
 }
