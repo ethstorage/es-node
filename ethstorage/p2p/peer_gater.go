@@ -1,8 +1,8 @@
 package p2p
 
 import (
-	log "github.com/ethereum/go-ethereum/log"
-	peer "github.com/libp2p/go-libp2p/core/peer"
+	"github.com/ethereum/go-ethereum/log"
+	"github.com/libp2p/go-libp2p/core/peer"
 )
 
 // ConnectionFactor is the factor by which we multiply the connection score.

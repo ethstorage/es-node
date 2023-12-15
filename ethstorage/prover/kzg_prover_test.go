@@ -130,7 +130,7 @@ func verifyInclusive(trunkIdx uint64, peInput []byte) error {
 
 	dataHash := common.Hash{}
 	copy(dataHash[:], peInput[:24])
-	index := new(big.Int).SetInt64((int64(trunkIdx)))
+	index := new(big.Int).SetInt64(int64(trunkIdx))
 	decodedData := new(big.Int).SetBytes(peInput[64:96])
 
 	h := crypto.Keccak256Hash([]byte("checkInclusive(bytes32,uint256,uint256,bytes)"))
