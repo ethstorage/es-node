@@ -17,11 +17,10 @@ import (
 )
 
 const (
-	metafileName         = "metafile.dat.meta"
-	defaultEncodeType    = ENCODE_BLOB_POSEIDON
-	blobEmptyFillingMask = byte(0b10000000)
-	kvEntries            = uint64(16)
-	lastKvIndex          = uint64(16)
+	metafileName      = "metafile.dat.meta"
+	defaultEncodeType = ENCODE_BLOB_POSEIDON
+	kvEntries         = uint64(16)
+	lastKvIndex       = uint64(16)
 )
 
 var (
@@ -117,69 +116,13 @@ func createEthStorage(contract common.Address, shardIdxList []uint64, chunkSize,
 	return sm, files
 }
 
-type BlobPayloadWithRowData struct {
-	MinerAddress common.Address `json:"minerAddress"`
-	BlobIndex    uint64         `json:"blobIndex"`
-	BlobCommit   common.Hash    `json:"blobCommit"`
-	EncodeType   uint64         `json:"encodeType"`
-	EncodedBlob  []byte         `json:"blob"`
-	RowData      []byte
-}
-
-// makeKVStorage generate a range of storage Data and its metadata
-func makeKVStorage(contract common.Address, shards []uint64, chunkSize, kvSize, kvCount, lastKvIndex uint64,
-	miner common.Address, encodeType uint64, metafile *os.File) map[common.Address]map[uint64]*BlobPayloadWithRowData {
-
-	shardData := make(map[common.Address]map[uint64]*BlobPayloadWithRowData)
-	smData := make(map[uint64]*BlobPayloadWithRowData)
-	shardData[contract] = smData
-	sm := ContractToShardManager[contract]
-
-	for _, sidx := range shards {
-		for i := sidx * kvCount; i < (sidx+1)*kvCount; i++ {
-			val := make([]byte, kvSize)
-			root := common.Hash{}
-			if i < lastKvIndex {
-				copy(val[:20], contract.Bytes())
-				binary.BigEndian.PutUint64(val[20:28], i)
-				root, _ = prover.GetRoot(val, kvSize/chunkSize, chunkSize)
-			}
-
-			commit := generateMetadata(root)
-			encodeData, _, _ := sm.EncodeKV(i, val, commit, miner, encodeType)
-			smData[i] = &BlobPayloadWithRowData{
-				MinerAddress: miner,
-				BlobIndex:    i,
-				BlobCommit:   commit,
-				EncodeType:   encodeType,
-				EncodedBlob:  encodeData,
-				RowData:      val,
-			}
-			meta := GenerateMetadata(i, kvSize, root[:])
-			metafile.WriteAt(meta.Bytes(), int64(i*32))
-		}
-	}
-
-	return shardData
-}
-
-func generateMetadata(hash common.Hash) common.Hash {
-	meta := make([]byte, 32)
-	copy(meta[0:HashSizeInContract], hash[0:HashSizeInContract])
-	meta[HashSizeInContract] = meta[HashSizeInContract] | blobEmptyFillingMask
-	return common.BytesToHash(meta)
-}
-
-func GenerateMetadata(idx, size uint64, hash []byte) common.Hash {
-	meta := make([]byte, 0)
-	idx_bs := make([]byte, 8)
-	binary.BigEndian.PutUint64(idx_bs, idx)
-	meta = append(meta, idx_bs[3:]...)
-	size_bs := make([]byte, 8)
-	binary.BigEndian.PutUint64(size_bs, size)
-	meta = append(meta, size_bs[5:]...)
-	meta = append(meta, hash[:24]...)
-	return common.BytesToHash(meta)
+func createBlob(kvIndex uint64) (blob []byte, hash common.Hash) {
+	val := make([]byte, 131072)
+	copy(val[:20], contractAddress.Bytes())
+	binary.BigEndian.PutUint64(val[20:28], kvIndex)
+	root := common.Hash{}
+	root, _ = prover.GetRoot(val, 1, 131072)
+	return val, root
 }
 
 func setup(t *testing.T) {
@@ -188,7 +131,10 @@ func setup(t *testing.T) {
 	if err != nil {
 		t.Error("Create metafileName fail", err.Error())
 	}
-	defer metafile.Close()
+	defer func(file *os.File) {
+		file.Close()
+		os.Remove(file.Name())
+	}(metafile)
 	l1 := newMockL1Source(lastKvIndex, metafileName)
 
 	// create shard manage
@@ -202,16 +148,9 @@ func setup(t *testing.T) {
 			os.Remove(file)
 		}
 	}(files)
-	//data := makeKVStorage(contractAddress, []uint64{0}, 131072, 131072,
-	//	kvEntries, lastKvIndex, common.Address{}, defaultEncodeType, metafile)
-	//t.Log("sm files", data)
 
 	storageManager = NewStorageManager(sm, l1)
-	err = storageManager.DownloadFinished(97528, []uint64{}, [][]byte{}, []common.Hash{})
-	if err != nil {
-		t.Fatal("set local L1 failed", err)
-		return
-	}
+	storageManager.DownloadThreadNum = 1
 }
 
 func TestStorageManager_LastKvIndex(t *testing.T) {
@@ -222,7 +161,7 @@ func TestStorageManager_LastKvIndex(t *testing.T) {
 
 func TestStorageManager_DownloadFinished(t *testing.T) {
 	setup(t)
-	h := common.Hash{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
+	h := common.Hash{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
 	err := storageManager.DownloadFinished(97529, []uint64{2}, [][]byte{{10}}, []common.Hash{h})
 
 	if err != nil {
@@ -236,31 +175,34 @@ func TestStorageManager_DownloadFinished(t *testing.T) {
 
 	meta := common.Hash{}
 	copy(meta[:], bs)
-	if meta != h {
+	if meta != prepareCommit(h) {
 		t.Fatal("failed to write meta", err)
 	}
 }
 
 func TestStorageManager_CommitBlobs(t *testing.T) {
 	setup(t)
-	h := common.Hash{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2}
-	failedCommited, err := storageManager.CommitBlobs([]uint64{2}, [][]byte{{10}}, []common.Hash{h})
+
+	kvIndex := uint64(2)
+	blob, h := createBlob(kvIndex)
+	storageManager.updateLocalMetas([]uint64{kvIndex}, []common.Hash{h})
+	successCommitted, err := storageManager.CommitBlobs([]uint64{kvIndex}, [][]byte{blob}, []common.Hash{h})
 	if err != nil {
 		t.Fatal("failed to commit blob", err)
 	}
 
-	if len(failedCommited) != 0 {
+	if len(successCommitted) < 1 {
 		t.Fatal("should commit all the blobs")
 	}
 
-	bs, success, err := storageManager.TryReadMeta(2)
+	bs, success, err := storageManager.TryReadMeta(kvIndex)
 	if err != nil || !success {
 		t.Fatal("failed to read meta", err)
 	}
 
 	meta := common.Hash{}
 	copy(meta[:], bs)
-	if meta != h {
-		t.Fatal("failed to write meta", err)
+	if meta != prepareCommit(h) {
+		t.Fatal("failed to write meta", meta, h)
 	}
 }
