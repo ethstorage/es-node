@@ -151,6 +151,19 @@ func setup(t *testing.T) {
 
 	storageManager = NewStorageManager(sm, l1)
 	storageManager.DownloadThreadNum = 1
+
+	kvIndexes := []uint64{1, 2, 3}
+	blobs := make([][]byte, len(kvIndexes))
+	hashes := make([]common.Hash, len(kvIndexes))
+	for i, idx := range kvIndexes {
+		blob, hash := createBlob(idx)
+		blobs[i] = blob
+		hashes[i] = hash
+	}
+	err = storageManager.DownloadFinished(97528, kvIndexes, blobs, hashes)
+	if err != nil {
+		t.Fatal("init error")
+	}
 }
 
 func TestStorageManager_LastKvIndex(t *testing.T) {
@@ -184,9 +197,8 @@ func TestStorageManager_CommitBlobs(t *testing.T) {
 	setup(t)
 
 	kvIndex := uint64(2)
-	blob, h := createBlob(kvIndex)
-	storageManager.updateLocalMetas([]uint64{kvIndex}, []common.Hash{h})
-	successCommitted, err := storageManager.CommitBlobs([]uint64{kvIndex}, [][]byte{blob}, []common.Hash{h})
+	b, h := createBlob(kvIndex)
+	successCommitted, err := storageManager.CommitBlobs([]uint64{kvIndex}, [][]byte{b}, []common.Hash{h})
 	if err != nil {
 		t.Fatal("failed to commit blob", err)
 	}
@@ -203,6 +215,6 @@ func TestStorageManager_CommitBlobs(t *testing.T) {
 	meta := common.Hash{}
 	copy(meta[:], bs)
 	if meta != prepareCommit(h) {
-		t.Fatal("failed to write meta", meta, h)
+		t.Fatal("failed to write meta", err)
 	}
 }
