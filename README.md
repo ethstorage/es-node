@@ -84,6 +84,7 @@ The full list of options that you can use to configure an es-node are as follows
 |`--miner.threads-per-shard`|Number of threads per shard|`runtime.NumCPU() x 2`||
 |`--miner.zk-working-dir`|Path to the snarkjs folder|`build/bin`||
 |`--miner.zkey`|zkey file name which should be put in the snarkjs folder|`blob_poseidon.zkey`||
+|`--miner.min-profit`|Minimum profit for mining transactions|`0`||
 |`--network`|Predefined L1 network selection. Available networks: devnet|||
 |`--p2p.advertise.ip`|The IP address to advertise in Discv5, put into the ENR of the node. This may also be a hostname / domain name to resolve to an IP.|||
 |`--p2p.advertise.tcp`|The TCP port to advertise in Discv5, put into the ENR of the node. Set to p2p.listen.tcp value if 0.|`0`||
