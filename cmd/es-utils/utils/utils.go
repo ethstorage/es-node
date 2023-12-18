@@ -323,7 +323,7 @@ func UploadBlobs(
 		5000000,
 		"",
 		"",
-		"30000000000",
+		"300000000",
 		chainID,
 		calldata,
 	)

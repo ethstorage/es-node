@@ -8,17 +8,18 @@ package integration
 import (
 	"bytes"
 	"context"
-	"log"
 	"math/big"
 	"os"
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethstorage/go-ethstorage/cmd/es-utils/utils"
 	"github.com/ethstorage/go-ethstorage/ethstorage/prover"
 )
@@ -81,41 +82,75 @@ func uploadBlob(t *testing.T, data []byte) common.Hash {
 	if err != nil {
 		t.Fatalf("Get chain id failed %v", err)
 	}
+	pk := os.Getenv(pkName)
+	key, err := crypto.HexToECDSA(pk)
+	if err != nil {
+		t.Fatalf("Invalid private key: %s, err: %v", pk, err)
+	}
+	signer := crypto.PubkeyToAddress(key.PublicKey)
+	lg.Info("Get signer address", "signer", signer.Hex())
+	n, err := client.NonceAt(ctx, signer, big.NewInt(rpc.LatestBlockNumber.Int64()))
+	if err != nil {
+		t.Fatalf("Error getting nonce: %v", err)
+	}
+	blbKey := "0x0000000000000000000000000000000000000000000000000000000000000001"
+	blbIdx := common.Big0
+	length := new(big.Int).SetInt64(128 * 1024)
+	// calldata := "0x4581a920000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000020000"
 
-	// key: "0x0000000000000000000000000000000000000000000000000000000000000001"
-	// blobIdx: 0
-	// length: 128*1024
-	calldata := "0x4581a920000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000020000"
+	h := crypto.Keccak256Hash([]byte("putBlob(bytes32,uint256,uint256)"))
+	mid := h[0:4]
+	bytes32Type, _ := abi.NewType("bytes32", "", nil)
+	uint256Type, _ := abi.NewType("uint256", "", nil)
+	args := abi.Arguments{
+		{Type: bytes32Type},
+		{Type: uint256Type},
+		{Type: uint256Type},
+	}
+	values := []interface{}{common.HexToHash(blbKey), blbIdx, length}
+	dataField, err := args.Pack(values...)
+	if err != nil {
+		t.Fatalf("Error getting calldata: %v", err)
+	}
+	calldata := append(mid, dataField...)
+	valBig, _ := new(big.Int).SetString(value, 10)
+	estimatedGas, err := client.EstimateGas(ctx, ethereum.CallMsg{
+		From:  signer,
+		To:    &contractAddr1GB,
+		Value: valBig,
+		Data:  calldata,
+	})
+	if err != nil {
+		lg.Crit("Estimate gas failed", "error", err.Error())
+	}
+	lg.Info("Estimated gas done", "gas", estimatedGas)
 
 	tx := utils.SendBlobTx(
 		l1Endpoint,
 		contractAddr1GB,
-		os.Getenv(pkName),
+		pk,
 		data,
 		true,
-		-1,
+		int64(n),
 		value,
 		510000,
 		"",
 		"",
-		"10000000000",
+		"100000000",
 		chainID.String(),
-		calldata,
+		"0x"+common.Bytes2Hex(calldata),
 	)
-	log.Printf("Blob transaction submitted %v", tx.Hash())
+	lg.Info("Blob transaction submitted", "hash", tx.Hash())
 	receipt, err := bind.WaitMined(ctx, client, tx)
 	if err != nil {
-		log.Fatal("Get transaction receipt err:", err)
+		lg.Crit("Get transaction receipt err", "error", err)
 	}
-	if receipt.Status == 0 {
-		log.Fatal("Blob transaction failed")
-	}
-	log.Printf("Blob transaction success! Gas used %v", receipt.GasUsed)
-	eventTopics := receipt.Logs[0].Topics
-	kvIndex := new(big.Int).SetBytes(eventTopics[1][:])
-	kvSize := new(big.Int).SetBytes(eventTopics[2][:])
-	dataHash := eventTopics[3]
-	log.Printf("Put Blob with kvIndex=%v kvSize=%v, dataHash=%x", kvIndex, kvSize, dataHash)
+	// if receipt.Status == 0 {
+	// 	lg.Crit("Blob transaction failed")
+	// }
+	lg.Info("Blob transaction success!", "GasUsed", receipt.GasUsed)
+	dataHash := receipt.Logs[0].Topics[3]
+	lg.Info("Put Blob done", "datahash", dataHash)
 	return dataHash
 }
 
@@ -123,7 +158,7 @@ func verifyInclusive(trunkIdx uint64, peInput []byte) error {
 	ctx := context.Background()
 	client, err := ethclient.DialContext(ctx, l1Endpoint)
 	if err != nil {
-		log.Fatalf("Failed to connect to the Ethereum client: %v", err)
+		lg.Crit("Failed to connect to the Ethereum client.", "error", err)
 	}
 	defer client.Close()
 

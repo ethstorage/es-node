@@ -7,13 +7,11 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"math/big"
 	"net/http"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	esLog "github.com/ethstorage/go-ethstorage/ethstorage/log"
@@ -27,10 +25,10 @@ const (
 )
 
 var (
-	contractAddr1GB     = common.HexToAddress("0x0c47aa023A3be36CA148a17a91aA8C9268A350AE")
-	contractAddrDevnet1 = common.HexToAddress("0x9f9F5Fd89ad648f2C000C954d8d9C87743243eC5")
+	contractAddr1GB     = common.HexToAddress("0x24d29453B4B4917117B4af022Ad1B0a9aBc2c7DE")
+	contractAddrDevnet2 = common.HexToAddress("0xb4B46bdAA835F8E4b4d8e208B6559cD267851051")
 	minerAddr           = common.HexToAddress("0x534632D6d7aD1fe5f832951c97FDe73E4eFD9a77")
-	value               = hexutil.EncodeUint64(10000000000000)
+	value               = "1000000000000000"
 	lg                  = esLog.NewLogger(esLog.DefaultCLIConfig())
 )
 
@@ -61,7 +59,7 @@ func readSlotFromContract(ctx context.Context, client *ethclient.Client, l1Contr
 	}
 	bs, err := client.CallContract(ctx, msg, nil)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to get %s from contract: %v", fieldName, err)
+		return nil, fmt.Errorf("failed to get %s from contract: %v", fieldName, err)
 	}
 	return bs, nil
 }
@@ -72,7 +70,7 @@ func readUintFromContract(ctx context.Context, client *ethclient.Client, l1Contr
 		return 0, err
 	}
 	value := new(big.Int).SetBytes(bs).Uint64()
-	log.Println("Read uint from contract", "field", fieldName, "value", value)
+	lg.Info("Read uint from contract", "field", fieldName, "value", value)
 	return value, nil
 }
 
@@ -80,7 +78,8 @@ func callVerify(calldata []byte) error {
 	ctx := context.Background()
 	client, err := ethclient.DialContext(ctx, l1Endpoint)
 	if err != nil {
-		log.Fatalf("Failed to connect to the Ethereum client: %v", err)
+		lg.Error("Failed to connect to the Ethereum client", "error", err)
+		return err
 	}
 	defer client.Close()
 	msg := ethereum.CallMsg{

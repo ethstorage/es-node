@@ -6,17 +6,13 @@
 package integration
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
 	esLog "github.com/ethstorage/go-ethstorage/ethstorage/log"
 	"github.com/ethstorage/go-ethstorage/ethstorage/prover"
-)
-
-const (
-	prPath   = "../ethstorage/prover"
-	zkeyFile = "blob_poseidon.zkey"
 )
 
 func TestKZGPoseidonProver_GenerateZKProofs(t *testing.T) {
@@ -44,6 +40,10 @@ func TestKZGPoseidonProver_GenerateZKProofs(t *testing.T) {
 	}
 
 	proverPath, _ := filepath.Abs(prPath)
+	zkeyFull := filepath.Join(proverPath, snarkLibDir, zkeyFile)
+	if _, err := os.Stat(zkeyFull); os.IsNotExist(err) {
+		t.Fatalf("%s not found", zkeyFull)
+	}
 	prv := prover.NewKZGPoseidonProver(proverPath, zkeyFile, esLog.NewLogger(esLog.DefaultCLIConfig()))
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

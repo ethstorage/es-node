@@ -34,9 +34,16 @@ const (
 	snarkBuildDir = "snarkbuild"
 	proofName     = "proof_blob_poseidon.json"
 	publicName    = "public_blob_poseidon.json"
+	prPath        = "../ethstorage/prover"
+	zkeyFile      = "blob_poseidon.zkey"
 )
 
 func TestZKProver_GenerateZKProof(t *testing.T) {
+	proverPath, _ := filepath.Abs(prPath)
+	zkeyFull := filepath.Join(proverPath, snarkLibDir, zkeyFile)
+	if _, err := os.Stat(zkeyFull); os.IsNotExist(err) {
+		t.Fatalf("%s not found", zkeyFull)
+	}
 	type args struct {
 		encodingKey common.Hash
 		chunkIdx    uint64
@@ -66,9 +73,8 @@ func TestZKProver_GenerateZKProof(t *testing.T) {
 			false,
 		},
 	}
-	path, _ := filepath.Abs("../ethstorage/prover")
-	libDir := filepath.Join(path, snarkLibDir)
-	p := prover.NewZKProverInternal(path, "blob_poseidon.zkey", lg)
+	libDir := filepath.Join(proverPath, snarkLibDir)
+	p := prover.NewZKProverInternal(proverPath, zkeyFile, lg)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			maskGo, err := GenerateMask(tt.args.encodingKey, tt.args.chunkIdx)
@@ -81,7 +87,7 @@ func TestZKProver_GenerateZKProof(t *testing.T) {
 				t.Errorf("ZKProver.GenerateZKProof() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			buildDir := filepath.Join(path, snarkBuildDir, strings.Join([]string{
+			buildDir := filepath.Join(proverPath, snarkBuildDir, strings.Join([]string{
 				tt.args.encodingKey.Hex(),
 				fmt.Sprint(tt.args.chunkIdx),
 			}, "-"))
