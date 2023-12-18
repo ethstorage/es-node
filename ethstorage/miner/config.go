@@ -13,12 +13,20 @@ import (
 )
 
 type Config struct {
+	// contract
 	RandomChecks   uint64
 	NonceLimit     uint64
+	StartTime      uint64
+	ShardEntry     uint64
+	TreasuryShare  uint64
 	MinimumDiff    *big.Int
 	Cutoff         *big.Int
 	DiffAdjDivisor *big.Int
+	StorageCost    *big.Int
+	PrepaidAmount  *big.Int
+	DcfFactor      *big.Int
 
+	// cli
 	GasPrice         *big.Int
 	PriorityGasPrice *big.Int
 	ZKeyFileName     string
@@ -26,6 +34,7 @@ type Config struct {
 	ThreadsPerShard  uint64
 	SignerFnFactory  signer.SignerFactory
 	SignerAddr       common.Address
+	MinimumProfit    *big.Int
 }
 
 var DefaultConfig = Config{
@@ -38,6 +47,7 @@ var DefaultConfig = Config{
 	GasPrice:         nil,
 	PriorityGasPrice: nil,
 	ZKeyFileName:     "blob_poseidon.zkey",
-	ZKWorkingDir:     filepath.Join("ethstorage", "prover"),
-	ThreadsPerShard:  uint64(runtime.NumCPU()),
+	ZKWorkingDir:     filepath.Join("build", "bin"),
+	ThreadsPerShard:  uint64(2 * runtime.NumCPU()),
+	MinimumProfit:    common.Big0,
 }

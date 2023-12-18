@@ -12,8 +12,9 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethstorage/go-ethstorage/ethstorage"
+	"github.com/ethereum/go-ethereum/params"
 	es "github.com/ethstorage/go-ethstorage/ethstorage"
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
 )
@@ -26,6 +27,10 @@ const (
 	// always use new block hash to mine for each slot
 	mineTimeOut              = 12 // seconds
 	miningTransactionTimeout = 25 // seconds
+)
+
+var (
+	minedEventSig = crypto.Keccak256Hash([]byte("MinedBlock(uint256,uint256,uint256,uint256,address,uint256)"))
 )
 
 type task struct {
@@ -83,7 +88,7 @@ type worker struct {
 
 func newWorker(
 	config Config,
-	storageMgr *ethstorage.StorageManager,
+	storageMgr *es.StorageManager,
 	api L1API,
 	chainHeadCh chan eth.L1BlockRef,
 	prover MiningProver,
@@ -222,6 +227,7 @@ func (w *worker) assignTasks(task task, block eth.L1BlockRef, reqDiff *big.Int) 
 			w.lg.Debug("Mining task queued", "shard", ti.shardIdx, "thread", ti.thread, "block", ti.blockNumber, "blockTime", block.Time, "now", uint64(time.Now().Unix()))
 		}
 	}
+	w.lg.Info("Mining tasks assigned", "shard", task.shardIdx, "threads", w.config.ThreadsPerShard, "block", block.Number, "nonces", w.config.NonceLimit)
 }
 
 func (w *worker) updateDifficulty(shardIdx, blockTime uint64) (*big.Int, error) {
@@ -234,11 +240,11 @@ func (w *worker) updateDifficulty(shardIdx, blockTime uint64) (*big.Int, error) 
 		w.lg.Warn("Failed to get es mining info", "error", err.Error())
 		return nil, err
 	}
-	w.lg.Info("Mining info retrieved", "shard", shardIdx, "lastMineTime", info.lastMineTime, "difficulty", info.difficulty, "proofsSubmitted", info.blockMined)
+	w.lg.Info("Mining info retrieved", "shard", shardIdx, "LastMineTime", info.LastMineTime, "Difficulty", info.Difficulty, "proofsSubmitted", info.BlockMined)
 	reqDiff := new(big.Int).Div(maxUint256, expectedDiff(
-		info.lastMineTime,
+		info.LastMineTime,
 		blockTime,
-		info.difficulty,
+		info.Difficulty,
 		w.config.Cutoff,
 		w.config.DiffAdjDivisor,
 		w.config.MinimumDiff,
@@ -343,34 +349,66 @@ func (w *worker) checkTxStatus(txHash common.Hash, miner common.Address) {
 		log.Warn("Mining transaction not found!", "err", err, "txHash", txHash)
 	} else if receipt.Status == 1 {
 		log.Info("Mining transaction success!      √", "miner", miner)
+		log.Info("Mining transaction details", "txHash", txHash, "gasUsed", receipt.GasUsed, "effectiveGasPrice", receipt.EffectiveGasPrice)
+		cost := new(big.Int).Mul(new(big.Int).SetUint64(receipt.GasUsed), receipt.EffectiveGasPrice)
+		var reward *big.Int
+		for _, rLog := range receipt.Logs {
+			if rLog.Topics[0] == minedEventSig {
+				// the last param of total unindexed 3
+				reward = new(big.Int).SetBytes(rLog.Data[64:])
+				break
+			}
+		}
+		if reward != nil {
+			log.Info("Mining transaction accounting (in ether)",
+				"reward", weiToEther(reward),
+				"cost", weiToEther(cost),
+				"profit", weiToEther(new(big.Int).Sub(reward, cost)),
+			)
+		}
 	} else if receipt.Status == 0 {
 		log.Warn("Mining transaction failed!      ×", "txHash", txHash)
 	}
+}
+
+// https://github.com/ethereum/go-ethereum/issues/21221#issuecomment-805852059
+func weiToEther(wei *big.Int) *big.Float {
+	f := new(big.Float)
+	f.SetPrec(236) //  IEEE 754 octuple-precision binary floating-point format: binary256
+	f.SetMode(big.ToNearestEven)
+	if wei == nil {
+		return f.SetInt64(0)
+	}
+	fWei := new(big.Float)
+	fWei.SetPrec(236) //  IEEE 754 octuple-precision binary floating-point format: binary256
+	fWei.SetMode(big.ToNearestEven)
+	return f.Quo(fWei.SetInt(wei), big.NewFloat(params.Ether))
 }
 
 // mineTask acturally executes a mining task
 func (w *worker) mineTask(t *taskItem) (bool, error) {
 	startTime := time.Now()
 	nonce := t.nonceStart
-	if t.thread == 0 {
-		w.lg.Info("Mining tasks started", "shard", t.shardIdx, "threads", w.config.ThreadsPerShard, "block", t.blockNumber, "nonces", fmt.Sprintf("%d~%d", 0, w.config.NonceLimit))
-	}
 	w.lg.Debug("Mining task started", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonces", fmt.Sprintf("%d~%d", t.nonceStart, t.nonceEnd))
 	for w.isRunning() {
 		if time.Since(startTime).Seconds() > mineTimeOut {
-			w.lg.Warn("Mining task timed out", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "noncesTried", nonce-t.nonceStart)
+			if t.thread == 0 {
+				nonceTriedTotal := (nonce - t.nonceStart) * w.config.ThreadsPerShard
+				w.lg.Warn("Mining tasks timed out", "shard", t.shardIdx, "block", t.blockNumber,
+					"noncesTried", fmt.Sprintf("%d(%.1f%%)", nonceTriedTotal, float64(nonceTriedTotal*100)/float64(w.config.NonceLimit)),
+				)
+			}
+			w.lg.Debug("Mining task timed out", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "noncesTried", nonce-t.nonceStart)
 			break
 		}
 		if nonce >= t.nonceEnd {
 			if t.thread == 0 {
 				w.lg.Info("The nonces are exhausted in this slot, waiting for the next block",
-					"samplingTime", fmt.Sprintf("%.1fs", time.Since(startTime).Seconds()),
-					"shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonce", nonce)
-			} else {
-				w.lg.Debug("The nonces are exhausted in this slot, waiting for the next block",
-					"samplingTime", fmt.Sprintf("%.1fs", time.Since(startTime).Seconds()),
-					"shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonce", nonce)
+					"samplingTime", fmt.Sprintf("%.1fs", time.Since(startTime).Seconds()), "shard", t.shardIdx, "block", t.blockNumber)
 			}
+			w.lg.Debug("The nonces are exhausted in this slot, waiting for the next block",
+				"samplingTime", fmt.Sprintf("%.1fs", time.Since(startTime).Seconds()),
+				"shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonceEnd", nonce)
 			break
 		}
 		hash0 := initHash(t.miner, t.blockHash, nonce)

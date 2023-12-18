@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	libp2p "github.com/libp2p/go-libp2p"
+	"github.com/libp2p/go-libp2p"
 	lconf "github.com/libp2p/go-libp2p/config"
 	"github.com/libp2p/go-libp2p/core/connmgr"
 	"github.com/libp2p/go-libp2p/core/host"
@@ -246,7 +246,6 @@ func addrFromIPAndPort(ip net.IP, port uint16) (ma.Multiaddr, error) {
 func YamuxC() libp2p.Option {
 	return libp2p.Muxer("/yamux/1.0.0", yamux.DefaultTransport)
 }
-
 
 func NoiseC() libp2p.Option {
 	return libp2p.Security(noise.ID, noise.New)

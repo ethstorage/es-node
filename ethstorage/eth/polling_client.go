@@ -3,6 +3,7 @@ package eth
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math/big"
 	"regexp"
 	"sync"
@@ -271,3 +272,15 @@ func (w *PollingClient) GetKvMetas(kvIndices []uint64, blockNumber int64) ([][32
 	return res[0].([][32]byte), nil
 }
 
+func (w *PollingClient) ReadContractField(fieldName string) ([]byte, error) {
+	h := crypto.Keccak256Hash([]byte(fieldName + "()"))
+	msg := ethereum.CallMsg{
+		To:   &w.esContract,
+		Data: h[0:4],
+	}
+	bs, err := w.Client.CallContract(context.Background(), msg, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get %s from contract: %v", fieldName, err)
+	}
+	return bs, nil
+}

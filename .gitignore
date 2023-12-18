@@ -23,6 +23,10 @@ build/_vendor/pkg
 .settings
 
 # executable
+es-node*
+/es-node*
+/build
+/es-node
 /cmd/es-node/es-node*
 /cmd/es-node/esnode_discovery_db/
 /cmd/es-node/esnode_peerstore_db/
@@ -34,6 +38,7 @@ build/_vendor/pkg
 /cmd/es-utils/blob-utils
 *.dat
 
+cookie
 *.zkey
 
 # shell

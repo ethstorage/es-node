@@ -178,7 +178,7 @@ func readMask(publicFile string) (common.Hash, error) {
 	}
 	defer f.Close()
 	var output []string
-	var decoder *json.Decoder = json.NewDecoder(f)
+	var decoder = json.NewDecoder(f)
 	err = decoder.Decode(&output)
 	if err != nil {
 		return common.Hash{}, err

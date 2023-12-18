@@ -156,7 +156,37 @@ func NewMinerConfig(ctx *cli.Context, client *ethclient.Client, l1Contract commo
 		return nil, err
 	}
 	minerConfig.DiffAdjDivisor = diffAdjDivisor
+	dcf, err := readBigIntFromContract(cctx, client, l1Contract, "dcfFactor")
+	if err != nil {
+		return nil, err
+	}
+	minerConfig.DcfFactor = dcf
 
+	startTime, err := readUintFromContract(cctx, client, l1Contract, "startTime")
+	if err != nil {
+		return nil, err
+	}
+	minerConfig.StartTime = startTime
+	shardEntryBits, err := readUintFromContract(cctx, client, l1Contract, "shardEntryBits")
+	if err != nil {
+		return nil, err
+	}
+	minerConfig.ShardEntry = 1 << shardEntryBits
+	treasuryShare, err := readUintFromContract(cctx, client, l1Contract, "treasuryShare")
+	if err != nil {
+		return nil, err
+	}
+	minerConfig.TreasuryShare = treasuryShare
+	storageCost, err := readBigIntFromContract(cctx, client, l1Contract, "storageCost")
+	if err != nil {
+		return nil, err
+	}
+	minerConfig.StorageCost = storageCost
+	prepaidAmount, err := readBigIntFromContract(cctx, client, l1Contract, "prepaidAmount")
+	if err != nil {
+		return nil, err
+	}
+	minerConfig.PrepaidAmount = prepaidAmount
 	signerFnFactory, signerAddr, err := NewSignerConfig(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get signer: %w", err)

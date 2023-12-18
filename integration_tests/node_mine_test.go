@@ -200,12 +200,18 @@ func fillEmpty(t *testing.T, l1Client *eth.PollingClient, storageMgr *ethstorage
 	if err != nil {
 		t.Fatalf("Failed to get block number %v", err)
 	}
+<<<<<<< HEAD:integration_tests/node_mine_test.go
 	storageMgr.Reset(int64(block))
 	lastBlobIdx, err := storageMgr.LastKvIndex()
 	if err != nil {
 		t.Fatalf("get lastBlobIdx for FillEmptyKV fail, err: %s", err.Error())
 	}
 	limit := storageMgr.KvEntries() * uint64(len(shardIds))
+=======
+	n.storageManager.Reset(int64(block))
+	lastBlobIdx := n.storageManager.LastKvIndex()
+	limit := n.storageManager.KvEntries() * uint64(len(shardIds))
+>>>>>>> 6985e6968ebf0cb626a7764a9f74907a6870feec:ethstorage/node/node_mine_test.go
 	for idx := lastBlobIdx; idx < limit; idx++ {
 		err = storageMgr.CommitBlob(idx, empty, common.Hash{})
 		if err != nil {

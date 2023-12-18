@@ -131,8 +131,13 @@ func readXIn(buildDir string) (string, error) {
 		return "", err
 	}
 	defer f.Close()
+<<<<<<< HEAD:integration_tests/zk_prover_test.go
 	var input prover.InputPair
 	var decoder *json.Decoder = json.NewDecoder(f)
+=======
+	var input InputPair
+	var decoder = json.NewDecoder(f)
+>>>>>>> 6985e6968ebf0cb626a7764a9f74907a6870feec:ethstorage/prover/zk_prover_test.go
 	err = decoder.Decode(&input)
 	if err != nil {
 		return "", err
@@ -164,7 +169,7 @@ func verifyDecodeSample(proof prover.ZKProof, trunkIdx uint64, encodingKey, mask
 	defer client.Close()
 
 	encodingKeyBN := new(big.Int).SetBytes(encodingKey[:])
-	indexBN := new(big.Int).SetInt64((int64(trunkIdx)))
+	indexBN := new(big.Int).SetInt64(int64(trunkIdx))
 	maskBN := new(big.Int).SetBytes(mask[:])
 
 	h := crypto.Keccak256Hash([]byte("decodeSample(((uint256,uint256),(uint256[2],uint256[2]),(uint256,uint256)),uint256,uint256,uint256)"))
