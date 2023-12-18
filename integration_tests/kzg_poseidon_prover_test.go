@@ -6,11 +6,22 @@
 package integration
 
 import (
+	"fmt"
+	"io"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
 	esLog "github.com/ethstorage/go-ethstorage/ethstorage/log"
 	"github.com/ethstorage/go-ethstorage/ethstorage/prover"
+)
+
+const (
+	prPath   = "../ethstorage/prover"
+	zkeyFile = "blob_poseidon.zkey"
 )
 
 func TestKZGPoseidonProver_GenerateZKProofs(t *testing.T) {
@@ -36,7 +47,9 @@ func TestKZGPoseidonProver_GenerateZKProofs(t *testing.T) {
 			wantErr: false,
 		},
 	}
-	prv := prover.NewKZGPoseidonProver("", "blob_poseidon.zkey", esLog.NewLogger(esLog.DefaultCLIConfig()))
+
+	proverPath, _ := filepath.Abs(prPath)
+	prv := prover.NewKZGPoseidonProver(proverPath, zkeyFile, esLog.NewLogger(esLog.DefaultCLIConfig()))
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			proofs, masks, err := prv.GenerateZKProofs(tt.args.encodingKeys, tt.args.chunkIdxes)
@@ -51,5 +64,40 @@ func TestKZGPoseidonProver_GenerateZKProofs(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func init() {
+	proverPath, _ := filepath.Abs(prPath)
+	zkeyFile := filepath.Join(proverPath, "snarkjs", zkeyFile)
+	fileID := "1ZLfhYeCXMnbk6wUiBADRAn1mZ8MI_zg-"
+	if _, err := os.Stat(zkeyFile); os.IsNotExist(err) {
+		fmt.Printf("%s not found, start downloading...\n", zkeyFile)
+		cookieCmd := exec.Command("curl", "-c", "./cookie", "-s", "-L", fmt.Sprintf("https://drive.google.com/uc?export=download&id=%s", fileID))
+		cookieOutput, err := cookieCmd.Output()
+		if err != nil {
+			fmt.Println("Error downloading file:", err)
+			panic(err)
+		}
+		confirmCode := strings.TrimPrefix(strings.TrimSpace(string(cookieOutput)), "confirm=")
+		downloadCmd := exec.Command("curl", "-Lb", "./cookie", fmt.Sprintf("https://drive.google.com/uc?export=download&confirm=%s&id=%s", confirmCode, fileID))
+		downloadOutput, err := downloadCmd.StdoutPipe()
+		if err != nil {
+			fmt.Println("Error downloading file:", err)
+			panic(err)
+		}
+		zkeyFileWriter, _ := os.Create(zkeyFile)
+		defer zkeyFileWriter.Close()
+
+		if err := downloadCmd.Start(); err != nil {
+			fmt.Println("Error downloading file:", err)
+			panic(err)
+		}
+
+		_, _ = io.Copy(zkeyFileWriter, downloadOutput)
+
+		if err := downloadCmd.Wait(); err != nil {
+			fmt.Println("Error downloading file:", err)
+		}
 	}
 }
