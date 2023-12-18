@@ -164,7 +164,7 @@ func (srv *SyncServer) handleGetBlobsByRangeRequest(ctx context.Context, stream 
 		payload, err := srv.BlobByIndex(id)
 		read++
 		if err != nil {
-			log.Debug("Get blob fail", "id", id, "error", err.Error())
+			log.Debug("Get blob fail", "ID", id, "error", err.Error())
 			continue
 		}
 		sucRead++

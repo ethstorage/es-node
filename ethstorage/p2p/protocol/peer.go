@@ -10,6 +10,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 )
 
@@ -77,7 +78,7 @@ func (p *Peer) IsShardExist(contract common.Address, shardId uint64) bool {
 	return false
 }
 
-// Log overrides the P2P logger with the higher level one containing only the id.
+// Log overrides the P2P logger with the higher level one containing only the ID.
 func (p *Peer) Log() log.Logger {
 	return p.logger
 }
@@ -131,4 +132,14 @@ func (p *Peer) RequestBlobsByList(id uint64, contract common.Address, shardId ui
 		BlobList: kvList,
 		Bytes:    maxReqestSize,
 	}, blobs)
+}
+
+type PeerInfo struct {
+	ID            peer.ID
+	IsActive      bool
+	Direction     network.Direction
+	RequestCount  int
+	RespondCount  int
+	FetchedBlobs  int
+	InsertedBlobs int
 }

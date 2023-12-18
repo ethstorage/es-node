@@ -124,7 +124,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 				} else {
 					shards = protocol.ConvertToShardList(css.([]*protocol.ContractShards))
 				}
-				added := n.syncCl.AddPeer(remotePeerId, shards)
+				added := n.syncCl.AddPeer(remotePeerId, shards, conn.Stat().Direction)
 				if !added {
 					log.Info("Close connection as AddPeer fail", "peer", remotePeerId)
 					conn.Close()
@@ -149,7 +149,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 			} else {
 				shards = protocol.ConvertToShardList(css.([]*protocol.ContractShards))
 			}
-			added := n.syncCl.AddPeer(conn.RemotePeer(), shards)
+			added := n.syncCl.AddPeer(conn.RemotePeer(), shards, conn.Stat().Direction)
 			if !added {
 				conn.Close()
 			}
