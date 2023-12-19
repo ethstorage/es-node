@@ -155,7 +155,6 @@ type SyncClient struct {
 	closingPeers               bool
 	syncDone                   bool // Flag to signal that eth storage sync is done
 	peers                      map[peer.ID]*Peer
-	peerInfos                  map[peer.ID]*PeerInfo
 	idlerPeers                 map[peer.ID]struct{} // Peers that aren't serving requests
 	runningFillEmptyTaskTreads int32                // Number of working threads for processing empty task
 
@@ -207,7 +206,6 @@ func NewSyncClient(log log.Logger, cfg *rollup.EsConfig, newStream newStreamFn, 
 		newStreamFn:                newStream,
 		idlerPeers:                 make(map[peer.ID]struct{}),
 		peers:                      make(map[peer.ID]*Peer),
-		peerInfos:                  make(map[peer.ID]*PeerInfo),
 		peerJoin:                   make(chan peer.ID, 1),
 		update:                     make(chan struct{}, 1),
 		runningFillEmptyTaskTreads: 0,
@@ -485,26 +483,12 @@ func (s *SyncClient) AddPeer(id peer.ID, shards map[common.Address][]uint64, dir
 		return false
 	}
 	// add new peer routine
-	pr := NewPeer(0, s.cfg.L2ChainID, id, s.newStreamFn, shards)
+	pr := NewPeer(0, s.cfg.L2ChainID, id, s.newStreamFn, direction, shards)
 	s.peers[id] = pr
 
 	s.idlerPeers[id] = struct{}{}
 	s.addPeerToTask(id, shards)
 	s.metrics.IncPeerCount()
-
-	pi, ok := s.peerInfos[id]
-	if !ok {
-		pi = &PeerInfo{
-			ID:            id,
-			IsActive:      true,
-			RequestCount:  0,
-			RespondCount:  0,
-			FetchedBlobs:  0,
-			InsertedBlobs: 0,
-		}
-		s.peerInfos[id] = pi
-	}
-	pi.Direction = direction
 	s.lock.Unlock()
 
 	s.notifyPeerJoin(id)
@@ -527,10 +511,6 @@ func (s *SyncClient) RemovePeer(id peer.ID) {
 	for _, t := range s.tasks {
 		delete(t.statelessPeers, id)
 	}
-	pi, ok := s.peerInfos[id]
-	if ok {
-		pi.IsActive = false
-	}
 }
 
 // Close will shut down the sync client and all attached work, and block until shutdown is complete.
@@ -544,7 +524,6 @@ func (s *SyncClient) Close() error {
 	s.cleanTasks()
 	s.saveSyncStatus(true)
 	s.report(true)
-	s.reportPeerSummary()
 	return nil
 }
 
@@ -706,12 +685,6 @@ func (s *SyncClient) assignBlobRangeTasks() {
 					s.idlerPeers[id] = struct{}{}
 					s.notifyUpdate()
 				}
-				if pi, ok := s.peerInfos[id]; ok {
-					pi.RequestCount++
-					if err != nil {
-						pi.RespondCount++
-					}
-				}
 				s.lock.Unlock()
 
 				if err != nil {
@@ -794,12 +767,6 @@ func (s *SyncClient) assignBlobHealTasks() {
 			if _, ok := s.peers[id]; ok {
 				s.idlerPeers[id] = struct{}{}
 				s.notifyUpdate()
-			}
-			if pi, ok := s.peerInfos[req.peer]; ok {
-				pi.RequestCount++
-				if err != nil {
-					pi.RespondCount++
-				}
 			}
 			s.lock.Unlock()
 
@@ -973,10 +940,6 @@ func (s *SyncClient) OnBlobsByRange(res *blobsByRangeResponse) {
 		res.req.subTask.done = true
 	}
 	res.req.subTask.next = max + 1
-	if pi, ok := s.peerInfos[req.peer]; ok {
-		pi.InsertedBlobs = pi.InsertedBlobs + len(inserted)
-		pi.FetchedBlobs = pi.FetchedBlobs + len(res.Blobs)
-	}
 	s.lock.Unlock()
 }
 
@@ -1041,10 +1004,6 @@ func (s *SyncClient) OnBlobsByList(res *blobsByListResponse) {
 		}
 	}
 	res.req.healTask.remove(inserted)
-	if pi, ok := s.peerInfos[req.peer]; ok {
-		pi.InsertedBlobs = pi.InsertedBlobs + len(inserted)
-		pi.FetchedBlobs = pi.FetchedBlobs + len(res.Blobs)
-	}
 	s.lock.Unlock()
 }
 
@@ -1187,23 +1146,29 @@ func (s *SyncClient) report(force bool) {
 	log.Info("Storage sync in progress", "progress", progress, "peerCount", peerCount, "syncTasksRemain", syncTasksRemain,
 		"blobsSynced", blobsSynced, "blobsToSync", blobsToSync, "fillTasksRemain", subFillTaskRemain,
 		"emptyFilled", blobsFilled, "emptyToFill", emptyToFill, "timeUsed", common.PrettyDuration(elapsed), "eta", common.PrettyDuration(estTime-elapsed))
-
-	inboundCount, outbondCount := 0, 0
-	for _, peer := range s.peerInfos {
-		if peer.Direction == network.DirInbound {
-			inboundCount++
-		} else if peer.Direction == network.DirOutbound {
-			outbondCount++
-		}
-	}
-	log.Info("P2P State", "peerCount", len(s.peerInfos), "activeCount", len(s.peers), "inboundCount", inboundCount, "outbound", outbondCount)
 }
 
-func (s *SyncClient) reportPeerSummary() {
-	for _, p := range s.peerInfos {
-		log.Info("Peer Summary", "ID", p.ID, "direction", p.Direction.String(), "requestsSent", p.RequestCount,
-			"respondsGot", p.RespondCount, "fetchedBlobs", p.FetchedBlobs, "insertedBlobs", p.InsertedBlobs)
+func (s *SyncClient) ReportPeerSummary() {
+	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			inbound, outbound := 0, 0
+			for _, peer := range s.peers {
+				if peer.direction == network.DirInbound {
+					inbound++
+				} else if peer.direction == network.DirOutbound {
+					outbound++
+				}
+			}
+			log.Info("P2P Summary", "activePeers", len(s.peers), "inbound", inbound, "outbound", outbound)
+		case <-s.resCtx.Done():
+			log.Info("P2P summary stop")
+			return
+		}
 	}
+
 }
 
 func (s *SyncClient) needThisPeer(contractShards map[common.Address][]uint64) bool {

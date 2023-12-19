@@ -154,6 +154,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 				conn.Close()
 			}
 		}
+		go n.syncCl.ReportPeerSummary()
 		n.syncSrv = protocol.NewSyncServer(rollupCfg, storageManager, m)
 
 		blobByRangeHandler := protocol.MakeStreamHandler(resourcesCtx, log.New("serve", "blobs_by_range"), n.syncSrv.HandleGetBlobsByRangeRequest)

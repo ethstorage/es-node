@@ -19,6 +19,7 @@ type Peer struct {
 	id          peer.ID // Unique ID for the peer, cached
 	newStreamFn newStreamFn
 	chainId     *big.Int
+	direction   network.Direction
 	version     uint                        // Protocol version negotiated
 	shards      map[common.Address][]uint64 // shards of this node support
 	resCtx      context.Context
@@ -27,12 +28,13 @@ type Peer struct {
 }
 
 // NewPeer create a wrapper for a network connection and negotiated  protocol version.
-func NewPeer(version uint, chainId *big.Int, peerId peer.ID, newStream newStreamFn, shards map[common.Address][]uint64) *Peer {
+func NewPeer(version uint, chainId *big.Int, peerId peer.ID, newStream newStreamFn, direction network.Direction, shards map[common.Address][]uint64) *Peer {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Peer{
 		id:          peerId,
 		newStreamFn: newStream,
 		chainId:     chainId,
+		direction:   direction,
 		version:     version,
 		shards:      shards,
 		resCtx:      ctx,
@@ -132,14 +134,4 @@ func (p *Peer) RequestBlobsByList(id uint64, contract common.Address, shardId ui
 		BlobList: kvList,
 		Bytes:    maxReqestSize,
 	}, blobs)
-}
-
-type PeerInfo struct {
-	ID            peer.ID
-	IsActive      bool
-	Direction     network.Direction
-	RequestCount  int
-	RespondCount  int
-	FetchedBlobs  int
-	InsertedBlobs int
 }
