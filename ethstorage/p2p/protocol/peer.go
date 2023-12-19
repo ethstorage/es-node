@@ -80,7 +80,7 @@ func (p *Peer) IsShardExist(contract common.Address, shardId uint64) bool {
 	return false
 }
 
-// Log overrides the P2P logger with the higher level one containing only the ID.
+// Log overrides the P2P logger with the higher level one containing only the id.
 func (p *Peer) Log() log.Logger {
 	return p.logger
 }
