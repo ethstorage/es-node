@@ -169,6 +169,14 @@ var (
 		Value:    16,
 		EnvVar:   p2pEnv("MAX_CONCURRENCY"),
 	}
+	FillEmptyConcurrency = cli.IntFlag{
+		Name: "p2p.fill.empty.concurrency",
+		Usage: "fill empty concurrency is the number of threads to concurrently fill encoded empty blobs. " +
+			"The default value is NumCPU - 2 and the min value is 1.",
+		Required: false,
+		Value:    0,
+		EnvVar:   p2pEnv("Fill_Empty_Concurrency"),
+	}
 	MetaDownloadBatchSize = cli.Uint64Flag{
 		Name:     "p2p.meta.download.batch",
 		Usage:    "Batch size for requesting the blob metadatas stored in the storage contract in one RPC call.",

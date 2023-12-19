@@ -365,9 +365,15 @@ func loadSyncerParams(conf *p2p.Config, ctx *cli.Context) error {
 	metaDownloadBatchSize := ctx.GlobalUint64(flags.MetaDownloadBatchSize.Name)
 	maxRequestSize := ctx.GlobalUint64(flags.MaxRequestSize.Name)
 	maxConcurrency := ctx.GlobalUint64(flags.MaxConcurrency.Name)
+	fillEmptyConcurrency := ctx.GlobalInt(flags.FillEmptyConcurrency.Name)
 	if maxConcurrency < 1 {
 		return fmt.Errorf("p2p.max.concurrency param is invalid: the value should larger than 0")
 	}
-	conf.SyncParams = &protocol.SyncerParams{MaxRequestSize: maxRequestSize, MaxConcurrency: maxConcurrency, MetaDownloadBatchSize: metaDownloadBatchSize}
+	conf.SyncParams = &protocol.SyncerParams{
+		MaxRequestSize:        maxRequestSize,
+		MaxConcurrency:        maxConcurrency,
+		FillEmptyConcurrency:  fillEmptyConcurrency,
+		MetaDownloadBatchSize: metaDownloadBatchSize,
+	}
 	return nil
 }

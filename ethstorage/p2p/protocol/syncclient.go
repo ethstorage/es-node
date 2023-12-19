@@ -58,7 +58,7 @@ const (
 var (
 	maxKvCountPerReq            = uint64(16)
 	syncStatusKey               = []byte("SyncStatus")
-	maxFillEmptyTaskTreads      int32
+	maxFillEmptyTaskTreads      = 1
 	requestTimeoutInMillisecond = 1000 * time.Millisecond // Millisecond
 )
 
@@ -156,7 +156,7 @@ type SyncClient struct {
 	syncDone                   bool // Flag to signal that eth storage sync is done
 	peers                      map[peer.ID]*Peer
 	idlerPeers                 map[peer.ID]struct{} // Peers that aren't serving requests
-	runningFillEmptyTaskTreads int32                // Number of working threads for processing empty task
+	runningFillEmptyTaskTreads int                  // Number of working threads for processing empty task
 
 	peerJoin chan peer.ID
 	update   chan struct{} // Notification channel for possible sync progression
@@ -187,9 +187,10 @@ type SyncClient struct {
 func NewSyncClient(log log.Logger, cfg *rollup.EsConfig, newStream newStreamFn, storageManager StorageManager, params *SyncerParams,
 	db ethdb.Database, m SyncClientMetrics, mux *event.Feed) *SyncClient {
 	ctx, cancel := context.WithCancel(context.Background())
-	maxFillEmptyTaskTreads = int32(runtime.NumCPU() - 2)
-	if maxFillEmptyTaskTreads < 1 {
-		maxFillEmptyTaskTreads = 1
+	if params.FillEmptyConcurrency > 0 {
+		maxFillEmptyTaskTreads = params.FillEmptyConcurrency
+	} else if runtime.NumCPU() > 2 {
+		maxFillEmptyTaskTreads = runtime.NumCPU() - 2
 	}
 	maxKvCountPerReq = params.MaxRequestSize / storageManager.MaxKvSize()
 	shardCount := len(storageManager.Shards())
