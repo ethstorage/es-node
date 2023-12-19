@@ -22,6 +22,5 @@ if [ ! -e  ${zkey_file} ]; then
   curl -Lb ./cookie "https://drive.google.com/uc?export=download&`echo ${html}|grep -Eo 'confirm=[a-zA-Z0-9\-_]+'`&id=${file_id}" -o ${zkey_file}
 fi
 
-# go test -timeout 0 github.com/ethstorage/go-ethstorage/integration_tests
-
-go test -timeout 0 -run ^TestKZGProver_GenerateKZGProof$ github.com/ethstorage/go-ethstorage/integration_tests
+# go test -timeout 0 github.com/ethstorage/go-ethstorage/integration_tests -v
+go test -timeout 0 -run ^TestMining$ github.com/ethstorage/go-ethstorage/integration_tests -v

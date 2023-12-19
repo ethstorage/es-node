@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"math/big"
 	"net/http"
 
 	"github.com/ethereum/go-ethereum"
@@ -15,7 +14,6 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	esLog "github.com/ethstorage/go-ethstorage/ethstorage/log"
-	"github.com/ethstorage/go-ethstorage/ethstorage/storage"
 )
 
 const (
@@ -25,31 +23,12 @@ const (
 )
 
 var (
-	contractAddr1GB     = common.HexToAddress("0x24d29453B4B4917117B4af022Ad1B0a9aBc2c7DE")
+	contractAddr16kv    = common.HexToAddress("0x192eE460Cf3A5AF51F9A7427Bb07237A2841D2d1")
 	contractAddrDevnet2 = common.HexToAddress("0xb4B46bdAA835F8E4b4d8e208B6559cD267851051")
 	minerAddr           = common.HexToAddress("0x534632D6d7aD1fe5f832951c97FDe73E4eFD9a77")
 	value               = "1000000000000000"
 	lg                  = esLog.NewLogger(esLog.DefaultCLIConfig())
 )
-
-func initStorageConfig(ctx context.Context, client *ethclient.Client, l1Contract, miner common.Address) (*storage.StorageConfig, error) {
-	maxKvSizeBits, err := readUintFromContract(ctx, client, l1Contract, "maxKvSizeBits")
-	if err != nil {
-		return nil, err
-	}
-	chunkSizeBits := maxKvSizeBits
-	shardEntryBits, err := readUintFromContract(ctx, client, l1Contract, "shardEntryBits")
-	if err != nil {
-		return nil, err
-	}
-	return &storage.StorageConfig{
-		L1Contract:        l1Contract,
-		Miner:             miner,
-		KvSize:            1 << maxKvSizeBits,
-		ChunkSize:         1 << chunkSizeBits,
-		KvEntriesPerShard: 1 << shardEntryBits,
-	}, nil
-}
 
 func readSlotFromContract(ctx context.Context, client *ethclient.Client, l1Contract common.Address, fieldName string) ([]byte, error) {
 	h := crypto.Keccak256Hash([]byte(fieldName + "()"))
@@ -64,16 +43,6 @@ func readSlotFromContract(ctx context.Context, client *ethclient.Client, l1Contr
 	return bs, nil
 }
 
-func readUintFromContract(ctx context.Context, client *ethclient.Client, l1Contract common.Address, fieldName string) (uint64, error) {
-	bs, err := readSlotFromContract(ctx, client, l1Contract, fieldName)
-	if err != nil {
-		return 0, err
-	}
-	value := new(big.Int).SetBytes(bs).Uint64()
-	lg.Info("Read uint from contract", "field", fieldName, "value", value)
-	return value, nil
-}
-
 func callVerify(calldata []byte) error {
 	ctx := context.Background()
 	client, err := ethclient.DialContext(ctx, l1Endpoint)
@@ -83,7 +52,7 @@ func callVerify(calldata []byte) error {
 	}
 	defer client.Close()
 	msg := ethereum.CallMsg{
-		To:   &contractAddr1GB,
+		To:   &contractAddr16kv,
 		Data: calldata,
 	}
 	bs, err := client.CallContract(ctx, msg, nil)

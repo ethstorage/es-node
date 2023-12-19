@@ -9,22 +9,21 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"math/big"
 	"net/http"
 	"os"
-	"os/signal"
 	"path/filepath"
 	"strings"
-	"syscall"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethstorage/go-ethstorage/cmd/es-utils/utils"
 	"github.com/ethstorage/go-ethstorage/ethstorage"
-	es "github.com/ethstorage/go-ethstorage/ethstorage"
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
 	"github.com/ethstorage/go-ethstorage/ethstorage/miner"
 	"github.com/ethstorage/go-ethstorage/ethstorage/p2p/protocol"
@@ -38,90 +37,24 @@ const (
 	dataFileName  = "shard-%d.dat"
 )
 
-var shardIds = []uint64{0}
+var shardIds = []uint64{0, 1}
 
-// to use a new contract and override data files:
-// go test -run ^TestMining$ github.com/ethstorage/go-ethstorage/ethstorage/node -v count=1 -contract=0x9BE8dEbb712A3c0dD163Da85D3aF867793Aef3E6 -init=true
 func TestMining(t *testing.T) {
-	contract := contractAddr1GB
-	// contract := common.HexToAddress("0xf8928E47ab82912025FD45589f2444fF3a0FDa73")
-	flagContract := getArg("-contract")
-	if flagContract != "" {
-		contract = common.HexToAddress(flagContract)
-		lg.Info("Use the contract address from flag", "contract", flagContract)
-	}
-	init := false
-	flagInitStorage := getArg("-init")
-	if flagInitStorage == "true" {
-		lg.Info("Data files will be removed")
-		init = true
-	}
-
-	intialized := false
-	existFile := 0
-	for _, shardId := range shardIds {
-		fileName := fmt.Sprintf(dataFileName, shardId)
-		if _, err := os.Stat(fileName); !os.IsNotExist(err) {
-			if init {
-				os.Remove(fileName)
-			} else {
-				existFile++
-			}
-		}
-	}
-
-	if existFile == 2 {
-		intialized = true
-		lg.Info("Data files already exist, will start mining")
-	}
-	// if existFile == 1 {
-	// 	lg.Crit("One of the data files is missing, please check")
-	// }
-	if existFile == 0 {
-		lg.Info("Will initialize the data files, please make sure you use a new contract")
-	}
+	contract := contractAddr16kv
 
 	pClient, err := eth.Dial(l1Endpoint, contract, lg)
 	if err != nil {
 		t.Fatalf("Failed to connect to the Ethereum client: %v", err)
 	}
-	storConfig, err := initStorageConfig(context.Background(), pClient.Client, contract, minerAddr)
+	storConfig := initStorageConfig(t, pClient, contract, minerAddr)
+	files, err := CreateDataFiles(storConfig)
 	if err != nil {
-		t.Fatalf("Failed to init storage client: %v", err)
-	}
-	var files []string
-	if !intialized {
-		f, err := CreateDataFiles(storConfig)
-		if err != nil {
-			t.Fatalf("Create data files error: %v", err)
-		}
-		files = f
-	} else {
-		for _, shardIdx := range shardIds {
-			fileName := fmt.Sprintf(dataFileName, shardIdx)
-			files = append(files, fileName)
-		}
+		t.Fatalf("Create data files error: %v", err)
 	}
 	storConfig.Filenames = files
-	if os.Getenv(pkName) == "" {
-		t.Fatal("No private key in env", pkName)
-	}
-	signerCfg := signer.CLIConfig{
-		PrivateKey: os.Getenv(pkName),
-	}
-	factory, addrFrom, err := signer.SignerFactoryFromConfig(signerCfg)
-	if err != nil {
-		t.Fatal("SignerFactoryFromConfig err", err)
-	}
-	miningConfig := &miner.DefaultConfig
-	miningConfig.SignerFnFactory = factory
-	miningConfig.SignerAddr = addrFrom
-	zkWorkingDir, err := filepath.Abs("../prover")
-	if err != nil {
-		t.Fatalf("Get zkWorkingDir error: %v", err)
-	}
-	miningConfig.ZKWorkingDir = zkWorkingDir
+	miningConfig := initMiningConfig(t, contract, pClient)
 
+	defer cleanFiles(miningConfig.ZKWorkingDir)
 	shardManager, err := initShardManager(*storConfig)
 	if err != nil {
 		t.Fatalf("init shard manager error: %v", err)
@@ -132,9 +65,9 @@ func TestMining(t *testing.T) {
 	feed := new(event.Feed)
 
 	l1api := miner.NewL1MiningAPI(pClient, lg)
-	pvr := prover.NewKZGPoseidonProver(zkWorkingDir, "blob_poseidon.zkey", lg)
+	pvr := prover.NewKZGPoseidonProver(miningConfig.ZKWorkingDir, zkeyFile, lg)
 	mnr := miner.New(miningConfig, storageManager, l1api, &pvr, feed, lg)
-	log.Info("Initialized miner")
+	lg.Info("Initialized miner")
 
 	l1HeadsSub := event.ResubscribeErr(time.Second*10, func(ctx context.Context, err error) (event.Subscription, error) {
 		if err != nil {
@@ -148,31 +81,196 @@ func TestMining(t *testing.T) {
 			}
 		})
 	})
-	if !intialized {
-		prepareData(t, pClient, storageManager)
-		// fillEmpty(t, pClient, storageManager)
-	}
+	go func() {
+		err, ok := <-l1HeadsSub.Err()
+		if !ok {
+			return
+		}
+		lg.Error("L1 heads subscription error", "err", err)
+	}()
+	// prepareData(t, pClient, storageManager)
+	fillEmpty(t, pClient, storageManager)
 	mnr.Start()
-	feed.Send(protocol.EthStorageSyncDone{
-		DoneType: protocol.SingleShardDone,
-		ShardId:  0,
-	})
-	time.Sleep(360 * time.Second)
-	feed.Send(protocol.EthStorageSyncDone{
-		DoneType: protocol.SingleShardDone,
-		ShardId:  1,
-	})
 
-	c := make(chan os.Signal)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-	<-c
+	var wg sync.WaitGroup
+	minedShardCh := make(chan uint64)
+	for _, s := range shardIds {
+		feed.Send(protocol.EthStorageSyncDone{
+			DoneType: protocol.SingleShardDone,
+			ShardId:  s,
+		})
+		info, err := l1api.GetMiningInfo(
+			context.Background(),
+			contract,
+			s,
+		)
+		if err != nil {
+			t.Fatalf("Failed to get es mining info for shard %d: %v", s, err)
+		}
+		go waitForMined(l1api, contract, mnr.ChainHeadCh, s, info.BlockMined.Uint64(), minedShardCh)
+		wg.Add(1)
+		time.Sleep(360 * time.Second)
+	}
+
+	for minedShard := range minedShardCh {
+		lg.Info("Mined shard", "shard", minedShard)
+		wg.Done()
+	}
+	wg.Wait()
 	mnr.Close()
-
-	l1HeadsSub.Unsubscribe()
 	close()
 }
 
-func initShardManager(storConfig storage.StorageConfig) (*es.ShardManager, error) {
+func cleanFiles(proverDir string) {
+	for _, shardId := range shardIds {
+		fileName := fmt.Sprintf(dataFileName, shardId)
+		if _, err := os.Stat(fileName); !os.IsNotExist(err) {
+			err = os.Remove(fileName)
+			if err != nil {
+				fmt.Println(err)
+			}
+		}
+	}
+
+	folderPath := filepath.Join(proverDir, "snarkbuild")
+	files, err := ioutil.ReadDir(folderPath)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	for _, file := range files {
+		if !strings.HasPrefix(file.Name(), ".") {
+			err = os.Remove(filepath.Join(folderPath, file.Name()))
+			if err != nil {
+				fmt.Println(err)
+			}
+		}
+	}
+}
+
+func initMiningConfig(t *testing.T, l1Contract common.Address, client *eth.PollingClient) *miner.Config {
+	miningConfig := &miner.Config{}
+	pk := os.Getenv(pkName)
+	if pk == "" {
+		t.Fatal("No private key in env", pkName)
+	}
+	factory, addrFrom, err := signer.SignerFactoryFromConfig(signer.CLIConfig{
+		PrivateKey: pk,
+	})
+	if err != nil {
+		t.Fatal("SignerFactoryFromConfig err", err)
+	}
+	miningConfig.SignerFnFactory = factory
+	miningConfig.SignerAddr = addrFrom
+	result, err := client.ReadContractField("randomChecks")
+	if err != nil {
+		t.Fatal("get randomChecks", err)
+	}
+	miningConfig.RandomChecks = new(big.Int).SetBytes(result).Uint64()
+	result, err = client.ReadContractField("nonceLimit")
+	if err != nil {
+		t.Fatal("get nonceLimit", err)
+	}
+	miningConfig.NonceLimit = new(big.Int).SetBytes(result).Uint64()
+	result, err = client.ReadContractField("minimumDiff")
+	if err != nil {
+		t.Fatal("get minimumDiff", err)
+	}
+	miningConfig.MinimumDiff = new(big.Int).SetBytes(result)
+	result, err = client.ReadContractField("cutoff")
+	if err != nil {
+		t.Fatal("get cutoff", err)
+	}
+	miningConfig.Cutoff = new(big.Int).SetBytes(result)
+	result, err = client.ReadContractField("diffAdjDivisor")
+	if err != nil {
+		t.Fatal("get diffAdjDivisor", err)
+	}
+	miningConfig.DiffAdjDivisor = new(big.Int).SetBytes(result)
+
+	result, err = client.ReadContractField("dcfFactor")
+	if err != nil {
+		t.Fatal("get dcfFactor", err)
+	}
+	miningConfig.DcfFactor = new(big.Int).SetBytes(result)
+	result, err = client.ReadContractField("startTime")
+	if err != nil {
+		t.Fatal("get startTime", err)
+	}
+	miningConfig.StartTime = new(big.Int).SetBytes(result).Uint64()
+	result, err = client.ReadContractField("shardEntryBits")
+	if err != nil {
+		t.Fatal("get shardEntryBits", err)
+	}
+	miningConfig.ShardEntry = 1 << new(big.Int).SetBytes(result).Uint64()
+	result, err = client.ReadContractField("treasuryShare")
+	if err != nil {
+		t.Fatal("get treasuryShare", err)
+	}
+	miningConfig.TreasuryShare = new(big.Int).SetBytes(result).Uint64()
+	result, err = client.ReadContractField("storageCost")
+	if err != nil {
+		t.Fatal("get storageCost", err)
+	}
+	miningConfig.StorageCost = new(big.Int).SetBytes(result)
+	result, err = client.ReadContractField("prepaidAmount")
+	if err != nil {
+		t.Fatal("get prepaidAmount", err)
+	}
+	miningConfig.PrepaidAmount = new(big.Int).SetBytes(result)
+
+	proverPath, _ := filepath.Abs(prPath)
+	zkeyFull := filepath.Join(proverPath, snarkLibDir, zkeyFile)
+	if _, err := os.Stat(zkeyFull); os.IsNotExist(err) {
+		t.Fatalf("%s not found", zkeyFull)
+	}
+	miningConfig.ZKWorkingDir = proverPath
+	miningConfig.ThreadsPerShard = 2
+	miningConfig.MinimumProfit = new(big.Int).SetInt64(-1e18)
+	return miningConfig
+}
+
+func waitForMined(l1api miner.L1API, contract common.Address, chainHeadCh chan eth.L1BlockRef, shardIdx, lastMined uint64, exitCh chan uint64) {
+	for range chainHeadCh {
+		info, err := l1api.GetMiningInfo(
+			context.Background(),
+			contract,
+			shardIdx,
+		)
+		if err != nil {
+			lg.Warn("Failed to get es mining info", "error", err.Error())
+			continue
+		}
+		if info.BlockMined.Uint64() > lastMined {
+			lg.Info("Mined new", "shard", shardIdx, "lastMined", info.BlockMined)
+			exitCh <- shardIdx
+			return
+		}
+	}
+}
+
+func initStorageConfig(t *testing.T, client *eth.PollingClient, l1Contract, miner common.Address) *storage.StorageConfig {
+	result, err := client.ReadContractField("maxKvSizeBits")
+	if err != nil {
+		t.Fatal("get maxKvSizeBits", err)
+	}
+	maxKvSizeBits := new(big.Int).SetBytes(result).Uint64()
+	chunkSizeBits := maxKvSizeBits
+	result, err = client.ReadContractField("shardEntryBits")
+	if err != nil {
+		t.Fatal("get shardEntryBits", err)
+	}
+	shardEntryBits := new(big.Int).SetBytes(result).Uint64()
+	return &storage.StorageConfig{
+		L1Contract:        l1Contract,
+		Miner:             miner,
+		KvSize:            1 << maxKvSizeBits,
+		ChunkSize:         1 << chunkSizeBits,
+		KvEntriesPerShard: 1 << shardEntryBits,
+	}
+}
+
+func initShardManager(storConfig storage.StorageConfig) (*ethstorage.ShardManager, error) {
 	shardManager := ethstorage.NewShardManager(storConfig.L1Contract, storConfig.KvSize, storConfig.KvEntriesPerShard, storConfig.ChunkSize)
 	for _, filename := range storConfig.Filenames {
 		var err error
@@ -195,20 +293,16 @@ func initShardManager(storConfig storage.StorageConfig) (*es.ShardManager, error
 }
 
 func fillEmpty(t *testing.T, l1Client *eth.PollingClient, storageMgr *ethstorage.StorageManager) {
-	empty := make([]byte, 0)
-	block, err := l1Client.BlockNumber(context.Background())
-	if err != nil {
-		t.Fatalf("Failed to get block number %v", err)
-	}
-	storageMgr.Reset(int64(block))
-	limit := storageMgr.KvEntries() * uint64(len(shardIds))
+	lg.Info("Filling empty started")
+	totalBlobs := storageMgr.KvEntries() * uint64(len(shardIds))
 	lastBlobIdx := storageMgr.LastKvIndex()
-	for idx := lastBlobIdx; idx < limit; idx++ {
-		err = storageMgr.CommitBlob(idx, empty, common.Hash{})
-		if err != nil {
-			t.Fatalf("write empty to kv file fail, index: %d; error: %s", idx, err.Error())
-		}
+	lg.Info("Filling empty", "lastBlobIdx", lastBlobIdx, "totalBlobs", totalBlobs)
+
+	inserted, next, err := storageMgr.CommitEmptyBlobs(lastBlobIdx, totalBlobs-1)
+	if err != nil {
+		t.Fatalf("Commit empty blobs failed %v", err)
 	}
+	lg.Info("Filling empty done", "inserted", inserted, "next", next)
 }
 
 func prepareData(t *testing.T, l1Client *eth.PollingClient, storageMgr *ethstorage.StorageManager) {
@@ -285,11 +379,11 @@ func CreateDataFiles(cfg *storage.StorageConfig) ([]string, error) {
 		chunkPerKv := cfg.KvSize / cfg.ChunkSize
 		startChunkId := shardIdx * cfg.KvEntriesPerShard * chunkPerKv
 		chunkIdxLen := chunkPerKv * cfg.KvEntriesPerShard
-		log.Info("Creating data file", "chunkIdxStart", startChunkId, "chunkIdxLen", chunkIdxLen, "chunkSize", cfg.ChunkSize, "miner", cfg.Miner, "encodeType", es.ENCODE_BLOB_POSEIDON)
+		lg.Info("Creating data file", "chunkIdxStart", startChunkId, "chunkIdxLen", chunkIdxLen, "chunkSize", cfg.ChunkSize, "miner", cfg.Miner, "encodeType", ethstorage.ENCODE_BLOB_POSEIDON)
 
-		df, err := es.Create(fileName, startChunkId, chunkPerKv*cfg.KvEntriesPerShard, 0, cfg.KvSize, es.ENCODE_BLOB_POSEIDON, cfg.Miner, cfg.ChunkSize)
+		df, err := ethstorage.Create(fileName, startChunkId, chunkPerKv*cfg.KvEntriesPerShard, 0, cfg.KvSize, ethstorage.ENCODE_BLOB_POSEIDON, cfg.Miner, cfg.ChunkSize)
 		if err != nil {
-			log.Crit("Creating data file", "error", err)
+			lg.Crit("Creating data file", "error", err)
 		}
 
 		lg.Info("Data file created", "shard", shardIdx, "file", fileName, "datafile", fmt.Sprintf("%+v", df))

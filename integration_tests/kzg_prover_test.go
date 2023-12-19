@@ -96,7 +96,6 @@ func uploadBlob(t *testing.T, data []byte) common.Hash {
 	blbKey := "0x0000000000000000000000000000000000000000000000000000000000000001"
 	blbIdx := common.Big0
 	length := new(big.Int).SetInt64(128 * 1024)
-	// calldata := "0x4581a920000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000020000"
 
 	h := crypto.Keccak256Hash([]byte("putBlob(bytes32,uint256,uint256)"))
 	mid := h[0:4]
@@ -116,7 +115,7 @@ func uploadBlob(t *testing.T, data []byte) common.Hash {
 	valBig, _ := new(big.Int).SetString(value, 10)
 	estimatedGas, err := client.EstimateGas(ctx, ethereum.CallMsg{
 		From:  signer,
-		To:    &contractAddr1GB,
+		To:    &contractAddr16kv,
 		Value: valBig,
 		Data:  calldata,
 	})
@@ -127,7 +126,7 @@ func uploadBlob(t *testing.T, data []byte) common.Hash {
 
 	tx := utils.SendBlobTx(
 		l1Endpoint,
-		contractAddr1GB,
+		contractAddr16kv,
 		pk,
 		data,
 		true,
