@@ -48,6 +48,7 @@ func TestSignerFactoryFromConfig(t *testing.T) {
 			contractAddrDevnet2,
 			false,
 		},
+		// TODO set up clef server for remote signature
 		// {
 		// 	"",
 		// 	signer.CLIConfig{
