@@ -347,6 +347,7 @@ var p2pFlags = []cli.Flag{
 	HostSecurity,
 	MaxRequestSize,
 	MaxConcurrency,
+	FillEmptyConcurrency,
 	MetaDownloadBatchSize,
 	PeersLo,
 	PeersHi,
