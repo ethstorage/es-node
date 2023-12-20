@@ -1,6 +1,9 @@
+// Copyright 2022-2023, EthStorage.
+// For license information, see https://github.com/ethstorage/es-node/blob/main/LICENSE
+
 //go:build !ci
 
-package signer
+package integration
 
 import (
 	"context"
@@ -12,70 +15,69 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethstorage/go-ethstorage/ethstorage/signer"
 )
-
-const l1Endpoint = "http://65.108.236.27:8545"
 
 func TestSignerFactoryFromConfig(t *testing.T) {
 	tests := []struct {
 		name         string
-		signerConfig CLIConfig
+		signerConfig signer.CLIConfig
 		addrFrom     common.Address
 		addrTo       common.Address
 		wantErr      bool
 	}{
 		{
 			"",
-			CLIConfig{
-				PrivateKey: "0xaaa279031ebf27a046278a8ff5d1b8ab77362d19ace646653b76a7c1184516ef",
+			signer.CLIConfig{
+				PrivateKey: "0x7fb8f46cff75dd565c23e83f3c5aa2693f39cb6a5ede0120666af139cded39af",
 				Mnemonic:   "",
 				HDPath:     "",
 			},
-			common.HexToAddress("0x9ce0b38e90cd2a0c82409486078af83c790dff20"),
-			common.HexToAddress("0x188aac000e21ec314C5694bB82035b72210315A8"),
+			common.HexToAddress("0xd7cc258C5438a392cA1D7873020d5B9971568c00"),
+			contractAddrDevnet2,
 			false,
 		},
 		{
 			"",
-			CLIConfig{
+			signer.CLIConfig{
 				PrivateKey: "",
 				Mnemonic:   "candy maple cake sugar pudding cream honey rich smooth crumble sweet treat",
 				HDPath:     "m/44'/60'/0'/0/0",
 			},
 			common.HexToAddress("0x627306090abab3a6e1400e9345bc60c78a8bef57"),
-			common.HexToAddress("0x188aac000e21ec314C5694bB82035b72210315A8"),
+			contractAddrDevnet2,
 			false,
 		},
 		{
 			"",
-			CLIConfig{
+			signer.CLIConfig{
 				PrivateKey: "",
 				Mnemonic:   "",
 				HDPath:     "",
-				Endpoint:   "http://65.108.236.27:8550",
+				Endpoint:   clefEndpoint,
 				Address:    "0x13259366de990b0431e2c97cea949362bb68df12",
 			},
 			common.HexToAddress("0x13259366DE990B0431E2C97CEa949362BB68df12"),
-			common.HexToAddress("0x188aac000e21ec314C5694bB82035b72210315A8"),
+			contractAddrDevnet2,
 			false,
 		},
 		{
 			"",
-			CLIConfig{
+			signer.CLIConfig{
 				PrivateKey: "",
 				Mnemonic:   "",
 				HDPath:     "",
-				Endpoint:   "http://65.108.236.27:8550",
+				Endpoint:   clefEndpoint,
 				Address:    "0x13259366de990b0431e2c97cea949362bb68df12",
 			},
 			common.HexToAddress("0x13259366de990b0431e2c97cea949362bb68df12"),
-			common.HexToAddress("0x0000000000000000000000000000000000001234"), // only allowed to send tx to 0x188aac000e21ec314C5694bB82035b72210315A8
+			common.HexToAddress("0x0000000000000000000000000000000000001234"), // only allowed to send tx to contractAddrDevnet1
 			true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			factory, addrFrom, err := SignerFactoryFromConfig(tt.signerConfig)
+			factory, addrFrom, err := signer.SignerFactoryFromConfig(tt.signerConfig)
 			if err != nil {
 				t.Fatal("SignerFactoryFromConfig err", err)
 			}
