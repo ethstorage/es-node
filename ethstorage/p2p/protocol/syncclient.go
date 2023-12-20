@@ -466,7 +466,7 @@ func (s *SyncClient) Start() error {
 	return nil
 }
 
-func (s *SyncClient) AddPeer(id peer.ID, shards map[common.Address][]uint64) bool {
+func (s *SyncClient) AddPeer(id peer.ID, shards map[common.Address][]uint64, direction network.Direction) bool {
 	s.lock.Lock()
 	if _, ok := s.peers[id]; ok {
 		s.log.Warn("Cannot register peer for sync duties, peer was already registered", "peer", id)
@@ -484,7 +484,7 @@ func (s *SyncClient) AddPeer(id peer.ID, shards map[common.Address][]uint64) boo
 		return false
 	}
 	// add new peer routine
-	pr := NewPeer(0, s.cfg.L2ChainID, id, s.newStreamFn, shards)
+	pr := NewPeer(0, s.cfg.L2ChainID, id, s.newStreamFn, direction, shards)
 	s.peers[id] = pr
 
 	s.idlerPeers[id] = struct{}{}
@@ -556,7 +556,7 @@ func (s *SyncClient) RequestL2List(indexes []uint64) (uint64, error) {
 		if err != nil {
 			return 0, err
 		}
-		s.onResult(packet.Blobs)
+		_, _, _, err = s.onResult(packet.Blobs)
 		if err != nil {
 			return 0, err
 		}
@@ -1147,6 +1147,29 @@ func (s *SyncClient) report(force bool) {
 	log.Info("Storage sync in progress", "progress", progress, "peerCount", peerCount, "syncTasksRemain", syncTasksRemain,
 		"blobsSynced", blobsSynced, "blobsToSync", blobsToSync, "fillTasksRemain", subFillTaskRemain,
 		"emptyFilled", blobsFilled, "emptyToFill", emptyToFill, "timeUsed", common.PrettyDuration(elapsed), "eta", common.PrettyDuration(estTime-elapsed))
+}
+
+func (s *SyncClient) ReportPeerSummary() {
+	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			inbound, outbound := 0, 0
+			for _, peer := range s.peers {
+				if peer.direction == network.DirInbound {
+					inbound++
+				} else if peer.direction == network.DirOutbound {
+					outbound++
+				}
+			}
+			log.Info("P2P Summary", "activePeers", len(s.peers), "inbound", inbound, "outbound", outbound)
+		case <-s.resCtx.Done():
+			log.Info("P2P summary stop")
+			return
+		}
+	}
+
 }
 
 func (s *SyncClient) needThisPeer(contractShards map[common.Address][]uint64) bool {

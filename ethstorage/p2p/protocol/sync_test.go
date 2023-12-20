@@ -346,7 +346,7 @@ func createLocalHostAndSyncClient(t *testing.T, testLog log.Logger, rollupCfg *r
 				shards = ConvertToShardList(css.([]*ContractShards))
 			}
 
-			added := syncCl.AddPeer(conn.RemotePeer(), shards)
+			added := syncCl.AddPeer(conn.RemotePeer(), shards, conn.Stat().Direction)
 			if !added {
 				conn.Close()
 			}
@@ -364,7 +364,7 @@ func createLocalHostAndSyncClient(t *testing.T, testLog log.Logger, rollupCfg *r
 		} else {
 			shards = ConvertToShardList(css.([]*ContractShards))
 		}
-		added := syncCl.AddPeer(conn.RemotePeer(), shards)
+		added := syncCl.AddPeer(conn.RemotePeer(), shards, conn.Stat().Direction)
 		if !added {
 			conn.Close()
 		}
