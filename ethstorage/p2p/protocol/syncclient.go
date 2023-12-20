@@ -327,7 +327,7 @@ func (s *SyncClient) createTask(sid uint64, lastKvIndex uint64) *task {
 	subTasks := make([]*subTask, 0)
 	// split subTask for a shard to 16 subtasks and if one batch is too small
 	// set to minSubTaskSize
-	maxTaskSize := (limit - first - 1 + s.syncerParams.MaxConcurrency) / s.syncerParams.MaxConcurrency
+	maxTaskSize := (limit - first - 1 + s.syncerParams.SyncConcurrency) / s.syncerParams.SyncConcurrency
 	if maxTaskSize < minSubTaskSize {
 		maxTaskSize = minSubTaskSize
 	}
