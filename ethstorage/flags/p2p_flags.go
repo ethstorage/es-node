@@ -161,13 +161,21 @@ var (
 		Value:    1 * 1024 * 1024,
 		EnvVar:   p2pEnv("MAX_REQUEST_SIZE"),
 	}
-	MaxConcurrency = cli.Uint64Flag{
-		Name: "p2p.max.concurrency",
-		Usage: "max concurrency is the number of chunks to split a shard into to allow concurrent retrievals. " +
+	SyncConcurrency = cli.Uint64Flag{
+		Name: "p2p.sync.concurrency",
+		Usage: "sync concurrency is the number of chunks to split a shard into to allow concurrent retrievals. " +
 			"The default value is 16, the min value is 1.",
 		Required: false,
 		Value:    16,
 		EnvVar:   p2pEnv("MAX_CONCURRENCY"),
+	}
+	FillEmptyConcurrency = cli.IntFlag{
+		Name: "p2p.fill-empty.concurrency",
+		Usage: "fill empty concurrency is the number of threads to concurrently fill encoded empty blobs. " +
+			"The default value is NumCPU - 2 and the min value is 1.",
+		Required: false,
+		Value:    0,
+		EnvVar:   p2pEnv("Fill_Empty_Concurrency"),
 	}
 	MetaDownloadBatchSize = cli.Uint64Flag{
 		Name:     "p2p.meta.download.batch",
@@ -338,7 +346,8 @@ var p2pFlags = []cli.Flag{
 	HostMux,
 	HostSecurity,
 	MaxRequestSize,
-	MaxConcurrency,
+	SyncConcurrency,
+	FillEmptyConcurrency,
 	MetaDownloadBatchSize,
 	PeersLo,
 	PeersHi,
