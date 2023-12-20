@@ -48,33 +48,32 @@ func TestSignerFactoryFromConfig(t *testing.T) {
 			contractAddrDevnet2,
 			false,
 		},
-		// TODO set up clef server for remote signature
-		// {
-		// 	"",
-		// 	signer.CLIConfig{
-		// 		PrivateKey: "",
-		// 		Mnemonic:   "",
-		// 		HDPath:     "",
-		// 		Endpoint:   clefEndpoint,
-		// 		Address:    "0x13259366de990b0431e2c97cea949362bb68df12",
-		// 	},
-		// 	common.HexToAddress("0x13259366DE990B0431E2C97CEa949362BB68df12"),
-		// 	contractAddrDevnet2,
-		// 	false,
-		// },
-		// {
-		// 	"",
-		// 	signer.CLIConfig{
-		// 		PrivateKey: "",
-		// 		Mnemonic:   "",
-		// 		HDPath:     "",
-		// 		Endpoint:   clefEndpoint,
-		// 		Address:    "0x13259366de990b0431e2c97cea949362bb68df12",
-		// 	},
-		// 	common.HexToAddress("0x13259366de990b0431e2c97cea949362bb68df12"),
-		// 	common.HexToAddress("0x0000000000000000000000000000000000001234"), // only allowed to send tx to contractAddrDevnet1
-		// 	true,
-		// },
+		{
+			"",
+			signer.CLIConfig{
+				PrivateKey: "",
+				Mnemonic:   "",
+				HDPath:     "",
+				Endpoint:   clefEndpoint,
+				Address:    "0x13259366de990b0431e2c97cea949362bb68df12",
+			},
+			common.HexToAddress("0x13259366DE990B0431E2C97CEa949362BB68df12"),
+			contractAddrDevnet2,
+			false,
+		},
+		{
+			"",
+			signer.CLIConfig{
+				PrivateKey: "",
+				Mnemonic:   "",
+				HDPath:     "",
+				Endpoint:   clefEndpoint,
+				Address:    "0x13259366de990b0431e2c97cea949362bb68df12",
+			},
+			common.HexToAddress("0x13259366de990b0431e2c97cea949362bb68df12"),
+			common.HexToAddress("0x0000000000000000000000000000000000001234"), // only allowed to send tx to contractAddrDevnet1
+			true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
