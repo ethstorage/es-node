@@ -436,37 +436,37 @@ func (m *Metrics) SetPeerScores(scores map[string]float64) {
 func (m *Metrics) ClientGetBlobsByRangeEvent(peerID string, resultCode byte, duration time.Duration) {
 	code := strconv.FormatUint(uint64(resultCode), 10)
 	m.SyncClientRequestsTotal.WithLabelValues("get_blobs_by_range", code).Inc()
-	m.SyncClientRequestDurationSeconds.WithLabelValues("get_blobs_by_range", code).Observe(float64(duration) / float64(time.Second))
+	m.SyncClientRequestDurationSeconds.WithLabelValues("get_blobs_by_range", code).Observe(float64(duration) / float64(time.Millisecond))
 	m.SyncClientPeerRequestsTotal.WithLabelValues(peerID, "get_blobs_by_range", code).Inc()
-	m.SyncClientPeerRequestDurationSeconds.WithLabelValues(peerID, "get_blobs_by_range", code).Observe(float64(duration) / float64(time.Second))
+	m.SyncClientPeerRequestDurationSeconds.WithLabelValues(peerID, "get_blobs_by_range", code).Observe(float64(duration) / float64(time.Millisecond))
 }
 
 func (m *Metrics) ClientGetBlobsByListEvent(peerID string, resultCode byte, duration time.Duration) {
 	code := strconv.FormatUint(uint64(resultCode), 10)
 	m.SyncClientRequestsTotal.WithLabelValues("get_blobs_by_list", code).Inc()
-	m.SyncClientRequestDurationSeconds.WithLabelValues("get_blobs_by_list", code).Observe(float64(duration) / float64(time.Second))
+	m.SyncClientRequestDurationSeconds.WithLabelValues("get_blobs_by_list", code).Observe(float64(duration) / float64(time.Millisecond))
 	m.SyncClientPeerRequestsTotal.WithLabelValues(peerID, "get_blobs_by_list", code).Inc()
-	m.SyncClientPeerRequestDurationSeconds.WithLabelValues(peerID, "get_blobs_by_list", code).Observe(float64(duration) / float64(time.Second))
+	m.SyncClientPeerRequestDurationSeconds.WithLabelValues(peerID, "get_blobs_by_list", code).Observe(float64(duration) / float64(time.Millisecond))
 }
 
 func (m *Metrics) ClientFillEmptyBlobsEvent(count uint64, duration time.Duration) {
 	method := "fillEmpty"
 	m.SyncClientPerfCallTotal.WithLabelValues(method).Add(float64(count))
-	m.SyncClientPerfCallDurationSeconds.WithLabelValues(method).Observe(float64(duration) / float64(time.Second) / float64(count))
+	m.SyncClientPerfCallDurationSeconds.WithLabelValues(method).Observe(float64(duration) / float64(time.Millisecond) / float64(count))
 }
 
-func (m *Metrics) ClientOnBlobsByRange(peerID string, reqBlobCount, retBlobCount, insertedCount uint64, duration time.Duration) {
+func (m *Metrics) ClientOnBlobsByRange(peerID string, reqBlobCount, getBlobCount, insertedCount uint64, duration time.Duration) {
 	m.SyncClientState.WithLabelValues("reqBlobCount").Add(float64(reqBlobCount))
-	m.SyncClientState.WithLabelValues("retBlobCount").Add(float64(retBlobCount))
+	m.SyncClientState.WithLabelValues("getBlobCount").Add(float64(getBlobCount))
 	m.SyncClientState.WithLabelValues("insertedBlobCount").Add(float64(insertedCount))
 
 	m.SyncClientPeerState.WithLabelValues(peerID, "reqBlobCount").Add(float64(reqBlobCount))
-	m.SyncClientPeerState.WithLabelValues(peerID, "retBlobCount").Add(float64(retBlobCount))
+	m.SyncClientPeerState.WithLabelValues(peerID, "getBlobCount").Add(float64(getBlobCount))
 	m.SyncClientPeerState.WithLabelValues(peerID, "insertedBlobCount").Add(float64(insertedCount))
 
 	method := "onBlobsByRange"
 	m.SyncClientPerfCallTotal.WithLabelValues(method).Inc()
-	m.SyncClientPerfCallDurationSeconds.WithLabelValues(method).Observe(float64(duration) / float64(time.Second))
+	m.SyncClientPerfCallDurationSeconds.WithLabelValues(method).Observe(float64(duration) / float64(time.Millisecond))
 }
 
 func (m *Metrics) ClientOnBlobsByList(peerID string, reqCount, retBlobCount, insertedCount uint64, duration time.Duration) {
@@ -480,7 +480,7 @@ func (m *Metrics) ClientOnBlobsByList(peerID string, reqCount, retBlobCount, ins
 
 	method := "onBlobsByList"
 	m.SyncClientPerfCallTotal.WithLabelValues(method).Inc()
-	m.SyncClientPerfCallDurationSeconds.WithLabelValues(method).Observe(float64(duration) / float64(time.Second))
+	m.SyncClientPerfCallDurationSeconds.WithLabelValues(method).Observe(float64(duration) / float64(time.Millisecond))
 }
 
 func (m *Metrics) ClientRecordTimeUsed(method string) func() {
@@ -506,19 +506,19 @@ func (m *Metrics) DecPeerCount() {
 func (m *Metrics) ServerGetBlobsByRangeEvent(peerID string, resultCode byte, duration time.Duration) {
 	code := strconv.FormatUint(uint64(resultCode), 10)
 	m.SyncServerHandleReqTotal.WithLabelValues("get_blobs_by_range", code).Inc()
-	m.SyncServerHandleReqDurationSeconds.WithLabelValues("get_blobs_by_range", code).Observe(float64(duration) / float64(time.Second))
+	m.SyncServerHandleReqDurationSeconds.WithLabelValues("get_blobs_by_range", code).Observe(float64(duration) / float64(time.Millisecond))
 
 	m.SyncServerHandleReqTotalPerPeer.WithLabelValues(peerID, "get_blobs_by_range", code).Inc()
-	m.SyncServerHandleReqDurationSecondsPerPeer.WithLabelValues(peerID, "get_blobs_by_range", code).Observe(float64(duration) / float64(time.Second))
+	m.SyncServerHandleReqDurationSecondsPerPeer.WithLabelValues(peerID, "get_blobs_by_range", code).Observe(float64(duration) / float64(time.Millisecond))
 }
 
 func (m *Metrics) ServerGetBlobsByListEvent(peerID string, resultCode byte, duration time.Duration) {
 	code := strconv.FormatUint(uint64(resultCode), 10)
 	m.SyncServerHandleReqTotal.WithLabelValues("get_blobs_by_list", code).Inc()
-	m.SyncServerHandleReqDurationSeconds.WithLabelValues("get_blobs_by_list", code).Observe(float64(duration) / float64(time.Second))
+	m.SyncServerHandleReqDurationSeconds.WithLabelValues("get_blobs_by_list", code).Observe(float64(duration) / float64(time.Millisecond))
 
 	m.SyncServerHandleReqTotalPerPeer.WithLabelValues(peerID, "get_blobs_by_list", code).Inc()
-	m.SyncServerHandleReqDurationSecondsPerPeer.WithLabelValues(peerID, "get_blobs_by_list", code).Observe(float64(duration) / float64(time.Second))
+	m.SyncServerHandleReqDurationSecondsPerPeer.WithLabelValues(peerID, "get_blobs_by_list", code).Observe(float64(duration) / float64(time.Millisecond))
 }
 
 func (m *Metrics) ServerReadBlobs(peerID string, read, sucRead uint64, timeUse time.Duration) {
@@ -529,7 +529,7 @@ func (m *Metrics) ServerReadBlobs(peerID string, read, sucRead uint64, timeUse t
 
 	method := "readBlobs"
 	m.SyncServerPerfCallTotal.WithLabelValues(method).Inc()
-	m.SyncServerPerfCallDurationSeconds.WithLabelValues(method).Observe(float64(timeUse) / float64(time.Second))
+	m.SyncServerPerfCallDurationSeconds.WithLabelValues(method).Observe(float64(timeUse) / float64(time.Millisecond))
 }
 
 func (m *Metrics) ServerRecordTimeUsed(method string) func() {
