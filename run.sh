@@ -30,6 +30,7 @@ if [ ! -e  ${zkey_file} ]; then
   file_id="1ZLfhYeCXMnbk6wUiBADRAn1mZ8MI_zg-"
   html=`curl -c ./cookie -s -L "https://drive.google.com/uc?export=download&id=${file_id}"`
   curl -Lb ./cookie "https://drive.google.com/uc?export=download&`echo ${html}|grep -Eo 'confirm=[a-zA-Z0-9\-_]+'`&id=${file_id}" -o ${zkey_file}
+  rm cookie
 fi
 
 executable="./build/bin/es-node"
@@ -47,7 +48,6 @@ es_node_init="init --shard_index 0"
 
 # start node 
 # TODO remove --network
-# TODO remove --miner.priority-gas-price and --miner.gas-price when gas price query is available
 es_node_start=" --network devnet \
   --miner.enabled \
   --storage.files $storage_file_0 \
@@ -55,7 +55,6 @@ es_node_start=" --network devnet \
   --l1.beacon http://65.109.115.36:5052 \
   --l1.beacon-based-time 1701262812 \
   --l1.beacon-based-slot 1 \
-  --p2p.listen.udp 30305 \
   --download.thread 32 \
   --p2p.max.request.size 4194304 \
   --p2p.sync.concurrency 32 \

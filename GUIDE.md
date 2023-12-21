@@ -77,9 +77,9 @@ docker run --name es  -d  \
           -e ES_NODE_SIGNER_PRIVATE_KEY=<private_key> \
           -p 9545:9545 \
           -p 9222:9222 \
-          -p 30305:30305/udp \
+          -p 9222:9222/udp \
           --entrypoint /es-node/run.sh \
-          ghcr.io/ethstorage/es-node
+          ghcr.io/ethstorage/es-node:v0.1.4
 ```
 
 You can check docker logs using the following command:
