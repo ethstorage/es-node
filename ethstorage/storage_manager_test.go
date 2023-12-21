@@ -125,6 +125,18 @@ func createBlob(kvIndex uint64) (blob []byte, hash common.Hash) {
 	return val, root
 }
 
+func generateMetadata(idx, size uint64, hash []byte) common.Hash {
+	meta := make([]byte, 0)
+	idx_bs := make([]byte, 8)
+	binary.BigEndian.PutUint64(idx_bs, idx)
+	meta = append(meta, idx_bs[3:]...)
+	size_bs := make([]byte, 8)
+	binary.BigEndian.PutUint64(size_bs, size)
+	meta = append(meta, size_bs[5:]...)
+	meta = append(meta, hash[:24]...)
+	return common.BytesToHash(meta)
+}
+
 func setup(t *testing.T) {
 	// create l1
 	metafile, err := createMetaFile(metafileName, int64(kvEntries))
@@ -159,6 +171,8 @@ func setup(t *testing.T) {
 		blob, hash := createBlob(idx)
 		blobs[i] = blob
 		hashes[i] = hash
+		meta := generateMetadata(uint64(i), kvIndexes[i], hash[:])
+		metafile.WriteAt(meta.Bytes(), int64(i*32))
 	}
 	err = storageManager.DownloadFinished(97528, kvIndexes, blobs, hashes)
 	if err != nil {
@@ -216,5 +230,26 @@ func TestStorageManager_CommitBlobs(t *testing.T) {
 	copy(meta[:], bs)
 	if meta != prepareCommit(h) {
 		t.Fatal("failed to write meta", err)
+	}
+}
+
+func TestStorageManager_DownloadAllMeta(t *testing.T) {
+	setup(t)
+	err := storageManager.DownloadAllMetas(4)
+	if err != nil {
+		t.Fatal("failed to Downloand Finished", err)
+	}
+
+	kvIndex := uint64(3)
+	_, h := createBlob(kvIndex)
+	bs, success, err := storageManager.TryReadMeta(kvIndex)
+	if err != nil || !success {
+		t.Fatal("failed to read meta", err)
+	}
+
+	meta := common.Hash{}
+	copy(meta[:], bs)
+	if meta != prepareCommit(h) {
+		t.Fatal("failed to compare meta", err)
 	}
 }
