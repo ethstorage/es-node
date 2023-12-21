@@ -79,7 +79,7 @@ docker run --name es  -d  \
           -p 9222:9222 \
           -p 30305:30305/udp \
           --entrypoint /es-node/run.sh \
-          ghcr.io/ethstorage/es-node
+          ghcr.io/ethstorage/es-node:v0.1.4
 ```
 
 You can check docker logs using the following command:
