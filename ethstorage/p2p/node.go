@@ -115,7 +115,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 				} else {
 					shards = protocol.ConvertToShardList(css.([]*protocol.ContractShards))
 				}
-				added := n.syncCl.AddPeer(remotePeerId, shards)
+				added := n.syncCl.AddPeer(remotePeerId, shards, conn.Stat().Direction)
 				if !added {
 					log.Info("Close connection as AddPeer fail", "peer", remotePeerId)
 					conn.Close()
@@ -140,11 +140,12 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 			} else {
 				shards = protocol.ConvertToShardList(css.([]*protocol.ContractShards))
 			}
-			added := n.syncCl.AddPeer(conn.RemotePeer(), shards)
+			added := n.syncCl.AddPeer(conn.RemotePeer(), shards, conn.Stat().Direction)
 			if !added {
 				conn.Close()
 			}
 		}
+		go n.syncCl.ReportPeerSummary()
 		n.syncSrv = protocol.NewSyncServer(rollupCfg, storageManager, m)
 
 		blobByRangeHandler := protocol.MakeStreamHandler(resourcesCtx, log.New("serve", "blobs_by_range"), n.syncSrv.HandleGetBlobsByRangeRequest)
