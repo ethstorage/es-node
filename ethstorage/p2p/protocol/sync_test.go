@@ -44,7 +44,7 @@ const (
 var (
 	contract = common.HexToAddress("0x0000000000000000000000000000000003330001")
 	empty    = make([]byte, 0)
-	params   = SyncerParams{MaxRequestSize: uint64(4 * 1024 * 1024), MaxConcurrency: 16, MetaDownloadBatchSize: 16}
+	params   = SyncerParams{MaxRequestSize: uint64(4 * 1024 * 1024), SyncConcurrency: 16, FillEmptyConcurrency: 16, MetaDownloadBatchSize: 16}
 	testLog  = log.New("TestSync")
 	prover   = prv.NewKZGProver(testLog)
 )
@@ -346,7 +346,7 @@ func createLocalHostAndSyncClient(t *testing.T, testLog log.Logger, rollupCfg *r
 				shards = ConvertToShardList(css.([]*ContractShards))
 			}
 
-			added := syncCl.AddPeer(conn.RemotePeer(), shards)
+			added := syncCl.AddPeer(conn.RemotePeer(), shards, conn.Stat().Direction)
 			if !added {
 				conn.Close()
 			}
@@ -364,7 +364,7 @@ func createLocalHostAndSyncClient(t *testing.T, testLog log.Logger, rollupCfg *r
 		} else {
 			shards = ConvertToShardList(css.([]*ContractShards))
 		}
-		added := syncCl.AddPeer(conn.RemotePeer(), shards)
+		added := syncCl.AddPeer(conn.RemotePeer(), shards, conn.Stat().Direction)
 		if !added {
 			conn.Close()
 		}
