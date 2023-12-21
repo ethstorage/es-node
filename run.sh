@@ -57,7 +57,7 @@ es_node_start=" --network devnet \
   --l1.beacon-based-slot 1 \
   --download.thread 32 \
   --p2p.max.request.size 4194304 \
-  --p2p.max.concurrency 32 \
+  --p2p.sync.concurrency 32 \
   --p2p.bootnodes enr:-Li4QPFCNc7mLPqxoVrk1eKB0qa5hb8H75IBwhvdSGGdamx1egKibkKO1v1rtLt7r3pJvoVxv95ITlpSphYCAsunU6qGAYwkwuOpimV0aHN0b3JhZ2XbAYDY15S0tGvaqDX45LTY4gi2VZzSZ4UQUcGAgmlkgnY0gmlwhEFtcySJc2VjcDI1NmsxoQM9rkUZ7qWoJQT2UVrPzDRzmLqDrxCSR4zC4db-lgz1bYN0Y3CCJAaDdWRwgnZh \
 "
 # create data file for shard 0 if not yet

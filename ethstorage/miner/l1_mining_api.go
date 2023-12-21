@@ -222,7 +222,7 @@ func (m *l1MiningAPI) estimateReward(ctx context.Context, cfg Config, contract c
 	}
 
 	minedTs := curBlock.Time - (new(big.Int).Sub(curBlock.Number, block).Uint64())*12
-	var reward *big.Int
+	reward := big.NewInt(0)
 	if shard < lastShard {
 		basePayment := new(big.Int).Mul(cfg.StorageCost, new(big.Int).SetUint64(cfg.ShardEntry))
 		reward = paymentIn(basePayment, cfg.DcfFactor, lastMineTime, minedTs, cfg.StartTime)
@@ -236,7 +236,7 @@ func (m *l1MiningAPI) estimateReward(ctx context.Context, cfg Config, contract c
 		}
 	}
 	minerReward := new(big.Int).Div(
-		new(big.Int).Mul(new(big.Int).SetUint64((rewardDenominator-cfg.TreasuryShare)), reward),
+		new(big.Int).Mul(new(big.Int).SetUint64(rewardDenominator-cfg.TreasuryShare), reward),
 		new(big.Int).SetUint64(rewardDenominator),
 	)
 	return minerReward, nil
