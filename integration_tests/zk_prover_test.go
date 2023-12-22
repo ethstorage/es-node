@@ -14,11 +14,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"reflect"
-	"strings"
 	"testing"
 
-	esLog "github.com/ethstorage/go-ethstorage/ethstorage/log"
 	"github.com/ethstorage/go-ethstorage/ethstorage/prover"
 
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
@@ -45,125 +42,60 @@ func TestZKProver_GenerateZKProof(t *testing.T) {
 	if _, err := os.Stat(zkeyFull); os.IsNotExist(err) {
 		t.Fatalf("%s not found", zkeyFull)
 	}
-	type args struct {
-		encodingKey common.Hash
-		chunkIdx    uint64
+
+	encodingKeys := []common.Hash{
+		common.HexToHash("0x1"),
+		common.HexToHash("0x22222222222"),
+		common.HexToHash("0x1e88fb83944b20562a100533d0521b90bf7df7cc6e0aaa1c46482b67c7b370ab"),
 	}
-	tests := []struct {
-		name    string
-		args    args
-		xIn     string
-		wantErr bool
-	}{
-		{
-			"test chunk 0",
-			args{encodingKey: common.HexToHash("0x1"), chunkIdx: 0},
-			"1",
-			false,
-		},
-		{
-			"test chunk 2222",
-			args{encodingKey: common.HexToHash("0x22222222222"), chunkIdx: 2222},
-			"13571350061658342048390665596699168162893949286891081722317471185110722978977",
-			false,
-		},
-		{
-			"test chunk 4095",
-			args{encodingKey: common.HexToHash("0x1e88fb83944b20562a100533d0521b90bf7df7cc6e0aaa1c46482b67c7b370ab"), chunkIdx: 4095},
-			"12199007973319674300030596965685270475268514105269206407619072166392043015767",
-			false,
-		},
+	sampleIdxs := []uint64{0, 2222, 4095}
+	xIns := []string{
+		"1",
+		"13571350061658342048390665596699168162893949286891081722317471185110722978977",
+		"12199007973319674300030596965685270475268514105269206407619072166392043015767",
 	}
 	libDir := filepath.Join(proverPath, snarkLibDir)
 	p := prover.NewZKProverInternal(proverPath, zkeyFile, lg)
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			maskGo, err := GenerateMask(tt.args.encodingKey, tt.args.chunkIdx)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("GenerateMask() error = %v, wantErr %v", err, tt.wantErr)
+	t.Run("zk test", func(t *testing.T) {
+		proof, masks, err := p.GenerateZKProof(encodingKeys, sampleIdxs)
+		if err != nil {
+			t.Errorf("ZKProver.GenerateZKProof() error = %v ", err)
+			return
+		}
+		buildDir := filepath.Join(proverPath, snarkBuildDir, fmt.Sprint(encodingKeys, sampleIdxs))
+		xIn, err := readXIn(buildDir)
+		if err != nil {
+			t.Fatalf("get xIn failed %v", err)
+		}
+		for i, x := range xIn {
+			if x != xIns[i] {
+				t.Errorf("ZKProver.GenerateZKProof() xIn[%d] = %v, expected %v", i, x, xIns[i])
 				return
 			}
-			proof, mask, err := p.GenerateZKProof(tt.args.encodingKey, tt.args.chunkIdx)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ZKProver.GenerateZKProof() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			buildDir := filepath.Join(proverPath, snarkBuildDir, strings.Join([]string{
-				tt.args.encodingKey.Hex(),
-				fmt.Sprint(tt.args.chunkIdx),
-			}, "-"))
-			xIn, err := readXIn(buildDir)
+		}
+
+		for i, encodingKey := range encodingKeys {
+			maskGo, err := GenerateMask(encodingKey, sampleIdxs[i])
 			if err != nil {
-				t.Fatalf("get xIn failed %v", err)
-			}
-			if !reflect.DeepEqual(xIn, tt.xIn) {
-				t.Errorf("ZKProver.GenerateZKProof() xIn = %v, want %v", xIn, tt.xIn)
-			}
-			maskBig := common.BigToHash(new(big.Int).SetBytes(maskGo[:]))
-			if !reflect.DeepEqual(maskBig, mask) {
-				t.Errorf("ZKProver.GenerateZKProof() mask = %v, GenerateMask %v", mask, maskBig)
+				t.Errorf("GenerateMask() error = %v", err)
 				return
 			}
-			err = localVerify(t, libDir, buildDir)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ZKProver.GenerateZKProof() localVerify failed: %v", err)
-			}
-			err = verifyDecodeSample(proof, tt.args.chunkIdx, tt.args.encodingKey, mask)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ZKProver.GenerateZKProof() verifyDecodeSample err: %v", err)
-			}
-			t.Log("verifyDecodeSample success!")
-			os.RemoveAll(buildDir)
-		})
-	}
-}
-
-// prove in parallel
-func TestKZGPoseidonProver_GenerateZKProofs(t *testing.T) {
-	type args struct {
-		encodingKeys []common.Hash
-		chunkIdxes   []uint64
-	}
-	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-	}{
-		{
-			name: "test 1",
-			args: args{
-				[]common.Hash{
-					common.HexToHash("0x1"),
-					common.HexToHash("0x22222222222"),
-					common.HexToHash("0x1e88fb83944b20562a100533d0521b90bf7df7cc6e0aaa1c46482b67c7b370ab"),
-				},
-				[]uint64{0, 2222, 4095},
-			},
-			wantErr: false,
-		},
-	}
-
-	proverPath, _ := filepath.Abs(prPath)
-	zkeyFull := filepath.Join(proverPath, snarkLibDir, zkeyFile)
-	if _, err := os.Stat(zkeyFull); os.IsNotExist(err) {
-		t.Fatalf("%s not found", zkeyFull)
-	}
-	prv := prover.NewKZGPoseidonProver(proverPath, zkeyFile, esLog.NewLogger(esLog.DefaultCLIConfig()))
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			proofs, masks, err := prv.GenerateZKProofs(tt.args.encodingKeys, tt.args.chunkIdxes)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("GenerateZKProofs() error = %v, wantErr %v", err, tt.wantErr)
+			if maskGo != masks[i] {
+				t.Errorf("ZKProver.GenerateZKProof() mask = %v, GeneratedMask %v", masks[i], maskGo)
 				return
 			}
-			for i := 0; i < len(tt.args.chunkIdxes); i++ {
-				err = verifyDecodeSample(proofs[i], tt.args.chunkIdxes[i], tt.args.encodingKeys[i], masks[i])
-				if (err != nil) != tt.wantErr {
-					t.Errorf("ZKProver.GenerateZKProofs() %d decodeSample err: %v", i, err)
-				}
-			}
-		})
-	}
+		}
+		err = localVerify(t, libDir, buildDir)
+		if err != nil {
+			t.Errorf("ZKProver.GenerateZKProof() localVerify failed: %v", err)
+		}
+		err = verifyDecodeSample(proof, masks)
+		if err != nil {
+			t.Errorf("ZKProver.GenerateZKProof() verifyDecodeSample err: %v", err)
+		}
+		t.Log("verifyDecodeSample success!")
+		os.RemoveAll(buildDir)
+	})
 }
 
 func GenerateMask(encodingKey common.Hash, chunkIdx uint64) (common.Hash, error) {
@@ -180,17 +112,17 @@ func GenerateMask(encodingKey common.Hash, chunkIdx uint64) (common.Hash, error)
 	return common.BytesToHash(mask), nil
 }
 
-func readXIn(buildDir string) (string, error) {
+func readXIn(buildDir string) ([]string, error) {
 	f, err := os.Open(filepath.Join(buildDir, "input_blob_poseidon.json"))
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	defer f.Close()
 	var input prover.InputPair
 	var decoder *json.Decoder = json.NewDecoder(f)
 	err = decoder.Decode(&input)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	return input.XIn, nil
 }
@@ -210,47 +142,25 @@ func localVerify(t *testing.T, libDir string, buildDir string) error {
 	return nil
 }
 
-func verifyDecodeSample(proof prover.ZKProof, trunkIdx uint64, encodingKey, mask common.Hash) error {
+func verifyDecodeSample(proof prover.ZKProof, masks []common.Hash) error {
 	ctx := context.Background()
 	client, err := ethclient.DialContext(ctx, l1Endpoint)
 	if err != nil {
 		log.Fatalf("Failed to connect to the Ethereum client: %v", err)
 	}
 	defer client.Close()
-
-	encodingKeyBN := new(big.Int).SetBytes(encodingKey[:])
-	indexBN := new(big.Int).SetInt64(int64(trunkIdx))
-	maskBN := new(big.Int).SetBytes(mask[:])
-
-	h := crypto.Keccak256Hash([]byte("decodeSample(((uint256,uint256),(uint256[2],uint256[2]),(uint256,uint256)),uint256,uint256,uint256)"))
-	uintType, _ := abi.NewType("uint256", "", nil)
-	proofType, _ := abi.NewType("tuple", "", []abi.ArgumentMarshaling{
-		{
-			Name: "A", Type: "tuple", Components: []abi.ArgumentMarshaling{
-				{Name: "X", Type: "uint256"},
-				{Name: "Y", Type: "uint256"},
-			},
-		},
-		{
-			Name: "B", Type: "tuple", Components: []abi.ArgumentMarshaling{
-				{Name: "X", Type: "uint256[2]"},
-				{Name: "Y", Type: "uint256[2]"},
-			},
-		},
-		{
-			Name: "C", Type: "tuple", Components: []abi.ArgumentMarshaling{
-				{Name: "X", Type: "uint256"},
-				{Name: "Y", Type: "uint256"},
-			},
-		},
-	})
-	args := abi.Arguments{
-		{Type: proofType},
-		{Type: uintType},
-		{Type: uintType},
-		{Type: uintType},
+	var maskBNs []*big.Int
+	for _, mask := range masks {
+		maskBNs = append(maskBNs, new(big.Int).SetBytes(mask[:]))
 	}
-	values := []interface{}{proof, encodingKeyBN, indexBN, maskBN}
+	h := crypto.Keccak256Hash([]byte("decodeSample(uint256[],((uint256,uint256),(uint256[2],uint256[2]),(uint256,uint256)))"))
+	uintArrayType, _ := abi.NewType("uint256[]", "", nil)
+	proofType := prover.GetAbiTypeOfZkp()
+	args := abi.Arguments{
+		{Type: uintArrayType},
+		{Type: proofType},
+	}
+	values := []interface{}{maskBNs, proof}
 	dataField, err := args.Pack(values...)
 	if err != nil {
 		return fmt.Errorf("Err: %v, args.Pack: %v", err, values)

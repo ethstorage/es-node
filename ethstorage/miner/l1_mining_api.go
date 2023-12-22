@@ -24,6 +24,10 @@ const (
 	rewardDenominator = 10000
 )
 
+var (
+	mineSig = crypto.Keccak256Hash([]byte(`mine(uint256,uint256,address,uint256,bytes32[],bytes[],bytes)`))
+)
+
 func NewL1MiningAPI(l1 *eth.PollingClient, lg log.Logger) *l1MiningAPI {
 	return &l1MiningAPI{l1, lg}
 }
@@ -97,10 +101,9 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 		rst.miner,
 		new(big.Int).SetUint64(rst.nonce),
 		rst.encodedData,
-		rst.proofs,
+		rst.inclusiveProofs,
 	)
-	h := crypto.Keccak256Hash([]byte(`mine(uint256,uint256,address,uint256,bytes32[],bytes[])`))
-	calldata := append(h[0:4], dataField...)
+	calldata := append(mineSig[0:4], dataField...)
 
 	gasPrice := cfg.GasPrice
 	if gasPrice == nil || gasPrice.Cmp(common.Big0) == 0 {
