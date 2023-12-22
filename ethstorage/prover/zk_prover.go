@@ -15,8 +15,10 @@ import (
 
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
 	"github.com/crate-crypto/go-proto-danksharding-crypto/eth"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
 )
 
@@ -62,14 +64,12 @@ func newZKProver(workingDir, zkeyFile string, cleanup bool, lg log.Logger) *ZKPr
 	}
 }
 
-// TODO: a zk prover interface
-
-// Generate ZK Proof for the given encoding key and chunck index using snarkjs
-func (p *ZKProver) GenerateZKProof(encodingKeys []common.Hash, sampleIdxs []uint64) (ZKProof, []common.Hash, error) {
+// Generate ZK Proof for the given encoding keys and chunck indexes using snarkjs
+func (p *ZKProver) GenerateZKProof(encodingKeys []common.Hash, sampleIdxs []uint64) ([]byte, []common.Hash, error) {
 	for i, idx := range sampleIdxs {
 		p.lg.Debug("Generate zk proof", "encodingKey", encodingKeys[i], "sampleIdx", sampleIdxs[i])
 		if int(idx) >= eth.FieldElementsPerBlob {
-			return ZKProof{}, nil, fmt.Errorf("chunk index out of scope: %d", idx)
+			return nil, nil, fmt.Errorf("chunk index out of scope: %d", idx)
 		}
 	}
 	start := time.Now()
@@ -78,14 +78,16 @@ func (p *ZKProver) GenerateZKProof(encodingKeys []common.Hash, sampleIdxs []uint
 		p.lg.Info("Generate zk proof done", "sampleIdx", sampleIdxs, "took(sec)", dur.Seconds())
 	}(start)
 
-	buildDir := filepath.Join(p.dir, snarkBuildDir, fmt.Sprint(encodingKeys, sampleIdxs))
+	tempDir := crypto.Keccak256Hash([]byte(fmt.Sprint(encodingKeys, sampleIdxs)))
+	p.lg.Debug("Generate zk proof", "path", common.Bytes2Hex(tempDir[:]))
+	buildDir := filepath.Join(p.dir, snarkBuildDir, common.Bytes2Hex(tempDir[:]))
 	if _, err := os.Stat(buildDir); err == nil {
 		os.RemoveAll(buildDir)
 	}
 	err := os.Mkdir(buildDir, os.ModePerm)
 	if err != nil {
 		p.lg.Error("Generate zk proof failed", "mkdir", buildDir, "error", err)
-		return ZKProof{}, nil, err
+		return nil, nil, err
 	}
 	defer func() {
 		if p.cleanup {
@@ -102,17 +104,17 @@ func (p *ZKProver) GenerateZKProof(encodingKeys []common.Hash, sampleIdxs []uint
 	file, err := os.OpenFile(inputFile, os.O_CREATE|os.O_WRONLY, os.ModePerm)
 	if err != nil {
 		p.lg.Error("Create input file failed", "error", err)
-		return ZKProof{}, nil, err
+		return nil, nil, err
 	}
 	defer file.Close()
 
-	var b fr.Element
-	var exp big.Int
-	exp.Div(exp.Sub(fr.Modulus(), common.Big1), big.NewInt(int64(eth.FieldElementsPerBlob)))
-	ru := b.Exp(*b.SetInt64(5), &exp)
 	var encodingKeyModStr, xInStr []string
 	for i, sampleIdx := range sampleIdxs {
-		xIn := ru.Exp(*ru, big.NewInt(int64(sampleIdx)))
+		var b fr.Element
+		var exp big.Int
+		exp.Div(exp.Sub(fr.Modulus(), common.Big1), big.NewInt(int64(eth.FieldElementsPerBlob)))
+		ru := b.Exp(*b.SetInt64(5), &exp)
+		xIn := ru.Exp(*ru, new(big.Int).SetUint64(sampleIdx))
 		xInStr = append(xInStr, xIn.String())
 		encodingKeyMod := fr.Modulus().Mod(encodingKeys[i].Big(), fr.Modulus())
 		encodingKeyModStr = append(encodingKeyModStr, hexutil.Encode(encodingKeyMod.Bytes()))
@@ -124,7 +126,7 @@ func (p *ZKProver) GenerateZKProof(encodingKeys []common.Hash, sampleIdxs []uint
 	err = json.NewEncoder(file).Encode(inputObj)
 	if err != nil {
 		p.lg.Error("Write input file failed", "error", err)
-		return ZKProof{}, nil, err
+		return nil, nil, err
 	}
 	p.lg.Debug("Generate zk proof", "input", inputObj)
 
@@ -140,7 +142,7 @@ func (p *ZKProver) GenerateZKProof(encodingKeys []common.Hash, sampleIdxs []uint
 	out, err := cmd.Output()
 	if err != nil {
 		p.lg.Error("Generate witness failed", "error", err, "cmd", cmd.String(), "output", string(out))
-		return ZKProof{}, nil, err
+		return nil, nil, err
 	}
 	p.lg.Debug("Generate witness done")
 
@@ -157,7 +159,7 @@ func (p *ZKProver) GenerateZKProof(encodingKeys []common.Hash, sampleIdxs []uint
 	out, err = cmd.Output()
 	if err != nil {
 		p.lg.Error("Generate proof failed", "error", err, "cmd", cmd.String(), "output", string(out))
-		return ZKProof{}, nil, err
+		return nil, nil, err
 	}
 	p.lg.Debug("Generate proof done")
 
@@ -165,12 +167,12 @@ func (p *ZKProver) GenerateZKProof(encodingKeys []common.Hash, sampleIdxs []uint
 	proof, err := parseProof(proofFile)
 	if err != nil {
 		p.lg.Error("Parse proof failed", "error", err)
-		return ZKProof{}, nil, err
+		return nil, nil, err
 	}
 	masks, err := readMasks(publicFile)
 	if err != nil {
 		p.lg.Error("Read mask failed", "error", err)
-		return ZKProof{}, nil, err
+		return nil, nil, err
 	}
 	return proof, masks, nil
 }
@@ -198,37 +200,42 @@ func readMasks(publicFile string) ([]common.Hash, error) {
 	return masks, nil
 }
 
-func parseProof(proofFile string) (ZKProof, error) {
+func parseProof(proofFile string) ([]byte, error) {
 	dat, err := os.ReadFile(proofFile)
 	if err != nil {
-		return ZKProof{}, err
+		return nil, err
 	}
 	var piOut = pi{}
 	err = json.Unmarshal(dat, &piOut)
 	if err != nil {
-		return ZKProof{}, err
+		return nil, err
 	}
-	proof, err := toZKProof(piOut)
+	u2, _ := abi.NewType("uint256[2]", "", nil)
+	u22, _ := abi.NewType("uint256[2][2]", "", nil)
+	args := abi.Arguments{
+		{Type: u2},
+		{Type: u22},
+		{Type: u2},
+	}
+	a, err := toG1Point(piOut.A[:2])
 	if err != nil {
-		return ZKProof{}, err
+		return nil, err
 	}
-	return proof, nil
-}
+	b, err := toG2Point(piOut.B[0:2])
+	if err != nil {
+		return nil, err
+	}
+	c, err := toG1Point(piOut.C[0:2])
+	if err != nil {
+		return nil, err
+	}
 
-func toZKProof(p pi) (ZKProof, error) {
-	a, err := toG1Point(p.A[:2])
+	values := []interface{}{[]*big.Int{a.X, a.Y}, [][]*big.Int{b.X[:], b.Y[:]}, []*big.Int{c.X, c.Y}}
+	encoded, err := args.Pack(values...)
 	if err != nil {
-		return ZKProof{}, err
+		return nil, fmt.Errorf("%v, values: %v", err, values)
 	}
-	b, err := toG2Point(p.B[0:2])
-	if err != nil {
-		return ZKProof{}, err
-	}
-	c, err := toG1Point(p.C[0:2])
-	if err != nil {
-		return ZKProof{}, err
-	}
-	return ZKProof{a, b, c}, nil
+	return encoded, nil
 }
 
 func toG1Point(s []string) (G1Point, error) {

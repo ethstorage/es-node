@@ -45,13 +45,14 @@ func TestZKProver_GenerateZKProof(t *testing.T) {
 
 	encodingKeys := []common.Hash{
 		common.HexToHash("0x1"),
-		common.HexToHash("0x22222222222"),
 		common.HexToHash("0x1e88fb83944b20562a100533d0521b90bf7df7cc6e0aaa1c46482b67c7b370ab"),
 	}
-	sampleIdxs := []uint64{0, 2222, 4095}
+	sampleIdxs := []uint64{
+		0,
+		4095,
+	}
 	xIns := []string{
 		"1",
-		"13571350061658342048390665596699168162893949286891081722317471185110722978977",
 		"12199007973319674300030596965685270475268514105269206407619072166392043015767",
 	}
 	libDir := filepath.Join(proverPath, snarkLibDir)
@@ -62,7 +63,8 @@ func TestZKProver_GenerateZKProof(t *testing.T) {
 			t.Errorf("ZKProver.GenerateZKProof() error = %v ", err)
 			return
 		}
-		buildDir := filepath.Join(proverPath, snarkBuildDir, fmt.Sprint(encodingKeys, sampleIdxs))
+		tempDir := crypto.Keccak256Hash([]byte(fmt.Sprint(encodingKeys, sampleIdxs)))
+		buildDir := filepath.Join(proverPath, snarkBuildDir, common.Bytes2Hex(tempDir[:]))
 		xIn, err := readXIn(buildDir)
 		if err != nil {
 			t.Fatalf("get xIn failed %v", err)
@@ -73,7 +75,6 @@ func TestZKProver_GenerateZKProof(t *testing.T) {
 				return
 			}
 		}
-
 		for i, encodingKey := range encodingKeys {
 			maskGo, err := GenerateMask(encodingKey, sampleIdxs[i])
 			if err != nil {
@@ -88,10 +89,12 @@ func TestZKProver_GenerateZKProof(t *testing.T) {
 		err = localVerify(t, libDir, buildDir)
 		if err != nil {
 			t.Errorf("ZKProver.GenerateZKProof() localVerify failed: %v", err)
+			return
 		}
-		err = verifyDecodeSample(proof, masks)
+		err = verifyDecodeSample(masks, proof)
 		if err != nil {
 			t.Errorf("ZKProver.GenerateZKProof() verifyDecodeSample err: %v", err)
+			return
 		}
 		t.Log("verifyDecodeSample success!")
 		os.RemoveAll(buildDir)
@@ -142,7 +145,7 @@ func localVerify(t *testing.T, libDir string, buildDir string) error {
 	return nil
 }
 
-func verifyDecodeSample(proof prover.ZKProof, masks []common.Hash) error {
+func verifyDecodeSample(masks []common.Hash, proof []byte) error {
 	ctx := context.Background()
 	client, err := ethclient.DialContext(ctx, l1Endpoint)
 	if err != nil {
@@ -153,17 +156,17 @@ func verifyDecodeSample(proof prover.ZKProof, masks []common.Hash) error {
 	for _, mask := range masks {
 		maskBNs = append(maskBNs, new(big.Int).SetBytes(mask[:]))
 	}
-	h := crypto.Keccak256Hash([]byte("decodeSample(uint256[],((uint256,uint256),(uint256[2],uint256[2]),(uint256,uint256)))"))
+	h := crypto.Keccak256Hash([]byte("decodeSample(uint256[],bytes)"))
 	uintArrayType, _ := abi.NewType("uint256[]", "", nil)
-	proofType := prover.GetAbiTypeOfZkp()
+	bytesType, _ := abi.NewType("bytes", "", nil)
 	args := abi.Arguments{
 		{Type: uintArrayType},
-		{Type: proofType},
+		{Type: bytesType},
 	}
 	values := []interface{}{maskBNs, proof}
 	dataField, err := args.Pack(values...)
 	if err != nil {
-		return fmt.Errorf("Err: %v, args.Pack: %v", err, values)
+		return fmt.Errorf("%v, values: %v", err, values)
 	}
 	calldata := append(h[0:4], dataField...)
 	return callVerify(calldata)

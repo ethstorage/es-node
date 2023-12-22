@@ -49,12 +49,11 @@ func (p *KZGPoseidonProver) GetStorageProof(data [][]byte, encodingKeys []common
 	return proofs, nil
 }
 
-func combineProofs(zkProof ZKProof, masks []common.Hash, peInputs [][]byte) []byte {
-	proofType := GetAbiTypeOfZkp()
+func combineProofs(zkProof []byte, masks []common.Hash, peInputs [][]byte) []byte {
 	bytes32ArrayType, _ := abi.NewType("bytes32[]", "", nil)
 	bytesType, _ := abi.NewType("bytes", "", nil)
 	proofs, _ := abi.Arguments{
-		{Type: proofType},
+		{Type: bytesType},
 		{Type: bytes32ArrayType},
 		{Type: bytesType},
 	}.Pack(
