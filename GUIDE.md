@@ -19,7 +19,7 @@ Please refer to [this section](/README.md/#minimum-hardware-requirements) for ha
 ## System Environment
  - Ubuntu 20.04+ (tested and verified)
  - (Optional) Docker 24.0.5+ (would simplify the process)
- - (Optional) Go 1.21.* and Node.js 16+ (can be installed following the [steps](#install-dependencies))
+ - (Optional) Go 1.20+ and Node.js 16+ (can be installed following the [steps](#install-dependencies))
 
 You can choose [the method of running es-node](#options-to-run-es-node) based on your current environment.
 
