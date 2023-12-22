@@ -12,8 +12,9 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethstorage/go-ethstorage/ethstorage"
+	"github.com/ethereum/go-ethereum/params"
 	es "github.com/ethstorage/go-ethstorage/ethstorage"
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
 )
@@ -26,6 +27,10 @@ const (
 	// always use new block hash to mine for each slot
 	mineTimeOut              = 12 // seconds
 	miningTransactionTimeout = 25 // seconds
+)
+
+var (
+	minedEventSig = crypto.Keccak256Hash([]byte("MinedBlock(uint256,uint256,uint256,uint256,address,uint256)"))
 )
 
 type task struct {
@@ -83,7 +88,7 @@ type worker struct {
 
 func newWorker(
 	config Config,
-	storageMgr *ethstorage.StorageManager,
+	storageMgr *es.StorageManager,
 	api L1API,
 	chainHeadCh chan eth.L1BlockRef,
 	prover MiningProver,
@@ -344,9 +349,40 @@ func (w *worker) checkTxStatus(txHash common.Hash, miner common.Address) {
 		log.Warn("Mining transaction not found!", "err", err, "txHash", txHash)
 	} else if receipt.Status == 1 {
 		log.Info("Mining transaction success!      √", "miner", miner)
+		log.Info("Mining transaction details", "txHash", txHash, "gasUsed", receipt.GasUsed, "effectiveGasPrice", receipt.EffectiveGasPrice)
+		cost := new(big.Int).Mul(new(big.Int).SetUint64(receipt.GasUsed), receipt.EffectiveGasPrice)
+		var reward *big.Int
+		for _, rLog := range receipt.Logs {
+			if rLog.Topics[0] == minedEventSig {
+				// the last param of total unindexed 3
+				reward = new(big.Int).SetBytes(rLog.Data[64:])
+				break
+			}
+		}
+		if reward != nil {
+			log.Info("Mining transaction accounting (in ether)",
+				"reward", weiToEther(reward),
+				"cost", weiToEther(cost),
+				"profit", weiToEther(new(big.Int).Sub(reward, cost)),
+			)
+		}
 	} else if receipt.Status == 0 {
 		log.Warn("Mining transaction failed!      ×", "txHash", txHash)
 	}
+}
+
+// https://github.com/ethereum/go-ethereum/issues/21221#issuecomment-805852059
+func weiToEther(wei *big.Int) *big.Float {
+	f := new(big.Float)
+	f.SetPrec(236) //  IEEE 754 octuple-precision binary floating-point format: binary256
+	f.SetMode(big.ToNearestEven)
+	if wei == nil {
+		return f.SetInt64(0)
+	}
+	fWei := new(big.Float)
+	fWei.SetPrec(236) //  IEEE 754 octuple-precision binary floating-point format: binary256
+	fWei.SetMode(big.ToNearestEven)
+	return f.Quo(fWei.SetInt(wei), big.NewFloat(params.Ether))
 }
 
 // mineTask acturally executes a mining task

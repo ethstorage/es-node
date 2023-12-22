@@ -58,7 +58,7 @@ const (
 var (
 	maxKvCountPerReq            = uint64(16)
 	syncStatusKey               = []byte("SyncStatus")
-	maxFillEmptyTaskTreads      int32
+	maxFillEmptyTaskTreads      = 1
 	requestTimeoutInMillisecond = 1000 * time.Millisecond // Millisecond
 )
 
@@ -156,7 +156,7 @@ type SyncClient struct {
 	syncDone                   bool // Flag to signal that eth storage sync is done
 	peers                      map[peer.ID]*Peer
 	idlerPeers                 map[peer.ID]struct{} // Peers that aren't serving requests
-	runningFillEmptyTaskTreads int32                // Number of working threads for processing empty task
+	runningFillEmptyTaskTreads int                  // Number of working threads for processing empty task
 
 	peerJoin chan peer.ID
 	update   chan struct{} // Notification channel for possible sync progression
@@ -187,9 +187,10 @@ type SyncClient struct {
 func NewSyncClient(log log.Logger, cfg *rollup.EsConfig, newStream newStreamFn, storageManager StorageManager, params *SyncerParams,
 	db ethdb.Database, m SyncClientMetrics, mux *event.Feed) *SyncClient {
 	ctx, cancel := context.WithCancel(context.Background())
-	maxFillEmptyTaskTreads = int32(runtime.NumCPU() - 2)
-	if maxFillEmptyTaskTreads < 1 {
-		maxFillEmptyTaskTreads = 1
+	if params.FillEmptyConcurrency > 0 {
+		maxFillEmptyTaskTreads = params.FillEmptyConcurrency
+	} else if runtime.NumCPU() > 2 {
+		maxFillEmptyTaskTreads = runtime.NumCPU() - 2
 	}
 	maxKvCountPerReq = params.MaxRequestSize / storageManager.MaxKvSize()
 	shardCount := len(storageManager.Shards())
@@ -326,7 +327,7 @@ func (s *SyncClient) createTask(sid uint64, lastKvIndex uint64) *task {
 	subTasks := make([]*subTask, 0)
 	// split subTask for a shard to 16 subtasks and if one batch is too small
 	// set to minSubTaskSize
-	maxTaskSize := (limit - first - 1 + s.syncerParams.MaxConcurrency) / s.syncerParams.MaxConcurrency
+	maxTaskSize := (limit - first - 1 + s.syncerParams.SyncConcurrency) / s.syncerParams.SyncConcurrency
 	if maxTaskSize < minSubTaskSize {
 		maxTaskSize = minSubTaskSize
 	}
@@ -465,7 +466,7 @@ func (s *SyncClient) Start() error {
 	return nil
 }
 
-func (s *SyncClient) AddPeer(id peer.ID, shards map[common.Address][]uint64) bool {
+func (s *SyncClient) AddPeer(id peer.ID, shards map[common.Address][]uint64, direction network.Direction) bool {
 	s.lock.Lock()
 	if _, ok := s.peers[id]; ok {
 		s.log.Warn("Cannot register peer for sync duties, peer was already registered", "peer", id)
@@ -483,7 +484,7 @@ func (s *SyncClient) AddPeer(id peer.ID, shards map[common.Address][]uint64) boo
 		return false
 	}
 	// add new peer routine
-	pr := NewPeer(0, s.cfg.L2ChainID, id, s.newStreamFn, shards)
+	pr := NewPeer(0, s.cfg.L2ChainID, id, s.newStreamFn, direction, shards)
 	s.peers[id] = pr
 
 	s.idlerPeers[id] = struct{}{}
@@ -555,7 +556,7 @@ func (s *SyncClient) RequestL2List(indexes []uint64) (uint64, error) {
 		if err != nil {
 			return 0, err
 		}
-		s.onResult(packet.Blobs)
+		_, _, _, err = s.onResult(packet.Blobs)
 		if err != nil {
 			return 0, err
 		}
@@ -1146,6 +1147,29 @@ func (s *SyncClient) report(force bool) {
 	log.Info("Storage sync in progress", "progress", progress, "peerCount", peerCount, "syncTasksRemain", syncTasksRemain,
 		"blobsSynced", blobsSynced, "blobsToSync", blobsToSync, "fillTasksRemain", subFillTaskRemain,
 		"emptyFilled", blobsFilled, "emptyToFill", emptyToFill, "timeUsed", common.PrettyDuration(elapsed), "eta", common.PrettyDuration(estTime-elapsed))
+}
+
+func (s *SyncClient) ReportPeerSummary() {
+	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			inbound, outbound := 0, 0
+			for _, peer := range s.peers {
+				if peer.direction == network.DirInbound {
+					inbound++
+				} else if peer.direction == network.DirOutbound {
+					outbound++
+				}
+			}
+			log.Info("P2P Summary", "activePeers", len(s.peers), "inbound", inbound, "outbound", outbound)
+		case <-s.resCtx.Done():
+			log.Info("P2P summary stop")
+			return
+		}
+	}
+
 }
 
 func (s *SyncClient) needThisPeer(contractShards map[common.Address][]uint64) bool {

@@ -84,6 +84,7 @@ The full list of options that you can use to configure an es-node are as follows
 |`--miner.threads-per-shard`|Number of threads per shard|`runtime.NumCPU() x 2`||
 |`--miner.zk-working-dir`|Path to the snarkjs folder|`build/bin`||
 |`--miner.zkey`|zkey file name which should be put in the snarkjs folder|`blob_poseidon.zkey`||
+|`--miner.min-profit`|Minimum profit for mining transactions|`0`||
 |`--network`|Predefined L1 network selection. Available networks: devnet|||
 |`--p2p.advertise.ip`|The IP address to advertise in Discv5, put into the ENR of the node. This may also be a hostname / domain name to resolve to an IP.|||
 |`--p2p.advertise.tcp`|The TCP port to advertise in Discv5, put into the ENR of the node. Set to p2p.listen.tcp value if 0.|`0`||
@@ -96,6 +97,9 @@ The full list of options that you can use to configure an es-node are as follows
 |`--p2p.listen.tcp`|TCP port to bind LibP2P to. Any available system port if set to 0.|`9222`||
 |`--p2p.listen.udp`|UDP port to bind Discv5 to. Same as TCP port if left 0.|`0`||
 |`--p2p.nat`|Enable NAT traversal with PMP/UPNP devices to learn external IP.|||
+|`--p2p.max.request.size`|max request size is the maximum number of bytes to request from a remote peer. It is value should not larger than 8 * 1024 * 1024. if you have good network condition, you can increase the max request size to improve the sync performance.|1048576||
+|`--p2p.sync.concurrency`|sync concurrency is the number of chunks to split a shard into to allow concurrent retrievals.|16||
+|`--p2p.fill-empty.concurrency`|fill empty concurrency is the number of threads to concurrently fill encoded empty blobs.|NumCPU - 2||
 |`--p2p.no-discovery`|Disable Discv5 (node discovery)|||
 |`--p2p.peers.grace`|Grace period to keep a newly connected peer around, if it is not misbehaving.|`30s`||
 |`--p2p.peers.hi`|High-tide peer count. The node starts pruning peer connections slowly after reaching this number.|`30`||
