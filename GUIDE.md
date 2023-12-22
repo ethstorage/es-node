@@ -19,7 +19,7 @@ Please refer to [this section](/README.md/#minimum-hardware-requirements) for ha
 ## System Environment
  - Ubuntu 20.04+ (tested and verified)
  - (Optional) Docker 24.0.5+ (would simplify the process)
- - (Optional) Go 1.20.* (not compatible with Go 1.21 yet) and Node.js 16+ (can be installed following the [steps](#install-dependencies))
+ - (Optional) Go 1.21.* and Node.js 16+ (can be installed following the [steps](#install-dependencies))
 
 You can choose [the method of running es-node](#options-to-run-es-node) based on your current environment.
 
@@ -123,13 +123,13 @@ _Please note that not all steps in this section are required; they depend on you
 
 ### Install Go
 
-Download a stable Go release, e.g., go1.20.10 (can't be built on go1.21.* yet). 
+Download a stable Go release, e.g., go1.21.4. 
 ```sh
-curl -OL https://golang.org/dl/go1.20.10.linux-amd64.tar.gz
+curl -OL https://golang.org/dl/go1.21.4.linux-amd64.tar.gz
 ```
 Extract and install
 ```sh
-tar -C /usr/local -xf go1.20.10.linux-amd64.tar.gz
+tar -C /usr/local -xf go1.21.4.linux-amd64.tar.gz
 ```
 Update `$PATH`
 ```
