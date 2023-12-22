@@ -28,7 +28,7 @@ import (
 
 const (
 	dbKey = "FetchStatus"
-	step  = 100
+	step  = 300
 	epoch = 12 * time.Second
 )
 
@@ -125,7 +125,12 @@ func newDashboard(rpcURL string, l1Contract common.Address) (*dashboard, error) 
 	}, nil
 }
 
-func (d *dashboard) RefreshBlobsMetrics(ctx context.Context, sig eth.L1BlockRef) {
+func (d *dashboard) RefreshMetrics(ctx context.Context, sig eth.L1BlockRef) {
+	d.RefreshBlobsMetrics(sig)
+	d.RefreshMiningMetrics()
+}
+
+func (d *dashboard) RefreshBlobsMetrics(sig eth.L1BlockRef) {
 	lastKVIndex, err := d.l1Source.GetStorageLastBlobIdx(int64(sig.Number))
 	if err != nil {
 		log.Warn("Refresh contract metrics (last kv index) failed", "err", err.Error())
@@ -137,20 +142,6 @@ func (d *dashboard) RefreshBlobsMetrics(ctx context.Context, sig eth.L1BlockRef)
 	d.maxShardIdx = maxShardIdx
 	if sig.Number > d.endBlock {
 		d.endBlock = sig.Number
-	}
-}
-
-func (d *dashboard) FilterEventAndReport() error {
-	d.RefreshMiningMetrics()
-	ticker := time.NewTicker(epoch)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ticker.C:
-			d.RefreshMiningMetrics()
-		case <-d.ctx.Done():
-			return d.ctx.Err()
-		}
 	}
 }
 
@@ -264,10 +255,8 @@ func main() {
 		log.Crit("New dashboard fail", "err", err)
 	}
 
-	l1LatestBlockSub := eth.PollBlockChanges(d.ctx, d.logger, d.l1Source, d.RefreshBlobsMetrics, ethRPC.LatestBlockNumber, epoch, epoch)
+	l1LatestBlockSub := eth.PollBlockChanges(d.ctx, d.logger, d.l1Source, d.RefreshMetrics, ethRPC.LatestBlockNumber, epoch, epoch)
 	defer l1LatestBlockSub.Unsubscribe()
-
-	go d.FilterEventAndReport()
 
 	if err := d.m.Serve(d.ctx, *listenAddrFlag, *portFlag); err != nil {
 		log.Crit("Error starting metrics server", "err", err)
