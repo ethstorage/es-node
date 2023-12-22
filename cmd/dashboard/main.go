@@ -29,6 +29,7 @@ import (
 const (
 	dbKey = "FetchStatus"
 	step  = 100
+	epoch = 12 * time.Second
 )
 
 var (
@@ -141,7 +142,7 @@ func (d *dashboard) RefreshBlobsMetrics(ctx context.Context, sig eth.L1BlockRef)
 
 func (d *dashboard) FilterEventAndReport() error {
 	d.RefreshMiningMetrics()
-	ticker := time.NewTicker(10 * time.Second)
+	ticker := time.NewTicker(epoch)
 	defer ticker.Stop()
 	for {
 		select {
@@ -200,7 +201,7 @@ func (d *dashboard) FetchMiningEvents(start, end uint64) ([]*miningEvent, uint64
 		if oErr != nil {
 			return nil, start, fmt.Errorf("BalanceAt fail, block: %d, error: %s", l.BlockNumber-1, err.Error())
 		}
-		reward := new(big.Int).Sub(balanceBefore, balance)
+		reward := new(big.Int).Sub(balanceBefore, balance).Uint64() * 99 / 100 // reward = balance diff * 99% because 1% goes to the treasury
 
 		events = append(events, &miningEvent{
 			ShardId:      new(big.Int).SetBytes(l.Topics[1].Bytes()).Uint64(),
@@ -209,7 +210,7 @@ func (d *dashboard) FetchMiningEvents(start, end uint64) ([]*miningEvent, uint64
 			LastMineTime: new(big.Int).SetBytes(l.Data[:32]).Uint64(),
 			// TODO: update when new version contract deployed, use the miner in the new MinedBlock event
 			Miner:  common.BytesToAddress(tx.Data()[80:100]),
-			Reward: reward.Uint64() / 10000000000,
+			Reward: reward / 10000000000,
 			GasFee: tx.Gas() * tx.GasPrice().Uint64() / 10000000000,
 		})
 	}
@@ -263,8 +264,7 @@ func main() {
 		log.Crit("New dashboard fail", "err", err)
 	}
 
-	l1LatestBlockSub := eth.PollBlockChanges(d.ctx, d.logger, d.l1Source, d.RefreshBlobsMetrics, ethRPC.LatestBlockNumber,
-		10*time.Second, time.Second*10)
+	l1LatestBlockSub := eth.PollBlockChanges(d.ctx, d.logger, d.l1Source, d.RefreshBlobsMetrics, ethRPC.LatestBlockNumber, epoch, epoch)
 	defer l1LatestBlockSub.Unsubscribe()
 
 	go d.FilterEventAndReport()
