@@ -827,12 +827,14 @@ func (s *SyncClient) assignFillEmptyBlobTasks() {
 					log.Debug("Fill in empty done", "time", time.Now().Sub(t).Seconds())
 				}
 				filled := next - start
+
+				s.lock.Lock()
 				s.emptyBlobsFilled += filled
 				if s.emptyBlobsToFill >= filled {
 					s.emptyBlobsToFill -= filled
+				} else {
+					s.emptyBlobsToFill = 0
 				}
-
-				s.lock.Lock()
 				eTask.First = next
 				if eTask.First >= eTask.Last {
 					eTask.done = true
@@ -1016,13 +1018,13 @@ func (s *SyncClient) FillFileWithEmptyBlob(start, limit uint64) (uint64, error) 
 		inserted = uint64(0)
 		next     = start
 	)
-	defer s.metrics.ClientFillEmptyBlobsEvent(inserted, time.Since(st))
 	lastBlobIdx := s.storageManager.LastKvIndex()
 
 	if start < lastBlobIdx {
 		start = lastBlobIdx
 	}
 	inserted, next, err := s.storageManager.CommitEmptyBlobs(start, limit)
+	defer s.metrics.ClientFillEmptyBlobsEvent(inserted, time.Since(st))
 
 	return next, err
 }
