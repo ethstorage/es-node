@@ -352,7 +352,7 @@ func (s *SyncClient) createTask(sid uint64, lastKvIndex uint64) *task {
 	subEmptyTasks := make([]*subEmptyTask, 0)
 	if limitForEmpty > 0 {
 		s.emptyBlobsToFill += limitForEmpty - firstEmpty
-		maxEmptyTaskSize := (limitForEmpty - firstEmpty + uint64(maxFillEmptyTaskTreads)) / uint64(maxFillEmptyTaskTreads)
+		maxEmptyTaskSize := (limitForEmpty - firstEmpty - 1 + uint64(maxFillEmptyTaskTreads)) / uint64(maxFillEmptyTaskTreads)
 		if maxEmptyTaskSize < minSubTaskSize {
 			maxEmptyTaskSize = minSubTaskSize
 		}
@@ -459,6 +459,9 @@ func (s *SyncClient) Start() error {
 
 	// Retrieve the previous sync status from LevelDB and abort if already synced
 	s.loadSyncStatus()
+	s.lock.Lock()
+	s.closingPeers = false
+	s.lock.Unlock()
 
 	s.wg.Add(1)
 	go s.mainLoop()
@@ -1019,6 +1022,9 @@ func (s *SyncClient) FillFileWithEmptyBlob(start, limit uint64) (uint64, error) 
 		next     = start
 	)
 	lastBlobIdx := s.storageManager.LastKvIndex()
+	if lastBlobIdx > limit {
+		return limit + 1, nil
+	}
 
 	if start < lastBlobIdx {
 		start = lastBlobIdx
