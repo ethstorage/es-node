@@ -1209,8 +1209,7 @@ func TestFillEmpty(t *testing.T) {
 		shardMap    = make(map[common.Address][]uint64)
 		m           = metrics.NewMetrics("sync_test")
 		rollupCfg   = &rollup.EsConfig{
-			L2ChainID:     new(big.Int).SetUint64(3333),
-			MetricsEnable: true,
+			L2ChainID: new(big.Int).SetUint64(3333),
 		}
 	)
 
