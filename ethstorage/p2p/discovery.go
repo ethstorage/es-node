@@ -166,28 +166,35 @@ func (v *Secp256k1) DecodeRLP(s *rlp.Stream) error {
 	return nil
 }
 
-func addNATMappings(tcpPort, udpPort int) (net.IP, int, int, error) {
-	n, err := nat.DiscoverNAT(context.Background())
+func addNATMappings(tcpPort, udpPort int) (net.IP, uint16, uint16, error) {
+	ctx := context.Background()
+	n, err := nat.DiscoverNAT(ctx)
 	if err != nil {
 		return nil, 0, 0, fmt.Errorf("no external address set to ENR as no NAT service found: %s", err.Error())
 	}
-	tcpMapping, err := n.NewMapping("tcp", tcpPort)
+	err = n.AddMapping(ctx, "tcp", tcpPort)
 	if err != nil {
 		return nil, 0, 0, fmt.Errorf("fail to add tcpMapping for tcp port to NAT: %s", err.Error())
 	}
-	addr, err := tcpMapping.ExternalAddr()
-	if err != nil {
-		return nil, 0, 0, fmt.Errorf("get external IP from NAT tcpMapping fail: %s", err.Error())
-	}
-	tcpAddr, err := net.ResolveTCPAddr("tcp", addr.String())
-	if err != nil {
-		return nil, 0, 0, fmt.Errorf("fail to resolve external address: %s", err.Error())
-	}
-	udpMapping, err := n.NewMapping("udp", udpPort)
+	err = n.AddMapping(ctx, "udp", udpPort)
 	if err != nil {
 		return nil, 0, 0, fmt.Errorf("fail to add tcpMapping for udp port to NAT: %s", err.Error())
 	}
-	return tcpAddr.IP, tcpMapping.ExternalPort(), udpMapping.ExternalPort(), nil
+
+	tcpMapping, foundTcp := n.GetMapping("tcp", tcpPort)
+	if foundTcp {
+		return nil, 0, 0, fmt.Errorf("fail to get tcpMapping for tcp port %d from NAT", tcpPort)
+	}
+	udpMapping, foundUdp := n.GetMapping("udp", udpPort)
+	if foundUdp {
+		return nil, 0, 0, fmt.Errorf("fail to get udpMapping for udp port %d from NAT", udpPort)
+	}
+	addr := tcpMapping.Addr().AsSlice()
+	if err != nil {
+		return nil, 0, 0, fmt.Errorf("get external IP from NAT fail: %s", err.Error())
+	}
+
+	return addr, tcpMapping.Port(), udpMapping.Port(), nil
 }
 
 func enrToAddrInfo(r *enode.Node) (*peer.AddrInfo, *crypto.Secp256k1PublicKey, error) {
