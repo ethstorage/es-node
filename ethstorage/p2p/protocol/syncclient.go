@@ -327,7 +327,7 @@ func (s *SyncClient) createTask(sid uint64, lastKvIndex uint64) *task {
 	subTasks := make([]*subTask, 0)
 	// split subTask for a shard to 16 subtasks and if one batch is too small
 	// set to minSubTaskSize
-	maxTaskSize := (limit - first - 1 + s.syncerParams.SyncConcurrency) / s.syncerParams.SyncConcurrency
+	maxTaskSize := (limit - first + s.syncerParams.SyncConcurrency - 1) / s.syncerParams.SyncConcurrency
 	if maxTaskSize < minSubTaskSize {
 		maxTaskSize = minSubTaskSize
 	}
@@ -352,7 +352,7 @@ func (s *SyncClient) createTask(sid uint64, lastKvIndex uint64) *task {
 	subEmptyTasks := make([]*subEmptyTask, 0)
 	if limitForEmpty > 0 {
 		s.emptyBlobsToFill += limitForEmpty - firstEmpty
-		maxEmptyTaskSize := (limitForEmpty - firstEmpty + uint64(maxFillEmptyTaskTreads)) / uint64(maxFillEmptyTaskTreads)
+		maxEmptyTaskSize := (limitForEmpty - firstEmpty + uint64(maxFillEmptyTaskTreads) - 1) / uint64(maxFillEmptyTaskTreads)
 		if maxEmptyTaskSize < minSubTaskSize {
 			maxEmptyTaskSize = minSubTaskSize
 		}
@@ -459,6 +459,9 @@ func (s *SyncClient) Start() error {
 
 	// Retrieve the previous sync status from LevelDB and abort if already synced
 	s.loadSyncStatus()
+	s.lock.Lock()
+	s.closingPeers = false
+	s.lock.Unlock()
 
 	s.wg.Add(1)
 	go s.mainLoop()
@@ -827,12 +830,14 @@ func (s *SyncClient) assignFillEmptyBlobTasks() {
 					log.Debug("Fill in empty done", "time", time.Now().Sub(t).Seconds())
 				}
 				filled := next - start
+
+				s.lock.Lock()
 				s.emptyBlobsFilled += filled
 				if s.emptyBlobsToFill >= filled {
 					s.emptyBlobsToFill -= filled
+				} else {
+					s.emptyBlobsToFill = 0
 				}
-
-				s.lock.Lock()
 				eTask.First = next
 				if eTask.First >= eTask.Last {
 					eTask.done = true
@@ -1016,13 +1021,16 @@ func (s *SyncClient) FillFileWithEmptyBlob(start, limit uint64) (uint64, error) 
 		inserted = uint64(0)
 		next     = start
 	)
-	defer s.metrics.ClientFillEmptyBlobsEvent(inserted, time.Since(st))
 	lastBlobIdx := s.storageManager.LastKvIndex()
+	if lastBlobIdx > limit {
+		return limit + 1, nil
+	}
 
 	if start < lastBlobIdx {
 		start = lastBlobIdx
 	}
 	inserted, next, err := s.storageManager.CommitEmptyBlobs(start, limit)
+	defer s.metrics.ClientFillEmptyBlobsEvent(inserted, time.Since(st))
 
 	return next, err
 }

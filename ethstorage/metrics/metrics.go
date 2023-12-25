@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"time"
 
-	ophttp "github.com/ethereum-optimism/optimism/op-node/http"
+	ophttp "github.com/ethereum-optimism/optimism/op-service/httputil"
 	"github.com/ethereum-optimism/optimism/op-service/metrics"
 	"github.com/ethereum/go-ethereum/common"
 	pb "github.com/libp2p/go-libp2p-pubsub/pb"
