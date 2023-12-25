@@ -83,7 +83,7 @@ type mockL1Source struct {
 	metaFile      *os.File
 }
 
-func NewMockL1Source(lastBlobIndex uint64, metafile string) ethstorage.Il1Source {
+func NewMockL1Source(lastBlobIndex uint64, metafile string) *mockL1Source {
 	if len(metafile) == 0 {
 		panic("metafile param is needed when using mock l1")
 	}
@@ -1246,12 +1246,11 @@ func TestFillEmpty(t *testing.T) {
 	_, syncCl := createLocalHostAndSyncClient(t, testLog, rollupCfg, db, sm, m, mux)
 	syncCl.Start()
 	for i := 0; i < 4; i++ {
-		time.Sleep(300 * time.Millisecond)
-		lastKvIndex = lastKvIndex + rand.Uint64()%(kvEntries/4)
-		l1.(*mockL1Source).lastBlobIndex = lastKvIndex
+		time.Sleep(500 * time.Millisecond)
+		l1.lastBlobIndex = l1.lastBlobIndex + rand.Uint64()%(kvEntries/4)
 		sm.Reset(1)
 	}
-	time.Sleep(3 * time.Second)
+	time.Sleep(5 * time.Second)
 
 	if len(syncCl.tasks[0].SubEmptyTasks) > 0 {
 		t.Fatalf("fill empty should be done")
