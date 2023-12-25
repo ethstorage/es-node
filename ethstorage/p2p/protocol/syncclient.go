@@ -327,7 +327,7 @@ func (s *SyncClient) createTask(sid uint64, lastKvIndex uint64) *task {
 	subTasks := make([]*subTask, 0)
 	// split subTask for a shard to 16 subtasks and if one batch is too small
 	// set to minSubTaskSize
-	maxTaskSize := (limit - first - 1 + s.syncerParams.SyncConcurrency) / s.syncerParams.SyncConcurrency
+	maxTaskSize := (limit - first + s.syncerParams.SyncConcurrency - 1) / s.syncerParams.SyncConcurrency
 	if maxTaskSize < minSubTaskSize {
 		maxTaskSize = minSubTaskSize
 	}
@@ -352,7 +352,7 @@ func (s *SyncClient) createTask(sid uint64, lastKvIndex uint64) *task {
 	subEmptyTasks := make([]*subEmptyTask, 0)
 	if limitForEmpty > 0 {
 		s.emptyBlobsToFill += limitForEmpty - firstEmpty
-		maxEmptyTaskSize := (limitForEmpty - firstEmpty - 1 + uint64(maxFillEmptyTaskTreads)) / uint64(maxFillEmptyTaskTreads)
+		maxEmptyTaskSize := (limitForEmpty - firstEmpty + uint64(maxFillEmptyTaskTreads) - 1) / uint64(maxFillEmptyTaskTreads)
 		if maxEmptyTaskSize < minSubTaskSize {
 			maxEmptyTaskSize = minSubTaskSize
 		}

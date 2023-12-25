@@ -1246,7 +1246,7 @@ func TestFillEmpty(t *testing.T) {
 	_, syncCl := createLocalHostAndSyncClient(t, testLog, rollupCfg, db, sm, m, mux)
 	syncCl.Start()
 	for i := 0; i < 4; i++ {
-		time.Sleep(1 * time.Second)
+		time.Sleep(300 * time.Millisecond)
 		lastKvIndex = lastKvIndex + rand.Uint64()%(kvEntries/4)
 		l1.(*mockL1Source).lastBlobIndex = lastKvIndex
 		sm.Reset(1)
