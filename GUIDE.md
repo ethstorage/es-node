@@ -10,7 +10,7 @@ For a detailed explanation for es-node please consult the [README](/README.md).
 
 - Layer 1: [dencun-devnet-12](https://dencun-devnet-12.ethpandaops.io/)
 - storage-contracts-v1: v0.1.0
-- es-node: v0.1.3
+- es-node: v0.1.4
 
 ## Minimum Hardware Requirements 
 
@@ -19,7 +19,7 @@ Please refer to [this section](/README.md/#minimum-hardware-requirements) for ha
 ## System Environment
  - Ubuntu 20.04+ (tested and verified)
  - (Optional) Docker 24.0.5+ (would simplify the process)
- - (Optional) Go 1.20.* (not compatible with Go 1.21 yet) and Node.js 16+ (can be installed following the [steps](#install-dependencies))
+ - (Optional) Go 1.20+ and Node.js 16+ (can be installed following the [steps](#install-dependencies))
 
 You can choose [the method of running es-node](#options-to-run-es-node) based on your current environment.
 
@@ -51,19 +51,19 @@ Download the pre-built package suitable for your platform:
 
 Linux x86-64 or AMD64:
 ```sh
-curl -L https://github.com/ethstorage/es-node/releases/download/v0.1.3/es-node.v0.1.3.linux-amd64.tar.gz | tar -xz
+curl -L https://github.com/ethstorage/es-node/releases/download/v0.1.4/es-node.v0.1.4.linux-amd64.tar.gz | tar -xz
 ```
 MacOS x86-64 or AMD64:
 ```sh
-curl -L https://github.com/ethstorage/es-node/releases/download/v0.1.3/es-node.v0.1.3.darwin-amd64.tar.gz | tar -xz
+curl -L https://github.com/ethstorage/es-node/releases/download/v0.1.4/es-node.v0.1.4.darwin-amd64.tar.gz | tar -xz
 ```
 MacOS ARM64:
 ```sh
-curl -L https://github.com/ethstorage/es-node/releases/download/v0.1.3/es-node.v0.1.3.darwin-arm64.tar.gz | tar -xz
+curl -L https://github.com/ethstorage/es-node/releases/download/v0.1.4/es-node.v0.1.4.darwin-arm64.tar.gz | tar -xz
 ```
 Run es-node
 ```
-cd es-node.v0.1.3
+cd es-node.v0.1.4
 env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> ./run.sh
 ```
 
@@ -77,9 +77,9 @@ docker run --name es  -d  \
           -e ES_NODE_SIGNER_PRIVATE_KEY=<private_key> \
           -p 9545:9545 \
           -p 9222:9222 \
-          -p 30305:30305/udp \
+          -p 9222:9222/udp \
           --entrypoint /es-node/run.sh \
-          ghcr.io/ethstorage/es-node
+          ghcr.io/ethstorage/es-node:v0.1.4
 ```
 
 You can check docker logs using the following command:
@@ -94,7 +94,7 @@ Download source code and switch to the latest release branch:
 ```sh
 git clone https://github.com/ethstorage/es-node.git
 cd es-node
-git checkout v0.1.3
+git checkout v0.1.4
 ```
 Build es-node:
 ```sh
@@ -123,13 +123,13 @@ _Please note that not all steps in this section are required; they depend on you
 
 ### Install Go
 
-Download a stable Go release, e.g., go1.20.10 (can't be built on go1.21.* yet). 
+Download a stable Go release, e.g., go1.21.4. 
 ```sh
-curl -OL https://golang.org/dl/go1.20.10.linux-amd64.tar.gz
+curl -OL https://golang.org/dl/go1.21.4.linux-amd64.tar.gz
 ```
 Extract and install
 ```sh
-tar -C /usr/local -xf go1.20.10.linux-amd64.tar.gz
+tar -C /usr/local -xf go1.21.4.linux-amd64.tar.gz
 ```
 Update `$PATH`
 ```

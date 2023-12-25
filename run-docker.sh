@@ -47,7 +47,7 @@ else
             -e ES_NODE_SIGNER_PRIVATE_KEY=$ES_NODE_SIGNER_PRIVATE_KEY \
             -p 9545:9545 \
             -p 9222:9222 \
-            -p 30305:30305/udp \
+            -p 9222:9222/udp \
             -d \
             --entrypoint /es-node/run.sh \
             $image_name
