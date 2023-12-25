@@ -83,7 +83,7 @@ type mockL1Source struct {
 	metaFile      *os.File
 }
 
-func NewMockL1Source(lastBlobIndex uint64, metafile string) ethstorage.Il1Source {
+func NewMockL1Source(lastBlobIndex uint64, metafile string) *mockL1Source {
 	if len(metafile) == 0 {
 		panic("metafile param is needed when using mock l1")
 	}
@@ -1100,6 +1100,7 @@ func TestCloseSyncWhileFillEmpty(t *testing.T) {
 
 	l1 := NewMockL1Source(lastKvIndex, metafileName)
 	sm := ethstorage.NewStorageManager(shardManager, l1)
+	sm.Reset(0)
 	_, syncCl := createLocalHostAndSyncClient(t, testLog, rollupCfg, db, sm, m, mux)
 	syncCl.Start()
 	time.Sleep(10 * time.Millisecond)
@@ -1194,5 +1195,63 @@ func TestAddPeerAfterSyncDone(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 	if len(syncCl.peers) != 2 {
 		t.Fatalf("sync client peers count is not match, expected: %d, actual count %d;", 2, len(syncCl.peers))
+	}
+}
+
+func TestFillEmpty(t *testing.T) {
+	var (
+		kvSize      = defaultChunkSize
+		kvEntries   = uint64(512)
+		lastKvIndex = uint64(12)
+		db          = rawdb.NewMemoryDatabase()
+		mux         = new(event.Feed)
+		shards      = []uint64{0}
+		shardMap    = make(map[common.Address][]uint64)
+		m           = metrics.NewMetrics("sync_test")
+		rollupCfg   = &rollup.EsConfig{
+			L2ChainID:     new(big.Int).SetUint64(3333),
+			MetricsEnable: true,
+		}
+	)
+
+	metafile, err := CreateMetaFile(metafileName, int64(kvEntries))
+	if err != nil {
+		t.Error("Create metafileName fail", err.Error())
+	}
+	defer metafile.Close()
+
+	shardMap[contract] = shards
+	shardManager, files := createEthStorage(contract, shards, defaultChunkSize, kvSize, kvEntries, common.Address{}, defaultEncodeType)
+	if shardManager == nil {
+		t.Fatalf("createEthStorage failed")
+	}
+	defer func(files []string) {
+		for _, file := range files {
+			os.Remove(file)
+		}
+	}(files)
+
+	makeKVStorage(contract, shards, defaultChunkSize, kvSize, kvEntries, lastKvIndex, common.Address{}, defaultEncodeType, metafile)
+
+	l1 := NewMockL1Source(lastKvIndex, metafileName)
+	sm := ethstorage.NewStorageManager(shardManager, l1)
+	sm.Reset(0)
+	_, syncCl := createLocalHostAndSyncClient(t, testLog, rollupCfg, db, sm, m, mux)
+	syncCl.Start()
+	for i := 0; i < 4; i++ {
+		time.Sleep(500 * time.Millisecond)
+		l1.lastBlobIndex = l1.lastBlobIndex + rand.Uint64()%(kvEntries/4)
+		sm.Reset(1)
+	}
+	time.Sleep(5 * time.Second)
+
+	if len(syncCl.tasks[0].SubEmptyTasks) > 0 {
+		t.Fatalf("fill empty should be done")
+	}
+	if syncCl.emptyBlobsToFill != 0 {
+		t.Fatalf("emptyBlobsToFill should be 0, value %d", syncCl.emptyBlobsToFill)
+	}
+	if syncCl.emptyBlobsFilled != (kvEntries - lastKvIndex) {
+		t.Fatalf("emptyBlobsFilled is wrong, expect %d, value %d", kvEntries-lastKvIndex, syncCl.emptyBlobsFilled)
 	}
 }
