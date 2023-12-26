@@ -86,6 +86,7 @@ func (conf *Config) Discovery(log log.Logger, l1ChainID uint64, tcpPort uint16, 
 			intTcpPort := localNode.Node().TCP()
 			intUdpPort := localNode.Node().UDP()
 			ip, extTcpPort, extUdpPort, err := addNATMappings(intTcpPort, intUdpPort)
+
 			if err == nil {
 				localNode.SetStaticIP(ip)
 				localNode.Set(enr.TCP(extTcpPort))
@@ -93,7 +94,7 @@ func (conf *Config) Discovery(log log.Logger, l1ChainID uint64, tcpPort uint16, 
 				log.Info("Add mappings to NAT", "external IP", ip.String(), "internal tcp port", intTcpPort,
 					"external tcp port", extTcpPort, "internal udp port", intUdpPort, "external udp port", extUdpPort)
 			} else {
-				log.Warn("", "error", err.Error())
+				log.Warn("Add mappings to NAT fail", "error", err.Error())
 			}
 		}
 	}
@@ -189,9 +190,12 @@ func addNATMappings(tcpPort, udpPort int) (net.IP, uint16, uint16, error) {
 	if foundUdp {
 		return nil, 0, 0, fmt.Errorf("fail to get udpMapping for udp port %d from NAT", udpPort)
 	}
-	addr := tcpMapping.Addr().AsSlice()
+	addr := net.IP(tcpMapping.Addr().AsSlice())
 	if err != nil {
 		return nil, 0, 0, fmt.Errorf("get external IP from NAT fail: %s", err.Error())
+	}
+	if addr.IsLoopback() || addr.IsPrivate() {
+		return nil, 0, 0, fmt.Errorf("NAT address is not external IP")
 	}
 
 	return addr, tcpMapping.Port(), udpMapping.Port(), nil
