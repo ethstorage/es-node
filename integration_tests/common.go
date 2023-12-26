@@ -8,12 +8,13 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	esLog "github.com/ethstorage/go-ethstorage/ethstorage/log"
+	"golang.org/x/term"
 )
 
 const (
@@ -23,27 +24,21 @@ const (
 )
 
 var (
-	contractAddr16kv    = common.HexToAddress("0x192eE460Cf3A5AF51F9A7427Bb07237A2841D2d1")
+	// devnet-12
+	contractAddr16kv    = common.HexToAddress("0xF00fCCdf01E33ac80728ffc4e5f93fBaBC31FC21")
 	contractAddrDevnet2 = common.HexToAddress("0xb4B46bdAA835F8E4b4d8e208B6559cD267851051")
 	minerAddr           = common.HexToAddress("0x534632D6d7aD1fe5f832951c97FDe73E4eFD9a77")
 	value               = "1000000000000000"
-	lg                  = esLog.NewLogger(esLog.DefaultCLIConfig())
+	lg                  = esLog.NewLogger(esLog.CLIConfig{
+		Level:  "debug",
+		Format: "text",
+		Color:  term.IsTerminal(int(os.Stdout.Fd())),
+	})
 )
 
-func readSlotFromContract(ctx context.Context, client *ethclient.Client, l1Contract common.Address, fieldName string) ([]byte, error) {
-	h := crypto.Keccak256Hash([]byte(fieldName + "()"))
-	msg := ethereum.CallMsg{
-		To:   &l1Contract,
-		Data: h[0:4],
-	}
-	bs, err := client.CallContract(ctx, msg, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get %s from contract: %v", fieldName, err)
-	}
-	return bs, nil
-}
-
 func callVerify(calldata []byte) error {
+	contract := contractAddr16kv
+	lg.Info("Verifying against contract", "contract", contract)
 	ctx := context.Background()
 	client, err := ethclient.DialContext(ctx, l1Endpoint)
 	if err != nil {
@@ -52,12 +47,16 @@ func callVerify(calldata []byte) error {
 	}
 	defer client.Close()
 	msg := ethereum.CallMsg{
-		To:   &contractAddr16kv,
+		To:   &contract,
 		Data: calldata,
 	}
 	bs, err := client.CallContract(ctx, msg, nil)
 	if err != nil {
+		lg.Error("Call verify", "err", err.Error())
 		return err
+	}
+	if len(bs) == 0 {
+		return fmt.Errorf("no return value")
 	}
 	if bs[len(bs)-1] != 1 {
 		return fmt.Errorf("false")

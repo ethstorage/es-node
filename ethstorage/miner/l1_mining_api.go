@@ -85,23 +85,34 @@ func (m *l1MiningAPI) GetDataHashes(ctx context.Context, contract common.Address
 func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Address, rst result, cfg Config) (common.Hash, error) {
 	m.lg.Debug("Submit mined result", "shard", rst.startShardId, "block", rst.blockNumber, "nonce", rst.nonce)
 	uint256Type, _ := abi.NewType("uint256", "", nil)
+	uint256Array, _ := abi.NewType("uint256[]", "", nil)
 	addrType, _ := abi.NewType("address", "", nil)
 	bytes32Array, _ := abi.NewType("bytes32[]", "", nil)
 	bytesArray, _ := abi.NewType("bytes[]", "", nil)
+	bytesType, _ := abi.NewType("bytes", "", nil)
+
+	var maskBNs []*big.Int
+	for _, mask := range rst.masks {
+		maskBNs = append(maskBNs, new(big.Int).SetBytes(mask[:]))
+	}
 	dataField, _ := abi.Arguments{
 		{Type: uint256Type},
 		{Type: uint256Type},
 		{Type: addrType},
 		{Type: uint256Type},
 		{Type: bytes32Array},
+		{Type: uint256Array},
 		{Type: bytesArray},
+		{Type: bytesType},
 	}.Pack(
 		rst.blockNumber,
 		new(big.Int).SetUint64(rst.startShardId),
 		rst.miner,
 		new(big.Int).SetUint64(rst.nonce),
 		rst.encodedData,
+		maskBNs,
 		rst.inclusiveProofs,
+		rst.decodeProof,
 	)
 	calldata := append(mineSig[0:4], dataField...)
 

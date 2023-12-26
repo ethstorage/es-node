@@ -4,7 +4,6 @@
 package prover
 
 import (
-	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
 )
@@ -26,64 +25,25 @@ func NewKZGPoseidonProver(workingDir, zkeyFileName string, lg log.Logger) KZGPos
 	}
 }
 
-// data: a blob / []byte size of 131072
-// encodingKey: a unique key to generate mask
-// sampleIdxInKv: sample index in the blob ranges [0, 4095]
-// returns a combined proof in the format required by the ethstorage contract, including
-// 1. mask, 2. the zk proof of how mask is generated with Poseidon hash,
-// and 3. the KZG proof required by point evaluation precompile
-func (p *KZGPoseidonProver) GetStorageProof(data [][]byte, encodingKeys []common.Hash, sampleIdxInKv []uint64) ([]byte, error) {
+// data: an array of blob / []byte size of 131072
+// encodingKeys: unique keys to generate mask
+// sampleIdxInKv: sample indexes in the blob ranges [0, 4095]
+// returns
+// 1. masks,
+// 2. the zk proof of how mask is generated with Poseidon hash,
+// 3. the KZG proof required by point evaluation precompile
+func (p *KZGPoseidonProver) GetStorageProof(data [][]byte, encodingKeys []common.Hash, sampleIdxInKv []uint64) ([]common.Hash, []byte, [][]byte, error) {
 	var peInputs [][]byte
 	for i, d := range data {
 		peInput, err := NewKZGProver(p.lg).GenerateKZGProof(d, sampleIdxInKv[i])
 		if err != nil {
-			return nil, err
+			return nil, nil, nil, err
 		}
 		peInputs = append(peInputs, peInput)
 	}
 	zkProof, masks, err := NewZKProver(p.dir, p.zkey, p.lg).GenerateZKProof(encodingKeys, sampleIdxInKv)
 	if err != nil {
-		return nil, err
+		return nil, nil, nil, err
 	}
-	proofs := combineProofs(zkProof, masks, peInputs)
-	return proofs, nil
-}
-
-func combineProofs(zkProof []byte, masks []common.Hash, peInputs [][]byte) []byte {
-	bytes32ArrayType, _ := abi.NewType("bytes32[]", "", nil)
-	bytesType, _ := abi.NewType("bytes", "", nil)
-	proofs, _ := abi.Arguments{
-		{Type: bytesType},
-		{Type: bytes32ArrayType},
-		{Type: bytesType},
-	}.Pack(
-		zkProof,
-		masks,
-		peInputs,
-	)
-	return proofs
-}
-
-func GetAbiTypeOfZkp() abi.Type {
-	proofType, _ := abi.NewType("tuple", "", []abi.ArgumentMarshaling{
-		{
-			Name: "A", Type: "tuple", Components: []abi.ArgumentMarshaling{
-				{Name: "X", Type: "uint256"},
-				{Name: "Y", Type: "uint256"},
-			},
-		},
-		{
-			Name: "B", Type: "tuple", Components: []abi.ArgumentMarshaling{
-				{Name: "X", Type: "uint256[2]"},
-				{Name: "Y", Type: "uint256[2]"},
-			},
-		},
-		{
-			Name: "C", Type: "tuple", Components: []abi.ArgumentMarshaling{
-				{Name: "X", Type: "uint256"},
-				{Name: "Y", Type: "uint256"},
-			},
-		},
-	})
-	return proofType
+	return masks, zkProof, peInputs, nil
 }

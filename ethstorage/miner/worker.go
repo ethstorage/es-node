@@ -60,7 +60,8 @@ type result struct {
 	miner           common.Address
 	nonce           uint64
 	encodedData     []common.Hash
-	inclusiveProofs []byte
+	masks           []common.Hash
+	inclusiveProofs [][]byte
 	decodeProof     []byte
 }
 
@@ -426,7 +427,7 @@ func (w *worker) mineTask(t *taskItem) (bool, error) {
 				return false, err
 			}
 			w.lg.Info("Got sample data", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "kvIdxs", kvIdxs, "sampleIdxsInKv", sampleIdxsInKv)
-			proofs, err := w.prover.GetStorageProof(dataSet, encodingKeys, sampleIdxsInKv)
+			masks, decodeProof, inclusiveProofs, err := w.prover.GetStorageProof(dataSet, encodingKeys, sampleIdxsInKv)
 			if err != nil {
 				w.lg.Error("Get storage proof error", "kvIdx", kvIdxs, "sampleIdxsInKv", sampleIdxsInKv, "error", err.Error())
 				return false, fmt.Errorf("get proof err: %v", err)
@@ -438,7 +439,9 @@ func (w *worker) mineTask(t *taskItem) (bool, error) {
 				miner:           t.miner,
 				nonce:           nonce,
 				encodedData:     encodedSamples,
-				inclusiveProofs: proofs,
+				masks:           masks,
+				decodeProof:     decodeProof,
+				inclusiveProofs: inclusiveProofs,
 			}
 			// push result to the result map
 			w.resultLock.Lock()

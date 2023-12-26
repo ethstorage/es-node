@@ -9,7 +9,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"math/big"
 	"os"
 	"os/exec"
@@ -65,6 +64,8 @@ func TestZKProver_GenerateZKProof(t *testing.T) {
 		}
 		tempDir := crypto.Keccak256Hash([]byte(fmt.Sprint(encodingKeys, sampleIdxs)))
 		buildDir := filepath.Join(proverPath, snarkBuildDir, common.Bytes2Hex(tempDir[:]))
+		defer os.RemoveAll(buildDir)
+
 		xIn, err := readXIn(buildDir)
 		if err != nil {
 			t.Fatalf("get xIn failed %v", err)
@@ -91,13 +92,18 @@ func TestZKProver_GenerateZKProof(t *testing.T) {
 			t.Errorf("ZKProver.GenerateZKProof() localVerify failed: %v", err)
 			return
 		}
-		err = verifyDecodeSample(masks, proof)
+		err = verifyProof(t, masks, proof)
+		if err != nil {
+			t.Errorf("ZKProver.GenerateZKProof() verifyProof err: %v", err)
+		} else {
+			t.Log("verifyProof success!")
+		}
+		err = verifyDecodeSample(t, masks, proof)
 		if err != nil {
 			t.Errorf("ZKProver.GenerateZKProof() verifyDecodeSample err: %v", err)
 			return
 		}
 		t.Log("verifyDecodeSample success!")
-		os.RemoveAll(buildDir)
 	})
 }
 
@@ -145,11 +151,11 @@ func localVerify(t *testing.T, libDir string, buildDir string) error {
 	return nil
 }
 
-func verifyDecodeSample(masks []common.Hash, proof []byte) error {
+func verifyDecodeSample(t *testing.T, masks []common.Hash, proof []byte) error {
 	ctx := context.Background()
 	client, err := ethclient.DialContext(ctx, l1Endpoint)
 	if err != nil {
-		log.Fatalf("Failed to connect to the Ethereum client: %v", err)
+		t.Fatalf("Failed to connect to the Ethereum client: %v", err)
 	}
 	defer client.Close()
 	var maskBNs []*big.Int
@@ -168,6 +174,46 @@ func verifyDecodeSample(masks []common.Hash, proof []byte) error {
 	if err != nil {
 		return fmt.Errorf("%v, values: %v", err, values)
 	}
+	calldata := append(h[0:4], dataField...)
+	return callVerify(calldata)
+}
+
+// call Decoder.sol
+func verifyProof(t *testing.T, masks []common.Hash, proof []byte) error {
+	u2, _ := abi.NewType("uint256[2]", "", nil)
+	u22, _ := abi.NewType("uint256[2][2]", "", nil)
+	unpacked, err := abi.Arguments{
+		{Type: u2},
+		{Type: u22},
+		{Type: u2},
+	}.UnpackValues(proof)
+	if err != nil {
+		t.Errorf("ZKProver.GenerateZKProof() unpackValues err: %v", err)
+		return err
+	}
+	ctx := context.Background()
+	client, err := ethclient.DialContext(ctx, l1Endpoint)
+	if err != nil {
+		t.Fatalf("Failed to connect to the Ethereum client: %v", err)
+	}
+	defer client.Close()
+	var maskBNs []*big.Int
+	for _, mask := range masks {
+		maskBNs = append(maskBNs, new(big.Int).SetBytes(mask[:]))
+	}
+	h := crypto.Keccak256Hash([]byte("verifyProof(uint256[2],uint256[2][2],uint256[2],uint256[2])"))
+	args := abi.Arguments{
+		{Type: u2},
+		{Type: u22},
+		{Type: u2},
+		{Type: u2},
+	}
+	values := append(unpacked, maskBNs)
+	dataField, err := args.Pack(values...)
+	if err != nil {
+		return fmt.Errorf("%v, values: %v", err, values)
+	}
+	t.Logf("values: %x", values)
 	calldata := append(h[0:4], dataField...)
 	return callVerify(calldata)
 }
