@@ -183,11 +183,11 @@ func addNATMappings(tcpPort, udpPort int) (net.IP, uint16, uint16, error) {
 	}
 
 	tcpMapping, foundTcp := n.GetMapping("tcp", tcpPort)
-	if foundTcp {
+	if !foundTcp {
 		return nil, 0, 0, fmt.Errorf("fail to get tcpMapping for tcp port %d from NAT", tcpPort)
 	}
 	udpMapping, foundUdp := n.GetMapping("udp", udpPort)
-	if foundUdp {
+	if !foundUdp {
 		return nil, 0, 0, fmt.Errorf("fail to get udpMapping for udp port %d from NAT", udpPort)
 	}
 	addr := net.IP(tcpMapping.Addr().AsSlice())
