@@ -25,7 +25,7 @@ const (
 
 var (
 	// devnet-12
-	contractAddr16kv    = common.HexToAddress("0xF00fCCdf01E33ac80728ffc4e5f93fBaBC31FC21")
+	contractAddr16kv    = common.HexToAddress("0xA7Db952C6330be26548a8A2092be3aD7abf0C3D7")
 	contractAddrDevnet2 = common.HexToAddress("0xb4B46bdAA835F8E4b4d8e208B6559cD267851051")
 	minerAddr           = common.HexToAddress("0x534632D6d7aD1fe5f832951c97FDe73E4eFD9a77")
 	value               = "1000000000000000"
