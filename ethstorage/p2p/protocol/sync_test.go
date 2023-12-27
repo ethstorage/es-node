@@ -561,7 +561,7 @@ func TestSync_RequestL2Range(t *testing.T) {
 	localHost, syncCl := createLocalHostAndSyncClient(t, testLog, rollupCfg, db, sm, m, mux)
 	syncCl.loadSyncStatus()
 	sm.Reset(0)
-	err = sm.DownloadAllMetas(16)
+	err = sm.DownloadAllMetas(context.Background(), 16)
 	if err != nil {
 		t.Fatal("Download blob metadata failed", "error", err)
 		return
@@ -634,7 +634,7 @@ func TestSync_RequestL2List(t *testing.T) {
 	localHost, syncCl := createLocalHostAndSyncClient(t, testLog, rollupCfg, db, sm, m, mux)
 	syncCl.loadSyncStatus()
 	sm.Reset(0)
-	err = sm.DownloadAllMetas(16)
+	err = sm.DownloadAllMetas(context.Background(), 16)
 	if err != nil {
 		t.Fatal("Download blob metadata failed", "error", err)
 		return
