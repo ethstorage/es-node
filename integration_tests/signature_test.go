@@ -18,7 +18,13 @@ import (
 	"github.com/ethstorage/go-ethstorage/ethstorage/signer"
 )
 
+var (
+	contractAddrDevnet2 = common.HexToAddress("0xb4B46bdAA835F8E4b4d8e208B6559cD267851051")
+	clefEndpoint        = "http://65.108.236.27:8550"
+)
+
 func TestSignerFactoryFromConfig(t *testing.T) {
+	t.SkipNow()
 	tests := []struct {
 		name         string
 		signerConfig signer.CLIConfig

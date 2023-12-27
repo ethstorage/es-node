@@ -483,6 +483,7 @@ func (w *worker) getMiningData(t *task, sampleIdx []uint64) ([][]byte, []uint64,
 	}
 	kvHashes, err := w.l1API.GetDataHashes(context.Background(), w.storageMgr.ContractAddress(), kvIdxs)
 	if err != nil {
+		w.lg.Error("Get data hashes error", "kvIdxs", kvIdxs, "error", err.Error())
 		return nil, nil, nil, nil, nil, err
 	}
 	for i := uint64(0); i < checksLen; i++ {
@@ -500,6 +501,7 @@ func (w *worker) getMiningData(t *task, sampleIdx []uint64) ([][]byte, []uint64,
 			if !exist {
 				err = fmt.Errorf("kv not found: index=%d", kvIdxs[i])
 			}
+			w.lg.Error("Get data error", "index", kvIdxs[i], "error", err.Error())
 			return nil, nil, nil, nil, nil, err
 		}
 	}

@@ -9,7 +9,6 @@ import (
 	"bytes"
 	"context"
 	"math/big"
-	"os"
 	"testing"
 	"time"
 
@@ -25,10 +24,7 @@ import (
 )
 
 func TestKZGProver_GenerateKZGProof(t *testing.T) {
-	dataRaw, err := readFile()
-	if err != nil {
-		t.Fatalf("read raw data error = %v", err)
-	}
+	dataRaw := generateRandomContent(128)
 	dataHash := uploadBlob(t, dataRaw)
 	blobs := utils.EncodeBlobs(dataRaw)
 	blob := blobs[0][:]
@@ -74,7 +70,7 @@ func uploadBlob(t *testing.T, data []byte) common.Hash {
 
 	client, err := ethclient.DialContext(ctx, l1Endpoint)
 	if err != nil {
-		lg.Crit("Failed to connect to the Ethereum client: %v", err)
+		t.Fatalf("Failed to connect to the Ethereum client: %v", err)
 	}
 	defer client.Close()
 
@@ -82,10 +78,9 @@ func uploadBlob(t *testing.T, data []byte) common.Hash {
 	if err != nil {
 		t.Fatalf("Get chain id failed %v", err)
 	}
-	pk := os.Getenv(pkName)
-	key, err := crypto.HexToECDSA(pk)
+	key, err := crypto.HexToECDSA(privateKey)
 	if err != nil {
-		t.Fatalf("Invalid private key: %s, err: %v", pk, err)
+		t.Fatalf("Invalid private key: %s, err: %v", privateKey, err)
 	}
 	signer := crypto.PubkeyToAddress(key.PublicKey)
 	lg.Info("Get signer address", "signer", signer.Hex())
@@ -127,7 +122,7 @@ func uploadBlob(t *testing.T, data []byte) common.Hash {
 	tx := utils.SendBlobTx(
 		l1Endpoint,
 		contractAddr16kv,
-		pk,
+		privateKey,
 		data,
 		true,
 		int64(n),

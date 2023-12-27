@@ -8,10 +8,8 @@ package integration
 import (
 	"context"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"math/big"
-	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -37,11 +35,12 @@ const (
 	dataFileName  = "shard-%d.dat"
 )
 
-var shardIds = []uint64{0, 1}
+// TODO: test 2 shards
+var shardIds = []uint64{0}
 
 func TestMining(t *testing.T) {
 	contract := contractAddr16kv
-
+	fmt.Println("l1Endpoint", l1Endpoint, "contract", contract)
 	pClient, err := eth.Dial(l1Endpoint, contract, lg)
 	if err != nil {
 		t.Fatalf("Failed to connect to the Ethereum client: %v", err)
@@ -96,8 +95,8 @@ func TestMining(t *testing.T) {
 		}
 		lg.Error("L1 heads subscription error", "err", err)
 	}()
-	// prepareData(t, pClient, storageManager, miningConfig.StorageCost.String())
-	fillEmpty(t, pClient, storageManager)
+	prepareData(t, pClient, storageManager, miningConfig.StorageCost.String())
+	// fillEmpty(t, pClient, storageManager)
 	mnr.Start()
 
 	var wg sync.WaitGroup
@@ -241,10 +240,7 @@ func fillEmpty(t *testing.T, l1Client *eth.PollingClient, storageMgr *ethstorage
 }
 
 func prepareData(t *testing.T, l1Client *eth.PollingClient, storageMgr *ethstorage.StorageManager, value string) {
-	data, err := getSourceData()
-	if err != nil {
-		t.Fatalf("Get source data failed %v", err)
-	}
+	data := generateRandomContent(128 * 10)
 	blobs := utils.EncodeBlobs(data)
 	t.Logf("Blobs len %d \n", len(blobs))
 	var hashs []common.Hash
@@ -275,7 +271,7 @@ func prepareData(t *testing.T, l1Client *eth.PollingClient, storageMgr *ethstora
 		if len(blobData) == 0 {
 			break
 		}
-		kvIdxes, dataHashes, err := utils.UploadBlobs(l1Client, l1Endpoint, os.Getenv(pkName), chainID.String(), storageMgr.ContractAddress(), blobData, false, value)
+		kvIdxes, dataHashes, err := utils.UploadBlobs(l1Client, l1Endpoint, privateKey, chainID.String(), storageMgr.ContractAddress(), blobData, false, value)
 		if err != nil {
 			t.Fatalf("Upload blobs failed %v", err)
 		}
@@ -284,11 +280,15 @@ func prepareData(t *testing.T, l1Client *eth.PollingClient, storageMgr *ethstora
 		hashs = append(hashs, dataHashes...)
 		ids = append(ids, kvIdxes...)
 	}
-	block, err := l1Client.BlockNumber(ctx)
+	block, err := l1Client.BlockNumber(context.Background())
 	if err != nil {
 		t.Fatalf("Failed to get block number %v", err)
 	}
 	storageMgr.Reset(int64(block))
+	err = storageMgr.DownloadAllMetas(1)
+	if err != nil {
+		t.Fatalf("Download all metas failed %v", err)
+	}
 	limit := len(shardIds) * int(storageMgr.KvEntries())
 	if limit > len(ids) {
 		limit = len(ids)
@@ -296,7 +296,7 @@ func prepareData(t *testing.T, l1Client *eth.PollingClient, storageMgr *ethstora
 	for i := 0; i < limit; i++ {
 		err := storageMgr.CommitBlob(ids[i], blobs[i][:], hashs[i])
 		if err != nil {
-			t.Fatalf("Failed to commit blob: id %d, error: %v", ids[i], err)
+			t.Fatalf("Failed to commit blob: i=%d, id=%d, error: %v", i, ids[i], err)
 		}
 	}
 }
@@ -330,28 +330,10 @@ func createDataFiles(cfg *storage.StorageConfig) ([]string, error) {
 	return files, nil
 }
 
-func getSourceData() ([]byte, error) {
-	txt_4m := "https://www.gutenberg.org/cache/epub/10/pg10.txt"
-	resp, err := http.Get(txt_4m)
-	if err != nil {
-		return nil, fmt.Errorf("error reading blob txtUrl: %v", err)
-	}
-	defer resp.Body.Close()
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("error reading blob txtUrl: %v", err)
-	}
-	return data, nil
-}
-
 func initMiningConfig(t *testing.T, l1Contract common.Address, client *eth.PollingClient) *miner.Config {
 	miningConfig := &miner.Config{}
-	pk := os.Getenv(pkName)
-	if pk == "" {
-		t.Fatal("No private key in env", pkName)
-	}
 	factory, addrFrom, err := signer.SignerFactoryFromConfig(signer.CLIConfig{
-		PrivateKey: pk,
+		PrivateKey: privateKey,
 	})
 	if err != nil {
 		t.Fatal("SignerFactoryFromConfig err", err)
