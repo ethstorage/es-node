@@ -90,13 +90,10 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 	bytes32Array, _ := abi.NewType("bytes32[]", "", nil)
 	bytesArray, _ := abi.NewType("bytes[]", "", nil)
 	bytesType, _ := abi.NewType("bytes", "", nil)
-
 	var maskBNs []*big.Int
 	for _, mask := range rst.masks {
-		m.lg.Warn("Debug", "mask", mask)
 		maskBNs = append(maskBNs, new(big.Int).SetBytes(mask[:]))
 	}
-	m.lg.Warn("Debug", "result", fmt.Sprintf("%+v", rst))
 	dataField, _ := abi.Arguments{
 		{Type: uint256Type},
 		{Type: uint256Type},
