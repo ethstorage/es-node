@@ -16,9 +16,9 @@ fi
 if [ -z "$ES_NODE_STORAGE_MINER" ]; then
   export ES_NODE_STORAGE_MINER=0x534632D6d7aD1fe5f832951c97FDe73E4eFD9a77
 fi
-
+# A newly deployed contract is required for each run
 if [ -z "$ES_NODE_STORAGE_L1CONTRACT" ]; then
-  export ES_NODE_STORAGE_L1CONTRACT=0x8b401c82Eb4001a58f072CE572D568Ca78f4C526
+  export ES_NODE_STORAGE_L1CONTRACT=0x8967F302a2d13a3e41138c934373ac392BCb0c76
 fi
 
 if [ -z "$ES_NODE_L1_ETH_RPC" ]; then

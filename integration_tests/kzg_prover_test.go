@@ -10,7 +10,6 @@ import (
 	"context"
 	"math/big"
 	"testing"
-	"time"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -23,7 +22,10 @@ import (
 	"github.com/ethstorage/go-ethstorage/ethstorage/prover"
 )
 
+var kzgContract = common.HexToAddress("0xcCD52331Ab334eabB8740557c8B05D7bFfBBc6f0")
+
 func TestKZGProver_GenerateKZGProof(t *testing.T) {
+	lg.Info("KZG prover test", "contract", kzgContract)
 	dataRaw := generateRandomContent(128)
 	dataHash := uploadBlob(t, dataRaw)
 	blobs := utils.EncodeBlobs(dataRaw)
@@ -64,27 +66,34 @@ func TestKZGProver_GenerateKZGProof(t *testing.T) {
 }
 
 func uploadBlob(t *testing.T, data []byte) common.Hash {
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
-	defer cancel()
-
-	client, err := ethclient.DialContext(ctx, l1Endpoint)
+	client, err := ethclient.DialContext(context.Background(), l1Endpoint)
 	if err != nil {
 		t.Fatalf("Failed to connect to the Ethereum client: %v", err)
 	}
 	defer client.Close()
 
-	chainID, err := client.ChainID(ctx)
+	chainID, err := client.ChainID(context.Background())
 	if err != nil {
 		t.Fatalf("Get chain id failed %v", err)
 	}
+	sig := crypto.Keccak256Hash([]byte("storageCost()"))
+	bs, err := client.CallContract(context.Background(), ethereum.CallMsg{
+		To:   &kzgContract,
+		Data: sig[0:4],
+	}, nil)
+	if err != nil {
+		t.Fatalf("failed to get storageCost from contract: %v", err)
+	}
+	storageCost := new(big.Int).SetBytes(bs)
+	lg.Info("Get storage cost done", "storageCost", storageCost)
+
 	key, err := crypto.HexToECDSA(privateKey)
 	if err != nil {
 		t.Fatalf("Invalid private key: %s, err: %v", privateKey, err)
 	}
 	signer := crypto.PubkeyToAddress(key.PublicKey)
 	lg.Info("Get signer address", "signer", signer.Hex())
-	n, err := client.NonceAt(ctx, signer, big.NewInt(rpc.LatestBlockNumber.Int64()))
+	n, err := client.NonceAt(context.Background(), signer, big.NewInt(rpc.LatestBlockNumber.Int64()))
 	if err != nil {
 		t.Fatalf("Error getting nonce: %v", err)
 	}
@@ -107,11 +116,10 @@ func uploadBlob(t *testing.T, data []byte) common.Hash {
 		t.Fatalf("Error getting calldata: %v", err)
 	}
 	calldata := append(mid, dataField...)
-	valBig, _ := new(big.Int).SetString(value, 10)
-	estimatedGas, err := client.EstimateGas(ctx, ethereum.CallMsg{
+	estimatedGas, err := client.EstimateGas(context.Background(), ethereum.CallMsg{
 		From:  signer,
-		To:    &contractAddr16kv,
-		Value: valBig,
+		To:    &kzgContract,
+		Value: storageCost,
 		Data:  calldata,
 	})
 	if err != nil {
@@ -121,12 +129,12 @@ func uploadBlob(t *testing.T, data []byte) common.Hash {
 
 	tx := utils.SendBlobTx(
 		l1Endpoint,
-		contractAddr16kv,
+		kzgContract,
 		privateKey,
 		data,
 		true,
 		int64(n),
-		value,
+		storageCost.String(),
 		510000,
 		"",
 		"",
@@ -135,7 +143,7 @@ func uploadBlob(t *testing.T, data []byte) common.Hash {
 		"0x"+common.Bytes2Hex(calldata),
 	)
 	lg.Info("Blob transaction submitted", "hash", tx.Hash())
-	receipt, err := bind.WaitMined(ctx, client, tx)
+	receipt, err := bind.WaitMined(context.Background(), client, tx)
 	if err != nil {
 		lg.Crit("Get transaction receipt err", "error", err)
 	}
@@ -149,13 +157,6 @@ func uploadBlob(t *testing.T, data []byte) common.Hash {
 }
 
 func verifyInclusive(trunkIdx uint64, peInput []byte) error {
-	ctx := context.Background()
-	client, err := ethclient.DialContext(ctx, l1Endpoint)
-	if err != nil {
-		lg.Crit("Failed to connect to the Ethereum client.", "error", err)
-	}
-	defer client.Close()
-
 	dataHash := common.Hash{}
 	copy(dataHash[:], peInput[:24])
 	index := new(big.Int).SetInt64(int64(trunkIdx))
@@ -177,5 +178,5 @@ func verifyInclusive(trunkIdx uint64, peInput []byte) error {
 		return err
 	}
 	calldata := append(mid, dataField...)
-	return callVerify(calldata)
+	return callVerify(calldata, kzgContract)
 }

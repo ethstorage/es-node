@@ -16,21 +16,18 @@ import (
 )
 
 var (
-	l1Endpoint       = os.Getenv("ES_NODE_L1_ETH_RPC")
-	privateKey       = os.Getenv("ES_NODE_SIGNER_PRIVATE_KEY")
-	contractAddr16kv = common.HexToAddress(os.Getenv("ES_NODE_STORAGE_L1CONTRACT"))
-	minerAddr        = common.HexToAddress(os.Getenv("ES_NODE_STORAGE_MINER"))
-
-	value = "1000000000000000"
-	lg    = esLog.NewLogger(esLog.CLIConfig{
+	l1Endpoint = os.Getenv("ES_NODE_L1_ETH_RPC")
+	l1Contract = common.HexToAddress(os.Getenv("ES_NODE_STORAGE_L1CONTRACT"))
+	privateKey = os.Getenv("ES_NODE_SIGNER_PRIVATE_KEY")
+	minerAddr  = common.HexToAddress(os.Getenv("ES_NODE_STORAGE_MINER"))
+	lg         = esLog.NewLogger(esLog.CLIConfig{
 		Level:  "debug",
 		Format: "text",
 		Color:  term.IsTerminal(int(os.Stdout.Fd())),
 	})
 )
 
-func callVerify(calldata []byte) error {
-	contract := contractAddr16kv
+func callVerify(calldata []byte, contract common.Address) error {
 	lg.Info("Verifying against contract", "contract", contract)
 	ctx := context.Background()
 	client, err := ethclient.DialContext(ctx, l1Endpoint)

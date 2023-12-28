@@ -175,7 +175,7 @@ func verifyDecodeSample(t *testing.T, masks []common.Hash, proof []byte) error {
 		return fmt.Errorf("%v, values: %v", err, values)
 	}
 	calldata := append(h[0:4], dataField...)
-	return callVerify(calldata)
+	return callVerify(calldata, l1Contract)
 }
 
 // call Decoder.sol
@@ -215,5 +215,5 @@ func verifyProof(t *testing.T, masks []common.Hash, proof []byte) error {
 	}
 	t.Logf("values: %x", values)
 	calldata := append(h[0:4], dataField...)
-	return callVerify(calldata)
+	return callVerify(calldata, l1Contract)
 }

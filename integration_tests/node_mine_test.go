@@ -39,7 +39,7 @@ const (
 var shardIds = []uint64{0}
 
 func TestMining(t *testing.T) {
-	contract := contractAddr16kv
+	contract := l1Contract
 	fmt.Println("l1Endpoint", l1Endpoint, "contract", contract)
 	pClient, err := eth.Dial(l1Endpoint, contract, lg)
 	if err != nil {
@@ -52,7 +52,9 @@ func TestMining(t *testing.T) {
 	} else {
 		lg.Info("lastKv", "lastKv", lastKv)
 	}
-
+	if lastKv != 0 {
+		t.Fatalf("A newly deployed storage contract is required")
+	}
 	storConfig := initStorageConfig(t, pClient, contract, minerAddr)
 	files, err := createDataFiles(storConfig)
 	if err != nil {
@@ -60,7 +62,7 @@ func TestMining(t *testing.T) {
 	}
 	storConfig.Filenames = files
 	miningConfig := initMiningConfig(t, contract, pClient)
-
+	lg.Info("Initialzed mining config", "miningConfig", fmt.Sprintf("%+v", miningConfig))
 	defer cleanFiles(miningConfig.ZKWorkingDir)
 	shardManager, err := initShardManager(*storConfig)
 	if err != nil {
@@ -289,7 +291,8 @@ func prepareData(t *testing.T, l1Client *eth.PollingClient, storageMgr *ethstora
 	if err != nil {
 		t.Fatalf("Download all metas failed %v", err)
 	}
-	limit := len(shardIds) * int(storageMgr.KvEntries())
+	totalKvs := len(shardIds) * int(storageMgr.KvEntries())
+	limit := totalKvs
 	if limit > len(ids) {
 		limit = len(ids)
 	}
@@ -298,6 +301,10 @@ func prepareData(t *testing.T, l1Client *eth.PollingClient, storageMgr *ethstora
 		if err != nil {
 			t.Fatalf("Failed to commit blob: i=%d, id=%d, error: %v", i, ids[i], err)
 		}
+	}
+	_, _, err = storageMgr.CommitEmptyBlobs(uint64(limit), uint64(totalKvs)-1)
+	if err != nil {
+		t.Fatalf("Commit empty blobs failed %v", err)
 	}
 }
 
