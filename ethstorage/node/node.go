@@ -252,9 +252,12 @@ func (n *EsNode) Start(ctx context.Context, cfg *Config) error {
 		return err
 	}
 
-	if err := n.p2pNode.Start(); err != nil {
-		n.log.Error("Could not start a p2pNode", "err", err)
-		return err
+	if n.p2pNode != nil {
+		if err := n.p2pNode.Start(); err != nil {
+			n.log.Error("Could not start a p2pNode", "err", err)
+			return err
+		}
+
 	}
 
 	return nil
