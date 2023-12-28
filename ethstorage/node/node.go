@@ -188,7 +188,7 @@ func (n *EsNode) initStorageManager(ctx context.Context, cfg *Config) error {
 	for _, filename := range cfg.Storage.Filenames {
 		var err error
 		var df *ethstorage.DataFile
-		df, err = ethstorage.OpenDataFile(filename)
+		df, err = ethstorage.OpenDataFileDirectIO(filename)
 		if err != nil {
 			return fmt.Errorf("open failed: %w", err)
 		}
