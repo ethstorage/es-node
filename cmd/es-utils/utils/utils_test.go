@@ -5,8 +5,7 @@ package utils
 
 import (
 	"bytes"
-	"io"
-	"net/http"
+	"os"
 	"testing"
 )
 
@@ -38,12 +37,14 @@ func generateSequentialBytes(t *testing.T, n int) []byte {
 }
 
 func readTxt(t *testing.T, n int) []byte {
-	resp, err := http.Get("https://www.gutenberg.org/cache/epub/11/pg11.txt")
+	f, err := os.Open("../blob_8k.dat")
 	if err != nil {
-		t.Fatal("read txt error")
+		t.Fatal("read file error")
 	}
-	defer resp.Body.Close()
-	data, err := io.ReadAll(resp.Body)
+	defer f.Close()
+
+	data := make([]byte, 1024)
+	_, err = f.Read(data)
 	if err != nil {
 		t.Fatal("read txt error")
 	}

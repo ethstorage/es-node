@@ -320,10 +320,10 @@ func UploadBlobs(
 		needEncoding,
 		-1,
 		value,
-		1000000,
+		5000000,
 		"",
-		"400000000",
-		"4000000000",
+		"",
+		"300000000",
 		chainID,
 		calldata,
 	)
