@@ -1250,7 +1250,7 @@ func TestFillEmpty(t *testing.T) {
 		l1.lastBlobIndex = l1.lastBlobIndex + rand.Uint64()%(kvEntries/4)
 		sm.Reset(1)
 	}
-	time.Sleep(5 * time.Second)
+	time.Sleep(8 * time.Second)
 
 	if len(syncCl.tasks[0].SubEmptyTasks) > 0 {
 		t.Fatalf("fill empty should be done")

@@ -7,7 +7,6 @@ package node
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"testing"
 
@@ -54,7 +53,11 @@ func test_InitDB(test *testing.T, dataDir string) {
 		Storage:  storConfig,
 	}
 
-	n, err := New(context.Background(), &cfg, nil, "")
+	n := &EsNode{
+		log:        log.New("unittest"),
+		appVersion: "unittest",
+	}
+	err := n.initDatabase(&cfg)
 	if err != nil {
 		test.Error(err.Error())
 	}
