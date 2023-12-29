@@ -4,6 +4,7 @@
 package ethstorage
 
 import (
+	"context"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -235,7 +236,7 @@ func TestStorageManager_CommitBlobs(t *testing.T) {
 
 func TestStorageManager_DownloadAllMeta(t *testing.T) {
 	setup(t)
-	err := storageManager.DownloadAllMetas(4)
+	err := storageManager.DownloadAllMetas(context.Background(), 4)
 	if err != nil {
 		t.Fatal("failed to Downloand Finished", err)
 	}
