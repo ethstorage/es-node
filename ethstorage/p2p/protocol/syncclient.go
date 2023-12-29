@@ -134,7 +134,7 @@ type StorageManager interface {
 
 	DecodeKV(kvIdx uint64, b []byte, hash common.Hash, providerAddr common.Address, encodeType uint64) ([]byte, bool, error)
 
-	DownloadAllMetas(batchSize uint64) error
+	DownloadAllMetas(ctx context.Context, batchSize uint64) error
 }
 
 type SyncClient struct {
@@ -573,7 +573,7 @@ func (s *SyncClient) mainLoop() {
 
 	s.cleanTasks()
 	if !s.syncDone {
-		err := s.storageManager.DownloadAllMetas(s.syncerParams.MetaDownloadBatchSize)
+		err := s.storageManager.DownloadAllMetas(s.resCtx, s.syncerParams.MetaDownloadBatchSize)
 		if err != nil {
 			log.Error("Download blob metadata failed", "error", err)
 			return
