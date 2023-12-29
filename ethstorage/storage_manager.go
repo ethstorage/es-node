@@ -5,6 +5,7 @@ package ethstorage
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"math/big"
@@ -321,7 +322,7 @@ func (s *StorageManager) syncCheck(kvIdx uint64) error {
 }
 
 // DownloadAllMetas This function download the blob hashes of all the local storage shards from the smart contract
-func (s *StorageManager) DownloadAllMetas(batchSize uint64) error {
+func (s *StorageManager) DownloadAllMetas(ctx context.Context, batchSize uint64) error {
 	s.mu.Lock()
 	lastKvIdx := s.lastKvIdx
 	s.mu.Unlock()
@@ -337,7 +338,7 @@ func (s *StorageManager) DownloadAllMetas(batchSize uint64) error {
 		log.Info("Begin to download metas", "shard", sid, "first", first, "end", end, "limit", limit, "lastKvIdx", lastKvIdx)
 		ts := time.Now()
 
-		err := s.downloadMetaInParallel(first, end, batchSize)
+		err := s.downloadMetaInParallel(ctx, first, end, batchSize)
 		if err != nil {
 			return err
 		}
@@ -348,13 +349,13 @@ func (s *StorageManager) DownloadAllMetas(batchSize uint64) error {
 	return nil
 }
 
-func (s *StorageManager) downloadMetaInParallel(from, to, batchSize uint64) error {
+func (s *StorageManager) downloadMetaInParallel(ctx context.Context, from, to, batchSize uint64) error {
 	var wg sync.WaitGroup
 	taskNum := uint64(MetaDownloadThread)
 
 	// We don't need to download in parallel if the meta amount is small
 	if to-from < uint64(taskNum)*batchSize {
-		return s.downloadMetaInRange(from, to, batchSize, 0)
+		return s.downloadMetaInRange(ctx, from, to, batchSize, 0)
 	}
 
 	chanRes := make(chan error, taskNum)
@@ -371,7 +372,7 @@ func (s *StorageManager) downloadMetaInParallel(from, to, batchSize uint64) erro
 
 		go func(start, end, taskId uint64, out chan<- error) {
 			defer wg.Done()
-			err := s.downloadMetaInRange(start, end, batchSize, taskId)
+			err := s.downloadMetaInRange(ctx, start, end, batchSize, taskId)
 
 			chanRes <- err
 		}(rangeStart, rangeEnd, taskIdx, chanRes)
@@ -389,7 +390,7 @@ func (s *StorageManager) downloadMetaInParallel(from, to, batchSize uint64) erro
 	return nil
 }
 
-func (s *StorageManager) downloadMetaInRange(from, to, batchSize, taskId uint64) error {
+func (s *StorageManager) downloadMetaInRange(ctx context.Context, from, to, batchSize, taskId uint64) error {
 	rangeStart := from
 	for from < to {
 		s.mu.Lock()
@@ -439,6 +440,12 @@ func (s *StorageManager) downloadMetaInRange(from, to, batchSize, taskId uint64)
 			"progress", fmt.Sprintf("%.1f%%", float64((from-rangeStart)*100)/float64(to-rangeStart)),
 			"taskId", taskId)
 
+		select {
+		case <-ctx.Done():
+			log.Info("StorageManager res done, return")
+			return nil
+		default:
+		}
 		from = batchLimit
 	}
 	return nil
