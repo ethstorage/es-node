@@ -1,8 +1,6 @@
 // Copyright 2022-2023, EthStorage.
 // For license information, see https://github.com/ethstorage/es-node/blob/main/LICENSE
 
-//go:build !ci
-
 package protocol
 
 import (
@@ -561,7 +559,7 @@ func TestSync_RequestL2Range(t *testing.T) {
 	localHost, syncCl := createLocalHostAndSyncClient(t, testLog, rollupCfg, db, sm, m, mux)
 	syncCl.loadSyncStatus()
 	sm.Reset(0)
-	err = sm.DownloadAllMetas(16)
+	err = sm.DownloadAllMetas(context.Background(), 16)
 	if err != nil {
 		t.Fatal("Download blob metadata failed", "error", err)
 		return
@@ -634,7 +632,7 @@ func TestSync_RequestL2List(t *testing.T) {
 	localHost, syncCl := createLocalHostAndSyncClient(t, testLog, rollupCfg, db, sm, m, mux)
 	syncCl.loadSyncStatus()
 	sm.Reset(0)
-	err = sm.DownloadAllMetas(16)
+	err = sm.DownloadAllMetas(context.Background(), 16)
 	if err != nil {
 		t.Fatal("Download blob metadata failed", "error", err)
 		return
@@ -1250,7 +1248,7 @@ func TestFillEmpty(t *testing.T) {
 		l1.lastBlobIndex = l1.lastBlobIndex + rand.Uint64()%(kvEntries/4)
 		sm.Reset(1)
 	}
-	time.Sleep(5 * time.Second)
+	time.Sleep(8 * time.Second)
 
 	if len(syncCl.tasks[0].SubEmptyTasks) > 0 {
 		t.Fatalf("fill empty should be done")
