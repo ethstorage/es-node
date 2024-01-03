@@ -25,7 +25,7 @@ const (
 )
 
 var (
-	mineSig = crypto.Keccak256Hash([]byte(`mine(uint256,uint256,address,uint256,bytes32[],uint256[],bytes[],bytes)`))
+	mineSig = crypto.Keccak256Hash([]byte(`mine(uint256,uint256,address,uint256,bytes32[],uint256[],bytes[],bytes[])`))
 )
 
 func NewL1MiningAPI(l1 *eth.PollingClient, lg log.Logger) *l1MiningAPI {
@@ -89,7 +89,6 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 	addrType, _ := abi.NewType("address", "", nil)
 	bytes32Array, _ := abi.NewType("bytes32[]", "", nil)
 	bytesArray, _ := abi.NewType("bytes[]", "", nil)
-	bytesType, _ := abi.NewType("bytes", "", nil)
 	var maskBNs []*big.Int
 	for _, mask := range rst.masks {
 		maskBNs = append(maskBNs, new(big.Int).SetBytes(mask[:]))
@@ -102,7 +101,7 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 		{Type: bytes32Array},
 		{Type: uint256Array},
 		{Type: bytesArray},
-		{Type: bytesType},
+		{Type: bytesArray},
 	}.Pack(
 		rst.blockNumber,
 		new(big.Int).SetUint64(rst.startShardId),

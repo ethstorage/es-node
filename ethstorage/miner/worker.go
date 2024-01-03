@@ -62,7 +62,7 @@ type result struct {
 	encodedData     []common.Hash
 	masks           []common.Hash
 	inclusiveProofs [][]byte
-	decodeProof     []byte
+	decodeProof     [][]byte
 }
 
 // worker is the main object which takes care of storage mining

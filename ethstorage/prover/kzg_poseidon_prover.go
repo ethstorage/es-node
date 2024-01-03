@@ -32,7 +32,7 @@ func NewKZGPoseidonProver(workingDir, zkeyFileName string, lg log.Logger) KZGPos
 // 1. masks,
 // 2. the zk proof of how mask is generated with Poseidon hash,
 // 3. the KZG proof required by point evaluation precompile
-func (p *KZGPoseidonProver) GetStorageProof(data [][]byte, encodingKeys []common.Hash, sampleIdxInKv []uint64) ([]common.Hash, []byte, [][]byte, error) {
+func (p *KZGPoseidonProver) GetStorageProof(data [][]byte, encodingKeys []common.Hash, sampleIdxInKv []uint64) ([]common.Hash, [][]byte, [][]byte, error) {
 	var peInputs [][]byte
 	for i, d := range data {
 		peInput, err := NewKZGProver(p.lg).GenerateKZGProof(d, sampleIdxInKv[i])
@@ -45,5 +45,8 @@ func (p *KZGPoseidonProver) GetStorageProof(data [][]byte, encodingKeys []common
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	return masks, zkProof, peInputs, nil
+	// TODO backward compatible of one proof per sample
+	var zkProofs [][]byte
+	zkProofs = append(zkProofs, zkProof)
+	return masks, zkProofs, peInputs, nil
 }

@@ -18,7 +18,7 @@ if [ -z "$ES_NODE_STORAGE_MINER" ]; then
 fi
 # A newly deployed contract is required for each run
 if [ -z "$ES_NODE_STORAGE_L1CONTRACT" ]; then
-  export ES_NODE_STORAGE_L1CONTRACT=0x8967F302a2d13a3e41138c934373ac392BCb0c76
+  export ES_NODE_STORAGE_L1CONTRACT=0x41b72953A19D0F1cF6f27016bd29E487f4022Fb5
 fi
 
 if [ -z "$ES_NODE_L1_ETH_RPC" ]; then
@@ -39,4 +39,4 @@ if [ ! -e  ${zkey_file} ]; then
   rm cookie
 fi
 
-go test -timeout 0 github.com/ethstorage/go-ethstorage/integration_tests -v
+go test -timeout 0 github.com/ethstorage/go-ethstorage/integration_tests -v count=1 
