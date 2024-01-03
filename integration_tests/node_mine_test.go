@@ -287,7 +287,7 @@ func prepareData(t *testing.T, l1Client *eth.PollingClient, storageMgr *ethstora
 		t.Fatalf("Failed to get block number %v", err)
 	}
 	storageMgr.Reset(int64(block))
-	err = storageMgr.DownloadAllMetas(1)
+	err = storageMgr.DownloadAllMetas(context.Background(), 1)
 	if err != nil {
 		t.Fatalf("Download all metas failed %v", err)
 	}
