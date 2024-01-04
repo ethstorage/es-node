@@ -74,7 +74,7 @@ func TestMining(t *testing.T) {
 	feed := new(event.Feed)
 
 	l1api := miner.NewL1MiningAPI(pClient, lg)
-	pvr := prover.NewKZGPoseidonProver(miningConfig.ZKWorkingDir, zkeyFile, lg)
+	pvr := prover.NewKZGPoseidonProver(miningConfig.ZKWorkingDir, zkeyFile, 2, lg)
 	mnr := miner.New(miningConfig, storageManager, l1api, &pvr, feed, lg)
 	lg.Info("Initialized miner")
 
