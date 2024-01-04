@@ -165,7 +165,7 @@ func (p *ZKProver) GenerateZKProof(encodingKeys []common.Hash, sampleIdxs []uint
 	p.lg.Debug("Generate proof done")
 
 	// 4. Read proof and masks
-	proof, err := parseProof(proofFile)
+	proof, err := readProof(proofFile)
 	if err != nil {
 		p.lg.Error("Parse proof failed", "error", err)
 		return nil, nil, err
@@ -176,29 +176,6 @@ func (p *ZKProver) GenerateZKProof(encodingKeys []common.Hash, sampleIdxs []uint
 		return nil, nil, err
 	}
 	return proof, masks, nil
-}
-
-func readMasks(publicFile string) ([]*big.Int, error) {
-	var masks []*big.Int
-	f, err := os.Open(publicFile)
-	if err != nil {
-		return masks, err
-	}
-	defer f.Close()
-	var output []string
-	var decoder = json.NewDecoder(f)
-
-	if err = decoder.Decode(&output); err != nil {
-		return masks, err
-	}
-	for _, v := range output {
-		mask, ok := new(big.Int).SetString(v, 0)
-		if !ok {
-			return masks, fmt.Errorf("invalid mask %v", v)
-		}
-		masks = append(masks, mask)
-	}
-	return masks, nil
 }
 
 // Generate ZK Proof for the given encoding key and chunck index using snarkjs
@@ -294,7 +271,7 @@ func (p *ZKProver) GenerateZKProofPerSample(encodingKey common.Hash, sampleIdx u
 	p.lg.Debug("Generate proof done")
 
 	// 4. Read proof and mask
-	proof, err := parseProof(proofFile)
+	proof, err := readProof(proofFile)
 	if err != nil {
 		p.lg.Error("Parse proof failed", "error", err)
 		return nil, nil, err
@@ -307,29 +284,7 @@ func (p *ZKProver) GenerateZKProofPerSample(encodingKey common.Hash, sampleIdx u
 	return proof, mask, nil
 }
 
-func readMask(publicFile string) (*big.Int, error) {
-	f, err := os.Open(publicFile)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-	var output []string
-	var decoder = json.NewDecoder(f)
-	err = decoder.Decode(&output)
-	if err != nil {
-		return nil, err
-	}
-	if len(output) != 3 {
-		return nil, fmt.Errorf("invalid public output")
-	}
-	mask, ok := new(big.Int).SetString(output[2], 0)
-	if !ok {
-		return nil, fmt.Errorf("invalid mask")
-	}
-	return mask, nil
-}
-
-func parseProof(proofFile string) ([]byte, error) {
+func readProof(proofFile string) ([]byte, error) {
 	dat, err := os.ReadFile(proofFile)
 	if err != nil {
 		return nil, err
@@ -358,13 +313,60 @@ func parseProof(proofFile string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	fmt.Printf("a: %+v\n", a)
+	fmt.Printf("b: %+v\n", b)
+	fmt.Printf("c: %+v\n", c)
 	values := []interface{}{[]*big.Int{a.X, a.Y}, [][]*big.Int{b.X[:], b.Y[:]}, []*big.Int{c.X, c.Y}}
 	encoded, err := args.Pack(values...)
 	if err != nil {
 		return nil, fmt.Errorf("%v, values: %v", err, values)
 	}
 	return encoded, nil
+}
+
+func readMasks(publicFile string) ([]*big.Int, error) {
+	var masks []*big.Int
+	f, err := os.Open(publicFile)
+	if err != nil {
+		return masks, err
+	}
+	defer f.Close()
+	var output []string
+	var decoder = json.NewDecoder(f)
+
+	if err = decoder.Decode(&output); err != nil {
+		return masks, err
+	}
+	for _, v := range output {
+		mask, ok := new(big.Int).SetString(v, 0)
+		if !ok {
+			return masks, fmt.Errorf("invalid mask %v", v)
+		}
+		masks = append(masks, mask)
+	}
+	return masks, nil
+}
+
+func readMask(publicFile string) (*big.Int, error) {
+	f, err := os.Open(publicFile)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	var output []string
+	var decoder = json.NewDecoder(f)
+	err = decoder.Decode(&output)
+	if err != nil {
+		return nil, err
+	}
+	if len(output) != 3 {
+		return nil, fmt.Errorf("invalid public output")
+	}
+	mask, ok := new(big.Int).SetString(output[2], 0)
+	if !ok {
+		return nil, fmt.Errorf("invalid mask")
+	}
+	return mask, nil
 }
 
 func toG1Point(s []string) (G1Point, error) {

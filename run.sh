@@ -2,6 +2,8 @@
 
 # usage:
 # env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> ./run.sh
+# for one zk proof per sample (if the storage contract supports):
+# env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> ./run.sh --miner.zk-prover-version 1
 
 if [ -z "$ES_NODE_STORAGE_MINER" ]; then
   echo "Please provide 'ES_NODE_STORAGE_MINER' as an environment variable"
@@ -23,12 +25,33 @@ if [ ${#ES_NODE_SIGNER_PRIVATE_KEY} -ne 64 ]; then
   exit 1
 fi
 
+# ZK prover version, 1: one proof per sample, 2: one proof for multiple samples.
+zkp_version=2
+for arg in "$@"
+do
+  case "$arg" in
+    --miner.zk-prover-version)
+      shift
+      zkp_version="$1"
+      break
+      ;;
+    --miner.zk-prover-version=*)
+      zkp_version="${arg#*=}"
+      ;;
+  esac
+done
+echo "zk prover version is $zkp_version"
+
 # download blob_poseidon.zkey if not yet
+zkey_file="./build/bin/snarkjs/blob_poseidon2.zkey"
+file_id="1V3QkMpk5UC48Jc62nHXMgzeMb6KE8JRY"
+if [ "$zkp_version" = 1 ]; then
 zkey_file="./build/bin/snarkjs/blob_poseidon.zkey"
+file_id="1ZLfhYeCXMnbk6wUiBADRAn1mZ8MI_zg-"
+fi
 if [ ! -e  ${zkey_file} ]; then
   echo "${zkey_file} not found, start downloading..."
-  file_id="1V3QkMpk5UC48Jc62nHXMgzeMb6KE8JRY"
-  html=`curl -c ./cookie -s -L "https://drive.google.com/uc?export=download&id=${file_id}"`
+    html=`curl -c ./cookie -s -L "https://drive.google.com/uc?export=download&id=${file_id}"`
   curl -Lb ./cookie "https://drive.google.com/uc?export=download&`echo ${html}|grep -Eo 'confirm=[a-zA-Z0-9\-_]+'`&id=${file_id}" -o ${zkey_file}
   rm cookie
 fi
@@ -41,7 +64,7 @@ common_flags=" --datadir $data_dir \
   --l1.rpc http://65.109.115.36:8545 \
   --storage.l1contract 0xb4B46bdAA835F8E4b4d8e208B6559cD267851051 \
   --storage.miner $ES_NODE_STORAGE_MINER \
-  $@"
+  "
 
 # init shard 0
 es_node_init="init --shard_index 0"
@@ -71,4 +94,4 @@ if [ ! -e $storage_file_0 ]; then
 fi
 
 # start es-node
-exec $executable $es_node_start $common_flags
+exec $executable $common_flags $es_node_start

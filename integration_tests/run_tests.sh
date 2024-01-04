@@ -39,4 +39,4 @@ if [ ! -e  ${zkey_file} ]; then
   rm cookie
 fi
 
-go test -timeout 0 github.com/ethstorage/go-ethstorage/integration_tests -v count=1 
+go test -timeout 0 github.com/ethstorage/go-ethstorage/integration_tests -v
