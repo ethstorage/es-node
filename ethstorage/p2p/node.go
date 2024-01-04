@@ -178,7 +178,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 		}
 
 		if m != nil {
-			// go metrics.RecordBandwidth(resourcesCtx, bwc)
+			// go m.RecordBandwidth(resourcesCtx, bwc)
 		}
 	}
 	return nil
