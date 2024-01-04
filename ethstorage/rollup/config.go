@@ -3,7 +3,8 @@ package rollup
 import "math/big"
 
 type EsConfig struct {
-	L2ChainID *big.Int `json:"l2_chain_id"`
+	L2ChainID     *big.Int `json:"l2_chain_id"`
+	MetricsEnable bool     `json:"metrics_enable"`
 	// Required to identify the L2 network and create p2p signatures unique for this chain.
 	// L2ChainID *big.Int `json:"l2_chain_id"`
 }
