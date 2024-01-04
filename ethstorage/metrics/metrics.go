@@ -12,6 +12,7 @@ import (
 
 	ophttp "github.com/ethereum-optimism/optimism/op-service/httputil"
 	"github.com/ethereum-optimism/optimism/op-service/metrics"
+	"github.com/ethereum/go-ethereum/common"
 	pb "github.com/libp2p/go-libp2p-pubsub/pb"
 	libp2pmetrics "github.com/libp2p/go-libp2p/core/metrics"
 	"github.com/prometheus/client_golang/prometheus"
@@ -29,7 +30,7 @@ const (
 
 type Metricer interface {
 	SetLastKVIndexAndMaxShardId(lastL1Block, lastKVIndex uint64, maxShardId uint64)
-	SetMiningInfo(shardId uint64, difficulty, minedTime, blockMined uint64)
+	SetMiningInfo(shardId uint64, difficulty, minedTime, blockMined uint64, miner common.Address, gasFee, reward uint64)
 
 	ClientGetBlobsByRangeEvent(peerID string, resultCode byte, duration time.Duration)
 	ClientGetBlobsByListEvent(peerID string, resultCode byte, duration time.Duration)
@@ -59,13 +60,16 @@ type Metrics struct {
 	lastSubmissionTimes map[uint64]uint64
 
 	// Contract Status
-	LastL1Block        prometheus.Gauge
-	LastKVIndex        prometheus.Gauge
-	Shards             prometheus.Gauge
-	Difficulties       *prometheus.GaugeVec
-	LastSubmissionTime *prometheus.GaugeVec
-	MinedTime          *prometheus.GaugeVec
-	BlockMined         *prometheus.GaugeVec
+	LastL1Block             prometheus.Gauge
+	LastKVIndex             prometheus.Gauge
+	Shards                  prometheus.Gauge
+	Difficulties            *prometheus.GaugeVec
+	LastSubmissionTime      *prometheus.GaugeVec
+	MinedTime               *prometheus.GaugeVec
+	BlockMined              *prometheus.GaugeVec
+	LastMinerSubmissionTime *prometheus.GaugeVec
+	MiningReward            *prometheus.GaugeVec
+	GasFee                  *prometheus.GaugeVec
 
 	// P2P Metrics
 	PeerScores        *prometheus.GaugeVec
@@ -116,6 +120,7 @@ func NewMetrics(procName string) *Metrics {
 	factory := metrics.With(registry)
 	return &Metrics{
 		lastSubmissionTimes: make(map[uint64]uint64),
+
 		LastL1Block: factory.NewGauge(prometheus.GaugeOpts{
 			Namespace: ns,
 			Subsystem: ContractMetrics,
@@ -172,6 +177,39 @@ func NewMetrics(procName string) *Metrics {
 			Help:      "The block mined of shards in the l1 miner contract",
 		}, []string{
 			"shard_id",
+		}),
+
+		LastMinerSubmissionTime: factory.NewGaugeVec(prometheus.GaugeOpts{
+			Namespace: ns,
+			Subsystem: ContractMetrics,
+			Name:      "last_miner_submission_time_of_shards",
+			Help:      "The last submission time of shards for miners in the l1 miner contract",
+		}, []string{
+			"shard_id",
+			"miner",
+			"block_mined",
+		}),
+
+		MiningReward: factory.NewGaugeVec(prometheus.GaugeOpts{
+			Namespace: ns,
+			Subsystem: ContractMetrics,
+			Name:      "mining_reward_of_submission",
+			Help:      "The mining reward of a submission in the l1 miner contract",
+		}, []string{
+			"shard_id",
+			"miner",
+			"block_mined",
+		}),
+
+		GasFee: factory.NewGaugeVec(prometheus.GaugeOpts{
+			Namespace: ns,
+			Subsystem: ContractMetrics,
+			Name:      "gas_fee_of_submission",
+			Help:      "The gas fee of a submission in the l1 miner contract",
+		}, []string{
+			"shard_id",
+			"miner",
+			"block_mined",
 		}),
 
 		SyncClientRequestsTotal: factory.NewCounterVec(prometheus.CounterOpts{
@@ -415,11 +453,16 @@ func (m *Metrics) SetLastKVIndexAndMaxShardId(lastL1Block, lastKVIndex uint64, m
 	m.Shards.Set(float64(maxShardId))
 }
 
-func (m *Metrics) SetMiningInfo(shardId uint64, difficulty, minedTime, blockMined uint64) {
-	m.Difficulties.WithLabelValues(fmt.Sprintf("%d", shardId)).Set(float64(difficulty))
-	m.LastSubmissionTime.WithLabelValues(fmt.Sprintf("%d", shardId)).Set(float64(minedTime))
-	m.BlockMined.WithLabelValues(fmt.Sprintf("%d", shardId)).Set(float64(blockMined))
-	if t, ok := m.lastSubmissionTimes[shardId]; ok && t != minedTime {
+func (m *Metrics) SetMiningInfo(shardId uint64, difficulty, minedTime, blockMined uint64, miner common.Address, gasFee, reward uint64) {
+	if t, ok := m.lastSubmissionTimes[shardId]; ok && t <= minedTime {
+		m.Difficulties.WithLabelValues(fmt.Sprintf("%d", shardId)).Set(float64(difficulty))
+		m.LastSubmissionTime.WithLabelValues(fmt.Sprintf("%d", shardId)).Set(float64(minedTime))
+		m.BlockMined.WithLabelValues(fmt.Sprintf("%d", shardId)).Set(float64(blockMined))
+
+		m.LastMinerSubmissionTime.WithLabelValues(fmt.Sprintf("%d", shardId), miner.Hex(), fmt.Sprintf("%d", blockMined)).Set(float64(minedTime))
+		m.GasFee.WithLabelValues(fmt.Sprintf("%d", shardId), miner.Hex(), fmt.Sprintf("%d", blockMined)).Set(float64(gasFee))
+		m.MiningReward.WithLabelValues(fmt.Sprintf("%d", shardId), miner.Hex(), fmt.Sprintf("%d", blockMined)).Set(float64(reward))
+
 		m.MinedTime.WithLabelValues(fmt.Sprintf("%d", shardId), fmt.Sprintf("%d", blockMined)).Set(float64(minedTime - t))
 	}
 	m.lastSubmissionTimes[shardId] = minedTime
@@ -587,7 +630,7 @@ func (m *noopMetricer) Serve(ctx context.Context, hostname string, port int) err
 func (m *noopMetricer) SetLastKVIndexAndMaxShardId(lastL1Block, lastKVIndex uint64, maxShardId uint64) {
 }
 
-func (m *noopMetricer) SetMiningInfo(shardId uint64, difficulty, minedTime, blockMined uint64) {
+func (m *noopMetricer) SetMiningInfo(shardId uint64, difficulty, minedTime, blockMined uint64, miner common.Address, gasFee, reward uint64) {
 }
 
 func (n *noopMetricer) ClientGetBlobsByRangeEvent(peerID string, resultCode byte, duration time.Duration) {

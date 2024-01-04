@@ -1,13 +1,10 @@
 // Copyright 2022-2023, EthStorage.
 // For license information, see https://github.com/ethstorage/es-node/blob/main/LICENSE
 
-//go:build !ci
-
 package node
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"testing"
 
@@ -54,7 +51,11 @@ func test_InitDB(test *testing.T, dataDir string) {
 		Storage:  storConfig,
 	}
 
-	n, err := New(context.Background(), &cfg, nil, "")
+	n := &EsNode{
+		log:        log.New("unittest"),
+		appVersion: "unittest",
+	}
+	err := n.initDatabase(&cfg)
 	if err != nil {
 		test.Error(err.Error())
 	}
