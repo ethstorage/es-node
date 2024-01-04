@@ -4,12 +4,16 @@
 package prover
 
 import (
+	"fmt"
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
 )
 
 type KZGPoseidonProver struct {
 	dir, zkey string
+	version   uint64
 	lg        log.Logger
 }
 
@@ -17,11 +21,12 @@ type KZGPoseidonProver struct {
 // workingDir specifies the working directory of the command relative to the caller.
 // zkeyFileName specifies the zkey file name used by snarkjs to generate snark proof
 // returns a prover that can generate a combined KZG + zk proof
-func NewKZGPoseidonProver(workingDir, zkeyFileName string, lg log.Logger) KZGPoseidonProver {
+func NewKZGPoseidonProver(workingDir, zkeyFileName string, version uint64, lg log.Logger) KZGPoseidonProver {
 	return KZGPoseidonProver{
-		dir:  workingDir,
-		zkey: zkeyFileName,
-		lg:   lg,
+		dir:     workingDir,
+		version: version,
+		zkey:    zkeyFileName,
+		lg:      lg,
 	}
 }
 
@@ -32,7 +37,7 @@ func NewKZGPoseidonProver(workingDir, zkeyFileName string, lg log.Logger) KZGPos
 // 1. masks,
 // 2. the zk proof of how mask is generated with Poseidon hash,
 // 3. the KZG proof required by point evaluation precompile
-func (p *KZGPoseidonProver) GetStorageProof(data [][]byte, encodingKeys []common.Hash, sampleIdxInKv []uint64) ([]common.Hash, [][]byte, [][]byte, error) {
+func (p *KZGPoseidonProver) GetStorageProof(data [][]byte, encodingKeys []common.Hash, sampleIdxInKv []uint64) ([]*big.Int, [][]byte, [][]byte, error) {
 	var peInputs [][]byte
 	for i, d := range data {
 		peInput, err := NewKZGProver(p.lg).GenerateKZGProof(d, sampleIdxInKv[i])
@@ -41,12 +46,26 @@ func (p *KZGPoseidonProver) GetStorageProof(data [][]byte, encodingKeys []common
 		}
 		peInputs = append(peInputs, peInput)
 	}
-	zkProof, masks, err := NewZKProver(p.dir, p.zkey, p.lg).GenerateZKProof(encodingKeys, sampleIdxInKv)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	// TODO backward compatible of one proof per sample
 	var zkProofs [][]byte
-	zkProofs = append(zkProofs, zkProof)
+	var masks []*big.Int
+	if p.version == 1 {
+		for i, encodingKey := range encodingKeys {
+			zkProof, mask, err := NewZKProver(p.dir, p.zkey, p.lg).GenerateZKProofPerSample(encodingKey, sampleIdxInKv[i])
+			if err != nil {
+				return nil, nil, nil, err
+			}
+			zkProofs = append(zkProofs, zkProof)
+			masks = append(masks, mask)
+		}
+	} else if p.version == 2 {
+		zkProof, msks, err := NewZKProver(p.dir, p.zkey, p.lg).GenerateZKProof(encodingKeys, sampleIdxInKv)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		zkProofs = append(zkProofs, zkProof)
+		masks = msks
+	} else {
+		return nil, nil, nil, fmt.Errorf("invalid zk proof version")
+	}
 	return masks, zkProofs, peInputs, nil
 }

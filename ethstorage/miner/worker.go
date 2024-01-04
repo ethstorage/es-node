@@ -60,7 +60,7 @@ type result struct {
 	miner           common.Address
 	nonce           uint64
 	encodedData     []common.Hash
-	masks           []common.Hash
+	masks           []*big.Int
 	inclusiveProofs [][]byte
 	decodeProof     [][]byte
 }

@@ -127,7 +127,7 @@ func readXIn(buildDir string) ([]string, error) {
 		return nil, err
 	}
 	defer f.Close()
-	var input prover.InputPair
+	var input prover.InputPairV2
 	var decoder = json.NewDecoder(f)
 	err = decoder.Decode(&input)
 	if err != nil {

@@ -27,7 +27,7 @@ type L1API interface {
 }
 
 type MiningProver interface {
-	GetStorageProof(encodedKVs [][]byte, encodingKey []common.Hash, sampleIdxInKv []uint64) ([]common.Hash, [][]byte, [][]byte, error)
+	GetStorageProof(encodedKVs [][]byte, encodingKey []common.Hash, sampleIdxInKv []uint64) ([]*big.Int, [][]byte, [][]byte, error)
 }
 
 type miningInfo struct {

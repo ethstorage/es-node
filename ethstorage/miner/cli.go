@@ -20,6 +20,7 @@ const (
 	PriorityGasPriceFlagName = "miner.priority-gas-price"
 	ZKeyFileNameFlagName     = "miner.zkey"
 	ZKWorkingDirFlagName     = "miner.zk-working-dir"
+	ZKProverVersionFlagName  = "miner.zk-prover-version"
 	ThreadsPerShardFlagName  = "miner.threads-per-shard"
 	MinimumProfitFlagName    = "miner.min-profit"
 )
@@ -63,6 +64,12 @@ func CLIFlags(envPrefix string) []cli.Flag {
 			EnvVar: rollup.PrefixEnvVar(envPrefix, "ZK_WORKING_DIR"),
 		},
 		cli.Uint64Flag{
+			Name:   ZKProverVersionFlagName,
+			Usage:  "ZK prover version, 1: one proof per sample, 2: one proof for multiple samples. Default: 2",
+			Value:  DefaultConfig.ZKProverVersion,
+			EnvVar: rollup.PrefixEnvVar(envPrefix, "ZK_PROVER_VERSION"),
+		},
+		cli.Uint64Flag{
 			Name:   ThreadsPerShardFlagName,
 			Usage:  "Number of threads per shard",
 			Value:  DefaultConfig.ThreadsPerShard,
@@ -79,6 +86,7 @@ type CLIConfig struct {
 	MinimumProfit    *big.Int
 	ZKeyFileName     string
 	ZKWorkingDir     string
+	ZKProverVersion  uint64
 	ThreadsPerShard  uint64
 }
 
@@ -107,6 +115,7 @@ func (c CLIConfig) ToMinerConfig() (Config, error) {
 	cfg.PriorityGasPrice = c.PriorityGasPrice
 	cfg.MinimumProfit = c.MinimumProfit
 	cfg.ZKeyFileName = c.ZKeyFileName
+	cfg.ZKProverVersion = c.ZKProverVersion
 	cfg.ThreadsPerShard = c.ThreadsPerShard
 	return cfg, nil
 }
@@ -119,6 +128,7 @@ func ReadCLIConfig(ctx *cli.Context) CLIConfig {
 		MinimumProfit:    types.GlobalBig(ctx, MinimumProfitFlagName),
 		ZKeyFileName:     ctx.GlobalString(ZKeyFileNameFlagName),
 		ZKWorkingDir:     ctx.GlobalString(ZKWorkingDirFlagName),
+		ZKProverVersion:  ctx.GlobalUint64(ZKProverVersionFlagName),
 		ThreadsPerShard:  ctx.GlobalUint64(ThreadsPerShardFlagName),
 	}
 	return cfg

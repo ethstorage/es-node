@@ -233,7 +233,12 @@ func (n *EsNode) initMiner(ctx context.Context, cfg *Config) error {
 		return nil
 	}
 	l1api := miner.NewL1MiningAPI(n.l1Source, n.log)
-	pvr := prover.NewKZGPoseidonProver(cfg.Mining.ZKWorkingDir, cfg.Mining.ZKeyFileName, n.log)
+	pvr := prover.NewKZGPoseidonProver(
+		cfg.Mining.ZKWorkingDir,
+		cfg.Mining.ZKeyFileName,
+		cfg.Mining.ZKProverVersion,
+		n.log,
+	)
 	n.miner = miner.New(cfg.Mining, n.storageManager, l1api, &pvr, n.feed, n.log)
 	log.Info("Initialized miner")
 	return nil
