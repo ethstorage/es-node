@@ -60,11 +60,12 @@ func newMiner(t *testing.T, storageMgr *es.StorageManager, client *eth.PollingCl
 		GasPrice:         nil,
 		PriorityGasPrice: new(big.Int).SetUint64(10),
 		ThreadsPerShard:  1,
+		ZKProverVersion:  2,
 		ZKeyFileName:     "blob_poseidon.zkey",
 	}
 	l1api := NewL1MiningAPI(client, lg)
 	zkWorkingDir, _ := filepath.Abs("../prover")
-	pvr := prover.NewKZGPoseidonProver(zkWorkingDir, defaultConfig.ZKeyFileName, lg)
+	pvr := prover.NewKZGPoseidonProver(zkWorkingDir, defaultConfig.ZKeyFileName, defaultConfig.ZKProverVersion, lg)
 	fd := new(event.Feed)
 	miner := New(defaultConfig, storageMgr, l1api, &pvr, fd, lg)
 	return miner
