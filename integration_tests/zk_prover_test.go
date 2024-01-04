@@ -82,7 +82,7 @@ func TestZKProver_GenerateZKProof(t *testing.T) {
 				t.Errorf("GenerateMask() error = %v", err)
 				return
 			}
-			if maskGo != masks[i] {
+			if maskGo.Cmp(masks[i]) != 0 {
 				t.Errorf("ZKProver.GenerateZKProof() mask = %v, GeneratedMask %v", masks[i], maskGo)
 				return
 			}
