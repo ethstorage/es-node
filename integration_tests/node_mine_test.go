@@ -404,13 +404,13 @@ func initMiningConfig(t *testing.T, l1Contract common.Address, client *eth.Polli
 	}
 	miningConfig.PrepaidAmount = new(big.Int).SetBytes(result)
 
+	miningConfig.ZKeyFileName = zkeyFile2
 	proverPath, _ := filepath.Abs(prPath)
-	zkeyFull := filepath.Join(proverPath, snarkLibDir, zkeyFile)
+	zkeyFull := filepath.Join(proverPath, snarkLibDir, miningConfig.ZKeyFileName)
 	if _, err := os.Stat(zkeyFull); os.IsNotExist(err) {
 		t.Fatalf("%s not found", zkeyFull)
 	}
 	miningConfig.ZKWorkingDir = proverPath
-	miningConfig.ZKeyFileName = "blob_poseidon2.zkey"
 	miningConfig.ZKProverVersion = 2
 	miningConfig.ThreadsPerShard = 2
 	miningConfig.MinimumProfit = new(big.Int).SetInt64(-1e18)

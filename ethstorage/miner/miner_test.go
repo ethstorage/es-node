@@ -61,7 +61,7 @@ func newMiner(t *testing.T, storageMgr *es.StorageManager, client *eth.PollingCl
 		PriorityGasPrice: new(big.Int).SetUint64(10),
 		ThreadsPerShard:  1,
 		ZKProverVersion:  2,
-		ZKeyFileName:     "blob_poseidon.zkey",
+		ZKeyFileName:     "blob_poseidon2.zkey",
 	}
 	l1api := NewL1MiningAPI(client, lg)
 	zkWorkingDir, _ := filepath.Abs("../prover")
