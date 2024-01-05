@@ -161,7 +161,7 @@ func verifyInclusive(trunkIdx uint64, peInput []byte) error {
 	copy(dataHash[:], peInput[:24])
 	index := new(big.Int).SetInt64(int64(trunkIdx))
 	decodedData := new(big.Int).SetBytes(peInput[64:96])
-	h := crypto.Keccak256Hash([]byte("_checkInclusive(bytes32,uint256,uint256,bytes)"))
+	h := crypto.Keccak256Hash([]byte("checkInclusive(bytes32,uint256,uint256,bytes)"))
 	mid := h[0:4]
 	bytes32Type, _ := abi.NewType("bytes32", "", nil)
 	uint256Type, _ := abi.NewType("uint256", "", nil)

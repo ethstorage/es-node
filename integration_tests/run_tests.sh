@@ -33,7 +33,7 @@ echo ES_NODE_STORAGE_MINER = $ES_NODE_STORAGE_MINER
 zkey_file="./ethstorage/prover/snarkjs/blob_poseidon.zkey"
 if [ ! -e  ${zkey_file} ]; then
   echo "${zkey_file} not found, start downloading..."
-  file_id="1V3QkMpk5UC48Jc62nHXMgzeMb6KE8JRY"
+  file_id="1ZLfhYeCXMnbk6wUiBADRAn1mZ8MI_zg-"
   html=`curl -c ./cookie -s -L "https://drive.google.com/uc?export=download&id=${file_id}"`
   curl -Lb ./cookie "https://drive.google.com/uc?export=download&`echo ${html}|grep -Eo 'confirm=[a-zA-Z0-9\-_]+'`&id=${file_id}" -o ${zkey_file}
   rm cookie
@@ -43,7 +43,7 @@ fi
 zkey_file="./ethstorage/prover/snarkjs/blob_poseidon2.zkey"
 if [ ! -e  ${zkey_file} ]; then
   echo "${zkey_file} not found, start downloading..."
-  file_id="1ZLfhYeCXMnbk6wUiBADRAn1mZ8MI_zg-"
+  file_id="1V3QkMpk5UC48Jc62nHXMgzeMb6KE8JRY"
   html=`curl -c ./cookie -s -L "https://drive.google.com/uc?export=download&id=${file_id}"`
   curl -Lb ./cookie "https://drive.google.com/uc?export=download&`echo ${html}|grep -Eo 'confirm=[a-zA-Z0-9\-_]+'`&id=${file_id}" -o ${zkey_file}
   rm cookie
