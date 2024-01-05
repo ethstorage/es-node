@@ -23,6 +23,12 @@ if [ ${#ES_NODE_SIGNER_PRIVATE_KEY} -ne 64 ]; then
   exit 1
 fi
 
+# install snarkjs if not
+if ! [ "$(command -v snarkjs)" ]; then
+    echo "snarkjs not found, start installing..."
+    npm install -g snarkjs
+fi
+
 # download blob_poseidon.zkey if not yet
 zkey_file="./build/bin/snarkjs/blob_poseidon.zkey"
 if [ ! -e  ${zkey_file} ]; then
