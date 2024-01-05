@@ -5,6 +5,7 @@ package node
 
 import (
 	"context"
+	"math/big"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -15,12 +16,12 @@ import (
 )
 
 type ethAPI struct {
-	rpcCfg *RPCConfig
-	log    log.Logger
+	rpcCfg  *RPCConfig
+	chainId *big.Int
+	log     log.Logger
 }
 
 const (
-	ESChainID          = 333
 	defaultCallTimeout = 2 * time.Second
 )
 
@@ -28,15 +29,16 @@ var (
 	rpcCli *rpc.Client
 )
 
-func NewETHAPI(config *RPCConfig, log log.Logger) *ethAPI {
+func NewETHAPI(config *RPCConfig, chainId *big.Int, log log.Logger) *ethAPI {
 	return &ethAPI{
-		rpcCfg: config,
-		log:    log,
+		rpcCfg:  config,
+		chainId: chainId,
+		log:     log,
 	}
 }
 
 func (api *ethAPI) ChainId() hexutil.Uint64 {
-	return hexutil.Uint64(ESChainID)
+	return hexutil.Uint64(api.chainId.Uint64())
 }
 
 type TransactionArgs struct {
