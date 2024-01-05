@@ -29,6 +29,7 @@ const (
 	witnessGenerator = "generate_witness.js"
 	inputName        = "input_blob_poseidon.json"
 	wasmName         = "blob_poseidon.wasm"
+	wasmName2        = "blob_poseidon2.wasm"
 	wtnsName         = "witness_blob_poseidon.wtns"
 	proofName        = "proof_blob_poseidon.json"
 	publicName       = "public_blob_poseidon.json"
@@ -135,7 +136,7 @@ func (p *ZKProver) GenerateZKProof(encodingKeys []common.Hash, sampleIdxs []uint
 	wtnsFile := filepath.Join(buildDir, wtnsName)
 	cmd := exec.Command("node",
 		filepath.Join(libDir, witnessGenerator),
-		filepath.Join(libDir, wasmName),
+		filepath.Join(libDir, wasmName2),
 		inputFile,
 		wtnsFile,
 	)

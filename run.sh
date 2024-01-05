@@ -47,13 +47,15 @@ do
   esac
 done
 echo "zk prover version is $zkp_version"
-# download blob_poseidon.zkey if not yet
-zkey_file="./build/bin/snarkjs/blob_poseidon2.zkey"
+
+# download zkey if not yet
+zkey_name="blob_poseidon2.zkey"
 file_id="1V3QkMpk5UC48Jc62nHXMgzeMb6KE8JRY"
 if [ "$zkp_version" = 1 ]; then
-zkey_file="./build/bin/snarkjs/blob_poseidon.zkey"
-file_id="1ZLfhYeCXMnbk6wUiBADRAn1mZ8MI_zg-"
+  zkey_name="blob_poseidon.zkey"
+  file_id="1ZLfhYeCXMnbk6wUiBADRAn1mZ8MI_zg-"
 fi
+zkey_file="./build/bin/snarkjs/$zkey_name"
 if [ ! -e  ${zkey_file} ]; then
   echo "${zkey_file} not found, start downloading..."
     html=`curl -c ./cookie -s -L "https://drive.google.com/uc?export=download&id=${file_id}"`
@@ -78,6 +80,7 @@ es_node_init="init --shard_index 0"
 # TODO remove --network
 es_node_start=" --network devnet \
   --miner.enabled \
+  --miner.zkey $zkey_name \
   --storage.files $storage_file_0 \
   --signer.private-key $ES_NODE_SIGNER_PRIVATE_KEY \
   --l1.beacon http://65.109.115.36:5052 \
