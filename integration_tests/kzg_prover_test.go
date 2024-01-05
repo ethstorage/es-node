@@ -22,7 +22,7 @@ import (
 	"github.com/ethstorage/go-ethstorage/ethstorage/prover"
 )
 
-var kzgContract = common.HexToAddress("0xcCD52331Ab334eabB8740557c8B05D7bFfBBc6f0")
+var kzgContract = common.HexToAddress("0x1ba144ad60008A66956e8C00AB2057a7db2c8d55")
 
 func TestKZGProver_GenerateKZGProof(t *testing.T) {
 	lg.Info("KZG prover test", "contract", kzgContract)

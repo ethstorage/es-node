@@ -204,7 +204,6 @@ func verifyDecodeSample(proofBytes []byte, trunkIdx uint64, encodingKey common.H
 		{Type: uintType},
 	}
 	proof := parseProof(proofBytes)
-	fmt.Printf("proof: %+v\n", proof)
 	values := []interface{}{proof, encodingKeyBN, indexBN, mask}
 	dataField, err := args.Pack(values...)
 	if err != nil {

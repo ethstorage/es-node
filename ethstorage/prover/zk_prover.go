@@ -313,9 +313,6 @@ func readProof(proofFile string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("a: %+v\n", a)
-	fmt.Printf("b: %+v\n", b)
-	fmt.Printf("c: %+v\n", c)
 	values := []interface{}{[]*big.Int{a.X, a.Y}, [][]*big.Int{b.X[:], b.Y[:]}, []*big.Int{c.X, c.Y}}
 	encoded, err := args.Pack(values...)
 	if err != nil {
