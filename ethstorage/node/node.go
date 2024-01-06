@@ -216,7 +216,7 @@ func (n *EsNode) initStorageManager(ctx context.Context, cfg *Config) error {
 }
 
 func (n *EsNode) initRPCServer(ctx context.Context, cfg *Config) error {
-	server, err := newRPCServer(ctx, &cfg.RPC, n.storageManager, n.downloader, n.log, n.appVersion)
+	server, err := newRPCServer(ctx, &cfg.RPC, cfg.Rollup.L2ChainID, n.storageManager, n.downloader, n.log, n.appVersion)
 	if err != nil {
 		return err
 	}
