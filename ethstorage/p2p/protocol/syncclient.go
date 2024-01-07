@@ -1030,7 +1030,9 @@ func (s *SyncClient) FillFileWithEmptyBlob(start, limit uint64) (uint64, error) 
 		start = lastBlobIdx
 	}
 	inserted, next, err := s.storageManager.CommitEmptyBlobs(start, limit)
-	defer s.metrics.ClientFillEmptyBlobsEvent(inserted, time.Since(st))
+	if inserted > 0 {
+		s.metrics.ClientFillEmptyBlobsEvent(inserted, time.Since(st))
+	}
 
 	return next, err
 }

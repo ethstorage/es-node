@@ -82,10 +82,22 @@ var (
 		Value:  3333,
 		EnvVar: prefixEnvVar("L2_CHAIN_ID"),
 	}
-	MetricsEnable = cli.BoolFlag{
-		Name:   "metrics.enable",
-		Usage:  "Enable metrics",
-		EnvVar: prefixEnvVar("METRICS_ENABLE"),
+	MetricsEnabledFlag = cli.BoolFlag{
+		Name:   "metrics.enabled",
+		Usage:  "Enable the metrics server",
+		EnvVar: prefixEnvVar("METRICS_ENABLED"),
+	}
+	MetricsAddrFlag = cli.StringFlag{
+		Name:   "metrics.addr",
+		Usage:  "Metrics listening address",
+		Value:  "0.0.0.0",
+		EnvVar: prefixEnvVar("METRICS_ADDR"),
+	}
+	MetricsPortFlag = cli.IntFlag{
+		Name:   "metrics.port",
+		Usage:  "Metrics listening port",
+		Value:  7300,
+		EnvVar: prefixEnvVar("METRICS_PORT"),
 	}
 	PprofEnabledFlag = cli.BoolFlag{
 		Name:   "pprof.enabled",
@@ -205,7 +217,9 @@ var optionalFlags = []cli.Flag{
 	L1BeaconSlotTime,
 	L1MinDurationForBlobsRequest,
 	L2ChainId,
-	MetricsEnable,
+	MetricsEnabledFlag,
+	MetricsAddrFlag,
+	MetricsPortFlag,
 	PprofEnabledFlag,
 	PprofAddrFlag,
 	PprofPortFlag,
