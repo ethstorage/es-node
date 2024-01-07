@@ -12,6 +12,7 @@ import (
 
 	ophttp "github.com/ethereum-optimism/optimism/op-service/httputil"
 	"github.com/ethereum-optimism/optimism/op-service/metrics"
+	"github.com/ethereum/go-ethereum/common"
 	pb "github.com/libp2p/go-libp2p-pubsub/pb"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
@@ -28,13 +29,13 @@ const (
 
 type Metricer interface {
 	SetLastKVIndexAndMaxShardId(lastL1Block, lastKVIndex uint64, maxShardId uint64)
-	SetMiningInfo(shardId uint64, difficulty, minedTime, blockMined uint64)
+	SetMiningInfo(shardId uint64, difficulty, minedTime, blockMined uint64, miner common.Address, gasFee, reward uint64)
 
 	ClientGetBlobsByRangeEvent(peerID string, resultCode byte, duration time.Duration)
 	ClientGetBlobsByListEvent(peerID string, resultCode byte, duration time.Duration)
 	ClientFillEmptyBlobsEvent(count uint64, duration time.Duration)
-	ClientOnBlobsByRange(peerID string, reqCount, retBlobCount, insertedCount uint64, duration time.Duration)
-	ClientOnBlobsByList(peerID string, reqCount, retBlobCount, insertedCount uint64, duration time.Duration)
+	ClientOnBlobsByRange(peerID string, reqCount, getBlobCount, insertedCount uint64, duration time.Duration)
+	ClientOnBlobsByList(peerID string, reqCount, getBlobCount, insertedCount uint64, duration time.Duration)
 	ClientRecordTimeUsed(method string) func()
 	IncDropPeerCount()
 	IncPeerCount()
@@ -56,13 +57,16 @@ type Metrics struct {
 	lastSubmissionTimes map[uint64]uint64
 
 	// Contract Status
-	LastL1Block        prometheus.Gauge
-	LastKVIndex        prometheus.Gauge
-	Shards             prometheus.Gauge
-	Difficulties       *prometheus.GaugeVec
-	LastSubmissionTime *prometheus.GaugeVec
-	MinedTime          *prometheus.GaugeVec
-	BlockMined         *prometheus.GaugeVec
+	LastL1Block             prometheus.Gauge
+	LastKVIndex             prometheus.Gauge
+	Shards                  prometheus.Gauge
+	Difficulties            *prometheus.GaugeVec
+	LastSubmissionTime      *prometheus.GaugeVec
+	MinedTime               *prometheus.GaugeVec
+	BlockMined              *prometheus.GaugeVec
+	LastMinerSubmissionTime *prometheus.GaugeVec
+	MiningReward            *prometheus.GaugeVec
+	GasFee                  *prometheus.GaugeVec
 
 	// P2P Metrics
 	PeerScores        *prometheus.GaugeVec
@@ -112,6 +116,7 @@ func NewMetrics(procName string) *Metrics {
 	factory := metrics.With(registry)
 	return &Metrics{
 		lastSubmissionTimes: make(map[uint64]uint64),
+
 		LastL1Block: factory.NewGauge(prometheus.GaugeOpts{
 			Namespace: ns,
 			Subsystem: ContractMetrics,
@@ -168,6 +173,39 @@ func NewMetrics(procName string) *Metrics {
 			Help:      "The block mined of shards in the l1 miner contract",
 		}, []string{
 			"shard_id",
+		}),
+
+		LastMinerSubmissionTime: factory.NewGaugeVec(prometheus.GaugeOpts{
+			Namespace: ns,
+			Subsystem: ContractMetrics,
+			Name:      "last_miner_submission_time_of_shards",
+			Help:      "The last submission time of shards for miners in the l1 miner contract",
+		}, []string{
+			"shard_id",
+			"miner",
+			"block_mined",
+		}),
+
+		MiningReward: factory.NewGaugeVec(prometheus.GaugeOpts{
+			Namespace: ns,
+			Subsystem: ContractMetrics,
+			Name:      "mining_reward_of_submission",
+			Help:      "The mining reward of a submission in the l1 miner contract",
+		}, []string{
+			"shard_id",
+			"miner",
+			"block_mined",
+		}),
+
+		GasFee: factory.NewGaugeVec(prometheus.GaugeOpts{
+			Namespace: ns,
+			Subsystem: ContractMetrics,
+			Name:      "gas_fee_of_submission",
+			Help:      "The gas fee of a submission in the l1 miner contract",
+		}, []string{
+			"shard_id",
+			"miner",
+			"block_mined",
 		}),
 
 		SyncClientRequestsTotal: factory.NewCounterVec(prometheus.CounterOpts{
@@ -411,11 +449,16 @@ func (m *Metrics) SetLastKVIndexAndMaxShardId(lastL1Block, lastKVIndex uint64, m
 	m.Shards.Set(float64(maxShardId))
 }
 
-func (m *Metrics) SetMiningInfo(shardId uint64, difficulty, minedTime, blockMined uint64) {
-	m.Difficulties.WithLabelValues(fmt.Sprintf("%d", shardId)).Set(float64(difficulty))
-	m.LastSubmissionTime.WithLabelValues(fmt.Sprintf("%d", shardId)).Set(float64(minedTime))
-	m.BlockMined.WithLabelValues(fmt.Sprintf("%d", shardId)).Set(float64(blockMined))
-	if t, ok := m.lastSubmissionTimes[shardId]; ok && t != minedTime {
+func (m *Metrics) SetMiningInfo(shardId uint64, difficulty, minedTime, blockMined uint64, miner common.Address, gasFee, reward uint64) {
+	if t, ok := m.lastSubmissionTimes[shardId]; ok && t <= minedTime {
+		m.Difficulties.WithLabelValues(fmt.Sprintf("%d", shardId)).Set(float64(difficulty))
+		m.LastSubmissionTime.WithLabelValues(fmt.Sprintf("%d", shardId)).Set(float64(minedTime))
+		m.BlockMined.WithLabelValues(fmt.Sprintf("%d", shardId)).Set(float64(blockMined))
+
+		m.LastMinerSubmissionTime.WithLabelValues(fmt.Sprintf("%d", shardId), miner.Hex(), fmt.Sprintf("%d", blockMined)).Set(float64(minedTime))
+		m.GasFee.WithLabelValues(fmt.Sprintf("%d", shardId), miner.Hex(), fmt.Sprintf("%d", blockMined)).Set(float64(gasFee))
+		m.MiningReward.WithLabelValues(fmt.Sprintf("%d", shardId), miner.Hex(), fmt.Sprintf("%d", blockMined)).Set(float64(reward))
+
 		m.MinedTime.WithLabelValues(fmt.Sprintf("%d", shardId), fmt.Sprintf("%d", blockMined)).Set(float64(minedTime - t))
 	}
 	m.lastSubmissionTimes[shardId] = minedTime
@@ -436,51 +479,51 @@ func (m *Metrics) SetPeerScores(scores map[string]float64) {
 func (m *Metrics) ClientGetBlobsByRangeEvent(peerID string, resultCode byte, duration time.Duration) {
 	code := strconv.FormatUint(uint64(resultCode), 10)
 	m.SyncClientRequestsTotal.WithLabelValues("get_blobs_by_range", code).Inc()
-	m.SyncClientRequestDurationSeconds.WithLabelValues("get_blobs_by_range", code).Observe(float64(duration) / float64(time.Second))
+	m.SyncClientRequestDurationSeconds.WithLabelValues("get_blobs_by_range", code).Observe(duration.Seconds())
 	m.SyncClientPeerRequestsTotal.WithLabelValues(peerID, "get_blobs_by_range", code).Inc()
-	m.SyncClientPeerRequestDurationSeconds.WithLabelValues(peerID, "get_blobs_by_range", code).Observe(float64(duration) / float64(time.Second))
+	m.SyncClientPeerRequestDurationSeconds.WithLabelValues(peerID, "get_blobs_by_range", code).Observe(duration.Seconds())
 }
 
 func (m *Metrics) ClientGetBlobsByListEvent(peerID string, resultCode byte, duration time.Duration) {
 	code := strconv.FormatUint(uint64(resultCode), 10)
 	m.SyncClientRequestsTotal.WithLabelValues("get_blobs_by_list", code).Inc()
-	m.SyncClientRequestDurationSeconds.WithLabelValues("get_blobs_by_list", code).Observe(float64(duration) / float64(time.Second))
+	m.SyncClientRequestDurationSeconds.WithLabelValues("get_blobs_by_list", code).Observe(duration.Seconds())
 	m.SyncClientPeerRequestsTotal.WithLabelValues(peerID, "get_blobs_by_list", code).Inc()
-	m.SyncClientPeerRequestDurationSeconds.WithLabelValues(peerID, "get_blobs_by_list", code).Observe(float64(duration) / float64(time.Second))
+	m.SyncClientPeerRequestDurationSeconds.WithLabelValues(peerID, "get_blobs_by_list", code).Observe(duration.Seconds())
 }
 
 func (m *Metrics) ClientFillEmptyBlobsEvent(count uint64, duration time.Duration) {
 	method := "fillEmpty"
 	m.SyncClientPerfCallTotal.WithLabelValues(method).Add(float64(count))
-	m.SyncClientPerfCallDurationSeconds.WithLabelValues(method).Observe(float64(duration) / float64(time.Second) / float64(count))
+	m.SyncClientPerfCallDurationSeconds.WithLabelValues(method).Observe(duration.Seconds() / float64(count))
 }
 
-func (m *Metrics) ClientOnBlobsByRange(peerID string, reqBlobCount, retBlobCount, insertedCount uint64, duration time.Duration) {
+func (m *Metrics) ClientOnBlobsByRange(peerID string, reqBlobCount, getBlobCount, insertedCount uint64, duration time.Duration) {
 	m.SyncClientState.WithLabelValues("reqBlobCount").Add(float64(reqBlobCount))
-	m.SyncClientState.WithLabelValues("retBlobCount").Add(float64(retBlobCount))
+	m.SyncClientState.WithLabelValues("getBlobCount").Add(float64(getBlobCount))
 	m.SyncClientState.WithLabelValues("insertedBlobCount").Add(float64(insertedCount))
 
 	m.SyncClientPeerState.WithLabelValues(peerID, "reqBlobCount").Add(float64(reqBlobCount))
-	m.SyncClientPeerState.WithLabelValues(peerID, "retBlobCount").Add(float64(retBlobCount))
+	m.SyncClientPeerState.WithLabelValues(peerID, "getBlobCount").Add(float64(getBlobCount))
 	m.SyncClientPeerState.WithLabelValues(peerID, "insertedBlobCount").Add(float64(insertedCount))
 
 	method := "onBlobsByRange"
 	m.SyncClientPerfCallTotal.WithLabelValues(method).Inc()
-	m.SyncClientPerfCallDurationSeconds.WithLabelValues(method).Observe(float64(duration) / float64(time.Second))
+	m.SyncClientPerfCallDurationSeconds.WithLabelValues(method).Observe(duration.Seconds())
 }
 
-func (m *Metrics) ClientOnBlobsByList(peerID string, reqCount, retBlobCount, insertedCount uint64, duration time.Duration) {
+func (m *Metrics) ClientOnBlobsByList(peerID string, reqCount, getBlobCount, insertedCount uint64, duration time.Duration) {
 	m.SyncClientState.WithLabelValues("reqBlobCount").Add(float64(reqCount))
-	m.SyncClientState.WithLabelValues("retBlobCount").Add(float64(retBlobCount))
+	m.SyncClientState.WithLabelValues("getBlobCount").Add(float64(getBlobCount))
 	m.SyncClientState.WithLabelValues("insertedBlobCount").Add(float64(insertedCount))
 
 	m.SyncClientPeerState.WithLabelValues(peerID, "reqBlobCount").Add(float64(reqCount))
-	m.SyncClientPeerState.WithLabelValues(peerID, "retBlobCount").Add(float64(retBlobCount))
+	m.SyncClientPeerState.WithLabelValues(peerID, "getBlobCount").Add(float64(getBlobCount))
 	m.SyncClientPeerState.WithLabelValues(peerID, "insertedBlobCount").Add(float64(insertedCount))
 
 	method := "onBlobsByList"
 	m.SyncClientPerfCallTotal.WithLabelValues(method).Inc()
-	m.SyncClientPerfCallDurationSeconds.WithLabelValues(method).Observe(float64(duration) / float64(time.Second))
+	m.SyncClientPerfCallDurationSeconds.WithLabelValues(method).Observe(duration.Seconds())
 }
 
 func (m *Metrics) ClientRecordTimeUsed(method string) func() {
@@ -506,19 +549,19 @@ func (m *Metrics) DecPeerCount() {
 func (m *Metrics) ServerGetBlobsByRangeEvent(peerID string, resultCode byte, duration time.Duration) {
 	code := strconv.FormatUint(uint64(resultCode), 10)
 	m.SyncServerHandleReqTotal.WithLabelValues("get_blobs_by_range", code).Inc()
-	m.SyncServerHandleReqDurationSeconds.WithLabelValues("get_blobs_by_range", code).Observe(float64(duration) / float64(time.Second))
+	m.SyncServerHandleReqDurationSeconds.WithLabelValues("get_blobs_by_range", code).Observe(duration.Seconds())
 
 	m.SyncServerHandleReqTotalPerPeer.WithLabelValues(peerID, "get_blobs_by_range", code).Inc()
-	m.SyncServerHandleReqDurationSecondsPerPeer.WithLabelValues(peerID, "get_blobs_by_range", code).Observe(float64(duration) / float64(time.Second))
+	m.SyncServerHandleReqDurationSecondsPerPeer.WithLabelValues(peerID, "get_blobs_by_range", code).Observe(duration.Seconds())
 }
 
 func (m *Metrics) ServerGetBlobsByListEvent(peerID string, resultCode byte, duration time.Duration) {
 	code := strconv.FormatUint(uint64(resultCode), 10)
 	m.SyncServerHandleReqTotal.WithLabelValues("get_blobs_by_list", code).Inc()
-	m.SyncServerHandleReqDurationSeconds.WithLabelValues("get_blobs_by_list", code).Observe(float64(duration) / float64(time.Second))
+	m.SyncServerHandleReqDurationSeconds.WithLabelValues("get_blobs_by_list", code).Observe(duration.Seconds())
 
 	m.SyncServerHandleReqTotalPerPeer.WithLabelValues(peerID, "get_blobs_by_list", code).Inc()
-	m.SyncServerHandleReqDurationSecondsPerPeer.WithLabelValues(peerID, "get_blobs_by_list", code).Observe(float64(duration) / float64(time.Second))
+	m.SyncServerHandleReqDurationSecondsPerPeer.WithLabelValues(peerID, "get_blobs_by_list", code).Observe(duration.Seconds())
 }
 
 func (m *Metrics) ServerReadBlobs(peerID string, read, sucRead uint64, timeUse time.Duration) {
@@ -529,7 +572,7 @@ func (m *Metrics) ServerReadBlobs(peerID string, read, sucRead uint64, timeUse t
 
 	method := "readBlobs"
 	m.SyncServerPerfCallTotal.WithLabelValues(method).Inc()
-	m.SyncServerPerfCallDurationSeconds.WithLabelValues(method).Observe(float64(timeUse) / float64(time.Second))
+	m.SyncServerPerfCallDurationSeconds.WithLabelValues(method).Observe(timeUse.Seconds())
 }
 
 func (m *Metrics) ServerRecordTimeUsed(method string) func() {
@@ -567,7 +610,7 @@ func (m *noopMetricer) Serve(ctx context.Context, hostname string, port int) err
 func (m *noopMetricer) SetLastKVIndexAndMaxShardId(lastL1Block, lastKVIndex uint64, maxShardId uint64) {
 }
 
-func (m *noopMetricer) SetMiningInfo(shardId uint64, difficulty, minedTime, blockMined uint64) {
+func (m *noopMetricer) SetMiningInfo(shardId uint64, difficulty, minedTime, blockMined uint64, miner common.Address, gasFee, reward uint64) {
 }
 
 func (n *noopMetricer) ClientGetBlobsByRangeEvent(peerID string, resultCode byte, duration time.Duration) {
@@ -579,11 +622,11 @@ func (n *noopMetricer) ClientGetBlobsByListEvent(peerID string, resultCode byte,
 func (n *noopMetricer) ClientFillEmptyBlobsEvent(count uint64, duration time.Duration) {
 }
 
-func (n *noopMetricer) ClientOnBlobsByRange(peerID string, reqCount, retBlobCount, insertedCount uint64, duration time.Duration) {
+func (n *noopMetricer) ClientOnBlobsByRange(peerID string, reqCount, getBlobCount, insertedCount uint64, duration time.Duration) {
 
 }
 
-func (n *noopMetricer) ClientOnBlobsByList(peerID string, reqCount, retBlobCount, insertedCount uint64, duration time.Duration) {
+func (n *noopMetricer) ClientOnBlobsByList(peerID string, reqCount, getBlobCount, insertedCount uint64, duration time.Duration) {
 }
 
 func (n *noopMetricer) ClientRecordTimeUsed(method string) func() {

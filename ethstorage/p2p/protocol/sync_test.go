@@ -1,8 +1,6 @@
 // Copyright 2022-2023, EthStorage.
 // For license information, see https://github.com/ethstorage/es-node/blob/main/LICENSE
 
-//go:build !ci
-
 package protocol
 
 import (
@@ -518,8 +516,7 @@ func TestSync_RequestL2Range(t *testing.T) {
 		shards       = make(map[common.Address][]uint64)
 		m            = metrics.NewMetrics("sync_test")
 		rollupCfg    = &rollup.EsConfig{
-			L2ChainID:     new(big.Int).SetUint64(3333),
-			MetricsEnable: false,
+			L2ChainID: new(big.Int).SetUint64(3333),
 		}
 	)
 	defer cancel()
@@ -561,7 +558,7 @@ func TestSync_RequestL2Range(t *testing.T) {
 	localHost, syncCl := createLocalHostAndSyncClient(t, testLog, rollupCfg, db, sm, m, mux)
 	syncCl.loadSyncStatus()
 	sm.Reset(0)
-	err = sm.DownloadAllMetas(16)
+	err = sm.DownloadAllMetas(context.Background(), 16)
 	if err != nil {
 		t.Fatal("Download blob metadata failed", "error", err)
 		return
@@ -591,8 +588,7 @@ func TestSync_RequestL2List(t *testing.T) {
 		shards       = make(map[common.Address][]uint64)
 		m            = metrics.NewMetrics("sync_test")
 		rollupCfg    = &rollup.EsConfig{
-			L2ChainID:     new(big.Int).SetUint64(3333),
-			MetricsEnable: false,
+			L2ChainID: new(big.Int).SetUint64(3333),
 		}
 	)
 	defer cancel()
@@ -634,7 +630,7 @@ func TestSync_RequestL2List(t *testing.T) {
 	localHost, syncCl := createLocalHostAndSyncClient(t, testLog, rollupCfg, db, sm, m, mux)
 	syncCl.loadSyncStatus()
 	sm.Reset(0)
-	err = sm.DownloadAllMetas(16)
+	err = sm.DownloadAllMetas(context.Background(), 16)
 	if err != nil {
 		t.Fatal("Download blob metadata failed", "error", err)
 		return
@@ -666,8 +662,7 @@ func TestSaveAndLoadSyncStatus(t *testing.T) {
 		m                = metrics.NewMetrics("sync_test")
 		expectedTimeUsed = time.Second * 10
 		rollupCfg        = &rollup.EsConfig{
-			L2ChainID:     new(big.Int).SetUint64(3333),
-			MetricsEnable: true,
+			L2ChainID: new(big.Int).SetUint64(3333),
 		}
 	)
 	// create ethstorage and generate data
@@ -768,8 +763,7 @@ func testSync(t *testing.T, chunkSize, kvSize, kvEntries uint64, localShards []u
 		localShardMap = make(map[common.Address][]uint64)
 		m             = metrics.NewMetrics("sync_test")
 		rollupCfg     = &rollup.EsConfig{
-			L2ChainID:     new(big.Int).SetUint64(3333),
-			MetricsEnable: true,
+			L2ChainID: new(big.Int).SetUint64(3333),
 		}
 	)
 
@@ -997,8 +991,7 @@ func TestAddPeerDuringSyncing(t *testing.T) {
 		excludedList = getRandomU64InRange(make(map[uint64]struct{}), 0, 15, 3)
 		m            = metrics.NewMetrics("sync_test")
 		rollupCfg    = &rollup.EsConfig{
-			L2ChainID:     new(big.Int).SetUint64(3333),
-			MetricsEnable: true,
+			L2ChainID: new(big.Int).SetUint64(3333),
 		}
 	)
 
@@ -1080,8 +1073,7 @@ func TestCloseSyncWhileFillEmpty(t *testing.T) {
 		shardMap    = make(map[common.Address][]uint64)
 		m           = metrics.NewMetrics("sync_test")
 		rollupCfg   = &rollup.EsConfig{
-			L2ChainID:     new(big.Int).SetUint64(3333),
-			MetricsEnable: true,
+			L2ChainID: new(big.Int).SetUint64(3333),
 		}
 	)
 
@@ -1135,8 +1127,7 @@ func TestAddPeerAfterSyncDone(t *testing.T) {
 		excludedList = make(map[uint64]struct{})
 		m            = metrics.NewMetrics("sync_test")
 		rollupCfg    = &rollup.EsConfig{
-			L2ChainID:     new(big.Int).SetUint64(3333),
-			MetricsEnable: true,
+			L2ChainID: new(big.Int).SetUint64(3333),
 		}
 	)
 
@@ -1216,8 +1207,7 @@ func TestFillEmpty(t *testing.T) {
 		shardMap    = make(map[common.Address][]uint64)
 		m           = metrics.NewMetrics("sync_test")
 		rollupCfg   = &rollup.EsConfig{
-			L2ChainID:     new(big.Int).SetUint64(3333),
-			MetricsEnable: true,
+			L2ChainID: new(big.Int).SetUint64(3333),
 		}
 	)
 
@@ -1250,7 +1240,7 @@ func TestFillEmpty(t *testing.T) {
 		l1.lastBlobIndex = l1.lastBlobIndex + rand.Uint64()%(kvEntries/4)
 		sm.Reset(1)
 	}
-	time.Sleep(5 * time.Second)
+	time.Sleep(8 * time.Second)
 
 	if len(syncCl.tasks[0].SubEmptyTasks) > 0 {
 		t.Fatalf("fill empty should be done")

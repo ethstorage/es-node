@@ -301,7 +301,7 @@ func (s *Downloader) downloadRange(start int64, end int64, toCache bool) ([]blob
 		end = start
 	}
 
-	events, err := s.l1Source.FilterLogsByBlockRange(big.NewInt(int64(start)), big.NewInt(int64(end)))
+	events, err := s.l1Source.FilterLogsByBlockRange(big.NewInt(int64(start)), big.NewInt(int64(end)), eth.PutBlobEvent)
 	if err != nil {
 		return nil, err
 	}
