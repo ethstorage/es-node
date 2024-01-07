@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethstorage/go-ethstorage/ethstorage"
 	"github.com/ethstorage/go-ethstorage/ethstorage/db"
+	"github.com/ethstorage/go-ethstorage/ethstorage/metrics"
 	"github.com/ethstorage/go-ethstorage/ethstorage/storage"
 )
 
@@ -54,6 +55,7 @@ func test_InitDB(test *testing.T, dataDir string) {
 	n := &EsNode{
 		log:        log.New("unittest"),
 		appVersion: "unittest",
+		metrics:    metrics.NoopMetrics,
 	}
 	err := n.initDatabase(&cfg)
 	if err != nil {

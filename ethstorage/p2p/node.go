@@ -43,12 +43,12 @@ type NodeP2P struct {
 // NewNodeP2P creates a new p2p node, and returns a reference to it. If the p2p is disabled, it returns nil.
 // If metrics are configured, a bandwidth monitor will be spawned in a goroutine.
 func NewNodeP2P(resourcesCtx context.Context, rollupCfg *rollup.EsConfig, l1ChainID uint64, log log.Logger, setup SetupP2P,
-	storageManager *ethstorage.StorageManager, db ethdb.Database, metrics metrics.Metricer, feed *event.Feed) (*NodeP2P, error) {
+	storageManager *ethstorage.StorageManager, db ethdb.Database, m metrics.Metricer, feed *event.Feed) (*NodeP2P, error) {
 	if setup == nil {
 		return nil, errors.New("p2p node cannot be created without setup")
 	}
 	var n NodeP2P
-	if err := n.init(resourcesCtx, rollupCfg, l1ChainID, log, setup, storageManager, db, metrics, feed); err != nil {
+	if err := n.init(resourcesCtx, rollupCfg, l1ChainID, log, setup, storageManager, db, m, feed); err != nil {
 		closeErr := n.Close()
 		if closeErr != nil {
 			log.Error("Failed to close p2p after starting with err", "closeErr", closeErr, "err", err)
