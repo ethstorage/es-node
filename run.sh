@@ -25,12 +25,6 @@ if [ ${#ES_NODE_SIGNER_PRIVATE_KEY} -ne 64 ]; then
   exit 1
 fi
 
-# install snarkjs if not
-if ! [ "$(command -v snarkjs)" ]; then
-    echo "snarkjs not found, start installing..."
-    npm install -g snarkjs
-fi
-
 # ZK prover version, 1: one proof per sample, 2: one proof for multiple samples.
 zkp_version=2
 for arg in "$@"
@@ -55,7 +49,7 @@ if [ "$zkp_version" = 1 ]; then
   zkey_name="blob_poseidon.zkey"
   file_id="1ZLfhYeCXMnbk6wUiBADRAn1mZ8MI_zg-"
 fi
-zkey_file="./build/bin/snarkjs/$zkey_name"
+zkey_file="./build/bin/snark_lib/$zkey_name"
 if [ ! -e  ${zkey_file} ]; then
   echo "${zkey_file} not found, start downloading..."
     html=`curl -c ./cookie -s -L "https://drive.google.com/uc?export=download&id=${file_id}"`

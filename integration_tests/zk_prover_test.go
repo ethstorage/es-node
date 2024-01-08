@@ -18,8 +18,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ethstorage/go-ethstorage/ethstorage/prover"
-
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
 	"github.com/crate-crypto/go-proto-danksharding-crypto/eth"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -27,11 +25,11 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethstorage/go-ethstorage/ethstorage/encoder"
+	"github.com/ethstorage/go-ethstorage/ethstorage/prover"
 )
 
 const (
 	l1ContractV1  = "0xc3208C27285ed9516F21a89053326Bb895DD78F7"
-	snarkLibDir   = "snarkjs"
 	snarkBuildDir = "snarkbuild"
 	inputName     = "input_blob_poseidon.json"
 	proofName     = "proof_blob_poseidon.json"
@@ -43,7 +41,7 @@ const (
 
 func TestZKProver_GenerateZKProofPerSample(t *testing.T) {
 	proverPath, _ := filepath.Abs(prPath)
-	zkeyFull := filepath.Join(proverPath, snarkLibDir, zkeyFile)
+	zkeyFull := filepath.Join(proverPath, prover.SnarkLib, zkeyFile)
 	if _, err := os.Stat(zkeyFull); os.IsNotExist(err) {
 		t.Fatalf("%s not found", zkeyFull)
 	}
@@ -76,7 +74,7 @@ func TestZKProver_GenerateZKProofPerSample(t *testing.T) {
 			false,
 		},
 	}
-	libDir := filepath.Join(proverPath, snarkLibDir)
+	libDir := filepath.Join(proverPath, prover.SnarkLib)
 	p := prover.NewZKProverInternal(proverPath, zkeyFile, lg)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -213,21 +211,111 @@ func verifyDecodeSample(proofBytes []byte, trunkIdx uint64, encodingKey common.H
 	return callVerify(calldata, common.HexToAddress(l1ContractV1))
 }
 
-func parseProof(data []byte) prover.ZKProof {
-	zkProof := prover.ZKProof{}
+func parseProof(data []byte) ZKProof {
+	zkProof := ZKProof{}
 	x1 := new(big.Int).SetBytes(data[:32])
 	y1 := new(big.Int).SetBytes(data[32:64])
-	zkProof.A = prover.G1Point{X: x1, Y: y1}
+	zkProof.A = G1Point{X: x1, Y: y1}
 	var x2 [2]*big.Int
 	var y2 [2]*big.Int
 	x2[0] = new(big.Int).SetBytes(data[64:96])
 	x2[1] = new(big.Int).SetBytes(data[96:128])
 	y2[0] = new(big.Int).SetBytes(data[128:160])
 	y2[1] = new(big.Int).SetBytes(data[160:192])
-	zkProof.B = prover.G2Point{X: x2, Y: y2}
+	zkProof.B = G2Point{X: x2, Y: y2}
 	x3 := new(big.Int).SetBytes(data[192:224])
 	y3 := new(big.Int).SetBytes(data[224:256])
-	zkProof.C = prover.G1Point{X: x3, Y: y3}
+	zkProof.C = G1Point{X: x3, Y: y3}
 
 	return zkProof
+}
+
+type ZKProof struct {
+	A G1Point `json:"A"`
+	B G2Point `json:"B"`
+	C G1Point `json:"C"`
+}
+
+type G1Point struct {
+	X *big.Int
+	Y *big.Int
+}
+
+func (p G1Point) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&struct {
+		X string `json:"X"`
+		Y string `json:"Y"`
+	}{
+		X: p.X.String(),
+		Y: p.Y.String(),
+	})
+}
+
+func (p *G1Point) UnmarshalJSON(b []byte) error {
+	var values struct {
+		X string `json:"X"`
+		Y string `json:"Y"`
+	}
+	err := json.Unmarshal(b, &values)
+	if err != nil {
+		fmt.Printf("Unmarshal %v\n", err)
+		return err
+	}
+	p.X = new(big.Int)
+	_, ok := p.X.SetString(values.X, 10)
+	if !ok {
+		return err
+	}
+	p.Y = new(big.Int)
+	_, ok = p.Y.SetString(values.Y, 10)
+	if !ok {
+		return err
+	}
+	return nil
+}
+
+type G2Point struct {
+	X [2]*big.Int `json:"X"`
+	Y [2]*big.Int `json:"Y"`
+}
+
+func (p *G2Point) UnmarshalJSON(b []byte) error {
+	var values struct {
+		X [2]string `json:"X"`
+		Y [2]string `json:"Y"`
+	}
+	err := json.Unmarshal(b, &values)
+	if err != nil {
+		fmt.Printf("Unmarshal %v\n", err)
+		return err
+	}
+	for j, vj := range values.X {
+		z := new(big.Int)
+		_, ok := z.SetString(vj, 10)
+		if !ok {
+			return err
+		}
+		// swap so that it can be accepted by the verifier contract
+		p.X[1-j] = z
+	}
+	for j, vj := range values.Y {
+		z := new(big.Int)
+		_, ok := z.SetString(vj, 10)
+		if !ok {
+			return err
+		}
+		// swap so that it can be accepted by the verifier contract
+		p.Y[1-j] = z
+	}
+	return nil
+}
+
+func (p G2Point) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&struct {
+		X [2]string `json:"X"`
+		Y [2]string `json:"Y"`
+	}{
+		X: [2]string{p.X[0].String(), p.X[1].String()},
+		Y: [2]string{p.Y[0].String(), p.Y[1].String()},
+	})
 }

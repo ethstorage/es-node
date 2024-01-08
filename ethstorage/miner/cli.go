@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 
 	"github.com/ethstorage/go-ethstorage/ethstorage/flags/types"
+	"github.com/ethstorage/go-ethstorage/ethstorage/prover"
 	"github.com/ethstorage/go-ethstorage/ethstorage/rollup"
 	"github.com/urfave/cli"
 )
@@ -91,7 +92,7 @@ type CLIConfig struct {
 }
 
 func (c CLIConfig) Check() error {
-	info, err := os.Stat(filepath.Join(c.ZKWorkingDir, "snarkjs"))
+	info, err := os.Stat(filepath.Join(c.ZKWorkingDir, prover.SnarkLib))
 	if err != nil {
 		if os.IsNotExist(err) || !info.IsDir() {
 			return fmt.Errorf("snarkjs folder not found in ZKWorkingDir: %v", err)
