@@ -23,7 +23,7 @@ The minimum hardware requirements for an es-node are as follows:
  - Disk: 
     - We recommend using an NVMe disk to support the full speed of sampling
     - At least 2.2TB of available storage space for the runtime and sync of one data shard
- - Internet service: At least 8 MBit/sec download speed
+ - Internet service: At least 8MB/sec download speed
 
 ## Getting started
 
