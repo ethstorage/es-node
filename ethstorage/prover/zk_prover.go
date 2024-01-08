@@ -5,7 +5,6 @@ package prover
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"math/big"
 	"os"
@@ -22,44 +21,35 @@ import (
 	"github.com/iden3/go-rapidsnark/witness/wasmer"
 )
 
-const (
-	SnarkLib  = "snark_lib"
-	wasmName  = "blob_poseidon.wasm"
-	wasm2Name = "blob_poseidon2.wasm"
-)
-
 type ZKProver struct {
-	dir, zkeyFile string
-	lg            log.Logger
-	cleanup       bool
+	calc witness.Calculator
+	zkey []byte
+	lg   log.Logger
 }
 
-func NewZKProver(workingDir, zkeyFile string, lg log.Logger) *ZKProver {
-	return newZKProver(workingDir, zkeyFile, true, lg)
-}
-
-func NewZKProverInternal(workingDir, zkeyFile string, lg log.Logger) *ZKProver {
-	return newZKProver(workingDir, zkeyFile, false, lg)
-}
-
-func newZKProver(workingDir, zkeyFile string, cleanup bool, lg log.Logger) *ZKProver {
-	path := workingDir
-	if path == "" {
-		path, _ = filepath.Abs("./")
+func NewZKProver(libDir, zkeyName, wasmName string, lg log.Logger) (*ZKProver, error) {
+	wasmBytes, err := os.ReadFile(filepath.Join(libDir, wasmName))
+	if err != nil {
+		lg.Error("Read wasm file failed", "error", err)
+		return nil, err
 	}
-	libDir := filepath.Join(path, SnarkLib)
-	if _, err := os.Stat(libDir); errors.Is(err, os.ErrNotExist) {
-		lg.Crit("Init ZK prover failed", "error", "snark lib does not exist", "dir", libDir)
+	calc, err := witness.NewCalculator(wasmBytes, witness.WithWasmEngine(wasmer.NewCircom2WitnessCalculator))
+	if err != nil {
+		return nil, err
+	}
+	zkey, err := os.ReadFile(filepath.Join(libDir, zkeyName))
+	if err != nil {
+		lg.Error("Read zkey file failed", "error", err)
+		return nil, err
 	}
 	return &ZKProver{
-		dir:      path,
-		zkeyFile: zkeyFile,
-		cleanup:  cleanup,
-		lg:       lg,
-	}
+		zkey: zkey,
+		calc: calc,
+		lg:   lg,
+	}, nil
 }
 
-// Generate ZK Proof for the given encoding keys and chunck indexes using snarkjs
+// Generate ZK Proof for the given encoding keys and chunck indexes
 func (p *ZKProver) GenerateZKProof(encodingKeys []common.Hash, sampleIdxs []uint64) ([]byte, []*big.Int, error) {
 	for i, idx := range sampleIdxs {
 		p.lg.Debug("Generate zk proof", "encodingKey", encodingKeys[i], "sampleIdx", sampleIdxs[i])
@@ -94,29 +84,30 @@ func (p *ZKProver) GenerateZKProof(encodingKeys []common.Hash, sampleIdxs []uint
 		p.lg.Error("Marshal input failed", "error", err)
 		return nil, nil, err
 	}
-	libDir := filepath.Join(p.dir, SnarkLib)
-	zkeyBytes, err := os.ReadFile(filepath.Join(libDir, p.zkeyFile))
+	parsedInputs, err := witness.ParseInputs(inputBytes)
 	if err != nil {
-		p.lg.Error("Read zkey file failed", "error", err)
+		p.lg.Error("Parse input failed", "error", err)
 		return nil, nil, err
 	}
-	wasmBytes, err := os.ReadFile(filepath.Join(libDir, wasm2Name))
+	wtnsBytes, err := p.calc.CalculateWTNSBin(parsedInputs, true)
 	if err != nil {
-		p.lg.Error("Read wasm file failed", "error", err)
+		p.lg.Error("Calculate witness failed", "error", err)
 		return nil, nil, err
 	}
-	proof, publicInputs, err := prove(inputBytes, zkeyBytes, wasmBytes)
+	proof, publicInputs, err := prover.Groth16ProverRaw(p.zkey, wtnsBytes)
 	if err != nil {
+		p.lg.Error("Prove failed", "error", err)
 		return nil, nil, err
 	}
 	masks, err := readMasks(publicInputs)
 	if err != nil {
+		p.lg.Error("Read masks failed", "error", err)
 		return nil, nil, err
 	}
 	return []byte(proof), masks, nil
 }
 
-// Generate ZK Proof for the given encoding key and chunck index using snarkjs
+// Generate ZK Proof for the given encoding key and chunck index
 func (p *ZKProver) GenerateZKProofPerSample(encodingKey common.Hash, sampleIdx uint64) ([]byte, *big.Int, error) {
 	p.lg.Debug("Generate zk proof", "encodingKey", encodingKey.Hex(), "sampleIdx", sampleIdx)
 	if int(sampleIdx) >= eth.FieldElementsPerBlob {
@@ -138,26 +129,25 @@ func (p *ZKProver) GenerateZKProofPerSample(encodingKey common.Hash, sampleIdx u
 		EncodingKeyIn: hexutil.Encode(encodingKeyMod.Bytes()),
 		XIn:           xIn.String(),
 	}
-
 	p.lg.Debug("Generate zk proof", "input", inputObj)
 	inputBytes, err := json.Marshal(inputObj)
 	if err != nil {
 		p.lg.Error("Marshal input failed", "error", err)
 		return nil, nil, err
 	}
-	libDir := filepath.Join(p.dir, SnarkLib)
-	zkeyBytes, err := os.ReadFile(filepath.Join(libDir, p.zkeyFile))
+	parsedInputs, err := witness.ParseInputs(inputBytes)
 	if err != nil {
-		p.lg.Error("Read zkey file failed", "error", err)
+		p.lg.Error("Parse input failed", "error", err)
 		return nil, nil, err
 	}
-	wasmBytes, err := os.ReadFile(filepath.Join(libDir, wasmName))
+	wtnsBytes, err := p.calc.CalculateWTNSBin(parsedInputs, true)
 	if err != nil {
-		p.lg.Error("Read wasm file failed", "error", err)
+		p.lg.Error("Calculate witness failed", "error", err)
 		return nil, nil, err
 	}
-	proof, publicInputs, err := prove(inputBytes, zkeyBytes, wasmBytes)
+	proof, publicInputs, err := prover.Groth16ProverRaw(p.zkey, wtnsBytes)
 	if err != nil {
+		p.lg.Error("Prove failed", "error", err)
 		return nil, nil, err
 	}
 	mask, err := readMask(publicInputs)
@@ -165,23 +155,6 @@ func (p *ZKProver) GenerateZKProofPerSample(encodingKey common.Hash, sampleIdx u
 		return nil, nil, err
 	}
 	return []byte(proof), mask, nil
-}
-
-func prove(inputs, zkey, wasm []byte) (string, string, error) {
-	calc, err := witness.NewCalculator(wasm,
-		witness.WithWasmEngine(wasmer.NewCircom2WitnessCalculator))
-	if err != nil {
-		return "", "", err
-	}
-	parsedInputs, err := witness.ParseInputs(inputs)
-	if err != nil {
-		return "", "", err
-	}
-	wtnsBytes, err := calc.CalculateWTNSBin(parsedInputs, true)
-	if err != nil {
-		return "", "", err
-	}
-	return prover.Groth16ProverRaw(zkey, wtnsBytes)
 }
 
 func readMasks(publicInputs string) ([]*big.Int, error) {
@@ -222,7 +195,6 @@ func readMask(publicFile string) (*big.Int, error) {
 	return mask, nil
 }
 
-// input structure used by snarkjs
 type InputPairV2 struct {
 	EncodingKeyIn []string `json:"encodingKeyIn"`
 	XIn           []string `json:"xIn"`

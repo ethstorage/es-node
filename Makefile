@@ -10,7 +10,6 @@ LDFLAGS := -ldflags "$(LDFLAGSSTRING)"
 
 es-node: build
 	cp -r ethstorage/prover/snark_lib build/bin
-	mkdir -p build/bin/snarkbuild
 
 build:
 	env GO111MODULE=on GOOS=$(TARGETOS) GOARCH=$(TARGETARCH) go build -v $(LDFLAGS) -o build/bin/es-node ./cmd/es-node/
