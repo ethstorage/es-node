@@ -32,6 +32,7 @@ type KZGPoseidonProver struct {
 // zkeyFileName specifies the zkey file name to generate snark proof
 // returns a prover that can generate a combined KZG + zk proof
 func NewKZGPoseidonProver(workingDir, zkeyFileName string, version uint64, lg log.Logger) KZGPoseidonProver {
+	// check dependencies when es-node starts
 	libDir := filepath.Join(workingDir, SnarkLib)
 	if _, err := os.Stat(libDir); errors.Is(err, os.ErrNotExist) {
 		lg.Crit("Init ZK prover failed", "error", "snark lib does not exist", "dir", libDir)
@@ -42,9 +43,9 @@ func NewKZGPoseidonProver(workingDir, zkeyFileName string, version uint64, lg lo
 	}
 	var wasmFile string
 	if version == 2 {
-		wasmFile = filepath.Join(libDir, wasm2Name)
+		wasmFile = filepath.Join(libDir, Wasm2Name)
 	} else if version == 1 {
-		wasmFile = filepath.Join(libDir, wasmName)
+		wasmFile = filepath.Join(libDir, WasmName)
 	} else {
 		lg.Crit("Init ZK prover failed", "error", "invalid version", "version", version)
 	}
@@ -78,7 +79,7 @@ func (p *KZGPoseidonProver) GetStorageProof(data [][]byte, encodingKeys []common
 	var zkProofs [][]byte
 	var masks []*big.Int
 	if p.version == 1 {
-		prvr, err := NewZKProver(p.libDir, p.zkey, wasmName, p.lg)
+		prvr, err := NewZKProver(p.libDir, p.zkey, WasmName, p.lg)
 		if err != nil {
 			return nil, nil, nil, err
 		}
@@ -91,7 +92,7 @@ func (p *KZGPoseidonProver) GetStorageProof(data [][]byte, encodingKeys []common
 			masks = append(masks, mask)
 		}
 	} else if p.version == 2 {
-		prvr, err := NewZKProver(p.libDir, p.zkey, wasm2Name, p.lg)
+		prvr, err := NewZKProver(p.libDir, p.zkey, Wasm2Name, p.lg)
 		if err != nil {
 			return nil, nil, nil, err
 		}

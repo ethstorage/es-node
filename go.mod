@@ -56,7 +56,7 @@ require (
 	github.com/hashicorp/golang-lru/arc/v2 v2.0.5 // indirect
 	github.com/herumi/bls-eth-go-binary v1.28.1 // indirect
 	github.com/huin/goupnp v1.3.0 // indirect
-	github.com/iden3/go-rapidsnark/types v0.0.2 // indirect
+	github.com/iden3/go-rapidsnark/types v0.0.3 // indirect
 	github.com/iden3/go-rapidsnark/witness/v2 v2.0.0 // indirect
 	github.com/iden3/wasmer-go v0.0.1 // indirect
 	github.com/jackpal/go-nat-pmp v1.0.2 // indirect
