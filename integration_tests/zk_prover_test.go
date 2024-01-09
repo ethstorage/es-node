@@ -7,11 +7,13 @@ package integration
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"math/big"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
@@ -27,18 +29,18 @@ import (
 const (
 	l1ContractV1 = "0xc3208C27285ed9516F21a89053326Bb895DD78F7"
 	prPath       = "../ethstorage/prover"
-	zkeyFile     = "blob_poseidon.zkey"
+	zkeyName     = "blob_poseidon.zkey"
 )
 
 func TestZKProver_GenerateZKProofPerSample(t *testing.T) {
 	proverPath, _ := filepath.Abs(prPath)
-	zkeyFull := filepath.Join(proverPath, prover.SnarkLib, zkeyFile)
+	zkeyFull := filepath.Join(proverPath, prover.SnarkLib, zkeyName)
 	if _, err := os.Stat(zkeyFull); os.IsNotExist(err) {
 		t.Fatalf("%s not found", zkeyFull)
 	}
 	type args struct {
 		encodingKey common.Hash
-		chunkIdx    uint64
+		sampleIdx   uint64
 	}
 	tests := []struct {
 		name    string
@@ -48,36 +50,56 @@ func TestZKProver_GenerateZKProofPerSample(t *testing.T) {
 	}{
 		{
 			"test chunk 0",
-			args{encodingKey: common.HexToHash("0x1"), chunkIdx: 0},
+			args{encodingKey: common.HexToHash("0x1"), sampleIdx: 0},
 			"1",
 			false,
 		},
 		{
 			"test chunk 2222",
-			args{encodingKey: common.HexToHash("0x22222222222"), chunkIdx: 2222},
+			args{encodingKey: common.HexToHash("0x22222222222"), sampleIdx: 2222},
 			"13571350061658342048390665596699168162893949286891081722317471185110722978977",
 			false,
 		},
 		{
 			"test chunk 4095",
-			args{encodingKey: common.HexToHash("0x1e88fb83944b20562a100533d0521b90bf7df7cc6e0aaa1c46482b67c7b370ab"), chunkIdx: 4095},
+			args{encodingKey: common.HexToHash("0x1e88fb83944b20562a100533d0521b90bf7df7cc6e0aaa1c46482b67c7b370ab"), sampleIdx: 4095},
 			"12199007973319674300030596965685270475268514105269206407619072166392043015767",
 			false,
 		},
 	}
 	libDir := filepath.Join(proverPath, prover.SnarkLib)
-	p, err := prover.NewZKProver(libDir, zkeyFile, prover.WasmName, lg)
+	p, err := prover.NewZKProver(libDir, zkeyName, prover.WasmName, lg)
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			maskGo, err := GenerateMask(tt.args.encodingKey, tt.args.chunkIdx)
+			inputBytes, err := p.GenerateInput(tt.args.encodingKey, tt.args.sampleIdx)
+			if err != nil {
+				t.Errorf("ZKProver.GenerateInput() error = %v", err)
+				return
+			}
+			var inputs map[string]interface{}
+			err = json.Unmarshal(inputBytes, &inputs)
+			if err != nil {
+				t.Errorf("ZKProver.GenerateInput() error = %v", err)
+				return
+			}
+			intputStr, ok := inputs["xIn"].(string)
+			if !ok {
+				t.Errorf("ZKProver.GenerateInput() type: %v, want string", reflect.TypeOf(inputs["xIn"]))
+				return
+			}
+			if intputStr != tt.xIn {
+				t.Errorf("ZKProver.GenerateInput() xIn = %v, want %v", inputs["xIn"], tt.xIn)
+				return
+			}
+			maskGo, err := GenerateMask(tt.args.encodingKey, tt.args.sampleIdx)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GenerateMask() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			proofRaw, mask, err := p.GenerateZKProofPerSample(tt.args.encodingKey, tt.args.chunkIdx)
+			proofRaw, mask, err := p.GenerateZKProofPerSample(tt.args.encodingKey, tt.args.sampleIdx)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ZKProver.GenerateZKProofPerSample() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -86,7 +108,7 @@ func TestZKProver_GenerateZKProofPerSample(t *testing.T) {
 				t.Errorf("ZKProver.GenerateZKProofPerSample() mask = %v, GenerateMask %v", mask, maskGo)
 				return
 			}
-			err = verifyDecodeSample(proofRaw, tt.args.chunkIdx, tt.args.encodingKey, mask)
+			err = verifyDecodeSample(proofRaw, tt.args.sampleIdx, tt.args.encodingKey, mask)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ZKProver.GenerateZKProofPerSample() verifyDecodeSample err: %v", err)
 				return
@@ -158,8 +180,14 @@ func verifyDecodeSample(proofBytes []byte, trunkIdx uint64, encodingKey common.H
 	return callVerify(calldata, common.HexToAddress(l1ContractV1))
 }
 
-func parseProof(data []byte) prover.ZKProof {
-	zkProof := prover.ZKProof{}
+type ZKProof struct {
+	A prover.G1Point `json:"A"`
+	B prover.G2Point `json:"B"`
+	C prover.G1Point `json:"C"`
+}
+
+func parseProof(data []byte) ZKProof {
+	zkProof := ZKProof{}
 	x1 := new(big.Int).SetBytes(data[:32])
 	y1 := new(big.Int).SetBytes(data[32:64])
 	zkProof.A = prover.G1Point{X: x1, Y: y1}

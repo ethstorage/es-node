@@ -7,6 +7,7 @@ package integration
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"os"
@@ -52,17 +53,24 @@ func TestZKProver_GenerateZKProof(t *testing.T) {
 		return
 	}
 	t.Run("zk test", func(t *testing.T) {
-		inputs, err := p.GenerateInputs(encodingKeys, sampleIdxs)
+		inputsBytes, err := p.GenerateInputs(encodingKeys, sampleIdxs)
+		if err != nil {
+			t.Errorf("ZKProver.GenerateInputs() error = %v", err)
+			return
+		}
+		var inputs map[string]interface{}
+		err = json.Unmarshal(inputsBytes, &inputs)
 		if err != nil {
 			t.Errorf("ZKProver.GenerateInputs() error = %v", err)
 			return
 		}
 		vxIn, ok := inputs["xIn"].([]interface{})
 		if !ok {
-			t.Errorf("ZKProver.GenerateInputs(): invalid inputs")
+			t.Errorf("ZKProver.GenerateInputs() type: %v, want []interface{}", reflect.TypeOf(inputs["xIn"]))
+			return
 		}
 		for i, xIn := range xIns {
-			if reflect.DeepEqual(vxIn[i], xIn) {
+			if vxIn[i] != xIn {
 				t.Errorf("ZKProver.GenerateInputs() xIn = %v, want %v", inputs["xIn"], xIns)
 				return
 			}
@@ -72,7 +80,6 @@ func TestZKProver_GenerateZKProof(t *testing.T) {
 			t.Errorf("ZKProver.GenerateZKProof() error = %v ", err)
 			return
 		}
-		t.Logf("proof: %+v", proof)
 		for i, encodingKey := range encodingKeys {
 			maskGo, err := GenerateMask(encodingKey, sampleIdxs[i])
 			if err != nil {

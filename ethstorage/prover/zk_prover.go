@@ -20,7 +20,7 @@ import (
 	"github.com/iden3/go-rapidsnark/prover"
 	"github.com/iden3/go-rapidsnark/types"
 	"github.com/iden3/go-rapidsnark/witness/v2"
-	"github.com/iden3/go-rapidsnark/witness/wasmer"
+	"github.com/iden3/go-rapidsnark/witness/wazero"
 )
 
 type ZKProver struct {
@@ -35,8 +35,9 @@ func NewZKProver(libDir, zkeyName, wasmName string, lg log.Logger) (*ZKProver, e
 		lg.Error("Read wasm file failed", "error", err)
 		return nil, err
 	}
-	calc, err := witness.NewCalculator(wasmBytes, witness.WithWasmEngine(wasmer.NewCircom2WitnessCalculator))
+	calc, err := witness.NewCalculator(wasmBytes, witness.WithWasmEngine(wazero.NewCircom2WZWitnessCalculator))
 	if err != nil {
+		lg.Error("Create witness calculator failed", "error", err)
 		return nil, err
 	}
 	zkey, err := os.ReadFile(filepath.Join(libDir, zkeyName))
@@ -51,78 +52,6 @@ func NewZKProver(libDir, zkeyName, wasmName string, lg log.Logger) (*ZKProver, e
 	}, nil
 }
 
-// Generate ZK Proof for the given encoding keys and sample indexes
-func (p *ZKProver) GenerateZKProof(encodingKeys []common.Hash, sampleIdxs []uint64) ([]byte, []*big.Int, error) {
-	for i, idx := range sampleIdxs {
-		p.lg.Debug("Generate zk proof", "encodingKey", encodingKeys[i], "sampleIdx", sampleIdxs[i])
-		if int(idx) >= eth.FieldElementsPerBlob {
-			return nil, nil, fmt.Errorf("chunk index out of scope: %d", idx)
-		}
-	}
-	start := time.Now()
-	defer func(start time.Time) {
-		dur := time.Since(start)
-		p.lg.Info("Generate zk proof done", "sampleIdx", sampleIdxs, "took(sec)", dur.Seconds())
-	}(start)
-
-	parsedInputs, err := p.GenerateInputs(encodingKeys, sampleIdxs)
-	if err != nil {
-		p.lg.Error("Generate inputs failed", "error", err)
-		return nil, nil, err
-	}
-	wtnsBytes, err := p.calc.CalculateWTNSBin(parsedInputs, true)
-	if err != nil {
-		p.lg.Error("Calculate witness failed", "error", err)
-		return nil, nil, err
-	}
-	proofRaw, publicInputs, err := prover.Groth16ProverRaw(p.zkey, wtnsBytes)
-	if err != nil {
-		p.lg.Error("Prove failed", "error", err)
-		return nil, nil, err
-	}
-	proof, err := readProof(proofRaw)
-	if err != nil {
-		p.lg.Error("Read proof failed", "error", err)
-		return nil, nil, err
-	}
-	p.lg.Debug("Proof generated", "proof", proof)
-	masks, err := readMasks(publicInputs)
-	if err != nil {
-		p.lg.Error("Read masks failed", "error", err)
-		return nil, nil, err
-	}
-	return proof, masks, nil
-}
-func (p *ZKProver) GenerateInputs(encodingKeys []common.Hash, sampleIdxs []uint64) (map[string]interface{}, error) {
-	var encodingKeyModStr, xInStr []string
-	for i, sampleIdx := range sampleIdxs {
-		var b fr.Element
-		var exp big.Int
-		exp.Div(exp.Sub(fr.Modulus(), common.Big1), big.NewInt(int64(eth.FieldElementsPerBlob)))
-		ru := b.Exp(*b.SetInt64(5), &exp)
-		xIn := ru.Exp(*ru, new(big.Int).SetUint64(sampleIdx))
-		xInStr = append(xInStr, xIn.String())
-		encodingKeyMod := fr.Modulus().Mod(encodingKeys[i].Big(), fr.Modulus())
-		encodingKeyModStr = append(encodingKeyModStr, hexutil.Encode(encodingKeyMod.Bytes()))
-	}
-	inputObj := InputPairV2{
-		EncodingKeyIn: encodingKeyModStr,
-		XIn:           xInStr,
-	}
-	p.lg.Debug("Generate zk proof", "input", inputObj)
-	inputBytes, err := json.Marshal(inputObj)
-	if err != nil {
-		p.lg.Error("Marshal input failed", "error", err)
-		return nil, err
-	}
-	parsedInputs, err := witness.ParseInputs(inputBytes)
-	if err != nil {
-		p.lg.Error("Parse input failed", "error", err)
-		return nil, err
-	}
-	return parsedInputs, nil
-}
-
 // Generate ZK Proof for the given encoding key and sample index
 func (p *ZKProver) GenerateZKProofPerSample(encodingKey common.Hash, sampleIdx uint64) ([]byte, *big.Int, error) {
 	p.lg.Debug("Generate zk proof", "encodingKey", encodingKey.Hex(), "sampleIdx", sampleIdx)
@@ -132,9 +61,28 @@ func (p *ZKProver) GenerateZKProofPerSample(encodingKey common.Hash, sampleIdx u
 	start := time.Now()
 	defer func(start time.Time) {
 		dur := time.Since(start)
-		p.lg.Info("Generate zk proof", "sampleIdx", sampleIdx, "took(sec)", dur.Seconds())
+		p.lg.Info("Generate zk proof", "sampleIdx", sampleIdx, "timeUsed(s)", dur.Seconds())
 	}(start)
 
+	inputBytes, err := p.GenerateInput(encodingKey, sampleIdx)
+	if err != nil {
+		p.lg.Error("Generate inputs failed", "error", err)
+		return nil, nil, err
+	}
+	proof, publicInputs, err := p.prove(inputBytes)
+	if err != nil {
+		p.lg.Error("Prove failed", "error", err)
+		return nil, nil, err
+	}
+	mask, err := readMask(publicInputs)
+	if err != nil {
+		return nil, nil, err
+	}
+	p.lg.Debug("Generate zk proof", "mask", mask)
+	return proof, mask, nil
+}
+
+func (p *ZKProver) GenerateInput(encodingKey common.Hash, sampleIdx uint64) ([]byte, error) {
 	var b fr.Element
 	var exp big.Int
 	exp.Div(exp.Sub(fr.Modulus(), common.Big1), big.NewInt(int64(eth.FieldElementsPerBlob)))
@@ -146,37 +94,32 @@ func (p *ZKProver) GenerateZKProofPerSample(encodingKey common.Hash, sampleIdx u
 		XIn:           xIn.String(),
 	}
 	p.lg.Debug("Generate zk proof", "input", inputObj)
-	inputBytes, err := json.Marshal(inputObj)
-	if err != nil {
-		p.lg.Error("Marshal input failed", "error", err)
-		return nil, nil, err
-	}
+	return json.Marshal(inputObj)
+}
+
+func (p *ZKProver) prove(inputBytes []byte) ([]byte, string, error) {
 	parsedInputs, err := witness.ParseInputs(inputBytes)
 	if err != nil {
 		p.lg.Error("Parse input failed", "error", err)
-		return nil, nil, err
+		return nil, "", err
 	}
 	wtnsBytes, err := p.calc.CalculateWTNSBin(parsedInputs, true)
 	if err != nil {
 		p.lg.Error("Calculate witness failed", "error", err)
-		return nil, nil, err
+		return nil, "", err
 	}
 	proofRaw, publicInputs, err := prover.Groth16ProverRaw(p.zkey, wtnsBytes)
 	if err != nil {
 		p.lg.Error("Prove failed", "error", err)
-		return nil, nil, err
+		return nil, "", err
 	}
+	p.lg.Debug("Generate zk proof", "publicInputs", publicInputs)
 	proof, err := readProof(proofRaw)
 	if err != nil {
 		p.lg.Error("Read proof failed", "error", err)
-		return nil, nil, err
+		return nil, "", err
 	}
-	mask, err := readMask(publicInputs)
-	if err != nil {
-		return nil, nil, err
-	}
-	p.lg.Debug("Generate zk proof", "mask", mask)
-	return proof, mask, nil
+	return proof, publicInputs, nil
 }
 
 func readProof(proofRaw string) ([]byte, error) {
@@ -211,22 +154,6 @@ func readProof(proofRaw string) ([]byte, error) {
 	return packed, nil
 }
 
-func readMasks(publicInputs string) ([]*big.Int, error) {
-	var output []string
-	if err := json.Unmarshal([]byte(publicInputs), &output); err != nil {
-		return nil, err
-	}
-	var masks []*big.Int
-	for _, v := range output {
-		mask, ok := new(big.Int).SetString(v, 0)
-		if !ok {
-			return masks, fmt.Errorf("invalid mask %v", v)
-		}
-		masks = append(masks, mask)
-	}
-	return masks, nil
-}
-
 func readMask(publicInputs string) (*big.Int, error) {
 	var output []string
 	if err := json.Unmarshal([]byte(publicInputs), &output); err != nil {
@@ -240,11 +167,6 @@ func readMask(publicInputs string) (*big.Int, error) {
 		return nil, fmt.Errorf("invalid mask")
 	}
 	return mask, nil
-}
-
-type InputPairV2 struct {
-	EncodingKeyIn []string `json:"encodingKeyIn"`
-	XIn           []string `json:"xIn"`
 }
 
 type InputPair struct {
@@ -283,12 +205,6 @@ func toG2Point(s [][]string) (G2Point, error) {
 		}
 	}
 	return G2Point{x, y}, nil
-}
-
-type ZKProof struct {
-	A G1Point `json:"A"`
-	B G2Point `json:"B"`
-	C G1Point `json:"C"`
 }
 
 type G1Point struct {

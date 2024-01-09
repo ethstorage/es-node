@@ -68,6 +68,7 @@ require (
 	github.com/stretchr/testify v1.8.4 // indirect
 	github.com/supranational/blst v0.3.11 // indirect
 	github.com/syndtr/goleveldb v1.0.1-0.20220614013038-64ee5596c38a // indirect
+	github.com/tetratelabs/wazero v1.1.0 // indirect
 	github.com/tyler-smith/go-bip39 v1.1.0 // indirect
 	github.com/urfave/cli/v2 v2.25.7 // indirect
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
@@ -108,6 +109,7 @@ require (
 	github.com/hashicorp/golang-lru/v2 v2.0.5
 	github.com/iden3/go-rapidsnark/prover v0.0.10
 	github.com/iden3/go-rapidsnark/witness/wasmer v0.0.0-20230524142950-0986cf057d4e
+	github.com/iden3/go-rapidsnark/witness/wazero v0.0.1
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/ipfs/go-cid v0.4.1 // indirect
 	github.com/ipfs/go-ds-leveldb v0.5.0
