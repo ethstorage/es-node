@@ -251,7 +251,7 @@ func (n *EsNode) initMiner(ctx context.Context, cfg *Config) error {
 	pvr := prover.NewKZGPoseidonProver(
 		cfg.Mining.ZKWorkingDir,
 		cfg.Mining.ZKeyFileName,
-		cfg.Mining.ZKProverVersion,
+		cfg.Mining.ZKProverMode,
 		n.log,
 	)
 	n.miner = miner.New(cfg.Mining, n.storageManager, l1api, &pvr, n.feed, n.log)

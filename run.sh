@@ -3,7 +3,7 @@
 # usage:
 # env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> ./run.sh
 # for one zk proof per sample (if the storage contract supports):
-# env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> ./run.sh --miner.zk-prover-version 1
+# env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> ./run.sh --miner.zk-prover-mode 1
 
 if [ -z "$ES_NODE_STORAGE_MINER" ]; then
   echo "Please provide 'ES_NODE_STORAGE_MINER' as an environment variable"
@@ -36,12 +36,12 @@ zkp_version=2
 for arg in "$@"
 do
   case "$arg" in
-    --miner.zk-prover-version)
+    --miner.zk-prover-mode)
       shift
       zkp_version="$1"
       break
       ;;
-    --miner.zk-prover-version=*)
+    --miner.zk-prover-mode=*)
       zkp_version="${arg#*=}"
       ;;
   esac
@@ -58,7 +58,7 @@ fi
 zkey_file="./build/bin/snarkjs/$zkey_name"
 if [ ! -e  ${zkey_file} ]; then
   echo "${zkey_file} not found, start downloading..."
-    html=`curl -c ./cookie -s -L "https://drive.google.com/uc?export=download&id=${file_id}"`
+  html=`curl -c ./cookie -s -L "https://drive.google.com/uc?export=download&id=${file_id}"`
   curl -Lb ./cookie "https://drive.google.com/uc?export=download&`echo ${html}|grep -Eo 'confirm=[a-zA-Z0-9\-_]+'`&id=${file_id}" -o ${zkey_file}
   rm cookie
 fi
