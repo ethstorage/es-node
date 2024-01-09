@@ -64,7 +64,7 @@ func CLIFlags(envPrefix string) []cli.Flag {
 			EnvVar: rollup.PrefixEnvVar(envPrefix, "ZK_WORKING_DIR"),
 		},
 		cli.Uint64Flag{
-			Name:   ZKProverVersionFlagName,
+			Name:   ZKProverModeFlagName,
 			Usage:  "ZK prover version, 1: one proof per sample, 2: one proof for multiple samples. Default: 2",
 			Value:  DefaultConfig.ZKProverMode,
 			EnvVar: rollup.PrefixEnvVar(envPrefix, "ZK_PROVER_VERSION"),
