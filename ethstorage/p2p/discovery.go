@@ -23,6 +23,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/libp2p/go-libp2p/p2p/net/nat"
 	"github.com/multiformats/go-multiaddr"
 	ma "github.com/multiformats/go-multiaddr"
 )
@@ -49,23 +50,6 @@ func (conf *Config) Discovery(log log.Logger, l1ChainID uint64, tcpPort uint16, 
 	// use the geth curve definition. Same crypto, but geth needs to detect it as *their* definition of the curve.
 	priv.Curve = gcrypto.S256()
 	localNode := enode.NewLocalNode(conf.DiscoveryDB, priv)
-	if conf.AdvertiseIP != nil {
-		localNode.SetStaticIP(conf.AdvertiseIP)
-	} else {
-		for _, addr := range addrs {
-			ipStr, err := addr.ValueForProtocol(4)
-			if err != nil {
-				continue
-			}
-			ip := net.ParseIP(ipStr)
-			if ip.IsPrivate() || ip.IsLoopback() {
-				continue
-			}
-			localNode.SetStaticIP(ip)
-			break
-		}
-		// TODO: if no external IP found, use NAT protocol to find external IP
-	}
 	if conf.AdvertiseUDPPort != 0 { // explicitly advertised port gets priority
 		localNode.SetFallbackUDP(int(conf.AdvertiseUDPPort))
 	} else if conf.ListenUDPPort != 0 { // otherwise default to the port we configured it to listen on
@@ -79,6 +63,40 @@ func (conf *Config) Discovery(log log.Logger, l1ChainID uint64, tcpPort uint16, 
 		localNode.Set(enr.TCP(conf.ListenTCPPort))
 	} else {
 		return nil, nil, fmt.Errorf("no TCP port to put in discovery record")
+	}
+	if conf.AdvertiseIP != nil {
+		localNode.SetStaticIP(conf.AdvertiseIP)
+	} else {
+		end := false
+		for _, addr := range addrs {
+			ipStr, err := addr.ValueForProtocol(4)
+			if err != nil {
+				continue
+			}
+			ip := net.ParseIP(ipStr)
+			if ip.IsPrivate() || ip.IsLoopback() {
+				continue
+			}
+			localNode.SetStaticIP(ip)
+			end = true
+			break
+		}
+
+		if !end {
+			intTcpPort := localNode.Node().TCP()
+			intUdpPort := localNode.Node().UDP()
+			ip, extTcpPort, extUdpPort, err := addNATMappings(intTcpPort, intUdpPort)
+
+			if err == nil && !ip.IsPrivate() && !ip.IsLoopback() {
+				localNode.SetStaticIP(ip)
+				localNode.Set(enr.TCP(extTcpPort))
+				localNode.Set(enr.UDP(extUdpPort))
+				log.Info("Add mappings to NAT", "external IP", ip.String(), "internal tcp port", intTcpPort,
+					"external tcp port", extTcpPort, "internal udp port", intUdpPort, "external udp port", extUdpPort)
+			} else {
+				log.Warn("Add mappings to NAT fail", "error", err.Error())
+			}
+		}
 	}
 	dat := protocol.EthStorageENRData{
 		ChainID: l1ChainID,
@@ -147,6 +165,40 @@ func (v *Secp256k1) DecodeRLP(s *rlp.Stream) error {
 	}
 	*v = (Secp256k1)(*pk)
 	return nil
+}
+
+func addNATMappings(tcpPort, udpPort int) (net.IP, uint16, uint16, error) {
+	ctx := context.Background()
+	n, err := nat.DiscoverNAT(ctx)
+	if err != nil {
+		return nil, 0, 0, fmt.Errorf("no external address set to ENR as no NAT service found: %s", err.Error())
+	}
+	err = n.AddMapping(ctx, "tcp", tcpPort)
+	if err != nil {
+		return nil, 0, 0, fmt.Errorf("fail to add tcpMapping for tcp port to NAT: %s", err.Error())
+	}
+	err = n.AddMapping(ctx, "udp", udpPort)
+	if err != nil {
+		return nil, 0, 0, fmt.Errorf("fail to add tcpMapping for udp port to NAT: %s", err.Error())
+	}
+
+	tcpMapping, foundTcp := n.GetMapping("tcp", tcpPort)
+	if !foundTcp {
+		return nil, 0, 0, fmt.Errorf("fail to get tcpMapping for tcp port %d from NAT", tcpPort)
+	}
+	udpMapping, foundUdp := n.GetMapping("udp", udpPort)
+	if !foundUdp {
+		return nil, 0, 0, fmt.Errorf("fail to get udpMapping for udp port %d from NAT", udpPort)
+	}
+	addr := net.IP(tcpMapping.Addr().AsSlice())
+	if err != nil {
+		return nil, 0, 0, fmt.Errorf("get external IP from NAT fail: %s", err.Error())
+	}
+	if addr.IsLoopback() || addr.IsPrivate() {
+		return nil, 0, 0, fmt.Errorf("NAT address is not external IP")
+	}
+
+	return addr, tcpMapping.Port(), udpMapping.Port(), nil
 }
 
 func enrToAddrInfo(r *enode.Node) (*peer.AddrInfo, *crypto.Secp256k1PublicKey, error) {
