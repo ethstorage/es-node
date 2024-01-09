@@ -157,10 +157,10 @@ func uploadBlob(t *testing.T, data []byte) common.Hash {
 	return dataHash
 }
 
-func verifyInclusive(trunkIdx uint64, peInput []byte) error {
+func verifyInclusive(sampleIdx uint64, peInput []byte) error {
 	dataHash := common.Hash{}
 	copy(dataHash[:], peInput[:24])
-	index := new(big.Int).SetInt64(int64(trunkIdx))
+	index := new(big.Int).SetInt64(int64(sampleIdx))
 	decodedData := new(big.Int).SetBytes(peInput[64:96])
 	h := crypto.Keccak256Hash([]byte("checkInclusive(bytes32,uint256,uint256,bytes)"))
 	mid := h[0:4]

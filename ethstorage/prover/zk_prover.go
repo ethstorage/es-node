@@ -56,7 +56,7 @@ func NewZKProver(libDir, zkeyName, wasmName string, lg log.Logger) (*ZKProver, e
 func (p *ZKProver) GenerateZKProofPerSample(encodingKey common.Hash, sampleIdx uint64) ([]byte, *big.Int, error) {
 	p.lg.Debug("Generate zk proof", "encodingKey", encodingKey.Hex(), "sampleIdx", sampleIdx)
 	if int(sampleIdx) >= eth.FieldElementsPerBlob {
-		return nil, nil, fmt.Errorf("chunk index out of scope: %d", sampleIdx)
+		return nil, nil, fmt.Errorf("sample index out of scope: %d", sampleIdx)
 	}
 	start := time.Now()
 	defer func(start time.Time) {

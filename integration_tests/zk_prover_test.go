@@ -132,7 +132,7 @@ func GenerateMask(encodingKey common.Hash, chunkIdx uint64) (*big.Int, error) {
 	return new(big.Int).SetBytes(mask), nil
 }
 
-func verifyDecodeSample(proofBytes []byte, trunkIdx uint64, encodingKey common.Hash, mask *big.Int) error {
+func verifyDecodeSample(proofBytes []byte, sampleIdx uint64, encodingKey common.Hash, mask *big.Int) error {
 	ctx := context.Background()
 	client, err := ethclient.DialContext(ctx, l1Endpoint)
 	if err != nil {
@@ -141,7 +141,7 @@ func verifyDecodeSample(proofBytes []byte, trunkIdx uint64, encodingKey common.H
 	defer client.Close()
 
 	encodingKeyBN := new(big.Int).SetBytes(encodingKey[:])
-	indexBN := new(big.Int).SetInt64(int64(trunkIdx))
+	indexBN := new(big.Int).SetInt64(int64(sampleIdx))
 	h := crypto.Keccak256Hash([]byte("decodeSample(((uint256,uint256),(uint256[2],uint256[2]),(uint256,uint256)),uint256,uint256,uint256)"))
 	uintType, _ := abi.NewType("uint256", "", nil)
 	proofType, _ := abi.NewType("tuple", "", []abi.ArgumentMarshaling{
