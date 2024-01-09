@@ -87,7 +87,7 @@ func (conf *Config) Discovery(log log.Logger, l1ChainID uint64, tcpPort uint16, 
 			intUdpPort := localNode.Node().UDP()
 			ip, extTcpPort, extUdpPort, err := addNATMappings(intTcpPort, intUdpPort)
 
-			if err == nil {
+			if err == nil && !ip.IsPrivate() && !ip.IsLoopback() {
 				localNode.SetStaticIP(ip)
 				localNode.Set(enr.TCP(extTcpPort))
 				localNode.Set(enr.UDP(extUdpPort))
