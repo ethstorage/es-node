@@ -3,7 +3,7 @@
 # usage:
 # env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> ./run.sh
 # for one zk proof per sample (if the storage contract supports):
-# env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> ./run.sh --miner.zk-prover-version 1
+# env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> ./run.sh --miner.zk-prover-mode 1
 
 if [ -z "$ES_NODE_STORAGE_MINER" ]; then
   echo "Please provide 'ES_NODE_STORAGE_MINER' as an environment variable"
@@ -31,34 +31,40 @@ if ! [ "$(command -v snarkjs)" ]; then
     npm install -g snarkjs
 fi
 
-# ZK prover version, 1: one proof per sample, 2: one proof for multiple samples.
-zkp_version=2
+# ZK prover mode, 1: one proof per sample, 2: one proof for multiple samples.
+zkp_mode=2
 for arg in "$@"
 do
   case "$arg" in
-    --miner.zk-prover-version)
+    --miner.zk-prover-mode)
       shift
-      zkp_version="$1"
+      zkp_mode="$1"
       break
       ;;
-    --miner.zk-prover-version=*)
-      zkp_version="${arg#*=}"
+    --miner.zk-prover-mode=*)
+      zkp_mode="${arg#*=}"
       ;;
   esac
 done
-echo "zk prover version is $zkp_version"
+
+if [ "$zkp_mode" != 1 ] && [ "$zkp_mode" != 2 ]; then
+  echo "zk prover mode can only be 1 or 2"
+  exit 1  
+fi
+
+echo "zk prover mode is $zkp_mode"
 
 # download zkey if not yet
 zkey_name="blob_poseidon2.zkey"
 file_id="1V3QkMpk5UC48Jc62nHXMgzeMb6KE8JRY"
-if [ "$zkp_version" = 1 ]; then
+if [ "$zkp_mode" = 1 ]; then
   zkey_name="blob_poseidon.zkey"
   file_id="1ZLfhYeCXMnbk6wUiBADRAn1mZ8MI_zg-"
 fi
 zkey_file="./build/bin/snarkjs/$zkey_name"
 if [ ! -e  ${zkey_file} ]; then
   echo "${zkey_file} not found, start downloading..."
-    html=`curl -c ./cookie -s -L "https://drive.google.com/uc?export=download&id=${file_id}"`
+  html=`curl -c ./cookie -s -L "https://drive.google.com/uc?export=download&id=${file_id}"`
   curl -Lb ./cookie "https://drive.google.com/uc?export=download&`echo ${html}|grep -Eo 'confirm=[a-zA-Z0-9\-_]+'`&id=${file_id}" -o ${zkey_file}
   rm cookie
 fi
@@ -90,7 +96,8 @@ es_node_start=" --network devnet \
   --p2p.max.request.size 4194304 \
   --p2p.sync.concurrency 32 \
   --p2p.bootnodes enr:-Li4QPFCNc7mLPqxoVrk1eKB0qa5hb8H75IBwhvdSGGdamx1egKibkKO1v1rtLt7r3pJvoVxv95ITlpSphYCAsunU6qGAYwkwuOpimV0aHN0b3JhZ2XbAYDY15S0tGvaqDX45LTY4gi2VZzSZ4UQUcGAgmlkgnY0gmlwhEFtcySJc2VjcDI1NmsxoQM9rkUZ7qWoJQT2UVrPzDRzmLqDrxCSR4zC4db-lgz1bYN0Y3CCJAaDdWRwgnZh \
-"
+  $@"
+  
 # create data file for shard 0 if not yet
 if [ ! -e $storage_file_0 ]; then
   if $executable $es_node_init $common_flags ; then

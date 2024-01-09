@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"context"
 	"math/big"
+	"os"
 	"testing"
 
 	"github.com/ethereum/go-ethereum"
@@ -22,7 +23,7 @@ import (
 	"github.com/ethstorage/go-ethstorage/ethstorage/prover"
 )
 
-var kzgContract = common.HexToAddress("0x1ba144ad60008A66956e8C00AB2057a7db2c8d55")
+var kzgContract = common.HexToAddress(os.Getenv("ES_NODE_STORAGE_L1CONTRACT_KZG"))
 
 func TestKZGProver_GenerateKZGProof(t *testing.T) {
 	lg.Info("KZG prover test", "contract", kzgContract)
