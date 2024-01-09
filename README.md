@@ -81,9 +81,10 @@ The full list of options that you can use to configure an es-node are as follows
 |`--miner.enabled`|Storage mining enabled|||
 |`--miner.gas-price`|Gas price for mining transactions|||
 |`--miner.priority-gas-price`|Priority gas price for mining transactions|||
+|`--miner.zk-prover-version value`|ZK prover version, 1: one proof per sample, 2: one proof for multiple samples|`2`||
 |`--miner.threads-per-shard`|Number of threads per shard|`runtime.NumCPU() x 2`||
 |`--miner.zk-working-dir`|Path to the snarkjs folder|`build/bin`||
-|`--miner.zkey`|zkey file name which should be put in the snarkjs folder|`blob_poseidon.zkey`||
+|`--miner.zkey`|zkey file name which should be put in the snarkjs folder|`blob_poseidon2.zkey`||
 |`--miner.min-profit`|Minimum profit for mining transactions|`0`||
 |`--network`|Predefined L1 network selection. Available networks: devnet|||
 |`--p2p.advertise.ip`|The IP address to advertise in Discv5, put into the ENR of the node. This may also be a hostname / domain name to resolve to an IP.|||

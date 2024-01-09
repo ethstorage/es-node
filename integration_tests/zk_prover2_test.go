@@ -12,6 +12,7 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 
 	"github.com/ethstorage/go-ethstorage/ethstorage/prover"
@@ -23,13 +24,12 @@ import (
 )
 
 const (
-	vKeyName2 = "blob_poseidon2_verification_key.json"
-	zkeyFile2 = "blob_poseidon2.zkey"
+	zkey2Name = "blob_poseidon2.zkey"
 )
 
 func TestZKProver_GenerateZKProof(t *testing.T) {
 	proverPath, _ := filepath.Abs(prPath)
-	zkeyFull := filepath.Join(proverPath, snarkLibDir, zkeyFile2)
+	zkeyFull := filepath.Join(proverPath, prover.SnarkLib, zkey2Name)
 	if _, err := os.Stat(zkeyFull); os.IsNotExist(err) {
 		t.Fatalf("%s not found", zkeyFull)
 	}
@@ -46,27 +46,39 @@ func TestZKProver_GenerateZKProof(t *testing.T) {
 		"1",
 		"12199007973319674300030596965685270475268514105269206407619072166392043015767",
 	}
-	libDir := filepath.Join(proverPath, snarkLibDir)
-	p := prover.NewZKProverInternal(proverPath, zkeyFile2, lg)
+	libDir := filepath.Join(proverPath, prover.SnarkLib)
+	p, err := prover.NewZKProver(libDir, zkey2Name, prover.Wasm2Name, lg)
+	if err != nil {
+		t.Errorf("NewZKProver() error = %v", err)
+		return
+	}
 	t.Run("zk test", func(t *testing.T) {
+		inputsBytes, err := p.GenerateInputs(encodingKeys, sampleIdxs)
+		if err != nil {
+			t.Errorf("ZKProver.GenerateInputs() error = %v", err)
+			return
+		}
+		var inputs map[string]interface{}
+		err = json.Unmarshal(inputsBytes, &inputs)
+		if err != nil {
+			t.Errorf("ZKProver.GenerateInputs() error = %v", err)
+			return
+		}
+		vxIn, ok := inputs["xIn"].([]interface{})
+		if !ok {
+			t.Errorf("ZKProver.GenerateInputs() type: %v, want []interface{}", reflect.TypeOf(inputs["xIn"]))
+			return
+		}
+		for i, xIn := range xIns {
+			if vxIn[i] != xIn {
+				t.Errorf("ZKProver.GenerateInputs() xIn = %v, want %v", inputs["xIn"], xIns)
+				return
+			}
+		}
 		proof, masks, err := p.GenerateZKProof(encodingKeys, sampleIdxs)
 		if err != nil {
 			t.Errorf("ZKProver.GenerateZKProof() error = %v ", err)
 			return
-		}
-		tempDir := crypto.Keccak256Hash([]byte(fmt.Sprint(encodingKeys, sampleIdxs)))
-		buildDir := filepath.Join(proverPath, snarkBuildDir, common.Bytes2Hex(tempDir[:]))
-		defer os.RemoveAll(buildDir)
-
-		xIn, err := readXIn2(buildDir)
-		if err != nil {
-			t.Fatalf("get xIn failed %v", err)
-		}
-		for i, x := range xIn {
-			if x != xIns[i] {
-				t.Errorf("ZKProver.GenerateZKProof() xIn[%d] = %v, expected %v", i, x, xIns[i])
-				return
-			}
 		}
 		for i, encodingKey := range encodingKeys {
 			maskGo, err := GenerateMask(encodingKey, sampleIdxs[i])
@@ -78,11 +90,6 @@ func TestZKProver_GenerateZKProof(t *testing.T) {
 				t.Errorf("ZKProver.GenerateZKProof() mask = %v, GeneratedMask %v", masks[i], maskGo)
 				return
 			}
-		}
-		err = localVerify(t, libDir, buildDir, vKeyName2)
-		if err != nil {
-			t.Errorf("ZKProver.GenerateZKProof() localVerify failed: %v", err)
-			return
 		}
 		err = verifyProof(t, masks, proof)
 		if err != nil {
@@ -97,21 +104,6 @@ func TestZKProver_GenerateZKProof(t *testing.T) {
 		}
 		t.Log("verifyDecodeSample2 success!")
 	})
-}
-
-func readXIn2(buildDir string) ([]string, error) {
-	f, err := os.Open(filepath.Join(buildDir, inputName))
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-	var input prover.InputPairV2
-	var decoder = json.NewDecoder(f)
-	err = decoder.Decode(&input)
-	if err != nil {
-		return nil, err
-	}
-	return input.XIn, nil
 }
 
 func verifyDecodeSample2(t *testing.T, masks []*big.Int, proof []byte) error {
