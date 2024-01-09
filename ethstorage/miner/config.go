@@ -31,7 +31,7 @@ type Config struct {
 	PriorityGasPrice *big.Int
 	ZKeyFileName     string
 	ZKWorkingDir     string
-	ZKProverVersion  uint64
+	ZKProverMode     uint64
 	ThreadsPerShard  uint64
 	SignerFnFactory  signer.SignerFactory
 	SignerAddr       common.Address
@@ -49,7 +49,7 @@ var DefaultConfig = Config{
 	PriorityGasPrice: nil,
 	ZKeyFileName:     "blob_poseidon2.zkey",
 	ZKWorkingDir:     filepath.Join("build", "bin"),
-	ZKProverVersion:  2,
+	ZKProverMode:     2,
 	ThreadsPerShard:  uint64(2 * runtime.NumCPU()),
 	MinimumProfit:    common.Big0,
 }

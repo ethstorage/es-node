@@ -411,7 +411,7 @@ func initMiningConfig(t *testing.T, l1Contract common.Address, client *eth.Polli
 		t.Fatalf("%s not found", zkeyFull)
 	}
 	miningConfig.ZKWorkingDir = proverPath
-	miningConfig.ZKProverVersion = 2
+	miningConfig.ZKProverMode = 2
 	miningConfig.ThreadsPerShard = 2
 	miningConfig.MinimumProfit = new(big.Int).SetInt64(-1e18)
 	return miningConfig
