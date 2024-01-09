@@ -29,8 +29,9 @@ import (
 	"github.com/ethstorage/go-ethstorage/ethstorage/encoder"
 )
 
+var zkp1Contract = common.HexToAddress(os.Getenv("ES_NODE_STORAGE_L1CONTRACT_ZKP1"))
+
 const (
-	l1ContractV1  = "0xc3208C27285ed9516F21a89053326Bb895DD78F7"
 	snarkLibDir   = "snarkjs"
 	snarkBuildDir = "snarkbuild"
 	inputName     = "input_blob_poseidon.json"
@@ -210,7 +211,7 @@ func verifyDecodeSample(proofBytes []byte, trunkIdx uint64, encodingKey common.H
 		return fmt.Errorf("Err: %v, args.Pack: %v", err, values)
 	}
 	calldata := append(h[0:4], dataField...)
-	return callVerify(calldata, common.HexToAddress(l1ContractV1))
+	return callVerify(calldata, zkp1Contract)
 }
 
 func parseProof(data []byte) prover.ZKProof {
