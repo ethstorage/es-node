@@ -65,9 +65,9 @@ func CLIFlags(envPrefix string) []cli.Flag {
 		},
 		cli.Uint64Flag{
 			Name:   ZKProverModeFlagName,
-			Usage:  "ZK prover version, 1: one proof per sample, 2: one proof for multiple samples. Default: 2",
+			Usage:  "ZK prover mode, 1: one proof per sample, 2: one proof for multiple samples. Default: 2",
 			Value:  DefaultConfig.ZKProverMode,
-			EnvVar: rollup.PrefixEnvVar(envPrefix, "ZK_PROVER_VERSION"),
+			EnvVar: rollup.PrefixEnvVar(envPrefix, "ZK_PROVER_Mode"),
 		},
 		cli.Uint64Flag{
 			Name:   ThreadsPerShardFlagName,
