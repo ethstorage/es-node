@@ -21,17 +21,17 @@ const (
 )
 
 type KZGPoseidonProver struct {
-	zkMode uint64
-	libDir string
-	zkey   string
-	lg     log.Logger
+	zkProverMode uint64
+	libDir       string
+	zkey         string
+	lg           log.Logger
 }
 
 // Prover that can be used directly by miner to prove both KZG and Poseidon hash
 // workingDir specifies the working directory of the command relative to the caller.
 // zkeyFileName specifies the zkey file name to generate snark proof
 // returns a prover that can generate a combined KZG + zk proof
-func NewKZGPoseidonProver(workingDir, zkeyFileName string, zkMode uint64, lg log.Logger) KZGPoseidonProver {
+func NewKZGPoseidonProver(workingDir, zkeyFileName string, zkProverMode uint64, lg log.Logger) KZGPoseidonProver {
 	// check dependencies when es-node starts
 	libDir := filepath.Join(workingDir, SnarkLib)
 	if _, err := os.Stat(libDir); errors.Is(err, os.ErrNotExist) {
@@ -42,21 +42,21 @@ func NewKZGPoseidonProver(workingDir, zkeyFileName string, zkMode uint64, lg log
 		lg.Crit("Init ZK prover failed", "error", "zkey does not exist", "dir", zkeyFile)
 	}
 	var wasmFile string
-	if zkMode == 2 {
+	if zkProverMode == 2 {
 		wasmFile = filepath.Join(libDir, Wasm2Name)
-	} else if zkMode == 1 {
+	} else if zkProverMode == 1 {
 		wasmFile = filepath.Join(libDir, WasmName)
 	} else {
-		lg.Crit("Init ZK prover failed", "error", "invalid zkMode", "mode", zkMode)
+		lg.Crit("Init ZK prover failed", "error", "invalid zkProverMode", "mode", zkProverMode)
 	}
 	if _, err := os.Stat(zkeyFile); errors.Is(err, os.ErrNotExist) {
 		lg.Crit("Init ZK prover failed", "error", "wasm does not exist", "dir", wasmFile)
 	}
 	return KZGPoseidonProver{
-		zkMode: zkMode,
-		libDir: libDir,
-		zkey:   zkeyFileName,
-		lg:     lg,
+		zkProverMode: zkProverMode,
+		libDir:       libDir,
+		zkey:         zkeyFileName,
+		lg:           lg,
 	}
 }
 
@@ -78,7 +78,7 @@ func (p *KZGPoseidonProver) GetStorageProof(data [][]byte, encodingKeys []common
 	}
 	var zkProofs [][]byte
 	var masks []*big.Int
-	if p.zkMode == 1 {
+	if p.zkProverMode == 1 {
 		prvr, err := NewZKProver(p.libDir, p.zkey, WasmName, p.lg)
 		if err != nil {
 			return nil, nil, nil, err
@@ -91,7 +91,7 @@ func (p *KZGPoseidonProver) GetStorageProof(data [][]byte, encodingKeys []common
 			zkProofs = append(zkProofs, zkProof)
 			masks = append(masks, mask)
 		}
-	} else if p.zkMode == 2 {
+	} else if p.zkProverMode == 2 {
 		prvr, err := NewZKProver(p.libDir, p.zkey, Wasm2Name, p.lg)
 		if err != nil {
 			return nil, nil, nil, err
