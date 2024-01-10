@@ -12,7 +12,7 @@ es-node: build
 	cp -r ethstorage/prover/snark_lib build/bin
 
 build:
-	env GO111MODULE=on GOOS=$(TARGETOS) GOARCH=$(TARGETARCH) go build -v $(LDFLAGS) -o build/bin/es-node ./cmd/es-node/
+	env GO111MODULE=on GOOS=$(TARGETOS) GOARCH=$(TARGETARCH) go build -v $(LDFLAGS) -o build/bin/es-node  -tags rapidsnark_asm ./cmd/es-node/
 
 clean:
 	rm -r build
