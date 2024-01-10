@@ -24,6 +24,10 @@ const (
 	rewardDenominator = 10000
 )
 
+var (
+	mineSig = crypto.Keccak256Hash([]byte(`mine(uint256,uint256,address,uint256,bytes32[],uint256[],bytes[],bytes[])`))
+)
+
 func NewL1MiningAPI(l1 *eth.PollingClient, lg log.Logger) *l1MiningAPI {
 	return &l1MiningAPI{l1, lg}
 }
@@ -81,6 +85,7 @@ func (m *l1MiningAPI) GetDataHashes(ctx context.Context, contract common.Address
 func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Address, rst result, cfg Config) (common.Hash, error) {
 	m.lg.Debug("Submit mined result", "shard", rst.startShardId, "block", rst.blockNumber, "nonce", rst.nonce)
 	uint256Type, _ := abi.NewType("uint256", "", nil)
+	uint256Array, _ := abi.NewType("uint256[]", "", nil)
 	addrType, _ := abi.NewType("address", "", nil)
 	bytes32Array, _ := abi.NewType("bytes32[]", "", nil)
 	bytesArray, _ := abi.NewType("bytes[]", "", nil)
@@ -90,6 +95,8 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 		{Type: addrType},
 		{Type: uint256Type},
 		{Type: bytes32Array},
+		{Type: uint256Array},
+		{Type: bytesArray},
 		{Type: bytesArray},
 	}.Pack(
 		rst.blockNumber,
@@ -97,10 +104,11 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 		rst.miner,
 		new(big.Int).SetUint64(rst.nonce),
 		rst.encodedData,
-		rst.proofs,
+		rst.masks,
+		rst.inclusiveProofs,
+		rst.decodeProof,
 	)
-	h := crypto.Keccak256Hash([]byte(`mine(uint256,uint256,address,uint256,bytes32[],bytes[])`))
-	calldata := append(h[0:4], dataField...)
+	calldata := append(mineSig[0:4], dataField...)
 
 	gasPrice := cfg.GasPrice
 	if gasPrice == nil || gasPrice.Cmp(common.Big0) == 0 {

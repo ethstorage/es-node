@@ -13,7 +13,7 @@ FROM node:16-alpine
 COPY --from=builder /es-node/build/ /es-node/build/
 
 # For zk proof
-RUN npm install -g snarkjs@0.7.0
+RUN npm install -g snarkjs
 RUN apk add --no-cache curl grep
 
 # Entrypoint

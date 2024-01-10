@@ -159,5 +159,5 @@ nvm use 20
 ```
 ### Install snarkjs
 ```sh
-npm install -g snarkjs@0.7.0
+npm install -g snarkjs
 ```
