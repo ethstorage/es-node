@@ -26,19 +26,19 @@ if [ ${#ES_NODE_SIGNER_PRIVATE_KEY} -ne 64 ]; then
 fi
 
 # ZK prover mode, 1: one proof per sample, 2: one proof for multiple samples.
-zkp_mode=2
-for arg in "$@"
-do
-  case "$arg" in
-    --miner.zk-prover-mode)
-      shift
-      zkp_mode="$1"
-      break
-      ;;
-    --miner.zk-prover-mode=*)
-      zkp_mode="${arg#*=}"
-      ;;
-  esac
+zkp_mode=2 
+for ((i=1; i<=$#; i++)); do
+    if [ "${!i}" == "--miner.zk-prover-mode" ]; then
+        j=$((i+1))
+        zkp_mode="${!j}"
+        break
+    else
+        if [[ "${!i}" =~ --miner\.zk-prover-mode=([0-9]+) ]]; then
+            v="${BASH_REMATCH[1]}"
+            zkp_mode="${v}"
+            break
+        fi
+    fi
 done
 
 if [ "$zkp_mode" != 1 ] && [ "$zkp_mode" != 2 ]; then

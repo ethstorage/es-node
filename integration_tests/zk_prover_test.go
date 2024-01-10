@@ -26,6 +26,8 @@ import (
 	"github.com/ethstorage/go-ethstorage/ethstorage/prover"
 )
 
+var zkp1Contract = common.HexToAddress(os.Getenv("ES_NODE_STORAGE_L1CONTRACT_ZKP1"))
+
 const (
 	l1ContractV1 = "0xc3208C27285ed9516F21a89053326Bb895DD78F7"
 	prPath       = "../ethstorage/prover"
@@ -177,7 +179,7 @@ func verifyDecodeSample(proofBytes []byte, sampleIdx uint64, encodingKey common.
 		return fmt.Errorf("Err: %v, args.Pack: %v", err, values)
 	}
 	calldata := append(h[0:4], dataField...)
-	return callVerify(calldata, common.HexToAddress(l1ContractV1))
+	return callVerify(calldata, zkp1Contract)
 }
 
 type ZKProof struct {

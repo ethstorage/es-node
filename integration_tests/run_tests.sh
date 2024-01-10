@@ -24,9 +24,13 @@ fi
 if [ -z "$ES_NODE_STORAGE_L1CONTRACT_CLEF" ]; then
   export ES_NODE_STORAGE_L1CONTRACT_CLEF=0xb4B46bdAA835F8E4b4d8e208B6559cD267851051
 fi
-# A newly deployed contract is required for each run for miner test
+# A newly deployed contract is required for each run for miner test, with zkp verifier of mode 2
 if [ -z "$ES_NODE_STORAGE_L1CONTRACT" ]; then
   export ES_NODE_STORAGE_L1CONTRACT=0xbE3c2303f263C24d91D0fA3a169bb542E89FBdDa
+fi
+# A contract with zkp verifier of mode 1 (one proof per sample)
+if [ -z "$ES_NODE_STORAGE_L1CONTRACT_ZKP1" ]; then
+  export ES_NODE_STORAGE_L1CONTRACT_ZKP1=0x064633c393548112f4746E4B2F4Cf1BCC91BaFd4
 fi
 # The commonly used l1 eth rpc endpoint
 if [ -z "$ES_NODE_L1_ETH_RPC" ]; then
