@@ -8,6 +8,7 @@ package integration
 import (
 	"context"
 	"math/big"
+	"os"
 	"reflect"
 	"testing"
 
@@ -18,7 +19,13 @@ import (
 	"github.com/ethstorage/go-ethstorage/ethstorage/signer"
 )
 
+var (
+	clefContract = common.HexToAddress(os.Getenv("ES_NODE_STORAGE_L1CONTRACT_CLEF"))
+	clefEndpoint = os.Getenv("ES_NODE_CLEF_RPC")
+)
+
 func TestSignerFactoryFromConfig(t *testing.T) {
+	t.SkipNow()
 	tests := []struct {
 		name         string
 		signerConfig signer.CLIConfig
@@ -34,7 +41,7 @@ func TestSignerFactoryFromConfig(t *testing.T) {
 				HDPath:     "",
 			},
 			common.HexToAddress("0xd7cc258C5438a392cA1D7873020d5B9971568c00"),
-			contractAddrDevnet2,
+			clefContract,
 			false,
 		},
 		{
@@ -45,7 +52,7 @@ func TestSignerFactoryFromConfig(t *testing.T) {
 				HDPath:     "m/44'/60'/0'/0/0",
 			},
 			common.HexToAddress("0x627306090abab3a6e1400e9345bc60c78a8bef57"),
-			contractAddrDevnet2,
+			clefContract,
 			false,
 		},
 		{
@@ -58,7 +65,7 @@ func TestSignerFactoryFromConfig(t *testing.T) {
 				Address:    "0x13259366de990b0431e2c97cea949362bb68df12",
 			},
 			common.HexToAddress("0x13259366DE990B0431E2C97CEa949362BB68df12"),
-			contractAddrDevnet2,
+			clefContract,
 			false,
 		},
 		{

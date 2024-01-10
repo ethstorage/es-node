@@ -16,8 +16,10 @@ import (
 
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
 	"github.com/crate-crypto/go-proto-danksharding-crypto/eth"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
 )
 
@@ -27,6 +29,7 @@ const (
 	witnessGenerator = "generate_witness.js"
 	inputName        = "input_blob_poseidon.json"
 	wasmName         = "blob_poseidon.wasm"
+	wasmName2        = "blob_poseidon2.wasm"
 	wtnsName         = "witness_blob_poseidon.wtns"
 	proofName        = "proof_blob_poseidon.json"
 	publicName       = "public_blob_poseidon.json"
@@ -63,30 +66,30 @@ func newZKProver(workingDir, zkeyFile string, cleanup bool, lg log.Logger) *ZKPr
 	}
 }
 
-// TODO: a zk prover interface
-
-// Generate ZK Proof for the given encoding key and chunck index using snarkjs
-func (p *ZKProver) GenerateZKProof(encodingKey common.Hash, sampleIdx uint64) (ZKProof, common.Hash, error) {
-	p.lg.Debug("Generate zk proof", "encodingKey", encodingKey.Hex(), "sampleIdx", sampleIdx)
-	if int(sampleIdx) >= eth.FieldElementsPerBlob {
-		return ZKProof{}, common.Hash{}, fmt.Errorf("chunk index out of scope: %d", sampleIdx)
+// Generate ZK Proof for the given encoding keys and chunck indexes using snarkjs
+func (p *ZKProver) GenerateZKProof(encodingKeys []common.Hash, sampleIdxs []uint64) ([]byte, []*big.Int, error) {
+	for i, idx := range sampleIdxs {
+		p.lg.Debug("Generate zk proof", "encodingKey", encodingKeys[i], "sampleIdx", sampleIdxs[i])
+		if int(idx) >= eth.FieldElementsPerBlob {
+			return nil, nil, fmt.Errorf("chunk index out of scope: %d", idx)
+		}
 	}
 	start := time.Now()
 	defer func(start time.Time) {
 		dur := time.Since(start)
-		p.lg.Info("Generate zk proof", "sampleIdx", sampleIdx, "took(sec)", dur.Seconds())
+		p.lg.Info("Generate zk proof done", "sampleIdx", sampleIdxs, "took(sec)", dur.Seconds())
 	}(start)
-	buildDir := filepath.Join(p.dir, snarkBuildDir, strings.Join([]string{
-		encodingKey.Hex(),
-		fmt.Sprint(sampleIdx),
-	}, "-"))
+
+	tempDir := crypto.Keccak256Hash([]byte(fmt.Sprint(encodingKeys, sampleIdxs)))
+	p.lg.Debug("Generate zk proof", "path", common.Bytes2Hex(tempDir[:]))
+	buildDir := filepath.Join(p.dir, snarkBuildDir, common.Bytes2Hex(tempDir[:]))
 	if _, err := os.Stat(buildDir); err == nil {
 		os.RemoveAll(buildDir)
 	}
 	err := os.Mkdir(buildDir, os.ModePerm)
 	if err != nil {
 		p.lg.Error("Generate zk proof failed", "mkdir", buildDir, "error", err)
-		return ZKProof{}, common.Hash{}, err
+		return nil, nil, err
 	}
 	defer func() {
 		if p.cleanup {
@@ -103,24 +106,29 @@ func (p *ZKProver) GenerateZKProof(encodingKey common.Hash, sampleIdx uint64) (Z
 	file, err := os.OpenFile(inputFile, os.O_CREATE|os.O_WRONLY, os.ModePerm)
 	if err != nil {
 		p.lg.Error("Create input file failed", "error", err)
-		return ZKProof{}, common.Hash{}, err
+		return nil, nil, err
 	}
 	defer file.Close()
 
-	var b fr.Element
-	var exp big.Int
-	exp.Div(exp.Sub(fr.Modulus(), common.Big1), big.NewInt(int64(eth.FieldElementsPerBlob)))
-	ru := b.Exp(*b.SetInt64(5), &exp)
-	xIn := ru.Exp(*ru, big.NewInt(int64(sampleIdx)))
-	encodingKeyMod := fr.Modulus().Mod(encodingKey.Big(), fr.Modulus())
-	inputObj := InputPair{
-		EncodingKeyIn: hexutil.Encode(encodingKeyMod.Bytes()),
-		XIn:           xIn.String(),
+	var encodingKeyModStr, xInStr []string
+	for i, sampleIdx := range sampleIdxs {
+		var b fr.Element
+		var exp big.Int
+		exp.Div(exp.Sub(fr.Modulus(), common.Big1), big.NewInt(int64(eth.FieldElementsPerBlob)))
+		ru := b.Exp(*b.SetInt64(5), &exp)
+		xIn := ru.Exp(*ru, new(big.Int).SetUint64(sampleIdx))
+		xInStr = append(xInStr, xIn.String())
+		encodingKeyMod := fr.Modulus().Mod(encodingKeys[i].Big(), fr.Modulus())
+		encodingKeyModStr = append(encodingKeyModStr, hexutil.Encode(encodingKeyMod.Bytes()))
+	}
+	inputObj := InputPairV2{
+		EncodingKeyIn: encodingKeyModStr,
+		XIn:           xInStr,
 	}
 	err = json.NewEncoder(file).Encode(inputObj)
 	if err != nil {
 		p.lg.Error("Write input file failed", "error", err)
-		return ZKProof{}, common.Hash{}, err
+		return nil, nil, err
 	}
 	p.lg.Debug("Generate zk proof", "input", inputObj)
 
@@ -128,7 +136,7 @@ func (p *ZKProver) GenerateZKProof(encodingKey common.Hash, sampleIdx uint64) (Z
 	wtnsFile := filepath.Join(buildDir, wtnsName)
 	cmd := exec.Command("node",
 		filepath.Join(libDir, witnessGenerator),
-		filepath.Join(libDir, wasmName),
+		filepath.Join(libDir, wasmName2),
 		inputFile,
 		wtnsFile,
 	)
@@ -136,7 +144,7 @@ func (p *ZKProver) GenerateZKProof(encodingKey common.Hash, sampleIdx uint64) (Z
 	out, err := cmd.Output()
 	if err != nil {
 		p.lg.Error("Generate witness failed", "error", err, "cmd", cmd.String(), "output", string(out))
-		return ZKProof{}, common.Hash{}, err
+		return nil, nil, err
 	}
 	p.lg.Debug("Generate witness done")
 
@@ -153,77 +161,210 @@ func (p *ZKProver) GenerateZKProof(encodingKey common.Hash, sampleIdx uint64) (Z
 	out, err = cmd.Output()
 	if err != nil {
 		p.lg.Error("Generate proof failed", "error", err, "cmd", cmd.String(), "output", string(out))
-		return ZKProof{}, common.Hash{}, err
+		return nil, nil, err
+	}
+	p.lg.Debug("Generate proof done")
+
+	// 4. Read proof and masks
+	proof, err := readProof(proofFile)
+	if err != nil {
+		p.lg.Error("Parse proof failed", "error", err)
+		return nil, nil, err
+	}
+	masks, err := readMasks(publicFile)
+	if err != nil {
+		p.lg.Error("Read mask failed", "error", err)
+		return nil, nil, err
+	}
+	return proof, masks, nil
+}
+
+// Generate ZK Proof for the given encoding key and chunck index using snarkjs
+func (p *ZKProver) GenerateZKProofPerSample(encodingKey common.Hash, sampleIdx uint64) ([]byte, *big.Int, error) {
+	p.lg.Debug("Generate zk proof", "encodingKey", encodingKey.Hex(), "sampleIdx", sampleIdx)
+	if int(sampleIdx) >= eth.FieldElementsPerBlob {
+		return nil, nil, fmt.Errorf("chunk index out of scope: %d", sampleIdx)
+	}
+	start := time.Now()
+	defer func(start time.Time) {
+		dur := time.Since(start)
+		p.lg.Info("Generate zk proof", "sampleIdx", sampleIdx, "took(sec)", dur.Seconds())
+	}(start)
+	buildDir := filepath.Join(p.dir, snarkBuildDir, strings.Join([]string{
+		encodingKey.Hex(),
+		fmt.Sprint(sampleIdx),
+	}, "-"))
+	if _, err := os.Stat(buildDir); err == nil {
+		os.RemoveAll(buildDir)
+	}
+	err := os.Mkdir(buildDir, os.ModePerm)
+	if err != nil {
+		p.lg.Error("Generate zk proof failed", "mkdir", buildDir, "error", err)
+		return nil, nil, err
+	}
+	defer func() {
+		if p.cleanup {
+			e := os.RemoveAll(buildDir)
+			if e != nil {
+				p.lg.Warn("Remove folder error", "dir", buildDir, "error", e)
+			}
+		}
+	}()
+
+	libDir := filepath.Join(p.dir, snarkLibDir)
+	// 1. Generate input
+	inputFile := filepath.Join(buildDir, inputName)
+	file, err := os.OpenFile(inputFile, os.O_CREATE|os.O_WRONLY, os.ModePerm)
+	if err != nil {
+		p.lg.Error("Create input file failed", "error", err)
+		return nil, nil, err
+	}
+	defer file.Close()
+
+	var b fr.Element
+	var exp big.Int
+	exp.Div(exp.Sub(fr.Modulus(), common.Big1), big.NewInt(int64(eth.FieldElementsPerBlob)))
+	ru := b.Exp(*b.SetInt64(5), &exp)
+	xIn := ru.Exp(*ru, big.NewInt(int64(sampleIdx)))
+	encodingKeyMod := fr.Modulus().Mod(encodingKey.Big(), fr.Modulus())
+	inputObj := InputPair{
+		EncodingKeyIn: hexutil.Encode(encodingKeyMod.Bytes()),
+		XIn:           xIn.String(),
+	}
+	err = json.NewEncoder(file).Encode(inputObj)
+	if err != nil {
+		p.lg.Error("Write input file failed", "error", err)
+		return nil, nil, err
+	}
+	p.lg.Debug("Generate zk proof", "input", inputObj)
+
+	// 2. Generate witness
+	wtnsFile := filepath.Join(buildDir, wtnsName)
+	cmd := exec.Command("node",
+		filepath.Join(libDir, witnessGenerator),
+		filepath.Join(libDir, wasmName),
+		inputFile,
+		wtnsFile,
+	)
+	cmd.Dir = libDir
+	out, err := cmd.Output()
+	if err != nil {
+		p.lg.Error("Generate witness failed", "error", err, "cmd", cmd.String(), "output", string(out))
+		return nil, nil, err
+	}
+	p.lg.Debug("Generate witness done")
+
+	// 3. Generate proof
+	proofFile := filepath.Join(buildDir, proofName)
+	publicFile := filepath.Join(buildDir, publicName)
+	cmd = exec.Command("snarkjs", "groth16", "prove",
+		filepath.Join(libDir, p.zkeyFile),
+		wtnsFile,
+		proofFile,
+		publicFile,
+	)
+	cmd.Dir = libDir
+	out, err = cmd.Output()
+	if err != nil {
+		p.lg.Error("Generate proof failed", "error", err, "cmd", cmd.String(), "output", string(out))
+		return nil, nil, err
 	}
 	p.lg.Debug("Generate proof done")
 
 	// 4. Read proof and mask
-	proof, err := parseProof(proofFile)
+	proof, err := readProof(proofFile)
 	if err != nil {
 		p.lg.Error("Parse proof failed", "error", err)
-		return ZKProof{}, common.Hash{}, err
+		return nil, nil, err
 	}
 	mask, err := readMask(publicFile)
 	if err != nil {
 		p.lg.Error("Read mask failed", "error", err)
-		return ZKProof{}, common.Hash{}, err
+		return nil, nil, err
 	}
 	return proof, mask, nil
 }
 
-func readMask(publicFile string) (common.Hash, error) {
+func readProof(proofFile string) ([]byte, error) {
+	dat, err := os.ReadFile(proofFile)
+	if err != nil {
+		return nil, err
+	}
+	var piOut = pi{}
+	err = json.Unmarshal(dat, &piOut)
+	if err != nil {
+		return nil, err
+	}
+	u2, _ := abi.NewType("uint256[2]", "", nil)
+	u22, _ := abi.NewType("uint256[2][2]", "", nil)
+	args := abi.Arguments{
+		{Type: u2},
+		{Type: u22},
+		{Type: u2},
+	}
+	a, err := toG1Point(piOut.A[:2])
+	if err != nil {
+		return nil, err
+	}
+	b, err := toG2Point(piOut.B[0:2])
+	if err != nil {
+		return nil, err
+	}
+	c, err := toG1Point(piOut.C[0:2])
+	if err != nil {
+		return nil, err
+	}
+	values := []interface{}{[]*big.Int{a.X, a.Y}, [][]*big.Int{b.X[:], b.Y[:]}, []*big.Int{c.X, c.Y}}
+	encoded, err := args.Pack(values...)
+	if err != nil {
+		return nil, fmt.Errorf("%v, values: %v", err, values)
+	}
+	return encoded, nil
+}
+
+func readMasks(publicFile string) ([]*big.Int, error) {
+	var masks []*big.Int
 	f, err := os.Open(publicFile)
 	if err != nil {
-		return common.Hash{}, err
+		return masks, err
+	}
+	defer f.Close()
+	var output []string
+	var decoder = json.NewDecoder(f)
+
+	if err = decoder.Decode(&output); err != nil {
+		return masks, err
+	}
+	for _, v := range output {
+		mask, ok := new(big.Int).SetString(v, 0)
+		if !ok {
+			return masks, fmt.Errorf("invalid mask %v", v)
+		}
+		masks = append(masks, mask)
+	}
+	return masks, nil
+}
+
+func readMask(publicFile string) (*big.Int, error) {
+	f, err := os.Open(publicFile)
+	if err != nil {
+		return nil, err
 	}
 	defer f.Close()
 	var output []string
 	var decoder = json.NewDecoder(f)
 	err = decoder.Decode(&output)
 	if err != nil {
-		return common.Hash{}, err
+		return nil, err
 	}
 	if len(output) != 3 {
-		return common.Hash{}, fmt.Errorf("invalid public output")
+		return nil, fmt.Errorf("invalid public output")
 	}
-	maskBig, ok := new(big.Int).SetString(output[2], 0)
+	mask, ok := new(big.Int).SetString(output[2], 0)
 	if !ok {
-		return common.Hash{}, fmt.Errorf("invalid mask")
+		return nil, fmt.Errorf("invalid mask")
 	}
-	return common.BigToHash(maskBig), nil
-}
-
-func parseProof(proofFile string) (ZKProof, error) {
-	dat, err := os.ReadFile(proofFile)
-	if err != nil {
-		return ZKProof{}, err
-	}
-	var piOut = pi{}
-	err = json.Unmarshal(dat, &piOut)
-	if err != nil {
-		return ZKProof{}, err
-	}
-	proof, err := toZKProof(piOut)
-	if err != nil {
-		return ZKProof{}, err
-	}
-	return proof, nil
-}
-
-func toZKProof(p pi) (ZKProof, error) {
-	a, err := toG1Point(p.A[:2])
-	if err != nil {
-		return ZKProof{}, err
-	}
-	b, err := toG2Point(p.B[0:2])
-	if err != nil {
-		return ZKProof{}, err
-	}
-	c, err := toG1Point(p.C[0:2])
-	if err != nil {
-		return ZKProof{}, err
-	}
-	return ZKProof{a, b, c}, nil
+	return mask, nil
 }
 
 func toG1Point(s []string) (G1Point, error) {
@@ -359,6 +500,11 @@ type pi struct {
 }
 
 // input structure used by snarkjs
+type InputPairV2 struct {
+	EncodingKeyIn []string `json:"encodingKeyIn"`
+	XIn           []string `json:"xIn"`
+}
+
 type InputPair struct {
 	EncodingKeyIn string `json:"encodingKeyIn"`
 	XIn           string `json:"xIn"`
