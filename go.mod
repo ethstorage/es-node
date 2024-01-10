@@ -15,6 +15,8 @@ require (
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d
 	github.com/holiman/uint256 v1.2.3
 	github.com/iden3/go-iden3-crypto v0.0.15
+	github.com/iden3/go-rapidsnark/types v0.0.3
+	github.com/iden3/go-rapidsnark/witness/v2 v2.0.0
 	github.com/ipfs/go-datastore v0.6.0
 	github.com/libp2p/go-libp2p v0.32.0
 	github.com/libp2p/go-libp2p-pubsub v0.10.0
@@ -56,8 +58,6 @@ require (
 	github.com/hashicorp/golang-lru/arc/v2 v2.0.5 // indirect
 	github.com/herumi/bls-eth-go-binary v1.28.1 // indirect
 	github.com/huin/goupnp v1.3.0 // indirect
-	github.com/iden3/go-rapidsnark/types v0.0.3 // indirect
-	github.com/iden3/go-rapidsnark/witness/v2 v2.0.0 // indirect
 	github.com/iden3/wasmer-go v0.0.1 // indirect
 	github.com/jackpal/go-nat-pmp v1.0.2 // indirect
 	github.com/kilic/bls12-381 v0.1.1-0.20220929213557-ca162e8a70f4 // indirect
@@ -108,8 +108,7 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/golang-lru/v2 v2.0.5
 	github.com/iden3/go-rapidsnark/prover v0.0.10
-	github.com/iden3/go-rapidsnark/witness/wasmer v0.0.0-20230524142950-0986cf057d4e
-	github.com/iden3/go-rapidsnark/witness/wazero v0.0.1
+	github.com/iden3/go-rapidsnark/witness/wazero v0.0.0-20230524142950-0986cf057d4e
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/ipfs/go-cid v0.4.1 // indirect
 	github.com/ipfs/go-ds-leveldb v0.5.0
