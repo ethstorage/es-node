@@ -20,7 +20,9 @@ import (
 	"github.com/iden3/go-rapidsnark/prover"
 	"github.com/iden3/go-rapidsnark/types"
 	"github.com/iden3/go-rapidsnark/witness/v2"
-	"github.com/iden3/go-rapidsnark/witness/wazero"
+
+	// "github.com/iden3/go-rapidsnark/witness/wazero"
+	"github.com/iden3/go-rapidsnark/witness/wasmer"
 )
 
 type ZKProver struct {
@@ -35,7 +37,7 @@ func NewZKProver(libDir, zkeyName, wasmName string, lg log.Logger) (*ZKProver, e
 		lg.Error("Read wasm file failed", "error", err)
 		return nil, err
 	}
-	calc, err := witness.NewCalculator(wasmBytes, witness.WithWasmEngine(wazero.NewCircom2WZWitnessCalculator))
+	calc, err := witness.NewCalculator(wasmBytes, witness.WithWasmEngine(wasmer.NewCircom2WitnessCalculator))
 	if err != nil {
 		lg.Error("Create witness calculator failed", "error", err)
 		return nil, err
