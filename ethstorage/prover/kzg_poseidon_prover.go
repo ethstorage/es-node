@@ -49,7 +49,7 @@ func NewKZGPoseidonProver(workingDir, zkeyFileName string, zkProverMode uint64, 
 	} else {
 		lg.Crit("Init ZK prover failed", "error", "invalid zkProverMode", "mode", zkProverMode)
 	}
-	if _, err := os.Stat(zkeyFile); errors.Is(err, os.ErrNotExist) {
+	if _, err := os.Stat(wasmFile); errors.Is(err, os.ErrNotExist) {
 		lg.Crit("Init ZK prover failed", "error", "wasm does not exist", "dir", wasmFile)
 	}
 	return KZGPoseidonProver{
