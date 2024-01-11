@@ -1,6 +1,5 @@
 # Build ES node in a stock Go builder container
-FROM golang:1.21-alpine as builder
-RUN apk add --no-cache gcc musl-dev linux-headers make g++
+FROM golang:1.21 as builder
 ADD . /es-node
 WORKDIR /es-node
 RUN make
