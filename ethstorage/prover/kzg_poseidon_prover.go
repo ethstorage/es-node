@@ -12,21 +12,21 @@ import (
 )
 
 type KZGPoseidonProver struct {
-	dir, zkey string
-	version   uint64
-	lg        log.Logger
+	dir, zkey    string
+	zkProverMode uint64
+	lg           log.Logger
 }
 
 // Prover that can be used directly by miner to prove both KZG and Poseidon hash
 // workingDir specifies the working directory of the command relative to the caller.
 // zkeyFileName specifies the zkey file name used by snarkjs to generate snark proof
 // returns a prover that can generate a combined KZG + zk proof
-func NewKZGPoseidonProver(workingDir, zkeyFileName string, version uint64, lg log.Logger) KZGPoseidonProver {
+func NewKZGPoseidonProver(workingDir, zkeyFileName string, mode uint64, lg log.Logger) KZGPoseidonProver {
 	return KZGPoseidonProver{
-		dir:     workingDir,
-		version: version,
-		zkey:    zkeyFileName,
-		lg:      lg,
+		dir:          workingDir,
+		zkProverMode: mode,
+		zkey:         zkeyFileName,
+		lg:           lg,
 	}
 }
 
@@ -48,7 +48,7 @@ func (p *KZGPoseidonProver) GetStorageProof(data [][]byte, encodingKeys []common
 	}
 	var zkProofs [][]byte
 	var masks []*big.Int
-	if p.version == 1 {
+	if p.zkProverMode == 1 {
 		for i, encodingKey := range encodingKeys {
 			zkProof, mask, err := NewZKProver(p.dir, p.zkey, p.lg).GenerateZKProofPerSample(encodingKey, sampleIdxInKv[i])
 			if err != nil {
@@ -57,7 +57,7 @@ func (p *KZGPoseidonProver) GetStorageProof(data [][]byte, encodingKeys []common
 			zkProofs = append(zkProofs, zkProof)
 			masks = append(masks, mask)
 		}
-	} else if p.version == 2 {
+	} else if p.zkProverMode == 2 {
 		zkProof, msks, err := NewZKProver(p.dir, p.zkey, p.lg).GenerateZKProof(encodingKeys, sampleIdxInKv)
 		if err != nil {
 			return nil, nil, nil, err
@@ -65,7 +65,7 @@ func (p *KZGPoseidonProver) GetStorageProof(data [][]byte, encodingKeys []common
 		zkProofs = append(zkProofs, zkProof)
 		masks = msks
 	} else {
-		return nil, nil, nil, fmt.Errorf("invalid zk proof version")
+		return nil, nil, nil, fmt.Errorf("invalid zk proof mode")
 	}
 	return masks, zkProofs, peInputs, nil
 }
