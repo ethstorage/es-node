@@ -161,3 +161,15 @@ nvm use 20
 ```sh
 npm install -g snarkjs
 ```
+
+## FAQ
+
+### Can I change the data file location?
+
+Yes, you can. 
+
+By default, when executed, the run.sh script will generate a data file named `shard-0.dat` to store shard 0 in the data directory specified by `--datadir`, located in the same folder as the run.sh script.
+
+If necessary, you can choose an alternative location for data storage by specifying the full path of the file as the value of the `--storage.files` flag in the run.sh script.
+
+Please refer to [configuration](/README.md#configuration) for more details.

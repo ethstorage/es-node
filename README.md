@@ -43,7 +43,7 @@ _Note: Some of the flags/parameters used in `run.sh` are supposed to change over
 
 With `es-node init` command, you can init your es-node by creating a data file for each shard.
 
-You can specify `shard_len` (the number of shards) or `shard_index` (the index of specified shard, and you can specify more than one) to create shards that you would like to mine. If both appears, `shard_index` takes precedence. 
+You can specify `shard_len` (the number of shards) or `shard_index` (the index of the specified shard, and you can specify more than one) to create shards that you would like to mine. If both appear, `shard_index` takes precedence. 
 
 Here are the options that you can use with `init` command:
 
