@@ -422,6 +422,15 @@ func NewMetrics(procName string) *Metrics {
 			Help:      "1 if the es node has finished starting up",
 		}),
 
+		BandwidthTotal: factory.NewGaugeVec(prometheus.GaugeOpts{
+			Namespace: ns,
+			Subsystem: "p2p",
+			Name:      "bandwidth_bytes_total",
+			Help:      "P2P bandwidth by direction",
+		}, []string{
+			"direction",
+		}),
+
 		registry: registry,
 
 		factory: factory,
