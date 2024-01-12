@@ -74,7 +74,7 @@ func TestMining(t *testing.T) {
 	feed := new(event.Feed)
 
 	l1api := miner.NewL1MiningAPI(pClient, lg)
-	pvr := prover.NewKZGPoseidonProver(miningConfig.ZKWorkingDir, zkeyFile, 2, lg)
+	pvr := prover.NewKZGPoseidonProver(miningConfig.ZKWorkingDir, zkey2Name, 2, lg)
 	mnr := miner.New(miningConfig, storageManager, l1api, &pvr, feed, lg)
 	lg.Info("Initialized miner")
 
@@ -404,9 +404,9 @@ func initMiningConfig(t *testing.T, l1Contract common.Address, client *eth.Polli
 	}
 	miningConfig.PrepaidAmount = new(big.Int).SetBytes(result)
 
-	miningConfig.ZKeyFileName = zkeyFile2
+	miningConfig.ZKeyFileName = zkey2Name
 	proverPath, _ := filepath.Abs(prPath)
-	zkeyFull := filepath.Join(proverPath, snarkLibDir, miningConfig.ZKeyFileName)
+	zkeyFull := filepath.Join(proverPath, prover.SnarkLib, miningConfig.ZKeyFileName)
 	if _, err := os.Stat(zkeyFull); os.IsNotExist(err) {
 		t.Fatalf("%s not found", zkeyFull)
 	}

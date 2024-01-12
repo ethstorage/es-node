@@ -242,7 +242,7 @@ func (w *worker) updateDifficulty(shardIdx, blockTime uint64) (*big.Int, error) 
 		w.lg.Warn("Failed to get es mining info", "error", err.Error())
 		return nil, err
 	}
-	w.lg.Info("Mining info retrieved", "shard", shardIdx, "LastMineTime", info.LastMineTime, "Difficulty", info.Difficulty, "proofsSubmitted", info.BlockMined)
+	w.lg.Info("Mining info retrieved", "shard", shardIdx, "lastMineTime", info.LastMineTime, "difficulty", info.Difficulty, "proofsSubmitted", info.BlockMined)
 	reqDiff := new(big.Int).Div(maxUint256, expectedDiff(
 		info.LastMineTime,
 		blockTime,

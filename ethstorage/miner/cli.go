@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 
 	"github.com/ethstorage/go-ethstorage/ethstorage/flags/types"
+	"github.com/ethstorage/go-ethstorage/ethstorage/prover"
 	"github.com/ethstorage/go-ethstorage/ethstorage/rollup"
 	"github.com/urfave/cli"
 )
@@ -53,13 +54,13 @@ func CLIFlags(envPrefix string) []cli.Flag {
 		},
 		cli.StringFlag{
 			Name:   ZKeyFileNameFlagName,
-			Usage:  "zkey file name which should be put in the snarkjs folder",
+			Usage:  "zkey file name which should be put in the snark_lib folder",
 			Value:  DefaultConfig.ZKeyFileName,
 			EnvVar: rollup.PrefixEnvVar(envPrefix, "ZKEY_FILE"),
 		},
 		cli.StringFlag{
 			Name:   ZKWorkingDirFlagName,
-			Usage:  "Path to the snarkjs folder",
+			Usage:  "Path to the snark_lib folder",
 			Value:  DefaultConfig.ZKWorkingDir,
 			EnvVar: rollup.PrefixEnvVar(envPrefix, "ZK_WORKING_DIR"),
 		},
@@ -91,10 +92,10 @@ type CLIConfig struct {
 }
 
 func (c CLIConfig) Check() error {
-	info, err := os.Stat(filepath.Join(c.ZKWorkingDir, "snarkjs"))
+	info, err := os.Stat(filepath.Join(c.ZKWorkingDir, prover.SnarkLib))
 	if err != nil {
 		if os.IsNotExist(err) || !info.IsDir() {
-			return fmt.Errorf("snarkjs folder not found in ZKWorkingDir: %v", err)
+			return fmt.Errorf("%s folder not found in ZKWorkingDir: %v", prover.SnarkLib, err)
 		}
 	}
 	return nil

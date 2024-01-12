@@ -46,7 +46,7 @@ echo ES_NODE_STORAGE_L1CONTRACT = $ES_NODE_STORAGE_L1CONTRACT
 echo ES_NODE_STORAGE_MINER = $ES_NODE_STORAGE_MINER
 
 # download zkeys if not yet
-zkey_file="./ethstorage/prover/snarkjs/blob_poseidon.zkey"
+zkey_file="./ethstorage/prover/snark_lib/blob_poseidon.zkey"
 if [ ! -e  ${zkey_file} ]; then
   echo "${zkey_file} not found, start downloading..."
   file_id="1ZLfhYeCXMnbk6wUiBADRAn1mZ8MI_zg-"
@@ -54,7 +54,7 @@ if [ ! -e  ${zkey_file} ]; then
   curl -Lb ./cookie "https://drive.google.com/uc?export=download&`echo ${html}|grep -Eo 'confirm=[a-zA-Z0-9\-_]+'`&id=${file_id}" -o ${zkey_file}
   rm cookie
 fi
-zkey_file="./ethstorage/prover/snarkjs/blob_poseidon2.zkey"
+zkey_file="./ethstorage/prover/snark_lib/blob_poseidon2.zkey"
 if [ ! -e  ${zkey_file} ]; then
   echo "${zkey_file} not found, start downloading..."
   file_id="1V3QkMpk5UC48Jc62nHXMgzeMb6KE8JRY"
@@ -63,4 +63,4 @@ if [ ! -e  ${zkey_file} ]; then
   rm cookie
 fi
 
-go test -timeout 0 github.com/ethstorage/go-ethstorage/integration_tests -v
+go test -tags rapidsnark_asm -timeout 0 github.com/ethstorage/go-ethstorage/integration_tests -v
