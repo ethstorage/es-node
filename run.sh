@@ -33,18 +33,19 @@ fi
 
 # ZK prover mode, 1: one proof per sample, 2: one proof for multiple samples.
 zkp_mode=2 
-for ((i=1; i<=$#; i++)); do
-    if [ "${!i}" == "--miner.zk-prover-mode" ]; then
+i=1
+while [ $i -le $# ]; do
+    if [ "${!i}" = "--miner.zk-prover-mode" ]; then
         j=$((i+1))
         zkp_mode="${!j}"
         break
     else
-        if [[ "${!i}" =~ --miner\.zk-prover-mode=([0-9]+) ]]; then
-            v="${BASH_REMATCH[1]}"
-            zkp_mode="${v}"
+        if echo "${!i}" | grep -qE -- "--miner\.zk-prover-mode=([0-9]+)"; then
+            zkp_mode=$(echo "${!i}" | sed -E 's/.*=([0-9]+)/\1/')
             break
         fi
     fi
+    i=$((i+1))
 done
 
 if [ "$zkp_mode" != 1 ] && [ "$zkp_mode" != 2 ]; then
