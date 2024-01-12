@@ -277,7 +277,6 @@ func (n *EsNode) Start(ctx context.Context, cfg *Config) error {
 			n.log.Error("Could not start a p2pNode", "err", err)
 			return err
 		}
-
 	}
 
 	return nil

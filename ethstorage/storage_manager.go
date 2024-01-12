@@ -153,10 +153,6 @@ func (s *StorageManager) Reset(newL1 int64) error {
 	return nil
 }
 
-func (s *StorageManager) GetLastKVIdxByBlockNumber(blockNumber int64) (uint64, error) {
-	return s.l1Source.GetStorageLastBlobIdx(blockNumber)
-}
-
 // CommitBlobs This function will be called when p2p sync received blobs. It will commit the blobs
 // that match local L1 view and return the unmatched ones.
 // Note that the caller must make sure the blobs data and the corresponding commit are matched.
