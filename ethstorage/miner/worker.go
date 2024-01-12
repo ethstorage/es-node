@@ -55,12 +55,14 @@ func (t *taskItem) String() string {
 }
 
 type result struct {
-	blockNumber  *big.Int
-	startShardId uint64
-	miner        common.Address
-	nonce        uint64
-	encodedData  []common.Hash
-	proofs       [][]byte
+	blockNumber     *big.Int
+	startShardId    uint64
+	miner           common.Address
+	nonce           uint64
+	encodedData     []common.Hash
+	masks           []*big.Int
+	inclusiveProofs [][]byte
+	decodeProof     [][]byte
 }
 
 // worker is the main object which takes care of storage mining
@@ -425,23 +427,21 @@ func (w *worker) mineTask(t *taskItem) (bool, error) {
 				return false, err
 			}
 			w.lg.Info("Got sample data", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "kvIdxs", kvIdxs, "sampleIdxsInKv", sampleIdxsInKv)
-			proofs := make([][]byte, len(kvIdxs))
-			for i := 0; i < len(dataSet); i++ {
-				ps, err := w.prover.GetStorageProof(dataSet[i], encodingKeys[i], sampleIdxsInKv[i])
-				if err != nil {
-					w.lg.Error("Get storage proof error", "kvIdx", kvIdxs[i], "sampleIdxsInKv", sampleIdxsInKv[i], "error", err.Error())
-					return false, fmt.Errorf("get proof err: %v", err)
-				}
-				w.lg.Info("Got storage proof", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "kvIdx", kvIdxs[i], "sampleIdxsInKv", sampleIdxsInKv[i])
-				proofs[i] = ps
+			masks, decodeProof, inclusiveProofs, err := w.prover.GetStorageProof(dataSet, encodingKeys, sampleIdxsInKv)
+			if err != nil {
+				w.lg.Error("Get storage proof error", "kvIdx", kvIdxs, "sampleIdxsInKv", sampleIdxsInKv, "error", err.Error())
+				return false, fmt.Errorf("get proof err: %v", err)
 			}
+			w.lg.Info("Got storage proof", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "kvIdx", kvIdxs, "sampleIdxsInKv", sampleIdxsInKv)
 			newResult := &result{
-				blockNumber:  t.blockNumber,
-				startShardId: t.shardIdx,
-				miner:        t.miner,
-				nonce:        nonce,
-				encodedData:  encodedSamples,
-				proofs:       proofs,
+				blockNumber:     t.blockNumber,
+				startShardId:    t.shardIdx,
+				miner:           t.miner,
+				nonce:           nonce,
+				encodedData:     encodedSamples,
+				masks:           masks,
+				decodeProof:     decodeProof,
+				inclusiveProofs: inclusiveProofs,
 			}
 			// push result to the result map
 			w.resultLock.Lock()
@@ -483,6 +483,7 @@ func (w *worker) getMiningData(t *task, sampleIdx []uint64) ([][]byte, []uint64,
 	}
 	kvHashes, err := w.l1API.GetDataHashes(context.Background(), w.storageMgr.ContractAddress(), kvIdxs)
 	if err != nil {
+		w.lg.Error("Get data hashes error", "kvIdxs", kvIdxs, "error", err.Error())
 		return nil, nil, nil, nil, nil, err
 	}
 	for i := uint64(0); i < checksLen; i++ {
@@ -500,6 +501,7 @@ func (w *worker) getMiningData(t *task, sampleIdx []uint64) ([][]byte, []uint64,
 			if !exist {
 				err = fmt.Errorf("kv not found: index=%d", kvIdxs[i])
 			}
+			w.lg.Error("Get data error", "index", kvIdxs[i], "error", err.Error())
 			return nil, nil, nil, nil, nil, err
 		}
 	}
