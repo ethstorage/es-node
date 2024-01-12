@@ -22,6 +22,7 @@ import (
 	"github.com/ethstorage/go-ethstorage/ethstorage"
 	"github.com/ethstorage/go-ethstorage/ethstorage/flags"
 	eslog "github.com/ethstorage/go-ethstorage/ethstorage/log"
+	"github.com/ethstorage/go-ethstorage/ethstorage/metrics"
 	"github.com/ethstorage/go-ethstorage/ethstorage/node"
 	"github.com/urfave/cli"
 )
@@ -118,7 +119,11 @@ func EsNodeMain(ctx *cli.Context) error {
 		return err
 	}
 
-	n, err := node.New(context.Background(), cfg, log, VersionWithMeta)
+	var m metrics.Metricer = metrics.NoopMetrics
+	if cfg.Metrics.Enabled {
+		m = metrics.NewMetrics("default")
+	}
+	n, err := node.New(context.Background(), cfg, log, VersionWithMeta, m)
 	if err != nil {
 		log.Error("Unable to create the storage node", "error", err)
 		return err
@@ -131,6 +136,8 @@ func EsNodeMain(ctx *cli.Context) error {
 	}
 	defer n.Close()
 
+	m.RecordInfo(VersionWithMeta)
+	m.RecordUp()
 	// TODO: heartbeat
 	if cfg.Pprof.Enabled {
 		pprofCtx, pprofCancel := context.WithCancel(context.Background())

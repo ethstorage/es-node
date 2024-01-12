@@ -6,6 +6,7 @@ package node
 import (
 	"context"
 	"errors"
+	"math/big"
 	"net"
 	"net/http"
 	"strconv"
@@ -30,13 +31,14 @@ type rpcServer struct {
 func newRPCServer(
 	ctx context.Context,
 	rpcCfg *RPCConfig,
+	l2ChainId *big.Int,
 	sm *ethstorage.StorageManager,
 	dl *downloader.Downloader,
 	log log.Logger,
 	appVersion string,
 ) (*rpcServer, error) {
 	esAPI := NewESAPI(rpcCfg, sm, dl, log)
-	ethApi := NewETHAPI(rpcCfg, log)
+	ethApi := NewETHAPI(rpcCfg, l2ChainId, log)
 
 	endpoint := net.JoinHostPort(rpcCfg.ListenAddr, strconv.Itoa(rpcCfg.ListenPort))
 	r := &rpcServer{

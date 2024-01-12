@@ -13,7 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethstorage/go-ethstorage/ethstorage"
-	me "github.com/ethstorage/go-ethstorage/ethstorage/metrics"
+	"github.com/ethstorage/go-ethstorage/ethstorage/metrics"
 	"github.com/ethstorage/go-ethstorage/ethstorage/p2p/protocol"
 	"github.com/ethstorage/go-ethstorage/ethstorage/rollup"
 	"github.com/hashicorp/go-multierror"
@@ -40,21 +40,15 @@ type NodeP2P struct {
 	storageManager *ethstorage.StorageManager
 }
 
-type Metricer interface {
-	RecordGossipEvent(evType int32)
-	// SetPeerScores Peer Scoring Metric Funcs
-	SetPeerScores(map[string]float64)
-}
-
 // NewNodeP2P creates a new p2p node, and returns a reference to it. If the p2p is disabled, it returns nil.
 // If metrics are configured, a bandwidth monitor will be spawned in a goroutine.
 func NewNodeP2P(resourcesCtx context.Context, rollupCfg *rollup.EsConfig, l1ChainID uint64, log log.Logger, setup SetupP2P,
-	storageManager *ethstorage.StorageManager, db ethdb.Database, metrics Metricer, feed *event.Feed) (*NodeP2P, error) {
+	storageManager *ethstorage.StorageManager, db ethdb.Database, m metrics.Metricer, feed *event.Feed) (*NodeP2P, error) {
 	if setup == nil {
 		return nil, errors.New("p2p node cannot be created without setup")
 	}
 	var n NodeP2P
-	if err := n.init(resourcesCtx, rollupCfg, l1ChainID, log, setup, storageManager, db, metrics, feed); err != nil {
+	if err := n.init(resourcesCtx, rollupCfg, l1ChainID, log, setup, storageManager, db, m, feed); err != nil {
 		closeErr := n.Close()
 		if closeErr != nil {
 			log.Error("Failed to close p2p after starting with err", "closeErr", closeErr, "err", err)
@@ -68,7 +62,7 @@ func NewNodeP2P(resourcesCtx context.Context, rollupCfg *rollup.EsConfig, l1Chai
 }
 
 func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig, l1ChainID uint64, log log.Logger, setup SetupP2P,
-	storageManager *ethstorage.StorageManager, db ethdb.Database, metrics Metricer, feed *event.Feed) error {
+	storageManager *ethstorage.StorageManager, db ethdb.Database, m metrics.Metricer, feed *event.Feed) error {
 	bwc := p2pmetrics.NewBandwidthCounter()
 	n.storageManager = storageManager
 
@@ -88,10 +82,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 			n.gater = extra.ConnectionGater()
 			n.connMgr = extra.ConnectionManager()
 		}
-		m := (me.Metricer)(nil)
-		if rollupCfg.MetricsEnable {
-			m = me.NewMetrics("sync")
-		}
+
 		// Activate the P2P req-resp sync
 		n.syncCl = protocol.NewSyncClient(log, rollupCfg, n.host.NewStream, storageManager, setup.SyncerParams(), db, m, feed)
 		n.host.Network().Notify(&network.NotifyBundle{
@@ -168,7 +159,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 		// TODO: use metric
 		n.host.Network().Notify(NewNetworkNotifier(log, nil))
 		// note: the IDDelta functionality was removed from libP2P, and no longer needs to be explicitly disabled.
-		n.gs, err = NewGossipSub(resourcesCtx, n.host, n.gater, rollupCfg, setup, metrics, log)
+		n.gs, err = NewGossipSub(resourcesCtx, n.host, n.gater, rollupCfg, setup, m, log)
 		if err != nil {
 			return fmt.Errorf("failed to start gossipsub router: %w", err)
 		}
@@ -186,8 +177,8 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 			return fmt.Errorf("failed to start discv5: %w", err)
 		}
 
-		if metrics != nil {
-			// go metrics.RecordBandwidth(resourcesCtx, bwc)
+		if m != nil {
+			go m.RecordBandwidth(resourcesCtx, bwc)
 		}
 	}
 	return nil

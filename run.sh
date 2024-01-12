@@ -2,6 +2,8 @@
 
 # usage:
 # env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> ./run.sh
+# for one zk proof per sample (if the storage contract supports):
+# env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> ./run.sh --miner.zk-prover-mode 1
 
 if [ -z "$ES_NODE_STORAGE_MINER" ]; then
   echo "Please provide 'ES_NODE_STORAGE_MINER' as an environment variable"
@@ -23,11 +25,46 @@ if [ ${#ES_NODE_SIGNER_PRIVATE_KEY} -ne 64 ]; then
   exit 1
 fi
 
-# download blob_poseidon.zkey if not yet
-zkey_file="./build/bin/snarkjs/blob_poseidon.zkey"
+# install snarkjs if not
+if ! [ "$(command -v snarkjs)" ]; then
+    echo "snarkjs not found, start installing..."
+    npm install -g snarkjs
+fi
+
+# ZK prover mode, 1: one proof per sample, 2: one proof for multiple samples.
+zkp_mode=2 
+i=1
+while [ $i -le $# ]; do
+    if [ "${!i}" = "--miner.zk-prover-mode" ]; then
+        j=$((i+1))
+        zkp_mode="${!j}"
+        break
+    else
+        if echo "${!i}" | grep -qE -- "--miner\.zk-prover-mode=([0-9]+)"; then
+            zkp_mode=$(echo "${!i}" | sed -E 's/.*=([0-9]+)/\1/')
+            break
+        fi
+    fi
+    i=$((i+1))
+done
+
+if [ "$zkp_mode" != 1 ] && [ "$zkp_mode" != 2 ]; then
+  echo "zk prover mode can only be 1 or 2"
+  exit 1  
+fi
+
+echo "zk prover mode is $zkp_mode"
+
+# download zkey if not yet
+zkey_name="blob_poseidon2.zkey"
+file_id="1V3QkMpk5UC48Jc62nHXMgzeMb6KE8JRY"
+if [ "$zkp_mode" = 1 ]; then
+  zkey_name="blob_poseidon.zkey"
+  file_id="1ZLfhYeCXMnbk6wUiBADRAn1mZ8MI_zg-"
+fi
+zkey_file="./build/bin/snarkjs/$zkey_name"
 if [ ! -e  ${zkey_file} ]; then
   echo "${zkey_file} not found, start downloading..."
-  file_id="1ZLfhYeCXMnbk6wUiBADRAn1mZ8MI_zg-"
   html=`curl -c ./cookie -s -L "https://drive.google.com/uc?export=download&id=${file_id}"`
   curl -Lb ./cookie "https://drive.google.com/uc?export=download&`echo ${html}|grep -Eo 'confirm=[a-zA-Z0-9\-_]+'`&id=${file_id}" -o ${zkey_file}
   rm cookie
@@ -41,7 +78,7 @@ common_flags=" --datadir $data_dir \
   --l1.rpc http://65.109.115.36:8545 \
   --storage.l1contract 0xb4B46bdAA835F8E4b4d8e208B6559cD267851051 \
   --storage.miner $ES_NODE_STORAGE_MINER \
-  $@"
+  "
 
 # init shard 0
 es_node_init="init --shard_index 0"
@@ -50,6 +87,7 @@ es_node_init="init --shard_index 0"
 # TODO remove --network
 es_node_start=" --network devnet \
   --miner.enabled \
+  --miner.zkey $zkey_name \
   --storage.files $storage_file_0 \
   --signer.private-key $ES_NODE_SIGNER_PRIVATE_KEY \
   --l1.beacon http://65.109.115.36:5052 \
@@ -59,7 +97,8 @@ es_node_start=" --network devnet \
   --p2p.max.request.size 4194304 \
   --p2p.sync.concurrency 32 \
   --p2p.bootnodes enr:-Li4QPFCNc7mLPqxoVrk1eKB0qa5hb8H75IBwhvdSGGdamx1egKibkKO1v1rtLt7r3pJvoVxv95ITlpSphYCAsunU6qGAYwkwuOpimV0aHN0b3JhZ2XbAYDY15S0tGvaqDX45LTY4gi2VZzSZ4UQUcGAgmlkgnY0gmlwhEFtcySJc2VjcDI1NmsxoQM9rkUZ7qWoJQT2UVrPzDRzmLqDrxCSR4zC4db-lgz1bYN0Y3CCJAaDdWRwgnZh \
-"
+  $@"
+  
 # create data file for shard 0 if not yet
 if [ ! -e $storage_file_0 ]; then
   if $executable $es_node_init $common_flags ; then
@@ -71,4 +110,4 @@ if [ ! -e $storage_file_0 ]; then
 fi
 
 # start es-node
-exec $executable $es_node_start $common_flags
+exec $executable $common_flags $es_node_start

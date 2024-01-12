@@ -20,6 +20,11 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 )
 
+const (
+	PutBlobEvent    = "PutBlob(uint256,uint256,bytes32)"
+	MinedBlockEvent = "MinedBlock(uint256,uint256,uint256,uint256)" // TODO: update when new version contract deployed
+)
+
 var httpRegex = regexp.MustCompile("^http(s)?://")
 var ErrSubscriberClosed = errors.New("subscriber closed")
 
@@ -120,9 +125,8 @@ func (w *PollingClient) SubscribeNewHead(ctx context.Context, ch chan<- *types.H
 	}), nil
 }
 
-func (w *PollingClient) FilterLogsByBlockRange(start *big.Int, end *big.Int) ([]types.Log, error) {
-	eventSig := []byte("PutBlob(uint256,uint256,bytes32)")
-	topic := crypto.Keccak256Hash(eventSig)
+func (w *PollingClient) FilterLogsByBlockRange(start *big.Int, end *big.Int, eventSig string) ([]types.Log, error) {
+	topic := crypto.Keccak256Hash([]byte(eventSig))
 
 	// create a new filter query
 	query := ethereum.FilterQuery{
