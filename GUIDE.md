@@ -19,7 +19,7 @@ Please refer to [this section](/README.md/#minimum-hardware-requirements) for ha
 ## System Environment
  - Ubuntu 20.04+ (tested and verified)
  - (Optional) Docker 24.0.5+ (would simplify the process)
- - (Optional) Go 1.20+ and Node.js 16+ (can be installed following the [steps](#install-dependencies))
+ - (Optional) Go 1.20+ (can be installed following the [steps](#install-dependencies))
 
 You can choose [the method of running es-node](#options-to-run-es-node) based on your current environment.
 
@@ -37,15 +37,13 @@ Remember to use the signer's private key (with ETH balance) to replace `<private
 
 You can run es-node from a pre-built Docker image, a pre-built executable, or from the source code.
 
- - If you choose [the pre-built es-node executable](#from-pre-built-executables), you will need to manually install some dependencies such as Node.js and snarkjs.
+ - [The pre-built es-node executable](#from-pre-built-executables) is recommended if you will run es-node on Linux or MacOS.
 
- - If you have Docker version 24.0.5 or above installed, the quickest way to get started is by [using a pre-built Docker image](#from-a-docker-image).
+ - If you already have Docker installed, or have to run es-node on Windows, you can [use a pre-built Docker image](#from-a-docker-image).
  
- - If you prefer to build [from the source code](#from-source-code), you will also need to install Go besides Node.js and snarkjs.
+ - If you prefer to build [from the source code](#from-source-code), you will need to install Go.
 
 ## From pre-built executables
-
-Before running es-node from the pre-built executables, ensure that you have installed [Node.js](#install-nodejs) and [snarkjs](#install-snarkjs).
 
 Download the pre-built package suitable for your platform:
 
@@ -88,7 +86,9 @@ docker logs -f es
 ```
 ## From source code
 
-You will need to [install Go](#install-go) to build es-node from source code, and install [Node.js](#install-nodejs) and [snarkjs](#install-snarkjs) to run es-node.
+You will need to [install Go](#install-go) to build es-node from source code.
+
+When using Ubuntu, it is necessary to [verify whether `build-essential` and `libomp-dev` are installed](#install-rapidsnark-dependencies).
 
 Download source code and switch to the latest release branch:
 ```sh
@@ -137,30 +137,22 @@ echo "export PATH=$PATH:/usr/local/go/bin" >> ~/.profile
 source ~/.profile
 ```
 
-### Install Node.js
+### Install RapidSNARK dependencies
 
-Install Node Version Manager
-```sh
-curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
+Check if `build-essential` and `libomp-dev packages` are installed on your Ubuntu system:
+
 ```
-Close and reopen your terminal to start using nvm or run the following to use it now:
-```sh
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+dpkg -l | grep build-essential
+dpkg -l | grep libomp-dev
 ```
-Choose a Node.js version above 16 (e.g. v20.*) and install 
-```sh
-nvm install 20
+Install the build-essential and libomp-dev packages if no information printed:
+
 ```
-Activate the Node.js version
-```sh
-nvm use 20
+apt update
+apt install build-essential
+apt install libomp-dev
 ```
-### Install snarkjs
-```sh
-npm install -g snarkjs
-```
+
 
 ## FAQ
 
