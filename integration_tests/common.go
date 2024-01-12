@@ -21,7 +21,7 @@ var (
 	privateKey = os.Getenv("ES_NODE_SIGNER_PRIVATE_KEY")
 	minerAddr  = common.HexToAddress(os.Getenv("ES_NODE_STORAGE_MINER"))
 	lg         = esLog.NewLogger(esLog.CLIConfig{
-		Level:  "debug",
+		Level:  "info",
 		Format: "text",
 		Color:  term.IsTerminal(int(os.Stdout.Fd())),
 	})
