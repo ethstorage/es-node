@@ -65,7 +65,7 @@ fi
 zkey_file="./build/bin/snarkjs/$zkey_name"
 if [ ! -e  ${zkey_file} ]; then
   echo "${zkey_file} not found, start downloading..." 
-  curl zkey_url -o ${zkey_file} 
+  curl $zkey_url -o ${zkey_file} 
 fi
 
 executable="./build/bin/es-node"
