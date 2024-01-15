@@ -57,17 +57,15 @@ echo "zk prover mode is $zkp_mode"
 
 # download zkey if not yet
 zkey_name="blob_poseidon2.zkey"
-file_id="1V3QkMpk5UC48Jc62nHXMgzeMb6KE8JRY"
+zkey_url="https://drive.usercontent.google.com/download?id=1V3QkMpk5UC48Jc62nHXMgzeMb6KE8JRY&export=download&confirm=t&uuid=987dbfe5-0dea-4c5b-8e8e-e03c0c43e5d2&at=APZUnTU9wgxwgi0Fua7Ooy6JxbIN:1705315831568"
 if [ "$zkp_mode" = 1 ]; then
   zkey_name="blob_poseidon.zkey"
-  file_id="1ZLfhYeCXMnbk6wUiBADRAn1mZ8MI_zg-"
+  zkey_url="https://drive.usercontent.google.com/download?id=1ZLfhYeCXMnbk6wUiBADRAn1mZ8MI_zg-&export=download&confirm=t&uuid=16ddcd58-2498-4d65-8931-934df3d0065c&at=APZUnTVkjg3SRn910o_UXqeYqOoy:1705311918635"
 fi
 zkey_file="./build/bin/snarkjs/$zkey_name"
 if [ ! -e  ${zkey_file} ]; then
-  echo "${zkey_file} not found, start downloading..."
-  html=`curl -c ./cookie -s -L "https://drive.google.com/uc?export=download&id=${file_id}"`
-  curl -Lb ./cookie "https://drive.google.com/uc?export=download&`echo ${html}|grep -Eo 'confirm=[a-zA-Z0-9\-_]+'`&id=${file_id}" -o ${zkey_file}
-  rm cookie
+  echo "${zkey_file} not found, start downloading..." 
+  curl zkey_url -o ${zkey_file} 
 fi
 
 executable="./build/bin/es-node"
