@@ -189,7 +189,7 @@ func (d *dashboard) FetchMiningEvents(start, end uint64) ([]*miningEvent, uint64
 			BlockMined:   new(big.Int).SetBytes(l.Topics[3].Bytes()),
 			LastMineTime: new(big.Int).SetBytes(l.Data[:32]).Uint64(),
 			Miner:        common.BytesToAddress(l.Data[:32][44:64]),
-			Reward:       new(big.Int).SetBytes(l.Data[64:96]).Uint64(),
+			Reward:       new(big.Int).SetBytes(l.Data[64:96]).Uint64() / 10000000000,
 			GasFee:       tx.Gas() * tx.GasPrice().Uint64() / 10000000000,
 		})
 	}
