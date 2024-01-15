@@ -93,9 +93,10 @@ func TestMining(t *testing.T) {
 		}
 		lg.Error("L1 heads subscription error", "err", err)
 	}()
+	mnr.Start()
+
 	prepareData(t, pClient, storageManager, miningConfig.StorageCost.String())
 	fillEmpty(t, pClient, storageManager)
-	mnr.Start()
 
 	var wg sync.WaitGroup
 	minedShardSig := make(chan uint64, len(shardIds))
