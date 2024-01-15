@@ -207,6 +207,20 @@ func (d *dashboard) GetTransactionByHash(hash common.Hash) (*types.Transaction, 
 	return tx, nil
 }
 
+func (d *dashboard) InitMetrics() error {
+	lastMineTimeVal, err := d.l1Source.ReadContractField("prepaidLastMineTime", new(big.Int).SetUint64(d.startBlock))
+	if err != nil {
+		return err
+	}
+	minDiffVal, err := d.l1Source.ReadContractField("minimumDiff", new(big.Int).SetUint64(d.startBlock))
+	if err != nil {
+		return err
+	}
+	d.m.SetMiningInfo(0, new(big.Int).SetBytes(minDiffVal).Uint64(), new(big.Int).SetBytes(lastMineTimeVal).Uint64(),
+		0, common.Address{}, 0, 0)
+	return nil
+}
+
 func readSlotFromContract(ctx context.Context, client *ethclient.Client, l1Contract common.Address, fieldName string) ([]byte, error) {
 	h := crypto.Keccak256Hash([]byte(fieldName + "()"))
 	msg := ethereum.CallMsg{
@@ -242,7 +256,10 @@ func main() {
 	if err != nil {
 		log.Crit("New dashboard fail", "err", err)
 	}
-
+	err = d.InitMetrics()
+	if err != nil {
+		log.Crit("Init metrics value fail", "err", err.Error())
+	}
 	l1LatestBlockSub := eth.PollBlockChanges(d.ctx, d.logger, d.l1Source, d.RefreshMetrics, ethRPC.LatestBlockNumber, epoch, epoch)
 	defer l1LatestBlockSub.Unsubscribe()
 
