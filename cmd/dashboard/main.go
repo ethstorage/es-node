@@ -183,26 +183,14 @@ func (d *dashboard) FetchMiningEvents(start, end uint64) ([]*miningEvent, uint64
 			return nil, start, fmt.Errorf("GetTransactionByHash fail, tx hash: %s, error: %s", l.TxHash.Hex(), err.Error())
 		}
 
-		// TODO: update when new version contract deployed, use the reward in the new MinedBlock event
-		balance, nErr := d.l1Source.BalanceAt(d.ctx, d.l1Contract, new(big.Int).SetUint64(l.BlockNumber))
-		if nErr != nil {
-			return nil, start, fmt.Errorf("BalanceAt fail, block: %d, error: %s", l.BlockNumber, err.Error())
-		}
-		balanceBefore, oErr := d.l1Source.BalanceAt(d.ctx, d.l1Contract, new(big.Int).SetUint64(l.BlockNumber-1))
-		if oErr != nil {
-			return nil, start, fmt.Errorf("BalanceAt fail, block: %d, error: %s", l.BlockNumber-1, err.Error())
-		}
-		reward := new(big.Int).Sub(balanceBefore, balance).Uint64() * 99 / 100 // reward = balance diff * 99% because 1% goes to the treasury
-
 		events = append(events, &miningEvent{
 			ShardId:      new(big.Int).SetBytes(l.Topics[1].Bytes()).Uint64(),
 			Difficulty:   new(big.Int).SetBytes(l.Topics[2].Bytes()),
 			BlockMined:   new(big.Int).SetBytes(l.Topics[3].Bytes()),
 			LastMineTime: new(big.Int).SetBytes(l.Data[:32]).Uint64(),
-			// TODO: update when new version contract deployed, use the miner in the new MinedBlock event
-			Miner:  common.BytesToAddress(tx.Data()[80:100]),
-			Reward: reward / 10000000000,
-			GasFee: tx.Gas() * tx.GasPrice().Uint64() / 10000000000,
+			Miner:        common.BytesToAddress(l.Data[:32][44:64]),
+			Reward:       new(big.Int).SetBytes(l.Data[64:96]).Uint64(),
+			GasFee:       tx.Gas() * tx.GasPrice().Uint64() / 10000000000,
 		})
 	}
 	return events, end + 1, nil

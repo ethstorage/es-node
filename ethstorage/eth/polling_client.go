@@ -22,7 +22,7 @@ import (
 
 const (
 	PutBlobEvent    = "PutBlob(uint256,uint256,bytes32)"
-	MinedBlockEvent = "MinedBlock(uint256,uint256,uint256,uint256)" // TODO: update when new version contract deployed
+	MinedBlockEvent = "MinedBlock(uint256,uint256,uint256,uint256,address,uint256)"
 )
 
 var httpRegex = regexp.MustCompile("^http(s)?://")
