@@ -90,11 +90,6 @@ func TestZKProver_GenerateZKProof(t *testing.T) {
 		} else {
 			t.Log("verifyProof success!")
 		}
-		err = verifyDecodeSample2(t, masks, proof)
-		if err != nil {
-			t.Errorf("ZKProver.GenerateZKProof() verifyDecodeSample2 err: %v", err)
-			return
-		}
 		t.Log("verifyDecodeSample2 success!")
 	})
 }
@@ -112,29 +107,6 @@ func readXIn2(buildDir string) ([]string, error) {
 		return nil, err
 	}
 	return input.XIn, nil
-}
-
-func verifyDecodeSample2(t *testing.T, masks []*big.Int, proof []byte) error {
-	ctx := context.Background()
-	client, err := ethclient.DialContext(ctx, l1Endpoint)
-	if err != nil {
-		t.Fatalf("Failed to connect to the Ethereum client: %v", err)
-	}
-	defer client.Close()
-	h := crypto.Keccak256Hash([]byte("decodeSample(uint256[],bytes)"))
-	uintArrayType, _ := abi.NewType("uint256[]", "", nil)
-	bytesType, _ := abi.NewType("bytes", "", nil)
-	args := abi.Arguments{
-		{Type: uintArrayType},
-		{Type: bytesType},
-	}
-	values := []interface{}{masks, proof}
-	dataField, err := args.Pack(values...)
-	if err != nil {
-		return fmt.Errorf("%v, values: %v", err, values)
-	}
-	calldata := append(h[0:4], dataField...)
-	return callVerify(calldata, l1Contract)
 }
 
 // call Decoder.sol

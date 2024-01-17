@@ -57,10 +57,10 @@ echo "zk prover mode is $zkp_mode"
 
 # download zkey if not yet
 zkey_name="blob_poseidon2.zkey"
-zkey_url="https://drive.usercontent.google.com/download?id=1V3QkMpk5UC48Jc62nHXMgzeMb6KE8JRY&export=download&confirm=t&uuid=987dbfe5-0dea-4c5b-8e8e-e03c0c43e5d2&at=APZUnTU9wgxwgi0Fua7Ooy6JxbIN:1705315831568"
+zkey_url="https://drive.usercontent.google.com/download?id=1olfJvXPJ25Rbcjj9udFlIVr08cUCgE4l&export=download&confirm=t&uuid=724a4ed0-c344-4cc1-9078-f50751028725"
 if [ "$zkp_mode" = 1 ]; then
   zkey_name="blob_poseidon.zkey"
-  zkey_url="https://drive.usercontent.google.com/download?id=1ZLfhYeCXMnbk6wUiBADRAn1mZ8MI_zg-&export=download&confirm=t&uuid=16ddcd58-2498-4d65-8931-934df3d0065c&at=APZUnTVkjg3SRn910o_UXqeYqOoy:1705311918635"
+  zkey_url="https://drive.usercontent.google.com/download?id=1ZLfhYeCXMnbk6wUiBADRAn1mZ8MI_zg-&export=download&confirm=t&uuid=16ddcd58-2498-4d65-8931-934df3d0065c"
 fi
 zkey_file="./build/bin/snarkjs/$zkey_name"
 if [ ! -e  ${zkey_file} ]; then
