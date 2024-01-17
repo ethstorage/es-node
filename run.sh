@@ -70,7 +70,7 @@ if [ ! -e  ${zkey_file} ]; then
     echo "Error: The zkey file was not downloaded correctly. Please try again."
     exit 1
   fi
-  file_size=$(stat -f %z ${zkey_file})
+  file_size=$(wc -c <  ${zkey_file})
   if [ ${file_size} -lt 104857600 ]; then
     echo "Error: The zkey file was not downloaded correctly. You can check the file content for more information."
     exit 1
