@@ -49,13 +49,13 @@ echo ES_NODE_STORAGE_MINER = $ES_NODE_STORAGE_MINER
 zkey_file="./ethstorage/prover/snarkjs/blob_poseidon.zkey"
 if [ ! -e  ${zkey_file} ]; then
   echo "${zkey_file} not found, start downloading..."
-  zkey_url="https://drive.usercontent.google.com/download?id=1ZLfhYeCXMnbk6wUiBADRAn1mZ8MI_zg-&export=download&confirm=t&uuid=16ddcd58-2498-4d65-8931-934df3d0065c&at=APZUnTVkjg3SRn910o_UXqeYqOoy:1705311918635"
+  zkey_url="https://drive.usercontent.google.com/download?id=1ZLfhYeCXMnbk6wUiBADRAn1mZ8MI_zg-&export=download&confirm=t&uuid=16ddcd58-2498-4d65-8931-934df3d0065c"
   curl $zkey_url -o ${zkey_file} 
 fi
 zkey_file="./ethstorage/prover/snarkjs/blob_poseidon2.zkey"
 if [ ! -e  ${zkey_file} ]; then
   echo "${zkey_file} not found, start downloading..."
-  zkey_url="https://drive.usercontent.google.com/download?id=1V3QkMpk5UC48Jc62nHXMgzeMb6KE8JRY&export=download&confirm=t&uuid=987dbfe5-0dea-4c5b-8e8e-e03c0c43e5d2&at=APZUnTU9wgxwgi0Fua7Ooy6JxbIN:1705315831568"
+  zkey_url="https://drive.usercontent.google.com/download?id=1V3QkMpk5UC48Jc62nHXMgzeMb6KE8JRY&export=download&confirm=t&uuid=987dbfe5-0dea-4c5b-8e8e-e03c0c43e5d2"
   curl $zkey_url -o ${zkey_file} 
 fi
 
