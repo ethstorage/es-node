@@ -57,21 +57,22 @@ echo "zk prover mode is $zkp_mode"
 
 # download zkey if not yet
 zkey_name="blob_poseidon2.zkey"
-zkey_url="https://drive.usercontent.google.com/download?id=V3QkMpk5UC48Jc62nHXMgzeMb6KE8JRY&export=download&confirm=t&uuid=987dbfe5-0dea-4c5b-8e8e-e03c0c43e5d2"
+zkey_size=560300809
+zkey_url="https://drive.usercontent.google.com/download?id=1V3QkMpk5UC48Jc62nHXMgzeMb6KE8JRY&export=download&confirm=t&uuid=987dbfe5-0dea-4c5b-8e8e-e03c0c43e5d2"
 if [ "$zkp_mode" = 1 ]; then
   zkey_name="blob_poseidon.zkey"
+  zkey_size=280151245
   zkey_url="https://drive.usercontent.google.com/download?id=1ZLfhYeCXMnbk6wUiBADRAn1mZ8MI_zg-&export=download&confirm=t&uuid=16ddcd58-2498-4d65-8931-934df3d0065c"
 fi
 zkey_file="./build/bin/snarkjs/$zkey_name"
-if [ ! -e  ${zkey_file} ]; then
-  echo "${zkey_file} not found, start downloading..." 
+if [ ! -e  ${zkey_file} ] || [ $(wc -c <  ${zkey_file}) -ne ${zkey_size} ]; then
+  echo "Start downloading ${zkey_file}..." 
   curl $zkey_url -o ${zkey_file}
   if [ ! -e  ${zkey_file} ]; then
-    echo "Error: The zkey file was not downloaded correctly. Please try again."
+    echo "Error: The zkey file was not downloaded. Please try again."
     exit 1
   fi
-  file_size=$(wc -c <  ${zkey_file})
-  if [ ${file_size} -lt 104857600 ]; then
+  if [ $(wc -c <  ${zkey_file}) -ne ${zkey_size} ]; then
     echo "Error: The zkey file was not downloaded correctly. You can check the file content for more information."
     exit 1
   fi
