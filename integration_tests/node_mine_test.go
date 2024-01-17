@@ -141,6 +141,16 @@ func TestMining(t *testing.T) {
 }
 
 func cleanFiles(proverDir string) {
+	for _, shardId := range shardIds {
+		fileName := fmt.Sprintf(dataFileName, shardId)
+		if _, err := os.Stat(fileName); !os.IsNotExist(err) {
+			err = os.Remove(fileName)
+			if err != nil {
+				fmt.Println(err)
+			}
+		}
+	}
+
 	folderPath := filepath.Join(proverDir, "snarkbuild")
 	files, err := ioutil.ReadDir(folderPath)
 	if err != nil {
