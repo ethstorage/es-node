@@ -18,19 +18,19 @@ if [ -z "$ES_NODE_STORAGE_MINER" ]; then
 fi
 # A contract that will be update with new blob uploaded for the KZG test
 if [ -z "$ES_NODE_STORAGE_L1CONTRACT_KZG" ]; then
-  export ES_NODE_STORAGE_L1CONTRACT_KZG=0x1B36EdCACd702acE37222003059e5F0Fa83225e5
+  export ES_NODE_STORAGE_L1CONTRACT_KZG=0x1Cf97d51d305e1e84132Ee504F6B20F5162355fD
 fi
 # A contract address that clef server checks against before signing the miner transaction
 if [ -z "$ES_NODE_STORAGE_L1CONTRACT_CLEF" ]; then
-  export ES_NODE_STORAGE_L1CONTRACT_CLEF=0x1B36EdCACd702acE37222003059e5F0Fa83225e5
+  export ES_NODE_STORAGE_L1CONTRACT_CLEF=0x1Cf97d51d305e1e84132Ee504F6B20F5162355fD
 fi
 # A newly deployed contract is required for each run for miner test, with zkp verifier of mode 2
 if [ -z "$ES_NODE_STORAGE_L1CONTRACT" ]; then
-  export ES_NODE_STORAGE_L1CONTRACT=0x5Ed6f788a92876CB111646dB8AaF61510747e6c7
+  export ES_NODE_STORAGE_L1CONTRACT=0x1Cf97d51d305e1e84132Ee504F6B20F5162355fD
 fi
 # A contract with zkp verifier of mode 1 (one proof per sample)
 if [ -z "$ES_NODE_STORAGE_L1CONTRACT_ZKP1" ]; then
-  export ES_NODE_STORAGE_L1CONTRACT_ZKP1=0x9D01a9D186f466EbF0F0eD0A94ebD37e4Ee21160
+  export ES_NODE_STORAGE_L1CONTRACT_ZKP1=0x90e945b64F5Fe312dDE12F4aaBa8868f2fad2398
 fi
 # The commonly used l1 eth rpc endpoint
 if [ -z "$ES_NODE_L1_ETH_RPC" ]; then
