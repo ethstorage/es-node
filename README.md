@@ -22,7 +22,7 @@ The minimum hardware requirements for an es-node are as follows:
  - 4GB of RAM
  - Disk: 
     - We recommend using an NVMe disk to support the full speed of sampling
-    - At least 2.2TB of available storage space for the runtime and sync of one data shard
+    - At least 550 GB of available storage space for the runtime and sync of one data shard
  - Internet service: At least 8MB/sec download speed
 
 ## Getting started
@@ -43,7 +43,7 @@ _Note: Some of the flags/parameters used in `run.sh` are supposed to change over
 
 With `es-node init` command, you can init your es-node by creating a data file for each shard.
 
-You can specify `shard_len` (the number of shards) or `shard_index` (the index of specified shards, and you can specify more than one) to create shards that you would like to mine. If both appear, `shard_index`` takes precedence. 
+You can specify `shard_len` (the number of shards) or `shard_index` (the index of specified shards, and you can specify more than one) to create shards that you would like to mine. If both appear, `shard_index` takes precedence. 
 
 Here are the options that you can use with `init` command:
 
