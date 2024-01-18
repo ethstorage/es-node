@@ -104,6 +104,7 @@ es_node_start=" --network devnet \
   --download.thread 32 \
   --p2p.max.request.size 4194304 \
   --p2p.sync.concurrency 32 \
+  --p2p.bootnodes enr:-Li4QD2t3oCXc98qPwZOXZC38631I7zYTKkYCeoutmRIQ7qXVXcG4kDPPD25HmmoKJlswGx-v55doc8HYqMrlyYZrWOGAY0am8vEimV0aHN0b3JhZ2XbAYDY15SeGGxJtIfAPgxSm2e9m8nh4ucT_MGAgmlkgnY0gmlwhEFtMpGJc2VjcDI1NmsxoQNIbl6CN0q_OiHTc2qON3rAtJwpJh7TByr4tVKp7zHgW4N0Y3CCJAaDdWRwgplt \
   $@"
   
 # create data file for shard 0 if not yet
