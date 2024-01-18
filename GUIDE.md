@@ -8,9 +8,9 @@ For a detailed explanation for es-node please consult the [README](/README.md).
 
 ## Testnet spec
 
-- Layer 1: [dencun-devnet-12](https://dencun-devnet-12.ethpandaops.io/)
+- Layer 1: [Goerli](https://goerli.net/)
 - storage-contracts-v1: v0.1.0
-- es-node: v0.1.4
+- es-node: v0.1.5
 
 ## Minimum Hardware Requirements 
 
@@ -29,7 +29,7 @@ _Note: The steps assume the use of the root user for all command line operations
 
 It is recommended to prepare two Ethereum accounts specifically for this test. One of these accounts should contain a balance of test ETH to be used as a transaction signer.
 
-The test ETH can be requested from [https://faucet.dencun-devnet-12.ethpandaops.io/](https://faucet.dencun-devnet-12.ethpandaops.io/). 
+The test ETH can be requested from [https://goerlifaucet.com/](https://goerlifaucet.com/). 
 
 Remember to use the signer's private key (with ETH balance) to replace `<private_key>` in the following steps. And use the other address to replace `<miner>`.
 
@@ -51,19 +51,19 @@ Download the pre-built package suitable for your platform:
 
 Linux x86-64 or AMD64:
 ```sh
-curl -L https://github.com/ethstorage/es-node/releases/download/v0.1.4/es-node.v0.1.4.linux-amd64.tar.gz | tar -xz
+curl -L https://github.com/ethstorage/es-node/releases/download/v0.1.5/es-node.v0.1.5.linux-amd64.tar.gz | tar -xz
 ```
 MacOS x86-64 or AMD64:
 ```sh
-curl -L https://github.com/ethstorage/es-node/releases/download/v0.1.4/es-node.v0.1.4.darwin-amd64.tar.gz | tar -xz
+curl -L https://github.com/ethstorage/es-node/releases/download/v0.1.5/es-node.v0.1.5.darwin-amd64.tar.gz | tar -xz
 ```
 MacOS ARM64:
 ```sh
-curl -L https://github.com/ethstorage/es-node/releases/download/v0.1.4/es-node.v0.1.4.darwin-arm64.tar.gz | tar -xz
+curl -L https://github.com/ethstorage/es-node/releases/download/v0.1.5/es-node.v0.1.5.darwin-arm64.tar.gz | tar -xz
 ```
 Run es-node
 ```
-cd es-node.v0.1.4
+cd es-node.v0.1.5
 env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> ./run.sh
 ```
 
@@ -79,7 +79,7 @@ docker run --name es  -d  \
           -p 9222:9222 \
           -p 9222:9222/udp \
           --entrypoint /es-node/run.sh \
-          ghcr.io/ethstorage/es-node:v0.1.4
+          ghcr.io/ethstorage/es-node:v0.1.5
 ```
 
 You can check docker logs using the following command:
@@ -94,7 +94,7 @@ Download source code and switch to the latest release branch:
 ```sh
 git clone https://github.com/ethstorage/es-node.git
 cd es-node
-git checkout v0.1.4
+git checkout v0.1.5
 ```
 Build es-node:
 ```sh
@@ -161,3 +161,16 @@ nvm use 20
 ```sh
 npm install -g snarkjs
 ```
+
+
+## FAQ
+
+### Can I change the data file location?
+
+Yes, you can. 
+
+By default, when executed, the run.sh script will generate a data file named `shard-0.dat` to store shard 0 in the data directory specified by `--datadir`, located in the same folder as the run.sh script.
+
+If necessary, you can choose an alternative location for data storage by specifying the full path of the file as the value of the `--storage.files` flag in the run.sh script.
+
+Please refer to [configuration](/README.md#configuration) for more details.
