@@ -52,7 +52,7 @@ func NewZKProver(libDir, zkeyName, wasmName string, lg log.Logger) (*ZKProver, e
 	}, nil
 }
 
-// Generate ZK Proof for the given encoding key and sample index
+// Generate ZK Proof for the given encoding key and chunck index using snarkjs
 func (p *ZKProver) GenerateZKProofPerSample(encodingKey common.Hash, sampleIdx uint64) ([]byte, *big.Int, error) {
 	p.lg.Debug("Generate zk proof", "encodingKey", encodingKey.Hex(), "sampleIdx", sampleIdx)
 	if int(sampleIdx) >= eth.FieldElementsPerBlob {

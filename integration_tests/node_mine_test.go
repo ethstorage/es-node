@@ -74,7 +74,7 @@ func TestMining(t *testing.T) {
 	feed := new(event.Feed)
 
 	l1api := miner.NewL1MiningAPI(pClient, lg)
-	pvr := prover.NewKZGPoseidonProver(miningConfig.ZKWorkingDir, zkey2Name, 2, lg)
+	pvr := prover.NewKZGPoseidonProver(miningConfig.ZKWorkingDir, miningConfig.ZKeyFileName, 2, lg)
 	mnr := miner.New(miningConfig, storageManager, l1api, &pvr, feed, lg)
 	lg.Info("Initialized miner")
 
@@ -97,9 +97,10 @@ func TestMining(t *testing.T) {
 		}
 		lg.Error("L1 heads subscription error", "err", err)
 	}()
-	prepareData(t, pClient, storageManager, miningConfig.StorageCost.String())
-	// fillEmpty(t, pClient, storageManager)
+
 	mnr.Start()
+	prepareData(t, pClient, storageManager, miningConfig.StorageCost.String())
+	fillEmpty(t, pClient, storageManager)
 
 	var wg sync.WaitGroup
 	minedShardCh := make(chan uint64)

@@ -18,19 +18,19 @@ if [ -z "$ES_NODE_STORAGE_MINER" ]; then
 fi
 # A contract that will be update with new blob uploaded for the KZG test
 if [ -z "$ES_NODE_STORAGE_L1CONTRACT_KZG" ]; then
-  export ES_NODE_STORAGE_L1CONTRACT_KZG=0x1ba144ad60008A66956e8C00AB2057a7db2c8d55
+  export ES_NODE_STORAGE_L1CONTRACT_KZG=0x1Cf97d51d305e1e84132Ee504F6B20F5162355fD
 fi
 # A contract address that clef server checks against before signing the miner transaction
 if [ -z "$ES_NODE_STORAGE_L1CONTRACT_CLEF" ]; then
-  export ES_NODE_STORAGE_L1CONTRACT_CLEF=0xb4B46bdAA835F8E4b4d8e208B6559cD267851051
+  export ES_NODE_STORAGE_L1CONTRACT_CLEF=0x1Cf97d51d305e1e84132Ee504F6B20F5162355fD
 fi
 # A newly deployed contract is required for each run for miner test, with zkp verifier of mode 2
 if [ -z "$ES_NODE_STORAGE_L1CONTRACT" ]; then
-  export ES_NODE_STORAGE_L1CONTRACT=0xbE3c2303f263C24d91D0fA3a169bb542E89FBdDa
+  export ES_NODE_STORAGE_L1CONTRACT=0x1Cf97d51d305e1e84132Ee504F6B20F5162355fD
 fi
 # A contract with zkp verifier of mode 1 (one proof per sample)
 if [ -z "$ES_NODE_STORAGE_L1CONTRACT_ZKP1" ]; then
-  export ES_NODE_STORAGE_L1CONTRACT_ZKP1=0x064633c393548112f4746E4B2F4Cf1BCC91BaFd4
+  export ES_NODE_STORAGE_L1CONTRACT_ZKP1=0x90e945b64F5Fe312dDE12F4aaBa8868f2fad2398
 fi
 # The commonly used l1 eth rpc endpoint
 if [ -z "$ES_NODE_L1_ETH_RPC" ]; then
@@ -49,18 +49,14 @@ echo ES_NODE_STORAGE_MINER = $ES_NODE_STORAGE_MINER
 zkey_file="./ethstorage/prover/snark_lib/blob_poseidon.zkey"
 if [ ! -e  ${zkey_file} ]; then
   echo "${zkey_file} not found, start downloading..."
-  file_id="1ZLfhYeCXMnbk6wUiBADRAn1mZ8MI_zg-"
-  html=`curl -c ./cookie -s -L "https://drive.google.com/uc?export=download&id=${file_id}"`
-  curl -Lb ./cookie "https://drive.google.com/uc?export=download&`echo ${html}|grep -Eo 'confirm=[a-zA-Z0-9\-_]+'`&id=${file_id}" -o ${zkey_file}
-  rm cookie
+  zkey_url="https://drive.usercontent.google.com/download?id=1ZLfhYeCXMnbk6wUiBADRAn1mZ8MI_zg-&export=download&confirm=t&uuid=16ddcd58-2498-4d65-8931-934df3d0065c"
+  curl $zkey_url -o ${zkey_file} 
 fi
 zkey_file="./ethstorage/prover/snark_lib/blob_poseidon2.zkey"
 if [ ! -e  ${zkey_file} ]; then
   echo "${zkey_file} not found, start downloading..."
-  file_id="1V3QkMpk5UC48Jc62nHXMgzeMb6KE8JRY"
-  html=`curl -c ./cookie -s -L "https://drive.google.com/uc?export=download&id=${file_id}"`
-  curl -Lb ./cookie "https://drive.google.com/uc?export=download&`echo ${html}|grep -Eo 'confirm=[a-zA-Z0-9\-_]+'`&id=${file_id}" -o ${zkey_file}
-  rm cookie
+  zkey_url="https://drive.usercontent.google.com/download?id=1olfJvXPJ25Rbcjj9udFlIVr08cUCgE4l&export=download&confirm=t&uuid=724a4ed0-c344-4cc1-9078-f50751028725"
+  curl $zkey_url -o ${zkey_file} 
 fi
 
 go test -tags rapidsnark_asm -timeout 0 github.com/ethstorage/go-ethstorage/integration_tests -v

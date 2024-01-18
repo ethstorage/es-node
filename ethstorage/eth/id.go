@@ -45,6 +45,7 @@ type L1BlockRef struct {
 	Number     uint64      `json:"number"`
 	ParentHash common.Hash `json:"parentHash"`
 	Time       uint64      `json:"timestamp"`
+	MixDigest  common.Hash `json:"mixDigest"`
 }
 
 func (id L1BlockRef) String() string {

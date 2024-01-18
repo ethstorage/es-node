@@ -15,8 +15,20 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
-// Generate ZK Proof for the given encoding keys and sample indexes
+// Generate ZK Proof for the given encoding key and sample index
 func (p *ZKProver) GenerateZKProof(encodingKeys []common.Hash, sampleIdxs []uint64) ([]byte, []*big.Int, error) {
+	proof, publics, err := p.GenerateZKProofRaw(encodingKeys, sampleIdxs)
+	if err != nil {
+		return nil, nil, err
+	}
+	if len(publics) != 6 {
+		return nil, nil, fmt.Errorf("publics length is %d", len(publics))
+	}
+	return proof, publics[4:], nil
+}
+
+// Generate ZK Proof for the given encoding keys and chunck indexes using snarkjs
+func (p *ZKProver) GenerateZKProofRaw(encodingKeys []common.Hash, sampleIdxs []uint64) ([]byte, []*big.Int, error) {
 	for i, idx := range sampleIdxs {
 		p.lg.Debug("Generate zk proof", "encodingKey", encodingKeys[i], "sampleIdx", sampleIdxs[i])
 		if int(idx) >= eth.FieldElementsPerBlob {
@@ -39,13 +51,12 @@ func (p *ZKProver) GenerateZKProof(encodingKeys []common.Hash, sampleIdxs []uint
 		p.lg.Error("Prove failed", "error", err)
 		return nil, nil, err
 	}
-	masks, err := readMasks(publicInputs)
+	publics, err := readPublics(publicInputs)
 	if err != nil {
-		p.lg.Error("Read masks failed", "error", err)
+		p.lg.Error("Read publics failed", "error", err)
 		return nil, nil, err
 	}
-	p.lg.Debug("Generate zk proof", "masks", masks)
-	return proof, masks, nil
+	return proof, publics, nil
 }
 
 func (p *ZKProver) GenerateInputs(encodingKeys []common.Hash, sampleIdxs []uint64) ([]byte, error) {
@@ -68,20 +79,20 @@ func (p *ZKProver) GenerateInputs(encodingKeys []common.Hash, sampleIdxs []uint6
 	return json.Marshal(inputObj)
 }
 
-func readMasks(publicInputs string) ([]*big.Int, error) {
+func readPublics(publicInputs string) ([]*big.Int, error) {
 	var output []string
 	if err := json.Unmarshal([]byte(publicInputs), &output); err != nil {
 		return nil, err
 	}
-	var masks []*big.Int
+	var publics []*big.Int
 	for _, v := range output {
-		mask, ok := new(big.Int).SetString(v, 0)
+		pub, ok := new(big.Int).SetString(v, 0)
 		if !ok {
-			return masks, fmt.Errorf("invalid mask %v", v)
+			return nil, fmt.Errorf("invalid public input %v", v)
 		}
-		masks = append(masks, mask)
+		publics = append(publics, pub)
 	}
-	return masks, nil
+	return publics, nil
 }
 
 type InputPairV2 struct {

@@ -43,7 +43,7 @@ type taskItem struct {
 	*task
 	requiredDiff *big.Int
 	blockNumber  *big.Int
-	blockHash    common.Hash
+	mixHash      common.Hash
 	nonceStart   uint64
 	nonceEnd     uint64
 	mineTime     uint64
@@ -205,7 +205,7 @@ func (w *worker) assignTasks(task task, block eth.L1BlockRef, reqDiff *big.Int) 
 			nonceStart:   seg * i,
 			nonceEnd:     ne,
 			blockNumber:  new(big.Int).SetUint64(block.Number),
-			blockHash:    block.Hash,
+			mixHash:      block.MixDigest,
 			mineTime:     block.Time,
 			thread:       i,
 		}
@@ -413,8 +413,8 @@ func (w *worker) mineTask(t *taskItem) (bool, error) {
 				"shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonceEnd", nonce)
 			break
 		}
-		hash0 := initHash(t.miner, t.blockHash, nonce)
-		hash1, sampleIdxs, err := w.computeHash(t.task, hash0)
+		hash0 := initHash(t.miner, t.mixHash, nonce)
+		hash1, sampleIdxs, err := w.computeHash(t.task.shardIdx, hash0)
 		if err != nil {
 			w.lg.Error("Calculate hash error", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "err", err.Error())
 			return false, err
@@ -461,10 +461,10 @@ func (w *worker) mineTask(t *taskItem) (bool, error) {
 }
 
 // computeHash calculates final hash from hash0
-func (w *worker) computeHash(t *task, hash0 common.Hash) (common.Hash, []uint64, error) {
+func (w *worker) computeHash(shardIdx uint64, hash0 common.Hash) (common.Hash, []uint64, error) {
 	return hashimoto(w.storageMgr.KvEntriesBits(),
 		w.storageMgr.MaxKvSizeBits(), sampleSizeBits,
-		t.shardIdx,
+		shardIdx,
 		w.config.RandomChecks,
 		w.storageMgr.ReadSampleUnlocked,
 		hash0,
