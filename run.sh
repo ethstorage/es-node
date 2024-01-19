@@ -84,7 +84,7 @@ storage_file_0="$data_dir/shard-0.dat"
 
 common_flags=" --datadir $data_dir \
   --l1.rpc https://tame-wild-liquid.ethereum-goerli.quiknode.pro/4ae31eb78cb83cafc31140a8acc0841ea197a668 \
-  --storage.l1contract 0x9e186c49b487C03e0c529b67BD9Bc9e1e2E713Fc \
+  --storage.l1contract 0xc6F300f3F60a5822fd56f6589077Cb2D409ca52e \
   --storage.miner $ES_NODE_STORAGE_MINER \
   "
 
