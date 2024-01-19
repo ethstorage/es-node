@@ -224,10 +224,13 @@ If not, using the flag `--miner.threads-per-shard` can specify the number of thr
 
 ### How do I know whether I've got a mining reward?
 
-You can observe the logs to see if there is such a message. If there is, it indicates a successful storage proof submission:
+You can observe the logs to see if there are such messages indicating a successful storage proof submission:
 
 ```
-
+NFO [01-19|14:41:48.715] Mining transaction confirmed             txHash=62df87..7dbfbc
+INFO [01-19|14:41:49.017] "Mining transaction success!      √"     miner=0x534632D6d7aD1fe5f832951c97FDe73E4eFD9a77
+INFO [01-19|14:41:49.018] Mining transaction details               txHash=62df87..7dbfbc gasUsed=419,892 effectiveGasPrice=2,000,000,009
+INFO [01-19|14:41:49.018] Mining transaction accounting (in ether) reward=0.01013071059 cost=0.0008397840038 profit=0.009290926583
 
 ```
 
