@@ -13,12 +13,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/log"
 	ethRPC "github.com/ethereum/go-ethereum/rpc"
@@ -107,10 +104,11 @@ func newDashboard(rpcURL string, l1Contract common.Address) (*dashboard, error) 
 		}
 	}
 
-	shardEntryBits, err := readUintFromContract(ctx, l1.Client, l1Contract, "shardEntryBits")
+	result, err := l1.ReadContractField("shardEntryBits", nil)
 	if err != nil {
 		return nil, err
 	}
+	shardEntryBits := new(big.Int).SetBytes(result).Uint64()
 
 	return &dashboard{
 		ctx:        ctx,
@@ -188,7 +186,7 @@ func (d *dashboard) FetchMiningEvents(start, end uint64) ([]*miningEvent, uint64
 			Difficulty:   new(big.Int).SetBytes(l.Topics[2].Bytes()),
 			BlockMined:   new(big.Int).SetBytes(l.Topics[3].Bytes()),
 			LastMineTime: new(big.Int).SetBytes(l.Data[:32]).Uint64(),
-			Miner:        common.BytesToAddress(l.Data[:32][44:64]),
+			Miner:        common.BytesToAddress(l.Data[44:64]),
 			Reward:       new(big.Int).SetBytes(l.Data[64:96]).Uint64() / 10000000000,
 			GasFee:       tx.Gas() * tx.GasPrice().Uint64() / 10000000000,
 		})
@@ -219,29 +217,6 @@ func (d *dashboard) InitMetrics() error {
 	d.m.SetMiningInfo(0, new(big.Int).SetBytes(minDiffVal).Uint64(), new(big.Int).SetBytes(lastMineTimeVal).Uint64(),
 		0, common.Address{}, 0, 0)
 	return nil
-}
-
-func readSlotFromContract(ctx context.Context, client *ethclient.Client, l1Contract common.Address, fieldName string) ([]byte, error) {
-	h := crypto.Keccak256Hash([]byte(fieldName + "()"))
-	msg := ethereum.CallMsg{
-		To:   &l1Contract,
-		Data: h[0:4],
-	}
-	bs, err := client.CallContract(ctx, msg, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get %s from contract: %v", fieldName, err)
-	}
-	return bs, nil
-}
-
-func readUintFromContract(ctx context.Context, client *ethclient.Client, l1Contract common.Address, fieldName string) (uint64, error) {
-	bs, err := readSlotFromContract(ctx, client, l1Contract, fieldName)
-	if err != nil {
-		return 0, err
-	}
-	value := new(big.Int).SetBytes(bs).Uint64()
-	log.Info("Read uint from contract", "field", fieldName, "value", value)
-	return value, nil
 }
 
 func main() {
