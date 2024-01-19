@@ -454,7 +454,6 @@ func (s *SyncClient) cleanTasks() {
 func (s *SyncClient) Start() error {
 	if s.startTime == (time.Time{}) {
 		s.startTime = time.Now()
-		s.logTime = time.Now()
 	}
 
 	// Retrieve the previous sync status from LevelDB and abort if already synced
@@ -580,6 +579,7 @@ func (s *SyncClient) mainLoop() {
 		}
 	}
 
+	s.logTime = time.Now()
 	for {
 		// Remove all completed tasks and terminate sync if everything's done
 		s.cleanTasks()
