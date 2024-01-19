@@ -14,7 +14,7 @@ func p2pEnv(v string) string {
 var (
 	DisableP2P = cli.BoolFlag{
 		Name:     "p2p.disable",
-		Usage:    "Completely disable the P2P stack",
+		Usage:    "Completely disable the P2P stack, if P2P is disabled, mining will not start automatically.",
 		Required: false,
 		EnvVar:   p2pEnv("DISABLE"),
 	}
