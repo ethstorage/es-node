@@ -57,17 +57,25 @@ echo "zk prover mode is $zkp_mode"
 
 # download zkey if not yet
 zkey_name="blob_poseidon2.zkey"
-file_id="1V3QkMpk5UC48Jc62nHXMgzeMb6KE8JRY"
+zkey_size=560300809
+zkey_url="https://drive.usercontent.google.com/download?id=1olfJvXPJ25Rbcjj9udFlIVr08cUCgE4l&export=download&confirm=t&uuid=724a4ed0-c344-4cc1-9078-f50751028725"
 if [ "$zkp_mode" = 1 ]; then
   zkey_name="blob_poseidon.zkey"
-  file_id="1ZLfhYeCXMnbk6wUiBADRAn1mZ8MI_zg-"
+  zkey_size=280151245
+  zkey_url="https://drive.usercontent.google.com/download?id=1ZLfhYeCXMnbk6wUiBADRAn1mZ8MI_zg-&export=download&confirm=t&uuid=16ddcd58-2498-4d65-8931-934df3d0065c"
 fi
 zkey_file="./build/bin/snarkjs/$zkey_name"
-if [ ! -e  ${zkey_file} ]; then
-  echo "${zkey_file} not found, start downloading..."
-  html=`curl -c ./cookie -s -L "https://drive.google.com/uc?export=download&id=${file_id}"`
-  curl -Lb ./cookie "https://drive.google.com/uc?export=download&`echo ${html}|grep -Eo 'confirm=[a-zA-Z0-9\-_]+'`&id=${file_id}" -o ${zkey_file}
-  rm cookie
+if [ ! -e  ${zkey_file} ] || [ $(wc -c <  ${zkey_file}) -ne ${zkey_size} ]; then
+  echo "Start downloading ${zkey_file}..." 
+  curl $zkey_url -o ${zkey_file}
+  if [ ! -e  ${zkey_file} ]; then
+    echo "Error: The zkey file was not downloaded. Please try again."
+    exit 1
+  fi
+  if [ $(wc -c <  ${zkey_file}) -ne ${zkey_size} ]; then
+    echo "Error: The zkey file was not downloaded correctly. You can check the file content for more information."
+    exit 1
+  fi
 fi
 
 executable="./build/bin/es-node"
@@ -75,8 +83,8 @@ data_dir="./es-data"
 storage_file_0="$data_dir/shard-0.dat"
 
 common_flags=" --datadir $data_dir \
-  --l1.rpc http://65.109.115.36:8545 \
-  --storage.l1contract 0xb4B46bdAA835F8E4b4d8e208B6559cD267851051 \
+  --l1.rpc https://tame-wild-liquid.ethereum-goerli.quiknode.pro/4ae31eb78cb83cafc31140a8acc0841ea197a668 \
+  --storage.l1contract 0x9e186c49b487C03e0c529b67BD9Bc9e1e2E713Fc \
   --storage.miner $ES_NODE_STORAGE_MINER \
   "
 
@@ -90,13 +98,13 @@ es_node_start=" --network devnet \
   --miner.zkey $zkey_name \
   --storage.files $storage_file_0 \
   --signer.private-key $ES_NODE_SIGNER_PRIVATE_KEY \
-  --l1.beacon http://65.109.115.36:5052 \
-  --l1.beacon-based-time 1701262812 \
-  --l1.beacon-based-slot 1 \
+  --l1.beacon https://tame-wild-liquid.ethereum-goerli.quiknode.pro/4ae31eb78cb83cafc31140a8acc0841ea197a668 \
+  --l1.beacon-based-time 1705546368 \
+  --l1.beacon-based-slot 7419864 \
   --download.thread 32 \
   --p2p.max.request.size 4194304 \
   --p2p.sync.concurrency 32 \
-  --p2p.bootnodes enr:-Li4QPFCNc7mLPqxoVrk1eKB0qa5hb8H75IBwhvdSGGdamx1egKibkKO1v1rtLt7r3pJvoVxv95ITlpSphYCAsunU6qGAYwkwuOpimV0aHN0b3JhZ2XbAYDY15S0tGvaqDX45LTY4gi2VZzSZ4UQUcGAgmlkgnY0gmlwhEFtcySJc2VjcDI1NmsxoQM9rkUZ7qWoJQT2UVrPzDRzmLqDrxCSR4zC4db-lgz1bYN0Y3CCJAaDdWRwgnZh \
+  --p2p.bootnodes enr:-Li4QD2t3oCXc98qPwZOXZC38631I7zYTKkYCeoutmRIQ7qXVXcG4kDPPD25HmmoKJlswGx-v55doc8HYqMrlyYZrWOGAY0am8vEimV0aHN0b3JhZ2XbAYDY15SeGGxJtIfAPgxSm2e9m8nh4ucT_MGAgmlkgnY0gmlwhEFtMpGJc2VjcDI1NmsxoQNIbl6CN0q_OiHTc2qON3rAtJwpJh7TByr4tVKp7zHgW4N0Y3CCJAaDdWRwgplt \
   $@"
   
 # create data file for shard 0 if not yet

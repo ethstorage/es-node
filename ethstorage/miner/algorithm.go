@@ -32,10 +32,10 @@ func hashimoto(kvEntriesBits, kvSizeBits, sampleSizeBits, shardIdx, randomChecks
 	return hash0, sampleIdxs, nil
 }
 
-func initHash(miner common.Address, blockHash common.Hash, nonce uint64) common.Hash {
+func initHash(miner common.Address, mixedHash common.Hash, nonce uint64) common.Hash {
 	return crypto.Keccak256Hash(
 		common.BytesToHash(miner.Bytes()).Bytes(),
-		blockHash.Bytes(),
+		mixedHash.Bytes(),
 		common.BigToHash(new(big.Int).SetUint64(nonce)).Bytes(),
 	)
 }
