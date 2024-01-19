@@ -38,6 +38,7 @@ func WatchHeadChanges(ctx context.Context, src NewHeadSource, fn HeadSignalFn) (
 					Number:     header.Number.Uint64(),
 					ParentHash: header.ParentHash,
 					Time:       header.Time,
+					MixDigest:  header.MixDigest,
 				})
 			case err := <-sub.Err():
 				return err

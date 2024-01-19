@@ -14,6 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethstorage/go-ethstorage/ethstorage"
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
@@ -25,7 +26,7 @@ const (
 )
 
 var (
-	mineSig = crypto.Keccak256Hash([]byte(`mine(uint256,uint256,address,uint256,bytes32[],uint256[],bytes[],bytes[])`))
+	mineSig = crypto.Keccak256Hash([]byte(`mine(uint256,uint256,address,uint256,bytes32[],uint256[],bytes,bytes[],bytes[])`))
 )
 
 func NewL1MiningAPI(l1 *eth.PollingClient, lg log.Logger) *l1MiningAPI {
@@ -84,11 +85,22 @@ func (m *l1MiningAPI) GetDataHashes(ctx context.Context, contract common.Address
 
 func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Address, rst result, cfg Config) (common.Hash, error) {
 	m.lg.Debug("Submit mined result", "shard", rst.startShardId, "block", rst.blockNumber, "nonce", rst.nonce)
+	blockHeader, err := m.HeaderByNumber(ctx, rst.blockNumber)
+	if err != nil {
+		m.lg.Error("Failed to get block header", "error", err)
+		return common.Hash{}, err
+	}
+	headerRlp, err := rlp.EncodeToBytes(blockHeader)
+	if err != nil {
+		m.lg.Error("Failed to encode block header", "error", err)
+		return common.Hash{}, err
+	}
 	uint256Type, _ := abi.NewType("uint256", "", nil)
 	uint256Array, _ := abi.NewType("uint256[]", "", nil)
 	addrType, _ := abi.NewType("address", "", nil)
 	bytes32Array, _ := abi.NewType("bytes32[]", "", nil)
 	bytesArray, _ := abi.NewType("bytes[]", "", nil)
+	bytesType, _ := abi.NewType("bytes", "", nil)
 	dataField, _ := abi.Arguments{
 		{Type: uint256Type},
 		{Type: uint256Type},
@@ -96,6 +108,7 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 		{Type: uint256Type},
 		{Type: bytes32Array},
 		{Type: uint256Array},
+		{Type: bytesType},
 		{Type: bytesArray},
 		{Type: bytesArray},
 	}.Pack(
@@ -105,6 +118,7 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 		new(big.Int).SetUint64(rst.nonce),
 		rst.encodedData,
 		rst.masks,
+		headerRlp,
 		rst.inclusiveProofs,
 		rst.decodeProof,
 	)
