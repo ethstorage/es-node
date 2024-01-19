@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -171,8 +172,9 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 			log.Warn("Failed to find what TCP port p2p is binded to", "err", err)
 		}
 
+		pubIP, _ := GetLocalPublicIP()
 		// All nil if disabled.
-		n.dv5Local, n.dv5Udp, err = setup.Discovery(log.New("p2p", "discv5"), l1ChainID, tcpPort, n.host.Addrs())
+		n.dv5Local, n.dv5Udp, err = setup.Discovery(log.New("p2p", "discv5"), l1ChainID, tcpPort, pubIP)
 		if err != nil {
 			return fmt.Errorf("failed to start discv5: %w", err)
 		}
@@ -273,4 +275,18 @@ func FindActiveTCPPort(h host.Host) (uint16, error) {
 		break
 	}
 	return tcpPort, nil
+}
+
+func GetLocalPublicIP() (net.IP, error) {
+	addresses, err := net.InterfaceAddrs()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, addr := range addresses {
+		if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsGlobalUnicast() && !ipnet.IP.IsPrivate() {
+			return ipnet.IP.To4(), nil
+		}
+	}
+	return nil, nil
 }
