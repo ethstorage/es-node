@@ -164,7 +164,7 @@ npm install -g snarkjs
 
 ## Two phases after es-node launch
 
-Basically es-node will go through two phases after launch:
+After the launch of ES node, it basically goes through two main stages.
 
 ### Data sync phase
 
@@ -173,6 +173,7 @@ The es-node will synchronize data from other peers in the network. You can check
 During this phase, the CPUs are expected to be fully occupied for data processing. If not, please refer to [the FAQ](#how-to-tune-the-performance-of-syncing) for performance tuning on this area.
 
 A typical log entry in this phase appears as follows:
+
 ```
 INFO [01-18|09:13:32.564] Storage sync in progress progress=85.50% peerCount=2 syncTasksRemain=1@0 blobsSynced=1@128.00KiB blobsToSync=0 fillTasksRemain=30 emptyFilled=3,586,176@437.77GiB emptyToFill=608,127   timeUsed=1h48m7.556s  eta=18m20.127s
 
@@ -181,13 +182,14 @@ INFO [01-18|09:13:32.564] Storage sync in progress progress=85.50% peerCount=2 s
 
 Once data synchronization is complete, the es-node will enter the sampling phase, also known as mining.
 
-You can determine the duration of the es-node's sampling by reviewing the `samplingTime` in the log. 
+When you see "The nonces are exhausted in this slot...", it indicates that your node has successfully completed all the sampling tasks within a slot. 
+The "samplingTime" value informs you of the duration, in seconds, it took to complete the sampling process.
 
-If the es-node doesn't have enough time to complete sampling within a slot, the log will display 'Mining tasks timed out'. For further actions, please refer to [the FAQ](#what-can-i-do-about-mining-tasks-timed-out).
+If the es-node doesn't have enough time to complete sampling within a slot, the log will display "Mining tasks timed out". For further actions, please refer to [the FAQ](#what-can-i-do-about-mining-tasks-timed-out).
 
-A typical log entry in this phase appears as follows:
+A typical log entry of sampling during a slot looks like this:
+
 ```
-
 INFO [01-18|11:52:18.766] Mining info retrieved                    shard=0 LastMineTime=1,705,545,915 Difficulty=0 proofsSubmitted=2
 INFO [01-18|11:52:18.766] Mining tasks assigned                    shard=0 threads=64 block=10,394,055 nonces=1,048,576
 INFO [01-18|11:52:21.539] The nonces are exhausted in this slot, waiting for the next block samplingTime=2.8s shard=0 block=10,394,055
@@ -213,9 +215,9 @@ To enhance syncing performance, you can adjust the values of the p2p.sync.concur
 - The `--p2p.sync.concurrency` flag determines the number of threads that simultaneously retrieve shard data, with a default setting of 16.
 - The` --p2p.fill-empty.concurrency` flag specifies the number of threads used to concurrently fill encoded empty blobs, with a default setting of the CPU number minus 2.
 
-### What can I do about 'Mining tasks timed out'? 
+### What can I do about "Mining tasks timed out"? 
 
-When you see the message 'Mining tasks timed out', it indicates that the sampling task couldn't be completed within a slot. 
+When you see the message "Mining tasks timed out", it indicates that the sampling task couldn't be completed within a slot. 
 
 You can check the IOPS of the disk to determine if the rate of data read has reached the IO capacity. 
 If not, using the flag `--miner.threads-per-shard` can specify the number of threads to perform sampling for each shard, thereby helping in accomplishing additional sampling.
