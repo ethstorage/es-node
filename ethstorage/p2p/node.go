@@ -229,7 +229,10 @@ func (n *NodeP2P) ConnectionManager() connmgr.ConnManager {
 }
 
 func (n *NodeP2P) Start() error {
-	return n.syncCl.Start()
+	if n.syncCl != nil {
+		return n.syncCl.Start()
+	}
+	return nil
 }
 
 func (n *NodeP2P) Close() error {
