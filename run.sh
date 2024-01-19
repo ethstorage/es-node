@@ -77,8 +77,8 @@ data_dir="./es-data"
 storage_file_0="$data_dir/shard-0.dat"
 
 common_flags=" --datadir $data_dir \
-  --l1.rpc http://65.109.115.36:8545 \
-  --storage.l1contract 0xb4B46bdAA835F8E4b4d8e208B6559cD267851051 \
+  --l1.rpc https://tame-wild-liquid.ethereum-goerli.quiknode.pro/4ae31eb78cb83cafc31140a8acc0841ea197a668 \
+  --storage.l1contract 0x9e186c49b487C03e0c529b67BD9Bc9e1e2E713Fc \
   --storage.miner $ES_NODE_STORAGE_MINER \
   "
 
@@ -92,13 +92,13 @@ es_node_start=" --network devnet \
   --miner.zkey $zkey_name \
   --storage.files $storage_file_0 \
   --signer.private-key $ES_NODE_SIGNER_PRIVATE_KEY \
-  --l1.beacon http://65.109.115.36:5052 \
-  --l1.beacon-based-time 1701262812 \
-  --l1.beacon-based-slot 1 \
+  --l1.beacon https://tame-wild-liquid.ethereum-goerli.quiknode.pro/4ae31eb78cb83cafc31140a8acc0841ea197a668 \
+  --l1.beacon-based-time 1705546368 \
+  --l1.beacon-based-slot 7419864 \
   --download.thread 32 \
   --p2p.max.request.size 4194304 \
   --p2p.sync.concurrency 32 \
-  --p2p.bootnodes enr:-Li4QPFCNc7mLPqxoVrk1eKB0qa5hb8H75IBwhvdSGGdamx1egKibkKO1v1rtLt7r3pJvoVxv95ITlpSphYCAsunU6qGAYwkwuOpimV0aHN0b3JhZ2XbAYDY15S0tGvaqDX45LTY4gi2VZzSZ4UQUcGAgmlkgnY0gmlwhEFtcySJc2VjcDI1NmsxoQM9rkUZ7qWoJQT2UVrPzDRzmLqDrxCSR4zC4db-lgz1bYN0Y3CCJAaDdWRwgnZh \
+  --p2p.bootnodes enr:-Li4QD2t3oCXc98qPwZOXZC38631I7zYTKkYCeoutmRIQ7qXVXcG4kDPPD25HmmoKJlswGx-v55doc8HYqMrlyYZrWOGAY0am8vEimV0aHN0b3JhZ2XbAYDY15SeGGxJtIfAPgxSm2e9m8nh4ucT_MGAgmlkgnY0gmlwhEFtMpGJc2VjcDI1NmsxoQNIbl6CN0q_OiHTc2qON3rAtJwpJh7TByr4tVKp7zHgW4N0Y3CCJAaDdWRwgplt \
   $@"
   
 # create data file for shard 0 if not yet
