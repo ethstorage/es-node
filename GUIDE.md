@@ -182,21 +182,58 @@ INFO [01-18|09:13:32.564] Storage sync in progress progress=85.50% peerCount=2 s
 
 Once data synchronization is complete, the es-node will enter the sampling phase, also known as mining.
 
+A typical log entry of sampling during a slot looks like this:
+
+```
+INFO [01-19|05:02:23.210] Mining info retrieved                    shard=0 LastMineTime=1,705,634,628 Difficulty=4,718,592,000 proofsSubmitted=6
+INFO [01-19|05:02:23.210] Mining tasks assigned                    shard=0 threads=64 block=10,397,712 nonces=1,048,576
+INFO [01-19|05:02:26.050] The nonces are exhausted in this slot, waiting for the next block samplingTime=2.8s shard=0 block=10,397,712
+
+```
 When you see "The nonces are exhausted in this slot...", it indicates that your node has successfully completed all the sampling tasks within a slot. 
 The "samplingTime" value informs you of the duration, in seconds, it took to complete the sampling process.
 
 If the es-node doesn't have enough time to complete sampling within a slot, the log will display "Mining tasks timed out". For further actions, please refer to [the FAQ](#what-can-i-do-about-mining-tasks-timed-out).
 
-A typical log entry of sampling during a slot looks like this:
-
-```
-INFO [01-18|11:52:18.766] Mining info retrieved                    shard=0 LastMineTime=1,705,545,915 Difficulty=0 proofsSubmitted=2
-INFO [01-18|11:52:18.766] Mining tasks assigned                    shard=0 threads=64 block=10,394,055 nonces=1,048,576
-INFO [01-18|11:52:21.539] The nonces are exhausted in this slot, waiting for the next block samplingTime=2.8s shard=0 block=10,394,055
-
-```
-
 ## FAQ
+
+### What should I do when the log frequently shows "i/o deadline reached" during data syncing?
+
+The timeout issue could be due to network reasons. It may be because the amount of data requested relative to network performance is too large, so even a slight delay in individual requests will be magnified.
+
+You can change the size of each request to a smaller value using `--p2p.max.request.size`. 
+The default value is `4194304`. You can try adjusting it to `1048576`.
+
+### How to tune the performance of syncing? 
+
+To enhance syncing performance, you can adjust the values of the p2p.sync.concurrency and p2p.fill-empty.concurrency flags.
+
+- The `--p2p.sync.concurrency` flag determines the number of threads that simultaneously retrieve shard data, with a default setting of 16.
+- The` --p2p.fill-empty.concurrency` flag specifies the number of threads used to concurrently fill encoded empty blobs, with a default setting of the CPU number minus 2.
+
+### What does it means when the log shows "The nonces are exhausted in this slot"
+
+When you see "The nonces are exhausted in this slot...", it indicates that your node has successfully completed all the sampling tasks within a slot, and you do not need to do anything about it. 
+
+### What can I do about "Mining tasks timed out"? 
+
+When you see the message "Mining tasks timed out", it indicates that the sampling task couldn't be completed within a slot. 
+
+You can check the IOPS of the disk to determine if the rate of data read has reached the IO capacity. 
+If not, using the flag `--miner.threads-per-shard` can specify the number of threads to perform sampling for each shard, thereby helping in accomplishing additional sampling.
+
+### How do I know whether I've got a mining reward?
+
+You can observe the logs to see if there is such a message. If there is, it indicates a successful storage proof submission:
+
+```
+
+
+```
+
+You can also visit [the EthStorage dashboard](http://grafana.ethstorage.io/d/es-node-mining-state-dev/ethstorage-monitoring-dev?orgId=2&refresh=5m) for real-time mining statistics.
+
+Finally, pay attention to the balance change of your miner's address which reflects the mining income.
 
 ### Can I change the data file location?
 
@@ -207,17 +244,3 @@ By default, when executed, the run.sh script will generate a data file named `sh
 If necessary, you can choose an alternative location for data storage by specifying the full path of the file as the value of the `--storage.files` flag in the run.sh script.
 
 Please refer to [configuration](/README.md#configuration) for more details.
-
-### How to tune the performance of syncing? 
-
-To enhance syncing performance, you can adjust the values of the p2p.sync.concurrency and p2p.fill-empty.concurrency flags.
-
-- The `--p2p.sync.concurrency` flag determines the number of threads that simultaneously retrieve shard data, with a default setting of 16.
-- The` --p2p.fill-empty.concurrency` flag specifies the number of threads used to concurrently fill encoded empty blobs, with a default setting of the CPU number minus 2.
-
-### What can I do about "Mining tasks timed out"? 
-
-When you see the message "Mining tasks timed out", it indicates that the sampling task couldn't be completed within a slot. 
-
-You can check the IOPS of the disk to determine if the rate of data read has reached the IO capacity. 
-If not, using the flag `--miner.threads-per-shard` can specify the number of threads to perform sampling for each shard, thereby helping in accomplishing additional sampling.
