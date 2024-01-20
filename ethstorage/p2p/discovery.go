@@ -115,7 +115,7 @@ func (conf *Config) Discovery(log log.Logger, l1ChainID uint64, tcpPort uint16, 
 	return localNode, udpV5, nil
 }
 
-func updateLocalNodeIPAndTCP(addrs []ma.Multiaddr, localNode *enode.LocalNode) {
+func updateLocalNodeIPAndTCP(addrs []ma.Multiaddr, localNode *enode.LocalNode) bool {
 	for _, addr := range addrs {
 		ipStr, err := addr.ValueForProtocol(4)
 		if err != nil {
@@ -132,8 +132,10 @@ func updateLocalNodeIPAndTCP(addrs []ma.Multiaddr, localNode *enode.LocalNode) {
 		tcpPort, _ := strconv.Atoi(tcpStr)
 		localNode.SetFallbackIP(ip)
 		localNode.Set(enr.TCP(tcpPort))
-		break
+		log.Warn("update LocalNode IP and TCP", "IP", ipStr, "tcp", tcpPort)
+		return true
 	}
+	return false
 }
 
 // Secp256k1 is like the geth Secp256k1 enr entry type, but using the libp2p pubkey representation instead
@@ -280,14 +282,15 @@ func (n *NodeP2P) DiscoveryProcess(ctx context.Context, log log.Logger, l1ChainI
 	}
 
 	go func() {
-		updateLocalNodeTicker := time.NewTicker(updateLocalNode) // TODO:
+		if n.dv5Local.Node().IP() != nil {
+			return
+		}
+		updateLocalNodeTicker := time.NewTicker(updateLocalNode)
 		defer updateLocalNodeTicker.Stop()
 		for {
 			select {
 			case <-updateLocalNodeTicker.C:
-				if n.dv5Local.Node().IP() == nil {
-					updateLocalNodeIPAndTCP(n.host.Addrs(), n.dv5Local)
-				} else {
+				if updateLocalNodeIPAndTCP(n.host.Addrs(), n.dv5Local) {
 					return
 				}
 			case <-ctx.Done():
