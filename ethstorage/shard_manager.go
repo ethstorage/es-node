@@ -181,7 +181,7 @@ func (sm *ShardManager) TryRead(kvIdx uint64, readLen int, commit common.Hash) (
 	}
 }
 
-// TryEncodeKV encode the KV data using the miner and encodeType specfied by the data shard.
+// TryEncodeKV encode the KV data using the miner and encodeType specified by the data shard.
 // Return false if the data is not managed by the ShardManager.
 func (sm *ShardManager) TryEncodeKV(kvIdx uint64, b []byte, hash common.Hash) ([]byte, bool, error) {
 	shardIdx := kvIdx / sm.kvEntries
