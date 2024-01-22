@@ -102,9 +102,10 @@ es_node_start=" --network devnet \
   --l1.beacon-based-time 1705546368 \
   --l1.beacon-based-slot 7419864 \
   --download.thread 32 \
+  --p2p.listen.udp 30305 \
   --p2p.max.request.size 4194304 \
   --p2p.sync.concurrency 32 \
-  --p2p.bootnodes enr:-Li4QD2t3oCXc98qPwZOXZC38631I7zYTKkYCeoutmRIQ7qXVXcG4kDPPD25HmmoKJlswGx-v55doc8HYqMrlyYZrWOGAY0am8vEimV0aHN0b3JhZ2XbAYDY15SeGGxJtIfAPgxSm2e9m8nh4ucT_MGAgmlkgnY0gmlwhEFtMpGJc2VjcDI1NmsxoQNIbl6CN0q_OiHTc2qON3rAtJwpJh7TByr4tVKp7zHgW4N0Y3CCJAaDdWRwgplt \
+  --p2p.bootnodes enr:-Li4QDqL8nUyes92JnNMpXPSeDUlF9rKt1VXiLwdSNg95OdfDK6g0wxt3fpjPfqeiZoblXhFIZQlyyjkbLWL07i_XE-GAY0we7KPimV0aHN0b3JhZ2XbAYDY15TG8wDz9gpYIv1W9liQd8stQJylLsGAgmlkgnY0gmlwhEFtMpGJc2VjcDI1NmsxoQNIbl6CN0q_OiHTc2qON3rAtJwpJh7TByr4tVKp7zHgW4N0Y3CCJAaDdWRwgnZh \
   $@"
   
 # create data file for shard 0 if not yet
