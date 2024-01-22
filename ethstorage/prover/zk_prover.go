@@ -163,7 +163,8 @@ func (p *ZKProver) GenerateZKProofRaw(encodingKeys []common.Hash, sampleIdxs []u
 	// 3. Generate proof
 	proofFile := filepath.Join(buildDir, proofName)
 	publicFile := filepath.Join(buildDir, publicName)
-	cmd = exec.Command("snarkjs", "groth16", "prove",
+	executable := filepath.Join(libDir, "./rapidsnark-macOS-x86_64-v0.0.2/bin/prover")
+	cmd = exec.Command(executable,
 		filepath.Join(libDir, p.zkeyFile),
 		wtnsFile,
 		proofFile,
@@ -269,7 +270,8 @@ func (p *ZKProver) GenerateZKProofPerSample(encodingKey common.Hash, sampleIdx u
 	// 3. Generate proof
 	proofFile := filepath.Join(buildDir, proofName)
 	publicFile := filepath.Join(buildDir, publicName)
-	cmd = exec.Command("snarkjs", "groth16", "prove",
+	executable := filepath.Join(libDir, "./rapidsnark-macOS-x86_64-v0.0.2/bin/prover")
+	cmd = exec.Command(executable,
 		filepath.Join(libDir, p.zkeyFile),
 		wtnsFile,
 		proofFile,
