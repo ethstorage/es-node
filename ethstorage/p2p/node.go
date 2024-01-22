@@ -173,9 +173,8 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 			log.Warn("Failed to find what TCP port p2p is binded to", "err", err)
 		}
 
-		pubIP, _ := GetLocalPublicIP()
 		// All nil if disabled.
-		n.dv5Local, n.dv5Udp, n.isIPSet, err = setup.Discovery(log.New("p2p", "discv5"), l1ChainID, tcpPort, pubIP)
+		n.dv5Local, n.dv5Udp, n.isIPSet, err = setup.Discovery(log.New("p2p", "discv5"), l1ChainID, tcpPort, getLocalPublicIPv4())
 		if err != nil {
 			return fmt.Errorf("failed to start discv5: %w", err)
 		}
@@ -278,16 +277,21 @@ func FindActiveTCPPort(h host.Host) (uint16, error) {
 	return tcpPort, nil
 }
 
-func GetLocalPublicIP() (net.IP, error) {
+func getLocalPublicIPv4() net.IP {
 	addresses, err := net.InterfaceAddrs()
 	if err != nil {
-		return nil, err
+		log.Debug("getLocalPublicIPv4 fail", "err", err.Error())
+		return nil
 	}
 
 	for _, addr := range addresses {
-		if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsGlobalUnicast() && !ipnet.IP.IsPrivate() {
-			return ipnet.IP.To4(), nil
+		ipnet, ok := addr.(*net.IPNet)
+		if !ok || ipnet.IP.To4() == nil {
+			continue
+		}
+		if ipnet.IP.IsGlobalUnicast() && !ipnet.IP.IsPrivate() {
+			return ipnet.IP.To4()
 		}
 	}
-	return nil, nil
+	return nil
 }
