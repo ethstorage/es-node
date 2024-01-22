@@ -43,18 +43,22 @@ const (
 	p2pVersion             = 0
 )
 
-func (conf *Config) Discovery(log log.Logger, l1ChainID uint64, tcpPort uint16, fallbackIP net.IP) (*enode.LocalNode, *discover.UDPv5, error) {
+func (conf *Config) Discovery(log log.Logger, l1ChainID uint64, tcpPort uint16, fallbackIP net.IP) (*enode.LocalNode, *discover.UDPv5, bool, error) {
+	isIPSet := false
 	if conf.NoDiscovery {
-		return nil, nil, nil
+		return nil, nil, isIPSet, nil
 	}
+
 	priv := (*decredSecp.PrivateKey)(conf.Priv).ToECDSA()
 	// use the geth curve definition. Same crypto, but geth needs to detect it as *their* definition of the curve.
 	priv.Curve = gcrypto.S256()
 	localNode := enode.NewLocalNode(conf.DiscoveryDB, priv)
 	if conf.AdvertiseIP != nil {
 		localNode.SetStaticIP(conf.AdvertiseIP)
+		isIPSet = true
 	} else if fallbackIP != nil {
 		localNode.SetFallbackIP(fallbackIP)
+		isIPSet = true
 	}
 	if conf.AdvertiseUDPPort != 0 { // explicitly advertised port gets priority
 		localNode.SetFallbackUDP(int(conf.AdvertiseUDPPort))
@@ -68,7 +72,7 @@ func (conf *Config) Discovery(log log.Logger, l1ChainID uint64, tcpPort uint16, 
 	} else if conf.ListenTCPPort != 0 { // otherwise default to the port we configured it to listen on
 		localNode.Set(enr.TCP(conf.ListenTCPPort))
 	} else {
-		return nil, nil, fmt.Errorf("no TCP port to put in discovery record")
+		return nil, nil, isIPSet, fmt.Errorf("no TCP port to put in discovery record")
 	}
 	dat := protocol.EthStorageENRData{
 		ChainID: l1ChainID,
@@ -87,7 +91,7 @@ func (conf *Config) Discovery(log log.Logger, l1ChainID uint64, tcpPort uint16, 
 
 	conn, err := net.ListenUDP("udp", udpAddr)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, isIPSet, err
 	}
 	if udpAddr.Port == 0 { // if we picked a port dynamically, then find the port we got, and update our node record
 		localUDPAddr := conn.LocalAddr().(*net.UDPAddr)
@@ -104,7 +108,7 @@ func (conf *Config) Discovery(log log.Logger, l1ChainID uint64, tcpPort uint16, 
 	}
 	udpV5, err := discover.ListenV5(conn, localNode, cfg)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, isIPSet, err
 	}
 
 	log.Info("Started discovery service", "enr", localNode.Node(), "id", localNode.ID(), "port", udpV5.Self().UDP())
@@ -112,7 +116,7 @@ func (conf *Config) Discovery(log log.Logger, l1ChainID uint64, tcpPort uint16, 
 	// TODO: periodically we can pull the external IP and TCP port from libp2p NAT service,
 	// and add it as a statement to keep the localNode accurate (if we trust the NAT device more than the discv5 statements)
 
-	return localNode, udpV5, nil
+	return localNode, udpV5, isIPSet, nil
 }
 
 func updateLocalNodeIPAndTCP(addrs []ma.Multiaddr, localNode *enode.LocalNode) bool {
@@ -282,7 +286,7 @@ func (n *NodeP2P) DiscoveryProcess(ctx context.Context, log log.Logger, l1ChainI
 	}
 
 	go func() {
-		if n.dv5Local.Node().IP() != nil {
+		if n.isIPSet {
 			return
 		}
 		updateLocalNodeTicker := time.NewTicker(updateLocalNode)

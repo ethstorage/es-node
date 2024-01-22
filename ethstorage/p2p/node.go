@@ -33,6 +33,7 @@ type NodeP2P struct {
 	gater   ConnectionGater     // p2p gater, to ban/unban peers with, may be nil even with p2p enabled
 	connMgr connmgr.ConnManager // p2p conn manager, to keep a reliable number of peers, may be nil even with p2p enabled
 	// the below components are all optional, and may be nil. They require the host to not be nil.
+	isIPSet        bool
 	dv5Local       *enode.LocalNode // p2p discovery identity
 	dv5Udp         *discover.UDPv5  // p2p discovery service
 	gs             *pubsub.PubSub   // p2p gossip router
@@ -174,7 +175,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 
 		pubIP, _ := GetLocalPublicIP()
 		// All nil if disabled.
-		n.dv5Local, n.dv5Udp, err = setup.Discovery(log.New("p2p", "discv5"), l1ChainID, tcpPort, pubIP)
+		n.dv5Local, n.dv5Udp, n.isIPSet, err = setup.Discovery(log.New("p2p", "discv5"), l1ChainID, tcpPort, pubIP)
 		if err != nil {
 			return fmt.Errorf("failed to start discv5: %w", err)
 		}
