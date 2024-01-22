@@ -92,7 +92,7 @@ The full list of options that you can use to configure an es-node are as follows
 |`--p2p.advertise.udp`|The UDP port to advertise in Discv5 as fallback if not determined by Discv5, put into the ENR of the node. Set to p2p.listen.udp value if 0.|`0`||
 |`--p2p.ban.peers`|Enables peer banning. This should ONLY be enabled once certain peer scoring is working correctly.|||
 |`--p2p.bootnodes`|Comma-separated base64-format ENR list. Bootnodes to start discovering other node records from.|||
-|`--p2p.disable`|Completely disable the P2P stack|||
+|`--p2p.disable`|Completely disable the P2P stack, if P2P is disabled, mining will not start automatically.|||
 |`--p2p.discovery.path`|Discovered ENRs are persisted in a database to recover from a restart without having to bootstrap the discovery process again. Set to 'memory' to never persist the peerstore.|`esnode_discovery_db`||
 |`--p2p.listen.ip`|IP to bind LibP2P and Discv5 to|`0.0.0.0`||
 |`--p2p.listen.tcp`|TCP port to bind LibP2P to. Any available system port if set to 0.|`9222`||
