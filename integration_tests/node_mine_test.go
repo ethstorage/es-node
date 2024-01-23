@@ -94,8 +94,6 @@ func TestMining(t *testing.T) {
 		lg.Error("L1 heads subscription error", "err", err)
 	}()
 	mnr.Start()
-	prepareData(t, pClient, storageManager, miningConfig.StorageCost.String())
-	fillEmpty(t, pClient, storageManager)
 	var wg sync.WaitGroup
 	minedShardSig := make(chan uint64, len(shardIds))
 	minedShardCh := make(chan uint64)
@@ -111,6 +109,14 @@ func TestMining(t *testing.T) {
 		}
 	}()
 	for i, s := range shardIds {
+		kvs := shardManager.KvEntries()
+		go func() {
+			fillEmpty(t, storageManager, kvs)
+			for j := 0; j < 3; j++ {
+				time.Sleep(3 * time.Minute)
+				prepareData(t, pClient, storageManager, miningConfig.StorageCost.String(), kvs/3)
+			}
+		}()
 		feed.Send(protocol.EthStorageSyncDone{
 			DoneType: protocol.SingleShardDone,
 			ShardId:  s,
@@ -131,9 +137,9 @@ func TestMining(t *testing.T) {
 			timeout := time.After(miningTime * time.Second)
 			select {
 			case minedShard := <-minedShardSig:
-				lg.Info(fmt.Sprintf("Shard %d successfully mined, will start next: shard %d", minedShard, i+1))
+				lg.Info(fmt.Sprintf("Shard %d successfully mined, will start next shard: %d", minedShard, i+1))
 			case <-timeout:
-				lg.Info(fmt.Sprintf("Shard %d has been mined for %ds, will start next shard", i, miningTime))
+				lg.Info(fmt.Sprintf("Shard %d has been mined for %ds, will start next shard: %d", i, miningTime, i+1))
 			}
 		}
 	}
@@ -205,21 +211,18 @@ func initShardManager(storConfig storage.StorageConfig) (*ethstorage.ShardManage
 	return shardManager, nil
 }
 
-func fillEmpty(t *testing.T, l1Client *eth.PollingClient, storageMgr *ethstorage.StorageManager) {
-	lg.Info("Filling empty started")
-	totalEntries := storageMgr.KvEntries() * uint64(len(shardIds))
+func fillEmpty(t *testing.T, storageMgr *ethstorage.StorageManager, entriesToFill uint64) {
 	lastKvIdx := storageMgr.LastKvIndex()
-	lg.Info("Filling empty", "lastKvIdx", lastKvIdx, "totalBlobs", totalEntries)
-
-	inserted, next, err := storageMgr.CommitEmptyBlobs(lastKvIdx, totalEntries-1)
+	lg.Info("Filling empty", "lastKvIdx", lastKvIdx, "entriesToFill", entriesToFill)
+	inserted, next, err := storageMgr.CommitEmptyBlobs(lastKvIdx, entriesToFill+lastKvIdx-1)
 	if err != nil {
 		t.Fatalf("Commit empty blobs failed %v", err)
 	}
 	lg.Info("Filling empty done", "inserted", inserted, "next", next)
 }
 
-func prepareData(t *testing.T, l1Client *eth.PollingClient, storageMgr *ethstorage.StorageManager, value string) {
-	data := generateRandomContent(128 * 10)
+func prepareData(t *testing.T, l1Client *eth.PollingClient, storageMgr *ethstorage.StorageManager, value string, blobLen uint64) {
+	data := generateRandomContent(128 * int(blobLen))
 	blobs := utils.EncodeBlobs(data)
 	t.Logf("Blobs len %d \n", len(blobs))
 	var hashs []common.Hash
