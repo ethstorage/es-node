@@ -5,7 +5,7 @@ services:
     ports:
       - '9545:9545'
       - '9222:9222'
-      - '9222:9222/udp'
+      - '30305:30305/udp'
     volumes:
       - ./es-data:/es-node/es-data
     environment:
