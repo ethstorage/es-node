@@ -24,8 +24,8 @@ es_node_start=" --network devnet \
   --p2p.listen.udp 30305 \
   --p2p.max.request.size 4194304 \
   --p2p.sync.concurrency 32 \
-  --p2p.bootnodes enr:-Li4QPFCNc7mLPqxoVrk1eKB0qa5hb8H75IBwhvdSGGdamx1egKibkKO1v1rtLt7r3pJvoVxv95ITlpSphYCAsunU6qGAYwkwuOpimV0aHN0b3JhZ2XbAYDY15S0tGvaqDX45LTY4gi2VZzSZ4UQUcGAgmlkgnY0gmlwhEFtcySJc2VjcDI1NmsxoQM9rkUZ7qWoJQT2UVrPzDRzmLqDrxCSR4zC4db-lgz1bYN0Y3CCJAaDdWRwgnZh \
- "
+  --p2p.bootnodes enr:-Li4QDqL8nUyes92JnNMpXPSeDUlF9rKt1VXiLwdSNg95OdfDK6g0wxt3fpjPfqeiZoblXhFIZQlyyjkbLWL07i_XE-GAY0we7KPimV0aHN0b3JhZ2XbAYDY15TG8wDz9gpYIv1W9liQd8stQJylLsGAgmlkgnY0gmlwhEFtMpGJc2VjcDI1NmsxoQNIbl6CN0q_OiHTc2qON3rAtJwpJh7TByr4tVKp7zHgW4N0Y3CCJAaDdWRwgnZh \
+  "
 # create data file for shard 0 if not yet
 if [ ! -e $storage_file_0 ]; then
   $executable $es_node_init $common_flags --encoding_type 0
