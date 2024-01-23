@@ -206,10 +206,18 @@ The default value is `4194304`. You can try adjusting it to `1048576`.
 
 ### How to tune the performance of syncing? 
 
-To enhance syncing performance, you can adjust the values of the p2p.sync.concurrency and p2p.fill-empty.concurrency flags.
+To enhance syncing performance or limit the usage of CPU power, you can adjust the values of the following related flags with higher or lower values:
 
 - The `--p2p.sync.concurrency` flag determines the number of threads that simultaneously retrieve shard data, with a default setting of 16.
-- The` --p2p.fill-empty.concurrency` flag specifies the number of threads used to concurrently fill encoded empty blobs, with a default setting of the CPU number minus 2.
+- The `--p2p.fill-empty.concurrency` flag specifies the number of threads used to concurrently fill encoded empty blobs, with a default setting of the CPU number minus 2.
+
+### Why is the CPU fully utilized when syncing data? Does this imply that running an es-node requires high-end hardware? Additionally, is there a way to configure it to use less CPU power? I'm asking because I need to run other software on the same machine.
+
+During data synchronization, the CPUs are fully utilized as the es-node is engaged in intensive data processing tasks like encoding and writing.
+
+However, this high-intensity processing occurs primarily when large volumes of data need to be synchronized, such as during the initial startup of the es-node. Once the synchronization is complete, and the es-node enters the mining phase, the CPU usage decreases significantly. So, generaly speaking, the es-node does not require high-end hardware, particularly for the CPU.
+
+If there is a need to conserve CPU power anyway, you can tune down the values of syncing performance related flags, namely `--p2p.sync.concurrency` and `--p2p.fill-empty.concurrency`. See [here](#how-to-tune-the-performance-of-syncing) for detailed information.
 
 ### What does it means when the log shows "The nonces are exhausted in this slot"
 
@@ -227,7 +235,7 @@ If not, using the flag `--miner.threads-per-shard` can specify the number of thr
 You can observe the logs to see if there are such messages indicating a successful storage proof submission:
 
 ```
-NFO [01-19|14:41:48.715] Mining transaction confirmed             txHash=62df87..7dbfbc
+INFO [01-19|14:41:48.715] Mining transaction confirmed             txHash=62df87..7dbfbc
 INFO [01-19|14:41:49.017] "Mining transaction success!      √"     miner=0x534632D6d7aD1fe5f832951c97FDe73E4eFD9a77
 INFO [01-19|14:41:49.018] Mining transaction details               txHash=62df87..7dbfbc gasUsed=419,892 effectiveGasPrice=2,000,000,009
 INFO [01-19|14:41:49.018] Mining transaction accounting (in ether) reward=0.01013071059 cost=0.0008397840038 profit=0.009290926583
