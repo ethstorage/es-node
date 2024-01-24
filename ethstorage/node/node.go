@@ -380,9 +380,8 @@ func (n *EsNode) Close() error {
 	return result.ErrorOrNil()
 }
 
-func (n *EsNode) initDatabase(cfg *Config) error {
+func (n *EsNode) initDatabase(cfg *Config) (err error) {
 	var db ethdb.Database
-	var err error
 	if cfg.DataDir == "" {
 		db = rawdb.NewMemoryDatabase()
 	} else {
