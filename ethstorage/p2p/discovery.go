@@ -39,8 +39,13 @@ const (
 	tableKickoffDelay      = time.Second * 3
 	discoveredAddrTTL      = time.Hour * 24
 	collectiveDialTimeout  = time.Second * 30
-	updateLocalNode        = time.Second * 30
-	p2pVersion             = 0
+	// if the node do not have AdvertiseIP and public ip (like run in the docker or behind a nat), we can get the public IP
+	// and the TCP port from the libp2p.host's addresses (get from the nat service or address observed by peers) and set
+	// to the node discovery. As the host's addresses would not show when it start, so we will check it every initLocalNodeAddrInterval.
+	// After the public IP and the TCP port initialized, we will also refresh the address in case the address change.
+	initLocalNodeAddrInterval    = time.Second * 30
+	refreshLocalNodeAddrInterval = time.Minute * 10
+	p2pVersion                   = 0
 )
 
 func (conf *Config) Discovery(log log.Logger, l1ChainID uint64, tcpPort uint16, fallbackIP net.IP) (*enode.LocalNode, *discover.UDPv5, bool, error) {
@@ -136,7 +141,7 @@ func updateLocalNodeIPAndTCP(addrs []ma.Multiaddr, localNode *enode.LocalNode) b
 		tcpPort, _ := strconv.Atoi(tcpStr)
 		localNode.SetFallbackIP(ip)
 		localNode.Set(enr.TCP(tcpPort))
-		log.Warn("update LocalNode IP and TCP", "IP", ipStr, "tcp", tcpPort)
+		log.Debug("update LocalNode IP and TCP", "IP", localNode.Node().IP(), "tcp", localNode.Node().TCP())
 		return true
 	}
 	return false
@@ -289,13 +294,16 @@ func (n *NodeP2P) DiscoveryProcess(ctx context.Context, log log.Logger, l1ChainI
 		if n.isIPSet {
 			return
 		}
-		updateLocalNodeTicker := time.NewTicker(updateLocalNode)
+		updateLocalNodeTicker := time.NewTicker(initLocalNodeAddrInterval)
+		initialized := false
 		defer updateLocalNodeTicker.Stop()
 		for {
 			select {
 			case <-updateLocalNodeTicker.C:
-				if updateLocalNodeIPAndTCP(n.host.Addrs(), n.dv5Local) {
-					return
+				if updateLocalNodeIPAndTCP(n.host.Addrs(), n.dv5Local) && !initialized {
+					initialized = true
+					updateLocalNodeTicker.Reset(refreshLocalNodeAddrInterval)
+					log.Info("Update TCP IP address", "ip", n.dv5Local.Node().IP(), "udp", n.dv5Local.Node().UDP(), "tcp", n.dv5Local.Node().TCP(), "seq", n.dv5Local.Seq())
 				}
 			case <-ctx.Done():
 				return
@@ -385,8 +393,8 @@ func (n *NodeP2P) DiscoveryProcess(ctx context.Context, log log.Logger, l1ChainI
 			n.ConnectionManager().TagPeer(info.ID, fmt.Sprintf("ethstorage-%d-%d", dat.ChainID, dat.Version), 42)
 			log.Debug("Discovered peer", "peer", info.ID, "nodeID", found.ID(), "addr", info.Addrs[0])
 		case <-connectTicker.C:
-			connected := n.Host().Network().Peers()
-			log.Warn("Peering tick", "connected", len(connected),
+			connected := n.syncCl.Peers()
+			log.Debug("Peering tick", "connected", len(connected),
 				"advertisedUdp", n.dv5Local.Node().UDP(),
 				"advertisedTcp", n.dv5Local.Node().TCP(),
 				"advertisedIP", n.dv5Local.Node().IP())
@@ -401,7 +409,7 @@ func (n *NodeP2P) DiscoveryProcess(ctx context.Context, log log.Logger, l1ChainI
 
 				existing := make(map[peer.ID]struct{})
 				for _, p := range connected {
-					existing[p] = struct{}{}
+					existing[p.ID()] = struct{}{}
 				}
 
 				// Keep using these peers, and don't try new discovery/connections.
