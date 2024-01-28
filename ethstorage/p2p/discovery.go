@@ -303,7 +303,8 @@ func (n *NodeP2P) DiscoveryProcess(ctx context.Context, log log.Logger, l1ChainI
 				if updateLocalNodeIPAndTCP(n.host.Addrs(), n.dv5Local) && !initialized {
 					initialized = true
 					updateLocalNodeTicker.Reset(refreshLocalNodeAddrInterval)
-					log.Info("Update TCP IP address", "ip", n.dv5Local.Node().IP(), "udp", n.dv5Local.Node().UDP(), "tcp", n.dv5Local.Node().TCP(), "seq", n.dv5Local.Seq())
+					log.Info("Update TCP IP address", "ip", n.dv5Local.Node().IP(), "udp", n.dv5Local.Node().UDP(),
+						"tcp", n.dv5Local.Node().TCP(), "seq", n.dv5Local.Seq(), "enr", n.dv5Local.Node().String())
 				}
 			case <-ctx.Done():
 				return
