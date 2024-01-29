@@ -414,10 +414,10 @@ func (s *SyncClient) cleanTasks() {
 	allDone := true
 	for _, t := range s.tasks {
 		for i := 0; i < len(t.SubTasks); i++ {
-			exist, first := t.healTask.hasIndexInRange(t.SubTasks[i].First, t.SubTasks[i].next)
+			exist, min := t.healTask.hasIndexInRange(t.SubTasks[i].First, t.SubTasks[i].next)
 			// if existed, min will be the smallest index in range [subTask.First, subTask.next)
 			// if no exist, min will be next, so subTask.First can directly set to subTask.next
-			t.SubTasks[i].First = first
+			t.SubTasks[i].First = min
 			if t.SubTasks[i].done && !exist {
 				t.SubTasks = append(t.SubTasks[:i], t.SubTasks[i+1:]...)
 				if t.nextIdx > i {
@@ -935,9 +935,9 @@ func (s *SyncClient) OnBlobsByRange(res *blobsByRangeResponse) {
 	sort.Slice(inserted, func(i, j int) bool {
 		return inserted[i] < inserted[j]
 	})
-	last := inserted[len(inserted)-1]
+	max := inserted[len(inserted)-1]
 	missing := make([]uint64, 0)
-	for i, n := 0, res.req.subTask.next; n <= last; n++ {
+	for i, n := 0, res.req.subTask.next; n <= max; n++ {
 		if inserted[i] == n {
 			i++
 		} else if inserted[i] > n {
@@ -946,10 +946,10 @@ func (s *SyncClient) OnBlobsByRange(res *blobsByRangeResponse) {
 	}
 	s.lock.Lock()
 	res.req.subTask.task.healTask.insert(missing)
-	if last == res.req.subTask.Last-1 {
+	if max == res.req.subTask.Last-1 {
 		res.req.subTask.done = true
 	}
-	res.req.subTask.next = last + 1
+	res.req.subTask.next = max + 1
 	s.lock.Unlock()
 }
 
@@ -1170,10 +1170,10 @@ func (s *SyncClient) ReportPeerSummary() {
 		select {
 		case <-ticker.C:
 			inbound, outbound := 0, 0
-			for _, p := range s.peers {
-				if p.direction == network.DirInbound {
+			for _, peer := range s.peers {
+				if peer.direction == network.DirInbound {
 					inbound++
-				} else if p.direction == network.DirOutbound {
+				} else if peer.direction == network.DirOutbound {
 					outbound++
 				}
 			}
