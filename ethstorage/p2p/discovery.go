@@ -45,6 +45,7 @@ const (
 	// After the public IP and the TCP port initialized, we will also refresh the address in case the address change.
 	initLocalNodeAddrInterval    = time.Second * 30
 	refreshLocalNodeAddrInterval = time.Minute * 10
+	refreshRemoteNodeENRInterval = time.Minute * 2
 	p2pVersion                   = 0
 )
 
@@ -305,6 +306,21 @@ func (n *NodeP2P) DiscoveryProcess(ctx context.Context, log log.Logger, l1ChainI
 					updateLocalNodeTicker.Reset(refreshLocalNodeAddrInterval)
 					log.Info("Update TCP IP address", "ip", n.dv5Local.Node().IP(), "udp", n.dv5Local.Node().UDP(),
 						"tcp", n.dv5Local.Node().TCP(), "seq", n.dv5Local.Seq(), "enr", n.dv5Local.Node().String())
+				}
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+
+	go func() {
+		refreshENRTicker := time.NewTicker(refreshRemoteNodeENRInterval)
+		defer refreshENRTicker.Stop()
+		for {
+			select {
+			case <-refreshENRTicker.C:
+				for _, node := range n.dv5Udp.AllNodes() {
+					n.dv5Udp.Resolve(node)
 				}
 			case <-ctx.Done():
 				return
