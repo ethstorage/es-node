@@ -258,3 +258,13 @@ By default, when executed, the run.sh script will generate a data file named `sh
 If necessary, you can choose an alternative location for data storage by specifying the full path of the file as the value of the `--storage.files` flag in the run.sh script.
 
 Please refer to [configuration](/README.md#configuration) for more details.
+
+### What can I do about "The zkey file was not downloaded" error?
+
+When you see the following message when running **run.sh**. you can manually download the blob_poseidon.zkey/blob_poseidon2.zkey to `./build/bin/snarkjs/` folder and run it again. 
+```
+zk prover mode is 2
+Start downloading ./build/bin/snarkjs/blob_poseidon2.zkey...
+... ...
+Error: The zkey file was not downloaded. Please try again.
+```
