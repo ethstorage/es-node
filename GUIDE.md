@@ -45,11 +45,11 @@ You can run es-node from a pre-built Docker image, a pre-built executable, or fr
 
 ## From pre-built executables
 
-Before running es-node from the pre-built executables, ensure that you have installed [Node.js](#install-nodejs) and [snarkjs](#install-snarkjs).
+Before running es-node from the pre-built executables, ensure that you have installed [Node.js](#install-nodejs), [snarkjs](#install-snarkjs) and [WSL](https://learn.microsoft.com/en-us/windows/wsl/) for Window. 
 
 Download the pre-built package suitable for your platform:
 
-Linux x86-64 or AMD64:
+Linux x86-64 or AMD64 or Windows:
 ```sh
 curl -L https://github.com/ethstorage/es-node/releases/download/v0.1.5/es-node.v0.1.5.linux-amd64.tar.gz | tar -xz
 ```
@@ -161,6 +161,9 @@ nvm use 20
 ```sh
 npm install -g snarkjs
 ```
+
+### Install wsl 
+If you need to run es-node in Windows, you need to run it using WSL. See [How to install Linux on Windows with WSL](https://learn.microsoft.com/en-us/windows/wsl/install).
 
 ## Two phases after es-node launch
 
