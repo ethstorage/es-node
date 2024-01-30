@@ -163,7 +163,7 @@ npm install -g snarkjs
 ```
 
 ### Install wsl 
-If you need to run es-node in Windows, you need to run it using WSL. See [How to install Linux on Windows with WSL](https://learn.microsoft.com/en-us/windows/wsl/install).
+If you need to run es-node in Windows, you need to run it using WSL. See [this](https://learn.microsoft.com/en-us/windows/wsl/install) to install WSL.
 
 ## Two phases after es-node launch
 
