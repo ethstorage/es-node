@@ -83,8 +83,8 @@ data_dir="./es-data"
 storage_file_0="$data_dir/shard-0.dat"
 
 common_flags=" --datadir $data_dir \
-  --l1.rpc https://tame-wild-liquid.ethereum-goerli.quiknode.pro/4ae31eb78cb83cafc31140a8acc0841ea197a668 \
-  --storage.l1contract 0xc6F300f3F60a5822fd56f6589077Cb2D409ca52e \
+  --l1.rpc https://polished-silent-market.ethereum-sepolia.quiknode.pro/3b74a592be57773068d83f931dd98af8cbc1e9ca \
+  --storage.l1contract 0x804C520d3c084C805E37A35E90057Ac32831F96f \
   --storage.miner $ES_NODE_STORAGE_MINER \
   "
 
@@ -98,9 +98,9 @@ es_node_start=" --network devnet \
   --miner.zkey $zkey_name \
   --storage.files $storage_file_0 \
   --signer.private-key $ES_NODE_SIGNER_PRIVATE_KEY \
-  --l1.beacon https://tame-wild-liquid.ethereum-goerli.quiknode.pro/4ae31eb78cb83cafc31140a8acc0841ea197a668 \
-  --l1.beacon-based-time 1705546368 \
-  --l1.beacon-based-slot 7419864 \
+  --l1.beacon https://polished-silent-market.ethereum-sepolia.quiknode.pro/3b74a592be57773068d83f931dd98af8cbc1e9ca \
+  --l1.beacon-based-time 1706684472 \
+  --l1.beacon-based-slot 4245906 \
   --download.thread 32 \
   --p2p.listen.udp 30305 \
   --p2p.max.request.size 4194304 \
