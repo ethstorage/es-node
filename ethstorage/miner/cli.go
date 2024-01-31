@@ -22,6 +22,7 @@ const (
 	ZKeyFileNameFlagName     = "miner.zkey"
 	ZKWorkingDirFlagName     = "miner.zk-working-dir"
 	ZKProverModeFlagName     = "miner.zk-prover-mode"
+	ZKProverImpFlagName      = "miner.zk-prover-imp"
 	ThreadsPerShardFlagName  = "miner.threads-per-shard"
 	MinimumProfitFlagName    = "miner.min-profit"
 )
@@ -66,9 +67,15 @@ func CLIFlags(envPrefix string) []cli.Flag {
 		},
 		cli.Uint64Flag{
 			Name:   ZKProverModeFlagName,
-			Usage:  "ZK prover mode, 1: one proof per sample, 2: one proof for multiple samples. Default: 2",
+			Usage:  "ZK prover mode, 1: one proof per sample, 2: one proof for multiple samples",
 			Value:  DefaultConfig.ZKProverMode,
 			EnvVar: rollup.PrefixEnvVar(envPrefix, "ZK_PROVER_Mode"),
+		},
+		cli.Uint64Flag{
+			Name:   ZKProverImpFlagName,
+			Usage:  "ZK prover implementation, 1: snarkjs, 2: go-rapidsnark",
+			Value:  DefaultConfig.ZKProverImp,
+			EnvVar: rollup.PrefixEnvVar(envPrefix, "ZK_PROVER_IMP"),
 		},
 		cli.Uint64Flag{
 			Name:   ThreadsPerShardFlagName,
@@ -88,6 +95,7 @@ type CLIConfig struct {
 	ZKeyFileName     string
 	ZKWorkingDir     string
 	ZKProverMode     uint64
+	ZKProverImp      uint64
 	ThreadsPerShard  uint64
 }
 
@@ -117,6 +125,7 @@ func (c CLIConfig) ToMinerConfig() (Config, error) {
 	cfg.MinimumProfit = c.MinimumProfit
 	cfg.ZKeyFileName = c.ZKeyFileName
 	cfg.ZKProverMode = c.ZKProverMode
+	cfg.ZKProverImp = c.ZKProverImp
 	cfg.ThreadsPerShard = c.ThreadsPerShard
 	return cfg, nil
 }
@@ -130,6 +139,7 @@ func ReadCLIConfig(ctx *cli.Context) CLIConfig {
 		ZKeyFileName:     ctx.GlobalString(ZKeyFileNameFlagName),
 		ZKWorkingDir:     ctx.GlobalString(ZKWorkingDirFlagName),
 		ZKProverMode:     ctx.GlobalUint64(ZKProverModeFlagName),
+		ZKProverImp:      ctx.GlobalUint64(ZKProverImpFlagName),
 		ThreadsPerShard:  ctx.GlobalUint64(ThreadsPerShardFlagName),
 	}
 	return cfg
