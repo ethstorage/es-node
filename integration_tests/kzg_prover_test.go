@@ -11,6 +11,7 @@ import (
 	"math/big"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -98,7 +99,7 @@ func uploadBlob(t *testing.T, data []byte) common.Hash {
 	if err != nil {
 		t.Fatalf("Error getting nonce: %v", err)
 	}
-	blbKey := "0x0000000000000000000000000000000000000000000000000000000000000001"
+	blbKey := crypto.Keccak256Hash(new(big.Int).SetInt64(time.Now().UnixNano()).Bytes())
 	blbIdx := common.Big0
 	length := new(big.Int).SetInt64(128 * 1024)
 
@@ -111,7 +112,7 @@ func uploadBlob(t *testing.T, data []byte) common.Hash {
 		{Type: uint256Type},
 		{Type: uint256Type},
 	}
-	values := []interface{}{common.HexToHash(blbKey), blbIdx, length}
+	values := []interface{}{blbKey, blbIdx, length}
 	dataField, err := args.Pack(values...)
 	if err != nil {
 		t.Fatalf("Error getting calldata: %v", err)
