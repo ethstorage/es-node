@@ -8,8 +8,8 @@ data_dir="./es-data"
 storage_file_0="$data_dir/shard-0.dat"
 
 common_flags=" --datadir $data_dir \
-  --l1.rpc http://65.109.115.36:8545 \
-  --storage.l1contract 0xb4B46bdAA835F8E4b4d8e208B6559cD267851051"
+  --l1.rpc https://tame-wild-liquid.ethereum-goerli.quiknode.pro/4ae31eb78cb83cafc31140a8acc0841ea197a668 \
+  --storage.l1contract 0xc6F300f3F60a5822fd56f6589077Cb2D409ca52e"
 
 # init shard 0
 es_node_init="init --shard_index 0"
@@ -18,13 +18,14 @@ es_node_init="init --shard_index 0"
 # TODO remove --network
 es_node_start=" --network devnet \
   --storage.files $storage_file_0 \
-  --l1.beacon http://65.109.115.36:5052 \
-  --l1.beacon-based-time 1701262812 \
-  --l1.beacon-based-slot 1 \
+  --l1.beacon https://tame-wild-liquid.ethereum-goerli.quiknode.pro/4ae31eb78cb83cafc31140a8acc0841ea197a668 \
+  --l1.beacon-based-time 1705546368 \
+  --l1.beacon-based-slot 7419864 \
   --p2p.max.request.size 4194304 \
+  --p2p.listen.udp 30305 \
   --p2p.sync.concurrency 32 \
-  --p2p.bootnodes enr:-Li4QPFCNc7mLPqxoVrk1eKB0qa5hb8H75IBwhvdSGGdamx1egKibkKO1v1rtLt7r3pJvoVxv95ITlpSphYCAsunU6qGAYwkwuOpimV0aHN0b3JhZ2XbAYDY15S0tGvaqDX45LTY4gi2VZzSZ4UQUcGAgmlkgnY0gmlwhEFtcySJc2VjcDI1NmsxoQM9rkUZ7qWoJQT2UVrPzDRzmLqDrxCSR4zC4db-lgz1bYN0Y3CCJAaDdWRwgnZh \
- "
+  --p2p.bootnodes enr:-Li4QDqL8nUyes92JnNMpXPSeDUlF9rKt1VXiLwdSNg95OdfDK6g0wxt3fpjPfqeiZoblXhFIZQlyyjkbLWL07i_XE-GAY0we7KPimV0aHN0b3JhZ2XbAYDY15TG8wDz9gpYIv1W9liQd8stQJylLsGAgmlkgnY0gmlwhEFtMpGJc2VjcDI1NmsxoQNIbl6CN0q_OiHTc2qON3rAtJwpJh7TByr4tVKp7zHgW4N0Y3CCJAaDdWRwgnZh \
+"
 # create data file for shard 0 if not yet
 if [ ! -e $storage_file_0 ]; then
   $executable $es_node_init $common_flags --encoding_type 0
