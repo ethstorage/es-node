@@ -105,7 +105,7 @@ es_node_start=" --network devnet \
   --p2p.listen.udp 30305 \
   --p2p.max.request.size 4194304 \
   --p2p.sync.concurrency 32 \
-  --p2p.bootnodes enr:-Li4QDqL8nUyes92JnNMpXPSeDUlF9rKt1VXiLwdSNg95OdfDK6g0wxt3fpjPfqeiZoblXhFIZQlyyjkbLWL07i_XE-GAY0we7KPimV0aHN0b3JhZ2XbAYDY15TG8wDz9gpYIv1W9liQd8stQJylLsGAgmlkgnY0gmlwhEFtMpGJc2VjcDI1NmsxoQNIbl6CN0q_OiHTc2qON3rAtJwpJh7TByr4tVKp7zHgW4N0Y3CCJAaDdWRwgnZh \
+  --p2p.bootnodes enr:-Li4QFpDtIlnf02Bli8jnZEkVAFyWkOOtaUZL7yKp3ySKmhGNiqRSe4AuUcFip3F4o_YLh30HJUg2UlcmIxx5W-fsK2GAY1eoPcdimV0aHN0b3JhZ2XbAYDY15SATFINPAhMgF43o16QBXrDKDH5b8GAgmlkgnY0gmlwhEFtMpGJc2VjcDI1NmsxoQL0mXwUXANkLHIAjN23dPfnOOhu-jhFUN13jcjHWeIP04N0Y3CCJAaDdWRwgnZh \
 $@"
   
 # create data file for shard 0 if not yet
