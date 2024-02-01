@@ -8,7 +8,6 @@ package integration
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -158,7 +157,7 @@ func cleanFiles(proverDir string) {
 	}
 
 	folderPath := filepath.Join(proverDir, "snarkbuild")
-	files, err := ioutil.ReadDir(folderPath)
+	files, err := os.ReadDir(folderPath)
 	if err != nil {
 		fmt.Println(err)
 		return
