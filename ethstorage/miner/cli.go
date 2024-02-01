@@ -22,7 +22,7 @@ const (
 	ZKeyFileNameFlagName     = "miner.zkey"
 	ZKWorkingDirFlagName     = "miner.zk-working-dir"
 	ZKProverModeFlagName     = "miner.zk-prover-mode"
-	ZKProverImpFlagName      = "miner.zk-prover-imp"
+	ZKProverImplFlagName     = "miner.zk-prover-impl"
 	ThreadsPerShardFlagName  = "miner.threads-per-shard"
 	MinimumProfitFlagName    = "miner.min-profit"
 )
@@ -69,13 +69,13 @@ func CLIFlags(envPrefix string) []cli.Flag {
 			Name:   ZKProverModeFlagName,
 			Usage:  "ZK prover mode, 1: one proof per sample, 2: one proof for multiple samples",
 			Value:  DefaultConfig.ZKProverMode,
-			EnvVar: rollup.PrefixEnvVar(envPrefix, "ZK_PROVER_Mode"),
+			EnvVar: rollup.PrefixEnvVar(envPrefix, "ZK_PROVER_MODE"),
 		},
 		cli.Uint64Flag{
-			Name:   ZKProverImpFlagName,
+			Name:   ZKProverImplFlagName,
 			Usage:  "ZK prover implementation, 1: snarkjs, 2: go-rapidsnark",
-			Value:  DefaultConfig.ZKProverImp,
-			EnvVar: rollup.PrefixEnvVar(envPrefix, "ZK_PROVER_IMP"),
+			Value:  DefaultConfig.ZKProverImpl,
+			EnvVar: rollup.PrefixEnvVar(envPrefix, "ZK_PROVER_IMPL"),
 		},
 		cli.Uint64Flag{
 			Name:   ThreadsPerShardFlagName,
@@ -95,7 +95,7 @@ type CLIConfig struct {
 	ZKeyFileName     string
 	ZKWorkingDir     string
 	ZKProverMode     uint64
-	ZKProverImp      uint64
+	ZKProverImpl     uint64
 	ThreadsPerShard  uint64
 }
 
@@ -125,7 +125,7 @@ func (c CLIConfig) ToMinerConfig() (Config, error) {
 	cfg.MinimumProfit = c.MinimumProfit
 	cfg.ZKeyFileName = c.ZKeyFileName
 	cfg.ZKProverMode = c.ZKProverMode
-	cfg.ZKProverImp = c.ZKProverImp
+	cfg.ZKProverImpl = c.ZKProverImpl
 	cfg.ThreadsPerShard = c.ThreadsPerShard
 	return cfg, nil
 }
@@ -139,7 +139,7 @@ func ReadCLIConfig(ctx *cli.Context) CLIConfig {
 		ZKeyFileName:     ctx.GlobalString(ZKeyFileNameFlagName),
 		ZKWorkingDir:     ctx.GlobalString(ZKWorkingDirFlagName),
 		ZKProverMode:     ctx.GlobalUint64(ZKProverModeFlagName),
-		ZKProverImp:      ctx.GlobalUint64(ZKProverImpFlagName),
+		ZKProverImpl:     ctx.GlobalUint64(ZKProverImplFlagName),
 		ThreadsPerShard:  ctx.GlobalUint64(ThreadsPerShardFlagName),
 	}
 	return cfg

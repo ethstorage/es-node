@@ -78,7 +78,7 @@ func TestMining(t *testing.T) {
 		miningConfig.ZKWorkingDir,
 		miningConfig.ZKeyFileName,
 		miningConfig.ZKProverMode,
-		miningConfig.ZKProverImp,
+		miningConfig.ZKProverImpl,
 		lg,
 	)
 	mnr := miner.New(miningConfig, storageManager, l1api, &pvr, feed, lg)
@@ -415,7 +415,7 @@ func initMiningConfig(t *testing.T, l1Contract common.Address, client *eth.Polli
 	proverPath, _ := filepath.Abs(prPath)
 	miningConfig.ZKWorkingDir = proverPath
 	miningConfig.ZKProverMode = 2
-	miningConfig.ZKProverImp = 1
+	miningConfig.ZKProverImpl = 1
 	miningConfig.ThreadsPerShard = 2
 	miningConfig.MinimumProfit = new(big.Int).SetInt64(-1e18)
 	return miningConfig
