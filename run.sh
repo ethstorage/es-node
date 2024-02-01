@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # usage:
 # env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> ./run.sh
