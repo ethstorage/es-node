@@ -11,6 +11,6 @@ services:
     environment:
       - ES_NODE_STORAGE_MINER=${ES_NODE_STORAGE_MINER}
       - ES_NODE_SIGNER_PRIVATE_KEY=${ES_NODE_SIGNER_PRIVATE_KEY}
-    command:  ["sh", "-c", "/es-node/run.sh --miner.zk-prover-impl=2"]
+    command:  ["bash", "-c", "/es-node/run.sh --miner.zk-prover-impl=2"]
     container_name: es
     tty: true
