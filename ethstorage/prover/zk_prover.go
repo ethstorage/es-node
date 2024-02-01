@@ -68,6 +68,18 @@ func newZKProver(workingDir, zkeyFile string, cleanup bool, lg log.Logger) *ZKPr
 
 // Generate ZK Proof for the given encoding keys and chunck indexes using snarkjs
 func (p *ZKProver) GenerateZKProof(encodingKeys []common.Hash, sampleIdxs []uint64) ([]byte, []*big.Int, error) {
+	proof, publics, err := p.GenerateZKProofRaw(encodingKeys, sampleIdxs)
+	if err != nil {
+		return nil, nil, err
+	}
+	if len(publics) != 6 {
+		return nil, nil, fmt.Errorf("publics length is %d", len(publics))
+	}
+	return proof, publics[4:], nil
+}
+
+// Generate ZK Proof for the given encoding keys and chunck indexes using snarkjs
+func (p *ZKProver) GenerateZKProofRaw(encodingKeys []common.Hash, sampleIdxs []uint64) ([]byte, []*big.Int, error) {
 	for i, idx := range sampleIdxs {
 		p.lg.Debug("Generate zk proof", "encodingKey", encodingKeys[i], "sampleIdx", sampleIdxs[i])
 		if int(idx) >= eth.FieldElementsPerBlob {
@@ -171,12 +183,12 @@ func (p *ZKProver) GenerateZKProof(encodingKeys []common.Hash, sampleIdxs []uint
 		p.lg.Error("Parse proof failed", "error", err)
 		return nil, nil, err
 	}
-	masks, err := readMasks(publicFile)
+	publics, err := readPublics(publicFile)
 	if err != nil {
-		p.lg.Error("Read mask failed", "error", err)
+		p.lg.Error("Read publics failed", "error", err)
 		return nil, nil, err
 	}
-	return proof, masks, nil
+	return proof, publics, nil
 }
 
 // Generate ZK Proof for the given encoding key and chunck index using snarkjs
@@ -322,27 +334,27 @@ func readProof(proofFile string) ([]byte, error) {
 	return encoded, nil
 }
 
-func readMasks(publicFile string) ([]*big.Int, error) {
-	var masks []*big.Int
+func readPublics(publicFile string) ([]*big.Int, error) {
+	var pubs []*big.Int
 	f, err := os.Open(publicFile)
 	if err != nil {
-		return masks, err
+		return pubs, err
 	}
 	defer f.Close()
 	var output []string
 	var decoder = json.NewDecoder(f)
 
 	if err = decoder.Decode(&output); err != nil {
-		return masks, err
+		return pubs, err
 	}
 	for _, v := range output {
-		mask, ok := new(big.Int).SetString(v, 0)
+		pub, ok := new(big.Int).SetString(v, 0)
 		if !ok {
-			return masks, fmt.Errorf("invalid mask %v", v)
+			return pubs, fmt.Errorf("invalid public input %v", v)
 		}
-		masks = append(masks, mask)
+		pubs = append(pubs, pub)
 	}
-	return masks, nil
+	return pubs, nil
 }
 
 func readMask(publicFile string) (*big.Int, error) {

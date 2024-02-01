@@ -22,8 +22,8 @@ The minimum hardware requirements for an es-node are as follows:
  - 4GB of RAM
  - Disk: 
     - We recommend using an NVMe disk to support the full speed of sampling
-    - At least 2.2TB of available storage space for the runtime and sync of one data shard
- - Internet service: At least 8 MBit/sec download speed
+    - At least 550 GB of available storage space for the runtime and sync of one data shard
+ - Internet service: At least 8MB/sec download speed
 
 ## Getting started
 
@@ -43,7 +43,7 @@ _Note: Some of the flags/parameters used in `run.sh` are supposed to change over
 
 With `es-node init` command, you can init your es-node by creating a data file for each shard.
 
-You can specify `shard_len` (the number of shards) or `shard_index` (the index of specified shard, and you can specify more than one) to create shards that you would like to mine. If both appears, `shard_index` takes precedence. 
+You can specify `shard_len` (the number of shards) or `shard_index` (the index of specified shards, and you can specify more than one) to create shards that you would like to mine. If both appear, `shard_index` takes precedence. 
 
 Here are the options that you can use with `init` command:
 
@@ -80,18 +80,19 @@ The full list of options that you can use to configure an es-node are as follows
 |`--metrics.enable`|Enable metrics|||
 |`--miner.enabled`|Storage mining enabled|||
 |`--miner.gas-price`|Gas price for mining transactions|||
+|`--miner.min-profit`|Minimum profit for mining transactions|`0`||
 |`--miner.priority-gas-price`|Priority gas price for mining transactions|||
 |`--miner.threads-per-shard`|Number of threads per shard|`runtime.NumCPU() x 2`||
 |`--miner.zk-working-dir`|Path to the snarkjs folder|`build/bin`||
-|`--miner.zkey`|zkey file name which should be put in the snarkjs folder|`blob_poseidon.zkey`||
-|`--miner.min-profit`|Minimum profit for mining transactions|`0`||
+|`--miner.zk-prover-mode`|ZK prover mode, 1: one proof per sample, 2: one proof for multiple samples|`2`||
+|`--miner.zkey`|zkey file name which should be put in the snarkjs folder|`blob_poseidon2.zkey`||
 |`--network`|Predefined L1 network selection. Available networks: devnet|||
 |`--p2p.advertise.ip`|The IP address to advertise in Discv5, put into the ENR of the node. This may also be a hostname / domain name to resolve to an IP.|||
 |`--p2p.advertise.tcp`|The TCP port to advertise in Discv5, put into the ENR of the node. Set to p2p.listen.tcp value if 0.|`0`||
 |`--p2p.advertise.udp`|The UDP port to advertise in Discv5 as fallback if not determined by Discv5, put into the ENR of the node. Set to p2p.listen.udp value if 0.|`0`||
 |`--p2p.ban.peers`|Enables peer banning. This should ONLY be enabled once certain peer scoring is working correctly.|||
 |`--p2p.bootnodes`|Comma-separated base64-format ENR list. Bootnodes to start discovering other node records from.|||
-|`--p2p.disable`|Completely disable the P2P stack|||
+|`--p2p.disable`|Completely disable the P2P stack, if P2P is disabled, mining will not start automatically.|||
 |`--p2p.discovery.path`|Discovered ENRs are persisted in a database to recover from a restart without having to bootstrap the discovery process again. Set to 'memory' to never persist the peerstore.|`esnode_discovery_db`||
 |`--p2p.listen.ip`|IP to bind LibP2P and Discv5 to|`0.0.0.0`||
 |`--p2p.listen.tcp`|TCP port to bind LibP2P to. Any available system port if set to 0.|`9222`||

@@ -204,7 +204,7 @@ func (n *EsNode) initStorageManager(ctx context.Context, cfg *Config) error {
 		return fmt.Errorf("shard is not completed")
 	}
 
-	log.Info("Initalized storage",
+	log.Info("Initialized storage",
 		"miner", cfg.Storage.Miner,
 		"l1contract", cfg.Storage.L1Contract,
 		"kvSize", shardManager.MaxKvSize(),
@@ -272,9 +272,11 @@ func (n *EsNode) Start(ctx context.Context, cfg *Config) error {
 		return err
 	}
 
-	if err := n.p2pNode.Start(); err != nil {
-		n.log.Error("Could not start a p2pNode", "err", err)
-		return err
+	if n.p2pNode != nil {
+		if err := n.p2pNode.Start(); err != nil {
+			n.log.Error("Could not start a p2pNode", "err", err)
+			return err
+		}
 	}
 
 	return nil
@@ -397,5 +399,5 @@ func (n *EsNode) initDatabase(cfg *Config) error {
 	if err == nil {
 		n.db = db
 	}
-	return nil
+	return err
 }
