@@ -109,7 +109,7 @@ chmod +x run.sh && env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=
 With source code, you also have the option to build a Docker image by yourself and run an es-node container:
 
 ```sh
-env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> docker compose up 
+env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> docker-compose up 
 ```
 If you want to run Docker container in the background and keep all the logs:
 ```sh

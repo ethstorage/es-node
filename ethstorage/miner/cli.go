@@ -49,7 +49,7 @@ func CLIFlags(envPrefix string) []cli.Flag {
 		},
 		&types.BigFlag{
 			Name:   MinimumProfitFlagName,
-			Usage:  "Minimum profit for mining transactions",
+			Usage:  "Minimum profit for mining transactions in wei",
 			Value:  DefaultConfig.MinimumProfit,
 			EnvVar: rollup.PrefixEnvVar(envPrefix, "MIN_PROFIT"),
 		},
