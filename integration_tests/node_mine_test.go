@@ -249,7 +249,7 @@ func fillEmpty(t *testing.T, l1Client *eth.PollingClient, storageMgr *ethstorage
 }
 
 func prepareData(t *testing.T, l1Client *eth.PollingClient, storageMgr *ethstorage.StorageManager, value string) {
-	data := generateRandomContent(128 * 10)
+	data := generateRandomContent(124 * 10)
 	blobs := utils.EncodeBlobs(data)
 	t.Logf("Blobs len %d \n", len(blobs))
 	var hashs []common.Hash
@@ -413,10 +413,6 @@ func initMiningConfig(t *testing.T, l1Contract common.Address, client *eth.Polli
 
 	miningConfig.ZKeyFileName = zkey2Name
 	proverPath, _ := filepath.Abs(prPath)
-	zkeyFull := filepath.Join(proverPath, prover.SnarkLib, miningConfig.ZKeyFileName)
-	if _, err := os.Stat(zkeyFull); os.IsNotExist(err) {
-		t.Fatalf("%s not found", zkeyFull)
-	}
 	miningConfig.ZKWorkingDir = proverPath
 	miningConfig.ZKProverMode = 2
 	miningConfig.ZKProverImp = 1
