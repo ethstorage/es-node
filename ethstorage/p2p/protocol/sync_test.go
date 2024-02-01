@@ -568,7 +568,7 @@ func TestSync_RequestL2Range(t *testing.T) {
 
 	time.Sleep(2 * time.Second)
 	// send request
-	_, err = syncCl.RequestL2Range(ctx, 0, 16)
+	_, err = syncCl.RequestL2Range(0, 16)
 	if err != nil {
 		t.Fatal(err)
 	}

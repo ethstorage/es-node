@@ -31,7 +31,7 @@ import (
 // StreamCtxFn provides a new context to use when handling stream requests
 type StreamCtxFn func() context.Context
 
-// Note: the mocknet in testing does not support read/write stream timeouts, the timeouts are only applied if available.
+// Note: the mock net in testing does not support read/write stream timeouts, the timeouts are only applied if available.
 // Rate-limits always apply, and are making sure the request/response throughput is not too fast, instead of too slow.
 const (
 	maxGossipSize = 10 * (1 << 20)
@@ -414,10 +414,10 @@ func (s *SyncClient) cleanTasks() {
 	allDone := true
 	for _, t := range s.tasks {
 		for i := 0; i < len(t.SubTasks); i++ {
-			exist, min := t.healTask.hasIndexInRange(t.SubTasks[i].First, t.SubTasks[i].next)
-			// if exist, min will be the smallest index in range [subTask.First, subTask.next)
+			exist, first := t.healTask.hasIndexInRange(t.SubTasks[i].First, t.SubTasks[i].next)
+			// if existed, min will be the smallest index in range [subTask.First, subTask.next)
 			// if no exist, min will be next, so subTask.First can directly set to subTask.next
-			t.SubTasks[i].First = min
+			t.SubTasks[i].First = first
 			if t.SubTasks[i].done && !exist {
 				t.SubTasks = append(t.SubTasks[:i], t.SubTasks[i+1:]...)
 				if t.nextIdx > i {
@@ -530,7 +530,7 @@ func (s *SyncClient) Close() error {
 	return nil
 }
 
-func (s *SyncClient) RequestL2Range(ctx context.Context, start, end uint64) (uint64, error) {
+func (s *SyncClient) RequestL2Range(start, end uint64) (uint64, error) {
 	for _, pr := range s.peers {
 		id := rand.Uint64()
 		var packet BlobsByRangePacket
@@ -931,9 +931,9 @@ func (s *SyncClient) OnBlobsByRange(res *blobsByRangeResponse) {
 	sort.Slice(inserted, func(i, j int) bool {
 		return inserted[i] < inserted[j]
 	})
-	max := inserted[len(inserted)-1]
+	last := inserted[len(inserted)-1]
 	missing := make([]uint64, 0)
-	for i, n := 0, res.req.subTask.next; n <= max; n++ {
+	for i, n := 0, res.req.subTask.next; n <= last; n++ {
 		if inserted[i] == n {
 			i++
 		} else if inserted[i] > n {
@@ -942,10 +942,10 @@ func (s *SyncClient) OnBlobsByRange(res *blobsByRangeResponse) {
 	}
 	s.lock.Lock()
 	res.req.subTask.task.healTask.insert(missing)
-	if max == res.req.subTask.Last-1 {
+	if last == res.req.subTask.Last-1 {
 		res.req.subTask.done = true
 	}
-	res.req.subTask.next = max + 1
+	res.req.subTask.next = last + 1
 	s.lock.Unlock()
 }
 
@@ -1167,10 +1167,10 @@ func (s *SyncClient) ReportPeerSummary() {
 		select {
 		case <-ticker.C:
 			inbound, outbound := 0, 0
-			for _, peer := range s.peers {
-				if peer.direction == network.DirInbound {
+			for _, p := range s.peers {
+				if p.direction == network.DirInbound {
 					inbound++
-				} else if peer.direction == network.DirOutbound {
+				} else if p.direction == network.DirOutbound {
 					outbound++
 				}
 			}
