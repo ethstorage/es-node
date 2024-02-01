@@ -399,5 +399,5 @@ func (n *EsNode) initDatabase(cfg *Config) error {
 	if err == nil {
 		n.db = db
 	}
-	return nil
+	return err
 }
