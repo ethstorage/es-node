@@ -22,7 +22,7 @@ import (
 
 const (
 	PutBlobEvent    = "PutBlob(uint256,uint256,bytes32)"
-	MinedBlockEvent = "MinedBlock(uint256,uint256,uint256,uint256)" // TODO: update when new version contract deployed
+	MinedBlockEvent = "MinedBlock(uint256,uint256,uint256,uint256,address,uint256)"
 )
 
 var httpRegex = regexp.MustCompile("^http(s)?://")
@@ -276,13 +276,13 @@ func (w *PollingClient) GetKvMetas(kvIndices []uint64, blockNumber int64) ([][32
 	return res[0].([][32]byte), nil
 }
 
-func (w *PollingClient) ReadContractField(fieldName string) ([]byte, error) {
+func (w *PollingClient) ReadContractField(fieldName string, blockNumber *big.Int) ([]byte, error) {
 	h := crypto.Keccak256Hash([]byte(fieldName + "()"))
 	msg := ethereum.CallMsg{
 		To:   &w.esContract,
 		Data: h[0:4],
 	}
-	bs, err := w.Client.CallContract(context.Background(), msg, nil)
+	bs, err := w.Client.CallContract(context.Background(), msg, blockNumber)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get %s from contract: %v", fieldName, err)
 	}

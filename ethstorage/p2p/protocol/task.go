@@ -130,5 +130,5 @@ type SyncProgress struct {
 	SyncedBytes      common.StorageSize // Number of kv bytes downloaded
 	EmptyBlobsToFill uint64
 	EmptyBlobsFilled uint64
-	TotalTimeUsed    time.Duration
+	TotalSecondsUsed uint64
 }

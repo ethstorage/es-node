@@ -204,7 +204,7 @@ func (n *EsNode) initStorageManager(ctx context.Context, cfg *Config) error {
 		return fmt.Errorf("shard is not completed")
 	}
 
-	log.Info("Initalized storage",
+	log.Info("Initialized storage",
 		"miner", cfg.Storage.Miner,
 		"l1contract", cfg.Storage.L1Contract,
 		"kvSize", shardManager.MaxKvSize(),
@@ -400,5 +400,5 @@ func (n *EsNode) initDatabase(cfg *Config) error {
 	if err == nil {
 		n.db = db
 	}
-	return nil
+	return err
 }
