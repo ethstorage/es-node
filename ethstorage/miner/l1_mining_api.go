@@ -154,8 +154,8 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 	})
 	if err != nil {
 		m.lg.Error("Estimate gas failed", "error", err.Error())
-		curBlock, _ := m.BlockNumber(context.Background())
-		m.lg.Warn("Query most recent block", "block", curBlock)
+		curBlock, _ := m.HeaderByNumber(ctx, big.NewInt(rpc.LatestBlockNumber.Int64()))
+		m.lg.Warn("Query most recent block", "blockNumber", curBlock.Number, "blockTime", curBlock.Time, "blockHash", curBlock.Hash())
 		return common.Hash{}, fmt.Errorf("failed to estimate gas: %w", err)
 	}
 	m.lg.Info("Estimated gas done", "gas", estimatedGas)
