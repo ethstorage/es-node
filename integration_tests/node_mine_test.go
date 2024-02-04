@@ -245,7 +245,7 @@ func initStorageConfig(client *eth.PollingClient) (*storage.StorageConfig, error
 	}
 	maxKvSizeBits := new(big.Int).SetBytes(result).Uint64()
 	chunkSizeBits := maxKvSizeBits
-	result, err = client.ReadContractField("shardEntryBits")
+	result, err = client.ReadContractField("shardEntryBits", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -381,58 +381,58 @@ func initMiningConfig(client *eth.PollingClient) (*miner.Config, error) {
 	}
 	miningConfig.SignerFnFactory = factory
 	miningConfig.SignerAddr = addrFrom
-	result, err := client.ReadContractField("randomChecks")
+	result, err := client.ReadContractField("randomChecks", nil)
 	if err != nil {
 		return nil, err
 	}
 	miningConfig.RandomChecks = new(big.Int).SetBytes(result).Uint64()
-	result, err = client.ReadContractField("nonceLimit")
+	result, err = client.ReadContractField("nonceLimit", nil)
 	if err != nil {
 		return nil, err
 	}
 	miningConfig.NonceLimit = new(big.Int).SetBytes(result).Uint64()
-	result, err = client.ReadContractField("minimumDiff")
+	result, err = client.ReadContractField("minimumDiff", nil)
 	if err != nil {
 		return nil, err
 	}
 	miningConfig.MinimumDiff = new(big.Int).SetBytes(result)
-	result, err = client.ReadContractField("cutoff")
+	result, err = client.ReadContractField("cutoff", nil)
 	if err != nil {
 		return nil, err
 	}
 	miningConfig.Cutoff = new(big.Int).SetBytes(result)
-	result, err = client.ReadContractField("diffAdjDivisor")
+	result, err = client.ReadContractField("diffAdjDivisor", nil)
 	if err != nil {
 		return nil, err
 	}
 	miningConfig.DiffAdjDivisor = new(big.Int).SetBytes(result)
 
-	result, err = client.ReadContractField("dcfFactor")
+	result, err = client.ReadContractField("dcfFactor", nil)
 	if err != nil {
 		return nil, err
 	}
 	miningConfig.DcfFactor = new(big.Int).SetBytes(result)
-	result, err = client.ReadContractField("startTime")
+	result, err = client.ReadContractField("startTime", nil)
 	if err != nil {
 		return nil, err
 	}
 	miningConfig.StartTime = new(big.Int).SetBytes(result).Uint64()
-	result, err = client.ReadContractField("shardEntryBits")
+	result, err = client.ReadContractField("shardEntryBits", nil)
 	if err != nil {
 		return nil, err
 	}
 	miningConfig.ShardEntry = 1 << new(big.Int).SetBytes(result).Uint64()
-	result, err = client.ReadContractField("treasuryShare")
+	result, err = client.ReadContractField("treasuryShare", nil)
 	if err != nil {
 		return nil, err
 	}
 	miningConfig.TreasuryShare = new(big.Int).SetBytes(result).Uint64()
-	result, err = client.ReadContractField("storageCost")
+	result, err = client.ReadContractField("storageCost", nil)
 	if err != nil {
 		return nil, err
 	}
 	miningConfig.StorageCost = new(big.Int).SetBytes(result)
-	result, err = client.ReadContractField("prepaidAmount")
+	result, err = client.ReadContractField("prepaidAmount", nil)
 	if err != nil {
 		return nil, err
 	}

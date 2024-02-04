@@ -27,7 +27,7 @@ const (
 	HEADER_SIZE = 4096
 )
 
-// A DataFile represents a local file for a consective chunks
+// A DataFile represents a local file for a consecutive chunks
 type DataFile struct {
 	file          *os.File
 	chunkIdxStart uint64

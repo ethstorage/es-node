@@ -8,8 +8,8 @@ data_dir="./es-data"
 storage_file_0="$data_dir/shard-0.dat"
 
 common_flags=" --datadir $data_dir \
-  --l1.rpc http://65.109.115.36:8545 \
-  --storage.l1contract 0xb4B46bdAA835F8E4b4d8e208B6559cD267851051"
+  --l1.rpc https://polished-silent-market.ethereum-sepolia.quiknode.pro/3b74a592be57773068d83f931dd98af8cbc1e9ca \
+  --storage.l1contract 0x804C520d3c084C805E37A35E90057Ac32831F96f \
 
 # init shard 0
 es_node_init="init --shard_index 0"
@@ -18,13 +18,14 @@ es_node_init="init --shard_index 0"
 # TODO remove --network
 es_node_start=" --network devnet \
   --storage.files $storage_file_0 \
-  --l1.beacon http://65.109.115.36:5052 \
-  --l1.beacon-based-time 1701262812 \
-  --l1.beacon-based-slot 1 \
+  --l1.beacon https://polished-silent-market.ethereum-sepolia.quiknode.pro/3b74a592be57773068d83f931dd98af8cbc1e9ca \
+  --l1.beacon-based-time 1706684472 \
+  --l1.beacon-based-slot 4245906 \
   --p2p.max.request.size 4194304 \
+  --p2p.listen.udp 30305 \
   --p2p.sync.concurrency 32 \
-  --p2p.bootnodes enr:-Li4QPFCNc7mLPqxoVrk1eKB0qa5hb8H75IBwhvdSGGdamx1egKibkKO1v1rtLt7r3pJvoVxv95ITlpSphYCAsunU6qGAYwkwuOpimV0aHN0b3JhZ2XbAYDY15S0tGvaqDX45LTY4gi2VZzSZ4UQUcGAgmlkgnY0gmlwhEFtcySJc2VjcDI1NmsxoQM9rkUZ7qWoJQT2UVrPzDRzmLqDrxCSR4zC4db-lgz1bYN0Y3CCJAaDdWRwgnZh \
- "
+  --p2p.bootnodes enr:-Li4QFpDtIlnf02Bli8jnZEkVAFyWkOOtaUZL7yKp3ySKmhGNiqRSe4AuUcFip3F4o_YLh30HJUg2UlcmIxx5W-fsK2GAY1eoPcdimV0aHN0b3JhZ2XbAYDY15SATFINPAhMgF43o16QBXrDKDH5b8GAgmlkgnY0gmlwhEFtMpGJc2VjcDI1NmsxoQL0mXwUXANkLHIAjN23dPfnOOhu-jhFUN13jcjHWeIP04N0Y3CCJAaDdWRwgnZh \
+"
 # create data file for shard 0 if not yet
 if [ ! -e $storage_file_0 ]; then
   $executable $es_node_init $common_flags --encoding_type 0

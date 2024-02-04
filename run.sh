@@ -77,8 +77,8 @@ data_dir="./es-data"
 storage_file_0="$data_dir/shard-0.dat"
 
 common_flags=" --datadir $data_dir \
-  --l1.rpc https://tame-wild-liquid.ethereum-goerli.quiknode.pro/4ae31eb78cb83cafc31140a8acc0841ea197a668 \
-  --storage.l1contract 0x9e186c49b487C03e0c529b67BD9Bc9e1e2E713Fc \
+  --l1.rpc https://polished-silent-market.ethereum-sepolia.quiknode.pro/3b74a592be57773068d83f931dd98af8cbc1e9ca \
+  --storage.l1contract 0x804C520d3c084C805E37A35E90057Ac32831F96f \
   --storage.miner $ES_NODE_STORAGE_MINER \
   "
 
@@ -92,14 +92,15 @@ es_node_start=" --network devnet \
   --miner.zkey $zkey_name \
   --storage.files $storage_file_0 \
   --signer.private-key $ES_NODE_SIGNER_PRIVATE_KEY \
-  --l1.beacon https://tame-wild-liquid.ethereum-goerli.quiknode.pro/4ae31eb78cb83cafc31140a8acc0841ea197a668 \
-  --l1.beacon-based-time 1705546368 \
-  --l1.beacon-based-slot 7419864 \
+  --l1.beacon https://polished-silent-market.ethereum-sepolia.quiknode.pro/3b74a592be57773068d83f931dd98af8cbc1e9ca \
+  --l1.beacon-based-time 1706684472 \
+  --l1.beacon-based-slot 4245906 \
   --download.thread 32 \
+  --p2p.listen.udp 30305 \
   --p2p.max.request.size 4194304 \
   --p2p.sync.concurrency 32 \
-  --p2p.bootnodes enr:-Li4QD2t3oCXc98qPwZOXZC38631I7zYTKkYCeoutmRIQ7qXVXcG4kDPPD25HmmoKJlswGx-v55doc8HYqMrlyYZrWOGAY0am8vEimV0aHN0b3JhZ2XbAYDY15SeGGxJtIfAPgxSm2e9m8nh4ucT_MGAgmlkgnY0gmlwhEFtMpGJc2VjcDI1NmsxoQNIbl6CN0q_OiHTc2qON3rAtJwpJh7TByr4tVKp7zHgW4N0Y3CCJAaDdWRwgplt \
-  $@"
+  --p2p.bootnodes enr:-Li4QFpDtIlnf02Bli8jnZEkVAFyWkOOtaUZL7yKp3ySKmhGNiqRSe4AuUcFip3F4o_YLh30HJUg2UlcmIxx5W-fsK2GAY1eoPcdimV0aHN0b3JhZ2XbAYDY15SATFINPAhMgF43o16QBXrDKDH5b8GAgmlkgnY0gmlwhEFtMpGJc2VjcDI1NmsxoQL0mXwUXANkLHIAjN23dPfnOOhu-jhFUN13jcjHWeIP04N0Y3CCJAaDdWRwgnZh \
+$@"
   
 # create data file for shard 0 if not yet
 if [ ! -e $storage_file_0 ]; then
