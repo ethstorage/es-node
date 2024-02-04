@@ -311,6 +311,7 @@ func (w *worker) resultLoop() {
 			}
 			// to avoid blockNumber == block.number in the contract
 			if latest == result.blockNumber.Uint64() {
+				w.lg.Info("Will wait a slot for the block number to increase")
 				time.Sleep(slot * time.Second)
 			}
 			txHash, err := w.l1API.SubmitMinedResult(
