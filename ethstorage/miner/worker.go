@@ -20,12 +20,11 @@ import (
 )
 
 const (
-	chainHeadChanSize = 1
-	taskQueueSize     = 1
-	resultQueueSize   = 10
-	sampleSizeBits    = 5 // 32 bytes
-	// always use new block hash to mine for each slot
-	mineTimeOut              = 12 // seconds
+	chainHeadChanSize        = 1
+	taskQueueSize            = 1
+	resultQueueSize          = 10
+	sampleSizeBits           = 5  // 32 bytes
+	slot                     = 12 // seconds
 	miningTransactionTimeout = 50 // seconds
 )
 
@@ -306,6 +305,14 @@ func (w *worker) resultLoop() {
 				continue
 			}
 			w.lg.Info("Mining result loop get result", "shard", result.startShardId, "block", result.blockNumber, "nonce", result.nonce)
+			latest, err := w.l1API.BlockNumber(context.Background())
+			if err != nil {
+				w.lg.Warn("Failed to get L1 block number", "error", err.Error())
+			}
+			// to avoid blockNumber == block.number in the contract
+			if latest == result.blockNumber.Uint64() {
+				time.Sleep(slot * time.Second)
+			}
 			txHash, err := w.l1API.SubmitMinedResult(
 				context.Background(),
 				w.storageMgr.ContractAddress(),
@@ -393,7 +400,8 @@ func (w *worker) mineTask(t *taskItem) (bool, error) {
 	nonce := t.nonceStart
 	w.lg.Debug("Mining task started", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonces", fmt.Sprintf("%d~%d", t.nonceStart, t.nonceEnd))
 	for w.isRunning() {
-		if time.Since(startTime).Seconds() > mineTimeOut {
+		// always use new randao to mine for each slot
+		if time.Since(startTime).Seconds() > slot {
 			if t.thread == 0 {
 				nonceTriedTotal := (nonce - t.nonceStart) * w.config.ThreadsPerShard
 				w.lg.Warn("Mining tasks timed out", "shard", t.shardIdx, "block", t.blockNumber,
