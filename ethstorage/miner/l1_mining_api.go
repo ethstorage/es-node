@@ -154,6 +154,10 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 	})
 	if err != nil {
 		m.lg.Error("Estimate gas failed", "error", err.Error())
+		curBlock, _ := m.HeaderByNumber(ctx, big.NewInt(rpc.LatestBlockNumber.Int64()))
+		if curBlock != nil {
+			m.lg.Info("Query most recent block", "blockNumber", curBlock.Number, "blockTime", curBlock.Time, "blockHash", curBlock.Hash())
+		}
 		return common.Hash{}, fmt.Errorf("failed to estimate gas: %w", err)
 	}
 	m.lg.Info("Estimated gas done", "gas", estimatedGas)
@@ -203,7 +207,7 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 	}
 	err = m.SendTransaction(ctx, signedTx)
 	if err != nil {
-		m.lg.Error("Send tx failed", "error", err)
+		m.lg.Error("Send tx failed", "txNonce", nonce, "gasPrice", gasPrice, "error", err)
 		return common.Hash{}, err
 	}
 	m.lg.Info("Submit mined result done", "shard", rst.startShardId, "block", rst.blockNumber,

@@ -24,7 +24,8 @@ jobs:
 
       - name: Create package
         run: |
-          cp -r ethstorage/prover/snark_lib ${{ env.BIN_DIR }}
+          mkdir -p ${{ env.BIN_DIR }}/snarkbuild
+          cp -r ethstorage/prover/snarkjs ${{ env.BIN_DIR }}
           cp run.sh ${{ env.BUILD_DIR }}
 
       - name: Build

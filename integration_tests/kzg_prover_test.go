@@ -28,13 +28,13 @@ var kzgContract = common.HexToAddress(os.Getenv("ES_NODE_STORAGE_L1CONTRACT_KZG"
 
 func TestKZGProver_GenerateKZGProof(t *testing.T) {
 	lg.Info("KZG prover test", "contract", kzgContract)
-	dataRaw := generateRandomContent(128)
+	dataRaw := generateRandomContent(124)
 	dataHash := uploadBlob(t, dataRaw)
 	blobs := utils.EncodeBlobs(dataRaw)
 	blob := blobs[0][:]
 	tests := []struct {
-		name     string
-		chunkIdx uint64
+		name      string
+		sampleIdx uint64
 	}{
 		{"check 0 th element",
 			0,
@@ -49,7 +49,7 @@ func TestKZGProver_GenerateKZGProof(t *testing.T) {
 	p := prover.NewKZGProver(lg)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			peInput, err := p.GenerateKZGProof(blob, tt.chunkIdx)
+			peInput, err := p.GenerateKZGProof(blob, tt.sampleIdx)
 			if err != nil {
 				t.Errorf("KZGProver.GenerateKZGProof() error = %v", err)
 				return
@@ -58,7 +58,7 @@ func TestKZGProver_GenerateKZGProof(t *testing.T) {
 				t.Errorf("dataHash not correct: off-chain %v, on-chain %v", peInput[0:24], dataHash[:24])
 				return
 			}
-			err = verifyInclusive(tt.chunkIdx, peInput)
+			err = verifyInclusive(tt.sampleIdx, peInput)
 			if err != nil {
 				t.Errorf("verifyInclusive() error = %v", err)
 				return
@@ -137,10 +137,10 @@ func uploadBlob(t *testing.T, data []byte) common.Hash {
 		true,
 		int64(n),
 		storageCost.String(),
-		510000,
+		150000,
 		"",
 		"",
-		"100000000",
+		"40000000000",
 		chainID.String(),
 		"0x"+common.Bytes2Hex(calldata),
 	)

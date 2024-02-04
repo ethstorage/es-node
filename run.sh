@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # usage:
 # env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> ./run.sh
@@ -43,7 +43,7 @@ while [ $i -le $# ]; do
 done
 
 if [ "$zkp_mode" != 1 ] && [ "$zkp_mode" != 2 ]; then
-  echo "zk prover mode can only be 1 or 2"
+  echo "miner.zk-prover-mode can only be 1 or 2"
   exit 1  
 fi
 
@@ -69,6 +69,38 @@ if [ ! -e  ${zkey_file} ] || [ $(wc -c <  ${zkey_file}) -ne ${zkey_size} ]; then
   if [ $(wc -c <  ${zkey_file}) -ne ${zkey_size} ]; then
     echo "Error: The zkey file was not downloaded correctly. You can check the file content for more information."
     exit 1
+  fi
+fi
+
+
+# ZK prover implementation, 1: snarkjs, 2: go-rapidsnark.
+zkp_impl=1 
+i=1
+while [ $i -le $# ]; do
+    if [ "${!i}" = "--miner.zk-prover-impl" ]; then
+        j=$((i+1))
+        zkp_impl="${!j}"
+        break
+    else
+        if echo "${!i}" | grep -qE -- "--miner\.zk-prover-impl=([0-9]+)"; then
+            zkp_impl=$(echo "${!i}" | sed -E 's/.*=([0-9]+)/\1/')
+            break
+        fi
+    fi
+    i=$((i+1))
+done
+
+if [ "$zkp_impl" != 1 ] && [ "$zkp_impl" != 2 ]; then
+  echo "miner.zk-prover-impl can only be 1 or 2"
+  exit 1  
+fi
+
+echo "zk prover implementation is $zkp_impl"
+if [ "$zkp_impl" = 1 ]; then
+  # install snarkjs if not
+  if ! [ "$(command -v snarkjs)" ]; then
+      echo "snarkjs not found, start installing..."
+      npm install -g snarkjs
   fi
 fi
 

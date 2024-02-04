@@ -116,7 +116,6 @@ func (n *mockNode) waitForInitShard1(exitCh chan uint64, wg *sync.WaitGroup) {
 	}
 
 	go n.startAndWaitForMined(1, exitCh)
-	wg.Add(1)
 }
 
 func TestMining(t *testing.T) {
@@ -137,6 +136,7 @@ func TestMining(t *testing.T) {
 	go prepareData(node.pollingClient, node.shardManager, node.storageManager, 14)
 
 	var wg sync.WaitGroup
+	wg.Add(2)
 	minedShardSig := make(chan uint64, 2)
 	minedShardCh := make(chan uint64)
 	minedShards := make(map[uint64]bool)
@@ -151,7 +151,6 @@ func TestMining(t *testing.T) {
 		}
 	}()
 	go node.startAndWaitForMined(0, minedShardCh)
-	wg.Add(1)
 
 	// defer next shard mining so that the started shard can be mined for a while
 	var miningTime time.Duration = 600
@@ -199,7 +198,13 @@ func initNode() (*mockNode, error) {
 		return nil, err
 	}
 	lg.Info("Initialzed mining config")
-	pvr := prover.NewKZGPoseidonProver(miningConfig.ZKWorkingDir, miningConfig.ZKeyFileName, 2, lg)
+	pvr := prover.NewKZGPoseidonProver(
+		miningConfig.ZKWorkingDir,
+		miningConfig.ZKeyFileName,
+		miningConfig.ZKProverMode,
+		miningConfig.ZKProverImpl,
+		lg,
+	)
 	feed := new(event.Feed)
 	l1api := miner.NewL1MiningAPI(pClient, lg)
 	storageManager := ethstorage.NewStorageManager(shardManager, pClient)
@@ -219,7 +224,7 @@ func initNode() (*mockNode, error) {
 }
 
 func prepareData(pollingClient *eth.PollingClient, shardManager *ethstorage.ShardManager, storageManager *ethstorage.StorageManager, blobCount int) error {
-	result, err := pollingClient.ReadContractField("storageCost")
+	result, err := pollingClient.ReadContractField("storageCost", nil)
 	if err != nil {
 		return err
 	}
@@ -239,7 +244,7 @@ func prepareData(pollingClient *eth.PollingClient, shardManager *ethstorage.Shar
 }
 
 func initStorageConfig(client *eth.PollingClient) (*storage.StorageConfig, error) {
-	result, err := client.ReadContractField("maxKvSizeBits")
+	result, err := client.ReadContractField("maxKvSizeBits", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -440,12 +445,9 @@ func initMiningConfig(client *eth.PollingClient) (*miner.Config, error) {
 
 	miningConfig.ZKeyFileName = zkey2Name
 	proverPath, _ := filepath.Abs(prPath)
-	zkeyFull := filepath.Join(proverPath, prover.SnarkLib, miningConfig.ZKeyFileName)
-	if _, err := os.Stat(zkeyFull); os.IsNotExist(err) {
-		return nil, err
-	}
 	miningConfig.ZKWorkingDir = proverPath
 	miningConfig.ZKProverMode = 2
+	miningConfig.ZKProverImpl = 1
 	miningConfig.ThreadsPerShard = 2
 	miningConfig.MinimumProfit = new(big.Int).SetInt64(-1e18)
 	return miningConfig, nil

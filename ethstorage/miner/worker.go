@@ -171,7 +171,7 @@ func (w *worker) newWorkLoop() {
 			if !w.isRunning() {
 				break
 			}
-			w.lg.Info("Updating tasks with L1 new head", "blockNumber", block.Number, "blockTime", block.Time, "now", uint64(time.Now().Unix()))
+			w.lg.Info("Updating tasks with L1 new head", "blockNumber", block.Number, "blockTime", block.Time, "blockHash", block.Hash, "now", uint64(time.Now().Unix()))
 			// TODO suspend mining if:
 			// 1) a mining tx is already submitted; or
 			// 2) if the last mining time is too close (the reward is not enough).
