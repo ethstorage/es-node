@@ -26,7 +26,7 @@ const (
 	sampleSizeBits    = 5 // 32 bytes
 	// always use new block hash to mine for each slot
 	mineTimeOut              = 12 // seconds
-	miningTransactionTimeout = 25 // seconds
+	miningTransactionTimeout = 50 // seconds
 )
 
 var (
