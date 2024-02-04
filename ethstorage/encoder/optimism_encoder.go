@@ -3,6 +3,8 @@
 
 package encoder
 
+// https://github.com/ethereum-optimism/optimism/blob/develop/op-service/eth/blob.go
+
 import (
 	"errors"
 	"fmt"
