@@ -68,7 +68,7 @@ func (p *ZKProver) GenerateZKProofRaw(encodingKeys []common.Hash, sampleIdxs []u
 	start := time.Now()
 	defer func(start time.Time) {
 		dur := time.Since(start)
-		p.lg.Info("Generate zk proof done", "sampleIdx", sampleIdxs, "took(sec)", dur.Seconds())
+		p.lg.Info("Generate zk proof done", "sampleIdx", sampleIdxs, "timeUsed(s)", dur.Seconds())
 	}(start)
 
 	pubInputs, err := p.GenerateInputs(encodingKeys, sampleIdxs)
@@ -123,7 +123,7 @@ func (p *ZKProver) GenerateZKProofPerSample(encodingKey common.Hash, sampleIdx u
 	start := time.Now()
 	defer func(start time.Time) {
 		dur := time.Since(start)
-		p.lg.Info("Generate zk proof done", "sampleIdx", sampleIdx, "took(sec)", dur.Seconds())
+		p.lg.Info("Generate zk proof done", "sampleIdx", sampleIdx, "timeUsed(s)", dur.Seconds())
 	}(start)
 
 	pubInput, err := p.GenerateInput(encodingKey, sampleIdx)
