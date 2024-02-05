@@ -49,11 +49,11 @@ Before running es-node from the pre-built executables, ensure that you have inst
 
 Download the pre-built package suitable for your platform:
 
-Linux x86-64 or AMD64 or WSL(Windows Subsystem for Linux):
+Linux x86-64 or WSL(Windows Subsystem for Linux):
 ```sh
 curl -L https://github.com/ethstorage/es-node/releases/download/v0.1.6/es-node.v0.1.6.linux-amd64.tar.gz | tar -xz
 ```
-MacOS x86-64 or AMD64:
+MacOS x86-64:
 ```sh
 curl -L https://github.com/ethstorage/es-node/releases/download/v0.1.6/es-node.v0.1.6.darwin-amd64.tar.gz | tar -xz
 ```
