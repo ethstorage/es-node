@@ -8,7 +8,7 @@ data_dir="./es-data"
 storage_file_0="$data_dir/shard-0.dat"
 
 common_flags=" --datadir $data_dir \
-  --l1.rpc https://polished-silent-market.ethereum-sepolia.quiknode.pro/3b74a592be57773068d83f931dd98af8cbc1e9ca \
+  --l1.rpc http://88.99.30.186:8545 \
   --storage.l1contract 0x804C520d3c084C805E37A35E90057Ac32831F96f \
 
 # init shard 0
@@ -18,7 +18,7 @@ es_node_init="init --shard_index 0"
 # TODO remove --network
 es_node_start=" --network devnet \
   --storage.files $storage_file_0 \
-  --l1.beacon https://polished-silent-market.ethereum-sepolia.quiknode.pro/3b74a592be57773068d83f931dd98af8cbc1e9ca \
+  --l1.beacon http://88.99.30.186:3500 \
   --l1.beacon-based-time 1706684472 \
   --l1.beacon-based-slot 4245906 \
   --p2p.max.request.size 4194304 \
