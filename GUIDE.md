@@ -45,11 +45,11 @@ You can run es-node from a pre-built Docker image, a pre-built executable, or fr
 
 ## From pre-built executables
 
-Before running es-node from the pre-built executables, ensure that you have installed [Node.js](#install-nodejs), [snarkjs](#install-snarkjs) and [WSL](https://learn.microsoft.com/en-us/windows/wsl/) for Window. 
+Before running es-node from the pre-built executables, ensure that you have installed [Node.js](#install-nodejs), [snarkjs](#install-snarkjs) and [WSL](https://learn.microsoft.com/en-us/windows/wsl/) if you are on Windows. 
 
 Download the pre-built package suitable for your platform:
 
-Linux x86-64 or AMD64 or Windows:
+Linux x86-64 or AMD64 or WSL(Windows Subsystem for Linux):
 ```sh
 curl -L https://github.com/ethstorage/es-node/releases/download/v0.1.6/es-node.v0.1.6.linux-amd64.tar.gz | tar -xz
 ```
@@ -162,7 +162,7 @@ nvm use 20
 npm install -g snarkjs
 ```
 
-### Install wsl 
+### Install WSL 
 If you need to run es-node in Windows, you need to run it using WSL. See [this](https://learn.microsoft.com/en-us/windows/wsl/install) to install WSL.
 
 ## Two phases after es-node launch
@@ -261,7 +261,7 @@ Please refer to [configuration](/README.md#configuration) for more details.
 
 ### What can I do about "The zkey file was not downloaded" error?
 
-When you see the following message when running **run.sh**. you can manually download the blob_poseidon.zkey/blob_poseidon2.zkey to `./build/bin/snarkjs/` folder and run it again. 
+When you see the following message when running **run.sh**. you can manually download the [**blob_poseidon.zkey**](https://drive.google.com/file/d/1ZLfhYeCXMnbk6wUiBADRAn1mZ8MI_zg-/view) / [**blob_poseidon2.zkey**](https://drive.google.com/file/d/1olfJvXPJ25Rbcjj9udFlIVr08cUCgE4l/view) to `./build/bin/snarkjs/` folder and run it again. 
 ```
 zk prover mode is 2
 Start downloading ./build/bin/snarkjs/blob_poseidon2.zkey...
