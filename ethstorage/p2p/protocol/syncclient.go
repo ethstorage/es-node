@@ -31,7 +31,7 @@ import (
 // StreamCtxFn provides a new context to use when handling stream requests
 type StreamCtxFn func() context.Context
 
-// Note: the mocknet in testing does not support read/write stream timeouts, the timeouts are only applied if available.
+// Note: the mock net in testing does not support read/write stream timeouts, the timeouts are only applied if available.
 // Rate-limits always apply, and are making sure the request/response throughput is not too fast, instead of too slow.
 const (
 	maxGossipSize = 10 * (1 << 20)
@@ -177,7 +177,7 @@ type SyncClient struct {
 	saveTime       time.Time // Time instance when state was last saved to DB
 	storageManager StorageManager
 
-	totalTimeUsed    time.Duration
+	totalSecondsUsed uint64
 	blobsSynced      uint64
 	syncedBytes      common.StorageSize
 	emptyBlobsToFill uint64
@@ -242,14 +242,14 @@ func (s *SyncClient) setSyncDone() {
 	if s.mux != nil {
 		s.mux.Send(EthStorageSyncDone{DoneType: AllShardDone})
 	}
-	log.Info("Sync done", "timeUsed", s.totalTimeUsed)
+	log.Info("Sync done", "timeUsed", s.totalSecondsUsed)
 }
 
 func (s *SyncClient) loadSyncStatus() {
 	// Start a fresh sync for retrieval.
 	s.blobsSynced, s.syncedBytes = 0, 0
 	s.emptyBlobsToFill, s.emptyBlobsFilled = 0, 0
-	s.totalTimeUsed = 0
+	s.totalSecondsUsed = 0
 	var progress SyncProgress
 
 	if status, _ := s.db.Get(syncStatusKey); status != nil {
@@ -276,7 +276,7 @@ func (s *SyncClient) loadSyncStatus() {
 			}
 			s.blobsSynced, s.syncedBytes = progress.BlobsSynced, progress.SyncedBytes
 			s.emptyBlobsFilled = progress.EmptyBlobsFilled
-			s.totalTimeUsed = progress.TotalTimeUsed
+			s.totalSecondsUsed = progress.TotalSecondsUsed
 		}
 	}
 
@@ -394,7 +394,7 @@ func (s *SyncClient) saveSyncStatus(force bool) {
 		SyncedBytes:      s.syncedBytes,
 		EmptyBlobsToFill: s.emptyBlobsToFill,
 		EmptyBlobsFilled: s.emptyBlobsFilled,
-		TotalTimeUsed:    s.totalTimeUsed,
+		TotalSecondsUsed: s.totalSecondsUsed,
 	}
 	status, err := json.Marshal(progress)
 	if err != nil {
@@ -414,10 +414,10 @@ func (s *SyncClient) cleanTasks() {
 	allDone := true
 	for _, t := range s.tasks {
 		for i := 0; i < len(t.SubTasks); i++ {
-			exist, min := t.healTask.hasIndexInRange(t.SubTasks[i].First, t.SubTasks[i].next)
+			exist, first := t.healTask.hasIndexInRange(t.SubTasks[i].First, t.SubTasks[i].next)
 			// if existed, min will be the smallest index in range [subTask.First, subTask.next)
 			// if no exist, min will be next, so subTask.First can directly set to subTask.next
-			t.SubTasks[i].First = min
+			t.SubTasks[i].First = first
 			if t.SubTasks[i].done && !exist {
 				t.SubTasks = append(t.SubTasks[:i], t.SubTasks[i+1:]...)
 				if t.nextIdx > i {
@@ -454,7 +454,6 @@ func (s *SyncClient) cleanTasks() {
 func (s *SyncClient) Start() error {
 	if s.startTime == (time.Time{}) {
 		s.startTime = time.Now()
-		s.logTime = time.Now()
 	}
 
 	// Retrieve the previous sync status from LevelDB and abort if already synced
@@ -535,7 +534,7 @@ func (s *SyncClient) Close() error {
 	return nil
 }
 
-func (s *SyncClient) RequestL2Range(ctx context.Context, start, end uint64) (uint64, error) {
+func (s *SyncClient) RequestL2Range(start, end uint64) (uint64, error) {
 	for _, pr := range s.peers {
 		id := rand.Uint64()
 		var packet BlobsByRangePacket
@@ -584,6 +583,7 @@ func (s *SyncClient) mainLoop() {
 		}
 	}
 
+	s.logTime = time.Now()
 	for {
 		// Remove all completed tasks and terminate sync if everything's done
 		s.cleanTasks()
@@ -935,9 +935,9 @@ func (s *SyncClient) OnBlobsByRange(res *blobsByRangeResponse) {
 	sort.Slice(inserted, func(i, j int) bool {
 		return inserted[i] < inserted[j]
 	})
-	max := inserted[len(inserted)-1]
+	last := inserted[len(inserted)-1]
 	missing := make([]uint64, 0)
-	for i, n := 0, res.req.subTask.next; n <= max; n++ {
+	for i, n := 0, res.req.subTask.next; n <= last; n++ {
 		if inserted[i] == n {
 			i++
 		} else if inserted[i] > n {
@@ -946,10 +946,10 @@ func (s *SyncClient) OnBlobsByRange(res *blobsByRangeResponse) {
 	}
 	s.lock.Lock()
 	res.req.subTask.task.healTask.insert(missing)
-	if max == res.req.subTask.Last-1 {
+	if last == res.req.subTask.Last-1 {
 		res.req.subTask.done = true
 	}
-	res.req.subTask.next = max + 1
+	res.req.subTask.next = last + 1
 	s.lock.Unlock()
 }
 
@@ -1124,13 +1124,13 @@ func (s *SyncClient) report(force bool) {
 	if !force && time.Since(s.logTime) < 8*time.Second {
 		return
 	}
-	s.totalTimeUsed = s.totalTimeUsed + time.Since(s.logTime)
+	s.totalSecondsUsed = s.totalSecondsUsed + uint64(time.Since(s.logTime).Seconds())
 	s.logTime = time.Now()
 
 	// Don't report anything until we have a meaningful progress
 	synced, syncedBytes := s.blobsSynced, s.syncedBytes
 	emptyFilled, emptyToFill := s.emptyBlobsFilled, s.emptyBlobsToFill
-	elapsed, peerCount := s.totalTimeUsed, len(s.peers)
+	totalSecondsUsed, peerCount := s.totalSecondsUsed, len(s.peers)
 	filledBytes := common.StorageSize(emptyFilled * s.storageManager.MaxKvSize())
 	if synced == 0 && emptyFilled == 0 {
 		return
@@ -1149,7 +1149,7 @@ func (s *SyncClient) report(force bool) {
 		subFillTaskRemain = subFillTaskRemain + len(t.SubEmptyTasks)
 	}
 
-	estTime := elapsed / time.Duration(synced+emptyFilled) * time.Duration(blobsToSync+synced+emptyFilled+emptyToFill)
+	etaSecondsLeft := totalSecondsUsed * (blobsToSync + emptyToFill) / (synced + emptyFilled)
 
 	// Create a mega progress report
 	var (
@@ -1160,7 +1160,8 @@ func (s *SyncClient) report(force bool) {
 	)
 	log.Info("Storage sync in progress", "progress", progress, "peerCount", peerCount, "syncTasksRemain", syncTasksRemain,
 		"blobsSynced", blobsSynced, "blobsToSync", blobsToSync, "fillTasksRemain", subFillTaskRemain,
-		"emptyFilled", blobsFilled, "emptyToFill", emptyToFill, "timeUsed", common.PrettyDuration(elapsed), "eta", common.PrettyDuration(estTime-elapsed))
+		"emptyFilled", blobsFilled, "emptyToFill", emptyToFill, "timeUsed", common.PrettyDuration(time.Duration(totalSecondsUsed)*time.Second),
+		"etaTimeLeft", common.PrettyDuration(time.Duration(etaSecondsLeft)*time.Second))
 }
 
 func (s *SyncClient) ReportPeerSummary() {
@@ -1170,10 +1171,10 @@ func (s *SyncClient) ReportPeerSummary() {
 		select {
 		case <-ticker.C:
 			inbound, outbound := 0, 0
-			for _, peer := range s.peers {
-				if peer.direction == network.DirInbound {
+			for _, p := range s.peers {
+				if p.direction == network.DirInbound {
 					inbound++
-				} else if peer.direction == network.DirOutbound {
+				} else if p.direction == network.DirOutbound {
 					outbound++
 				}
 			}

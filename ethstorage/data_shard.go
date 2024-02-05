@@ -17,7 +17,7 @@ import (
 )
 
 // A DataShard is a logical shard that manages multiple DataFiles.
-// It also manages the encoding/decoding, tranlation from KV read/write to chunk read/write,
+// It also manages the encoding/decoding, translation from KV read/write to chunk read/write,
 // and sanity check of the data files.
 type DataShard struct {
 	shardIdx    uint64

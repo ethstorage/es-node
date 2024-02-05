@@ -187,7 +187,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 }
 
 func (n *NodeP2P) RequestL2Range(ctx context.Context, start, end uint64) (uint64, error) {
-	return n.syncCl.RequestL2Range(ctx, start, end)
+	return n.syncCl.RequestL2Range(start, end)
 }
 
 // RequestShardList fetches shard list from remote peer

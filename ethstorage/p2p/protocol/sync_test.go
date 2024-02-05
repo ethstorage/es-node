@@ -568,7 +568,7 @@ func TestSync_RequestL2Range(t *testing.T) {
 
 	time.Sleep(2 * time.Second)
 	// send request
-	_, err = syncCl.RequestL2Range(ctx, 0, 16)
+	_, err = syncCl.RequestL2Range(0, 16)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -654,14 +654,14 @@ func TestSync_RequestL2List(t *testing.T) {
 // TestSaveAndLoadSyncStatus test save sync state to DB for tasks and load sync state from DB for tasks.
 func TestSaveAndLoadSyncStatus(t *testing.T) {
 	var (
-		entries          = uint64(1) << 10
-		kvSize           = defaultChunkSize
-		lastKvIndex      = entries*3 - 20
-		db               = rawdb.NewMemoryDatabase()
-		mux              = new(event.Feed)
-		m                = metrics.NewMetrics("sync_test")
-		expectedTimeUsed = time.Second * 10
-		rollupCfg        = &rollup.EsConfig{
+		entries             = uint64(1) << 10
+		kvSize              = defaultChunkSize
+		lastKvIndex         = entries*3 - 20
+		db                  = rawdb.NewMemoryDatabase()
+		mux                 = new(event.Feed)
+		m                   = metrics.NewMetrics("sync_test")
+		expectedSecondsUsed = uint64(10)
+		rollupCfg           = &rollup.EsConfig{
 			L2ChainID: new(big.Int).SetUint64(3333),
 		}
 	)
@@ -693,11 +693,11 @@ func TestSaveAndLoadSyncStatus(t *testing.T) {
 	if !syncCl.tasks[1].done {
 		t.Fatalf("task 1 should be done.")
 	}
-	syncCl.totalTimeUsed = expectedTimeUsed
+	syncCl.totalSecondsUsed = expectedSecondsUsed
 	syncCl.saveSyncStatus(true)
 
 	syncCl.tasks = make([]*task, 0)
-	syncCl.totalTimeUsed = 0
+	syncCl.totalSecondsUsed = 0
 	syncCl.loadSyncStatus()
 	tasks[0].healTask.Indexes = make(map[uint64]int64)
 	tasks[0].SubTasks[0].First = 5
@@ -706,8 +706,8 @@ func TestSaveAndLoadSyncStatus(t *testing.T) {
 	if err := compareTasks(tasks, syncCl.tasks); err != nil {
 		t.Fatalf("compare kv task fail. err: %s", err.Error())
 	}
-	if syncCl.totalTimeUsed != expectedTimeUsed {
-		t.Fatalf("compare totalTimeUsed fail, expect")
+	if syncCl.totalSecondsUsed != expectedSecondsUsed {
+		t.Fatalf("compare totalSecondsUsed fail, expect")
 	}
 }
 
@@ -1106,7 +1106,7 @@ func TestCloseSyncWhileFillEmpty(t *testing.T) {
 
 	t.Log("Fill empty status", "filled", syncCl.emptyBlobsFilled, "toFill", syncCl.emptyBlobsToFill)
 	if syncCl.syncDone {
-		t.Fatalf("fill empty shoud be cancel")
+		t.Fatalf("fill empty should be cancel")
 	}
 }
 
