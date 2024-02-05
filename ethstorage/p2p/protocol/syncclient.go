@@ -1187,7 +1187,7 @@ func (s *SyncClient) reportFillEmptyState() {
 		subFillTaskRemain = subFillTaskRemain + len(t.SubEmptyTasks)
 	}
 
-	etaFillSecondsLeft := totalSecondsUsed * emptyToFill / emptyFilled
+	etaSecondsLeft := totalSecondsUsed * emptyToFill / emptyFilled
 
 	// Create a mega progress report
 	var (
@@ -1197,7 +1197,7 @@ func (s *SyncClient) reportFillEmptyState() {
 	)
 	log.Info("Storage fill empty in progress", "progress", progress, "tasksRemain", tasksRemain,
 		"emptyFilled", blobsFilled, "emptyToFill", emptyToFill, "timeUsed", common.PrettyDuration(time.Duration(totalSecondsUsed)*time.Second),
-		"etaTimeLeft", common.PrettyDuration(time.Duration(etaFillSecondsLeft)*time.Second))
+		"etaTimeLeft", common.PrettyDuration(time.Duration(etaSecondsLeft)*time.Second))
 }
 
 func (s *SyncClient) ReportPeerSummary() {
