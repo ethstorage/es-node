@@ -226,7 +226,7 @@ func (m *l1MiningAPI) estimateReward(ctx context.Context, cfg Config, contract c
 	}
 	lastMineTime := info.LastMineTime
 
-	plmt, err := m.ReadContractField("prepaidLastMineTime")
+	plmt, err := m.ReadContractField("prepaidLastMineTime", nil)
 	if err != nil {
 		m.lg.Error("Failed to read prepaidLastMineTime", "error", err.Error())
 		return nil, err

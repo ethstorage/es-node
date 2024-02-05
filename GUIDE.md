@@ -8,9 +8,9 @@ For a detailed explanation for es-node please consult the [README](/README.md).
 
 ## Testnet spec
 
-- Layer 1: [Goerli](https://goerli.net/)
+- Layer 1: Sepolia testnet
 - storage-contracts-v1: v0.1.0
-- es-node: v0.1.5
+- es-node: v0.1.6
 
 ## Minimum Hardware Requirements 
 
@@ -29,7 +29,7 @@ _Note: The steps assume the use of the root user for all command line operations
 
 It is recommended to prepare two Ethereum accounts specifically for this test. One of these accounts should contain a balance of test ETH to be used as a transaction signer.
 
-The test ETH can be requested from [https://goerlifaucet.com/](https://goerlifaucet.com/). 
+The test ETH can be requested from [https://sepoliafaucet.com/](https://sepoliafaucet.com/). 
 
 Remember to use the signer's private key (with ETH balance) to replace `<private_key>` in the following steps. And use the other address to replace `<miner>`.
 
@@ -51,19 +51,19 @@ Download the pre-built package suitable for your platform:
 
 Linux x86-64 or AMD64 or Windows:
 ```sh
-curl -L https://github.com/ethstorage/es-node/releases/download/v0.1.5/es-node.v0.1.5.linux-amd64.tar.gz | tar -xz
+curl -L https://github.com/ethstorage/es-node/releases/download/v0.1.6/es-node.v0.1.6.linux-amd64.tar.gz | tar -xz
 ```
 MacOS x86-64 or AMD64:
 ```sh
-curl -L https://github.com/ethstorage/es-node/releases/download/v0.1.5/es-node.v0.1.5.darwin-amd64.tar.gz | tar -xz
+curl -L https://github.com/ethstorage/es-node/releases/download/v0.1.6/es-node.v0.1.6.darwin-amd64.tar.gz | tar -xz
 ```
 MacOS ARM64:
 ```sh
-curl -L https://github.com/ethstorage/es-node/releases/download/v0.1.5/es-node.v0.1.5.darwin-arm64.tar.gz | tar -xz
+curl -L https://github.com/ethstorage/es-node/releases/download/v0.1.6/es-node.v0.1.6.darwin-arm64.tar.gz | tar -xz
 ```
 Run es-node
 ```
-cd es-node.v0.1.5
+cd es-node.v0.1.6
 env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> ./run.sh
 ```
 
@@ -79,7 +79,7 @@ docker run --name es  -d  \
           -p 9222:9222 \
           -p 30305:30305/udp \
           --entrypoint /es-node/run.sh \
-          ghcr.io/ethstorage/es-node:v0.1.5
+          ghcr.io/ethstorage/es-node:v0.1.6
 ```
 
 You can check docker logs using the following command:
@@ -94,7 +94,7 @@ Download source code and switch to the latest release branch:
 ```sh
 git clone https://github.com/ethstorage/es-node.git
 cd es-node
-git checkout v0.1.5
+git checkout v0.1.6
 ```
 Build es-node:
 ```sh
@@ -109,7 +109,7 @@ chmod +x run.sh && env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=
 With source code, you also have the option to build a Docker image by yourself and run an es-node container:
 
 ```sh
-env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> docker compose up 
+env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> docker-compose up 
 ```
 If you want to run Docker container in the background and keep all the logs:
 ```sh
