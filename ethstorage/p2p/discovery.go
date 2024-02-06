@@ -45,7 +45,6 @@ const (
 	// After the public IP and the TCP port initialized, we will also refresh the address in case the address change.
 	initLocalNodeAddrInterval    = time.Second * 30
 	refreshLocalNodeAddrInterval = time.Minute * 10
-	refreshRemoteNodeENRInterval = time.Minute * 2
 	p2pVersion                   = 0
 )
 
@@ -281,12 +280,12 @@ func (n *NodeP2P) DiscoveryProcess(ctx context.Context, log log.Logger, l1ChainI
 				return
 			}
 			addrs := n.Host().Peerstore().Addrs(id)
-			log.Debug("Attempting connection", "peer", id)
+			log.Debug("Attempting connection", "peer", id, "Addr", addrs)
 			ctx, cancel := context.WithTimeout(ctx, time.Second*10)
 			err := n.Host().Connect(ctx, peer.AddrInfo{ID: id, Addrs: addrs})
 			cancel()
 			if err != nil {
-				log.Debug("Failed connection attempt", "peer", id, "err", err)
+				log.Debug("Failed connection attempt", "peer", id, "Addr", addrs, "err", err)
 			}
 		}
 	}
@@ -306,21 +305,6 @@ func (n *NodeP2P) DiscoveryProcess(ctx context.Context, log log.Logger, l1ChainI
 					updateLocalNodeTicker.Reset(refreshLocalNodeAddrInterval)
 					log.Info("Update TCP IP address", "ip", n.dv5Local.Node().IP(), "udp", n.dv5Local.Node().UDP(),
 						"tcp", n.dv5Local.Node().TCP(), "seq", n.dv5Local.Seq(), "enr", n.dv5Local.Node().String())
-				}
-			case <-ctx.Done():
-				return
-			}
-		}
-	}()
-
-	go func() {
-		refreshENRTicker := time.NewTicker(refreshRemoteNodeENRInterval)
-		defer refreshENRTicker.Stop()
-		for {
-			select {
-			case <-refreshENRTicker.C:
-				for _, node := range n.dv5Udp.AllNodes() {
-					n.dv5Udp.Resolve(node)
 				}
 			case <-ctx.Done():
 				return
@@ -387,11 +371,12 @@ func (n *NodeP2P) DiscoveryProcess(ctx context.Context, log log.Logger, l1ChainI
 			log.Info("Stopped peer discovery")
 			return // no ctx error, expected close
 		case found := <-randomNodesCh:
+			node := n.dv5Udp.Resolve(found)
 			var dat protocol.EthStorageENRData
-			if err := found.Load(&dat); err != nil { // we already filtered on chain ID and Version
+			if err := node.Load(&dat); err != nil { // we already filtered on chain ID and Version
 				continue
 			}
-			info, pub, err := enrToAddrInfo(found)
+			info, pub, err := enrToAddrInfo(node)
 			if err != nil {
 				continue
 			}
@@ -408,7 +393,7 @@ func (n *NodeP2P) DiscoveryProcess(ctx context.Context, log log.Logger, l1ChainI
 			// or peers on different chains, or anyone we have not seen via discovery.
 			// There is no tag score decay yet, so just set it to 42.
 			n.ConnectionManager().TagPeer(info.ID, fmt.Sprintf("ethstorage-%d-%d", dat.ChainID, dat.Version), 42)
-			log.Debug("Discovered peer", "peer", info.ID, "nodeID", found.ID(), "addr", info.Addrs[0])
+			log.Debug("Discovered peer", "peer", info.ID, "nodeID", node.ID(), "addr", info.Addrs[0])
 		case <-connectTicker.C:
 			connected := n.syncCl.Peers()
 			log.Debug("Peering tick", "connected", len(connected),
