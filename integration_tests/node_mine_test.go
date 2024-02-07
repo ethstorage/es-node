@@ -103,19 +103,118 @@ func (n *mockNode) waitForInitShard1(exitCh chan uint64, wg *sync.WaitGroup) {
 			break
 		}
 	}
+
+}
+
+func (n *mockNode) addShard1(lastKvIdx uint64) {
 	fileName := createDataFile(n.storageConfig, 1)
 	n.storageConfig.Filenames = append(n.storageConfig.Filenames, fileName)
 	df, err := ethstorage.OpenDataFile(fileName)
 	if err != nil {
 		lg.Crit("Open data file failed", "fileName", fileName)
 	}
+	lg.Info("Updating shard manager with a new data file")
 	n.shardManager.AddDataFileAndShard(df)
-	err = fillEmpty(n.storageManager, n.shardManager.KvEntries())
+	err = fillEmpty(n.storageManager, lastKvIdx-1, 2*n.shardManager.KvEntries()-1)
 	if err != nil {
 		lg.Crit("Failed to fill empty", "error", err)
 	}
+}
 
-	go n.startAndWaitForMined(1, exitCh)
+func (n *mockNode) prepareData(
+	pollingClient *eth.PollingClient,
+	shardManager *ethstorage.ShardManager,
+	storageManager *ethstorage.StorageManager,
+	blobCount int,
+) error {
+	result, err := pollingClient.ReadContractField("storageCost", nil)
+	if err != nil {
+		return err
+	}
+	blobs := maxBlobsPerTx
+	cost := new(big.Int).SetBytes(result).String()
+	for j := blobCount; j > 0; j = j - maxBlobsPerTx {
+		time.Sleep(1 * time.Minute)
+		if j < maxBlobsPerTx {
+			blobs = j
+		}
+		lg.Info("Uploading blobs", "count", blobs)
+		err := n.loadData(cost, uint64(blobs))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (n *mockNode) loadData(value string, blobLen uint64) error {
+	data := generateRandomContent(124 * int(blobLen))
+	blobs := utils.EncodeBlobs(data)
+	var hashs []common.Hash
+	var idxs []uint64
+
+	txs := len(blobs) / maxBlobsPerTx
+	last := len(blobs) % maxBlobsPerTx
+	if last > 0 {
+		txs = txs + 1
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+	defer cancel()
+	chainID, err := n.pollingClient.ChainID(ctx)
+	if err != nil {
+		return err
+	}
+	lg.Info("Uploading blobs", "chainId", chainID, "txLen", txs, "blobLen", len(blobs))
+	for i := 0; i < txs; i++ {
+		max := maxBlobsPerTx
+		if i == txs-1 && last > 0 {
+			max = last
+		}
+		blobGroup := blobs[i*maxBlobsPerTx : i*maxBlobsPerTx+max]
+		var blobData []byte
+		for _, bd := range blobGroup {
+			blobData = append(blobData, bd[:]...)
+		}
+		if len(blobData) == 0 {
+			break
+		}
+		kvIdxes, dataHashes, err := utils.UploadBlobs(n.pollingClient, l1Endpoint, privateKey, chainID.String(), n.storageConfig.L1Contract, blobData, false, value)
+		if err != nil {
+			return err
+		}
+		for j := 0; j < len(kvIdxes); j++ {
+			lg.Info("Upload data", "id", kvIdxes[j], "hash", dataHashes[j])
+		}
+		hashs = append(hashs, dataHashes...)
+		idxs = append(idxs, kvIdxes...)
+	}
+
+	lastKvIdx, err := n.pollingClient.GetStorageLastBlobIdx(rpc.LatestBlockNumber.Int64())
+	if err != nil {
+		lg.Crit("Failed to get last kv idx", "error", err)
+	}
+	if lastKvIdx >= n.storageConfig.KvEntriesPerShard {
+		n.addShard1(lastKvIdx)
+	}
+
+	block, err := n.pollingClient.BlockNumber(context.Background())
+	if err != nil {
+		return err
+	}
+	n.storageManager.Reset(int64(block))
+	err = n.storageManager.DownloadAllMetas(context.Background(), 16)
+	if err != nil {
+		return err
+	}
+	limit := len(idxs)
+	for i := 0; i < limit; i++ {
+		err := n.storageManager.CommitBlob(idxs[i], blobs[i][:], hashs[i])
+		if err != nil {
+			lg.Crit("Failed to commit blob", "i", i, "id", idxs[i], "error", err)
+		}
+		lg.Info("Commit blob", "id", idxs[i], "hash", hashs[i])
+	}
+	return nil
 }
 
 func TestMining(t *testing.T) {
@@ -128,12 +227,12 @@ func TestMining(t *testing.T) {
 	l1HeadsSub := node.subscribeL1()
 	node.miner.Start()
 
-	err = fillEmpty(node.storageManager, node.shardManager.KvEntries())
+	err = fillEmpty(node.storageManager, 0, node.shardManager.KvEntries()-1)
 	if err != nil {
 		lg.Crit("Failed to fill empty", "error", err)
 	}
 
-	go prepareData(node.pollingClient, node.shardManager, node.storageManager, 14)
+	go node.prepareData(node.pollingClient, node.shardManager, node.storageManager, 14)
 
 	var wg sync.WaitGroup
 	wg.Add(2)
@@ -153,17 +252,16 @@ func TestMining(t *testing.T) {
 	go node.startAndWaitForMined(0, minedShardCh)
 
 	// defer next shard mining so that the started shard can be mined for a while
-	var miningTime time.Duration = 600
-	timeout := time.After(miningTime * time.Second)
+	var miningTime time.Duration = 5
+	timeout := time.After(miningTime * time.Minute)
 	select {
 	case minedShard := <-minedShardSig:
 		lg.Info("Shard successfully mined", "minedShard", minedShard)
 	case <-timeout:
-		lg.Info(fmt.Sprintf("Shard 0 has been mined for %ds, will start shard 1", miningTime))
+		lg.Info(fmt.Sprintf("Shard 0 has been mined for %d minutes, will start shard 1", miningTime))
 	}
 
-	go node.waitForInitShard1(minedShardCh, &wg)
-
+	go node.startAndWaitForMined(1, minedShardCh)
 	wg.Wait()
 	l1HeadsSub.Unsubscribe()
 	node.miner.Close()
@@ -223,26 +321,6 @@ func initNode() (*mockNode, error) {
 	return node, nil
 }
 
-func prepareData(pollingClient *eth.PollingClient, shardManager *ethstorage.ShardManager, storageManager *ethstorage.StorageManager, blobCount int) error {
-	result, err := pollingClient.ReadContractField("storageCost", nil)
-	if err != nil {
-		return err
-	}
-	blobs := 3
-	cost := new(big.Int).SetBytes(result).String()
-	for j := blobCount; j > 0; j = j - 3 {
-		time.Sleep(3 * time.Minute)
-		if j < 3 {
-			blobs = j
-		}
-		err := uploadBlobs(pollingClient, storageManager, cost, uint64(blobs))
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 func initStorageConfig(client *eth.PollingClient) (*storage.StorageConfig, error) {
 	result, err := client.ReadContractField("maxKvSizeBits", nil)
 	if err != nil {
@@ -286,77 +364,15 @@ func initShardManager(storConfig storage.StorageConfig) (*ethstorage.ShardManage
 	return shardManager, nil
 }
 
-func fillEmpty(storageMgr *ethstorage.StorageManager, entriesToFill uint64) error {
-	lastKvIdx := storageMgr.LastKvIndex()
-	lg.Info("Filling empty", "lastKvIdx", lastKvIdx, "entriesToFill", entriesToFill)
-	inserted, next, err := storageMgr.CommitEmptyBlobs(lastKvIdx, entriesToFill+lastKvIdx-1)
+func fillEmpty(storageMgr *ethstorage.StorageManager, from, limit uint64) error {
+	lg.Info("Filling empty", "from", from, "to", limit)
+	inserted, next, err := storageMgr.CommitEmptyBlobs(from, limit)
 	if err != nil {
 		return err
 	}
 	lg.Info("Filling empty done", "inserted", inserted, "next", next)
 	return nil
 }
-
-func uploadBlobs(l1Client *eth.PollingClient, storageMgr *ethstorage.StorageManager, value string, blobLen uint64) error {
-	data := generateRandomContent(124 * int(blobLen))
-	blobs := utils.EncodeBlobs(data)
-	var hashs []common.Hash
-	var ids []uint64
-
-	txs := len(blobs) / maxBlobsPerTx
-	last := len(blobs) % maxBlobsPerTx
-	if last > 0 {
-		txs = txs + 1
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
-	defer cancel()
-	chainID, err := l1Client.ChainID(ctx)
-	if err != nil {
-		return err
-	}
-	for i := 0; i < txs; i++ {
-		max := maxBlobsPerTx
-		if i == txs-1 {
-			max = last
-		}
-		blobGroup := blobs[i*maxBlobsPerTx : i*maxBlobsPerTx+max]
-		var blobData []byte
-		for _, bd := range blobGroup {
-			blobData = append(blobData, bd[:]...)
-		}
-		if len(blobData) == 0 {
-			break
-		}
-		kvIdxes, dataHashes, err := utils.UploadBlobs(l1Client, l1Endpoint, privateKey, chainID.String(), storageMgr.ContractAddress(), blobData, false, value)
-		if err != nil {
-			return err
-		}
-		for j := 0; j < len(kvIdxes); j++ {
-			lg.Info("Upload data", "id", kvIdxes[j], "hash", dataHashes[j])
-		}
-		hashs = append(hashs, dataHashes...)
-		ids = append(ids, kvIdxes...)
-	}
-	block, err := l1Client.BlockNumber(context.Background())
-	if err != nil {
-		return err
-	}
-	storageMgr.Reset(int64(block))
-	err = storageMgr.DownloadAllMetas(context.Background(), 1)
-	if err != nil {
-		return err
-	}
-	limit := len(ids) - 1
-	for i := 0; i < limit; i++ {
-		err := storageMgr.CommitBlob(ids[i], blobs[i][:], hashs[i])
-		if err != nil {
-			lg.Crit("Failed to commit blob", "i", i, "id", ids[i], "error", err)
-		}
-		lg.Info("Commit blob", "id", ids[i], "hash", hashs[i])
-	}
-	return nil
-}
-
 func createDataFile(cfg *storage.StorageConfig, shardIdx uint64) string {
 	fileName := fmt.Sprintf(dataFileName, shardIdx)
 	if _, err := os.Stat(fileName); err == nil {

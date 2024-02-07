@@ -501,7 +501,7 @@ func (w *worker) getMiningData(t *task, sampleIdx []uint64) ([][]byte, []uint64,
 			if !exist {
 				err = fmt.Errorf("kv not found: index=%d", kvIdxs[i])
 			}
-			w.lg.Error("Get data error", "index", kvIdxs[i], "error", err.Error())
+			w.lg.Error("Get data error", "kvIdx", kvIdxs[i], "kvHash", kvHashes[i], "error", err.Error())
 			return nil, nil, nil, nil, nil, err
 		}
 	}
