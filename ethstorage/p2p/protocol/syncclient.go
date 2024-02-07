@@ -1123,16 +1123,24 @@ func (s *SyncClient) report(force bool) {
 	s.totalSecondsUsed = s.totalSecondsUsed + uint64(time.Since(s.logTime).Seconds())
 	s.logTime = time.Now()
 
+	s.reportSyncState()
+	s.reportFillEmptyState()
+}
+
+func (s *SyncClient) reportSyncState() {
 	// Don't report anything until we have a meaningful progress
-	synced, syncedBytes := s.blobsSynced, s.syncedBytes
-	emptyFilled, emptyToFill := s.emptyBlobsFilled, s.emptyBlobsToFill
-	totalSecondsUsed, peerCount := s.totalSecondsUsed, len(s.peers)
-	filledBytes := common.StorageSize(emptyFilled * s.storageManager.MaxKvSize())
-	if synced == 0 && emptyFilled == 0 {
+	if s.blobsSynced == 0 {
 		return
 	}
-	blobsToSync := uint64(0)
-	taskRemain, subTaskRemain, subFillTaskRemain := 0, 0, 0
+	var (
+		totalSecondsUsed = s.totalSecondsUsed
+		synced           = s.blobsSynced
+		syncedBytes      = s.syncedBytes
+		blobsToSync      = uint64(0)
+		taskRemain       = 0
+		subTaskRemain    = 0
+	)
+
 	for _, t := range s.tasks {
 		for _, st := range t.SubTasks {
 			blobsToSync = blobsToSync + (st.Last - st.next)
@@ -1142,20 +1150,52 @@ func (s *SyncClient) report(force bool) {
 		if !t.done {
 			taskRemain++
 		}
-		subFillTaskRemain = subFillTaskRemain + len(t.SubEmptyTasks)
 	}
 
-	etaSecondsLeft := totalSecondsUsed * (blobsToSync + emptyToFill) / (synced + emptyFilled)
+	etaSecondsLeft := totalSecondsUsed * blobsToSync / synced
 
 	// Create a mega progress report
 	var (
-		progress        = fmt.Sprintf("%.2f%%", float64(synced+emptyFilled)*100/float64(blobsToSync+synced+emptyFilled+emptyToFill))
-		syncTasksRemain = fmt.Sprintf("%d@%d", taskRemain, subTaskRemain)
-		blobsSynced     = fmt.Sprintf("%v@%v", log.FormatLogfmtUint64(synced), syncedBytes.TerminalString())
-		blobsFilled     = fmt.Sprintf("%v@%v", log.FormatLogfmtUint64(emptyFilled), filledBytes.TerminalString())
+		progress    = fmt.Sprintf("%.2f%%", float64(synced)*100/float64(blobsToSync+synced))
+		tasksRemain = fmt.Sprintf("%d@%d", taskRemain, subTaskRemain)
+		blobsSynced = fmt.Sprintf("%v@%v", log.FormatLogfmtUint64(synced), syncedBytes.TerminalString())
 	)
-	log.Info("Storage sync in progress", "progress", progress, "peerCount", peerCount, "syncTasksRemain", syncTasksRemain,
-		"blobsSynced", blobsSynced, "blobsToSync", blobsToSync, "fillTasksRemain", subFillTaskRemain,
+	log.Info("Storage sync in progress", "progress", progress, "peerCount", len(s.peers), "tasksRemain", tasksRemain,
+		"blobsSynced", blobsSynced, "blobsToSync", blobsToSync, "timeUsed", common.PrettyDuration(time.Duration(totalSecondsUsed)*time.Second),
+		"etaTimeLeft", common.PrettyDuration(time.Duration(etaSecondsLeft)*time.Second))
+}
+
+func (s *SyncClient) reportFillEmptyState() {
+	// Don't report anything until we have a meaningful progress
+	if s.emptyBlobsFilled == 0 {
+		return
+	}
+
+	var (
+		totalSecondsUsed  = s.totalSecondsUsed
+		emptyFilled       = s.emptyBlobsFilled
+		filledBytes       = common.StorageSize(s.emptyBlobsFilled * s.storageManager.MaxKvSize())
+		emptyToFill       = s.emptyBlobsToFill
+		taskRemain        = 0
+		subFillTaskRemain = 0
+	)
+
+	for _, t := range s.tasks {
+		if !t.done {
+			taskRemain++
+		}
+		subFillTaskRemain = subFillTaskRemain + len(t.SubEmptyTasks)
+	}
+
+	etaSecondsLeft := totalSecondsUsed * emptyToFill / emptyFilled
+
+	// Create a mega progress report
+	var (
+		progress    = fmt.Sprintf("%.2f%%", float64(emptyFilled)*100/float64(emptyFilled+emptyToFill))
+		tasksRemain = fmt.Sprintf("%d@%d", taskRemain, subFillTaskRemain)
+		blobsFilled = fmt.Sprintf("%v@%v", log.FormatLogfmtUint64(emptyFilled), filledBytes.TerminalString())
+	)
+	log.Info("Storage fill empty in progress", "progress", progress, "tasksRemain", tasksRemain,
 		"emptyFilled", blobsFilled, "emptyToFill", emptyToFill, "timeUsed", common.PrettyDuration(time.Duration(totalSecondsUsed)*time.Second),
 		"etaTimeLeft", common.PrettyDuration(time.Duration(etaSecondsLeft)*time.Second))
 }

@@ -40,6 +40,7 @@ var (
 )
 
 type miningEvent struct {
+	TxHash       common.Hash
 	ShardId      uint64
 	LastMineTime uint64
 	Difficulty   *big.Int
@@ -161,7 +162,7 @@ func (d *dashboard) RefreshMiningMetrics() {
 
 	for _, event := range events {
 		d.m.SetMiningInfo(event.ShardId, event.Difficulty.Uint64(), event.LastMineTime, event.BlockMined.Uint64(), event.Miner, event.GasFee, event.Reward)
-		d.logger.Info("Refresh mining info", "blockMined", event.BlockMined, "lastMineTime", event.LastMineTime,
+		d.logger.Info("Refresh mining info", "TxHash", event.TxHash.Hex(), "blockMined", event.BlockMined, "lastMineTime", event.LastMineTime,
 			"Difficulty", event.Difficulty, "Miner", event.Miner, "GasFee", event.GasFee, "Reward", event.Reward)
 	}
 	d.startBlock = next
@@ -176,33 +177,34 @@ func (d *dashboard) FetchMiningEvents(start, end uint64) ([]*miningEvent, uint64
 
 	events := make([]*miningEvent, 0)
 	for _, l := range logs {
-		tx, err := d.GetTransactionByHash(l.TxHash)
+		receipt, err := d.GetTransactionReceiptByHash(l.TxHash)
 		if err != nil {
 			return nil, start, fmt.Errorf("GetTransactionByHash fail, tx hash: %s, error: %s", l.TxHash.Hex(), err.Error())
 		}
 
 		events = append(events, &miningEvent{
+			TxHash:       l.TxHash,
 			ShardId:      new(big.Int).SetBytes(l.Topics[1].Bytes()).Uint64(),
 			Difficulty:   new(big.Int).SetBytes(l.Topics[2].Bytes()),
 			BlockMined:   new(big.Int).SetBytes(l.Topics[3].Bytes()),
 			LastMineTime: new(big.Int).SetBytes(l.Data[:32]).Uint64(),
 			Miner:        common.BytesToAddress(l.Data[44:64]),
 			Reward:       new(big.Int).SetBytes(l.Data[64:96]).Uint64() / 10000000000,
-			GasFee:       tx.Gas() * tx.GasPrice().Uint64() / 10000000000,
+			GasFee:       receipt.GasUsed * receipt.EffectiveGasPrice.Uint64() / 10000000000,
 		})
 	}
 	return events, end + 1, nil
 }
 
-func (d *dashboard) GetTransactionByHash(hash common.Hash) (*types.Transaction, error) {
-	tx, _, err := d.l1Source.TransactionByHash(context.Background(), hash)
+func (d *dashboard) GetTransactionReceiptByHash(hash common.Hash) (*types.Receipt, error) {
+	receipt, err := d.l1Source.TransactionReceipt(context.Background(), hash)
 	if err != nil {
 		return nil, err
 	}
-	if len(tx.Data()) < 100 {
-		return nil, fmt.Errorf("invalid data len for tx %d", len(tx.Data()))
+	if receipt.Status == types.ReceiptStatusFailed {
+		return nil, fmt.Errorf("tx successfully published but reverted")
 	}
-	return tx, nil
+	return receipt, nil
 }
 
 func (d *dashboard) InitMetrics() error {
