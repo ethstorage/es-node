@@ -305,14 +305,18 @@ func (w *worker) resultLoop() {
 				continue
 			}
 			w.lg.Info("Mining result loop get result", "shard", result.startShardId, "block", result.blockNumber, "nonce", result.nonce)
-			latest, err := w.l1API.BlockNumber(context.Background())
-			if err != nil {
-				w.lg.Warn("Failed to get L1 block number", "error", err.Error())
-			}
-			// to avoid blockNumber == block.number in the contract
-			if latest == result.blockNumber.Uint64() {
-				w.lg.Info("Will wait a slot for the block number to increase")
-				time.Sleep(slot * time.Second)
+			// check block number to avoid `blockNumber == block.number` in the contract, loop for 5 times in case of empty slots
+			for i := 0; i < 5; i++ {
+				latest, err := w.l1API.BlockNumber(context.Background())
+				if err != nil {
+					w.lg.Warn("Failed to get L1 block number", "error", err.Error())
+					continue
+				}
+				if latest == result.blockNumber.Uint64() {
+					w.lg.Info("Will wait a slot for the block number to increase")
+					time.Sleep(slot * time.Second)
+				}
+				break
 			}
 			txHash, err := w.l1API.SubmitMinedResult(
 				context.Background(),
