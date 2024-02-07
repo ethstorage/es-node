@@ -17,12 +17,8 @@ import (
 type IZKProver interface {
 	// Generate a zk proof for the given encoding keys and samples and return proof and masks (mode 2)
 	GenerateZKProof(encodingKeys []common.Hash, sampleIdxs []uint64) ([]byte, []*big.Int, error)
-	// Generate public inputs (mode 2)
-	GenerateInputs(encodingKeys []common.Hash, sampleIdxs []uint64) ([]byte, error)
 	// Generate a zk proof for a given sample (mode 1)
 	GenerateZKProofPerSample(encodingKey common.Hash, sampleIdx uint64) ([]byte, *big.Int, error)
-	// Generate public input (mode 1)
-	GenerateInput(encodingKey common.Hash, sampleIdx uint64) ([]byte, error)
 	// Generate ZK Proof for the given encoding keys and samples and return proof and all publics (mode 2)
 	GenerateZKProofRaw(encodingKeys []common.Hash, sampleIdxs []uint64) ([]byte, []*big.Int, error)
 }
@@ -38,7 +34,6 @@ type KZGPoseidonProver struct {
 	zkProverImpl uint64
 	libDir       string
 	zkey         string
-	wasm         string
 	lg           log.Logger
 }
 
@@ -81,7 +76,6 @@ func NewKZGPoseidonProver(workingDir, zkeyFileName string, zkProverMode, zkProve
 		zkProverImpl: zkProverImpl,
 		libDir:       libDir,
 		zkey:         zkeyFileName,
-		wasm:         wasmName,
 		lg:           lg,
 	}
 }
@@ -132,10 +126,10 @@ func (p *KZGPoseidonProver) GetStorageProof(data [][]byte, encodingKeys []common
 
 func (p *KZGPoseidonProver) getZKProver() (IZKProver, error) {
 	if p.zkProverImpl == 1 {
-		return NewZKProver(filepath.Dir(p.libDir), p.zkey, p.wasm, p.lg), nil
+		return NewZKProver(filepath.Dir(p.libDir), p.zkey, WasmName, p.lg), nil
 	}
 	if p.zkProverImpl == 2 {
-		return NewZKProverGo(p.libDir, p.zkey, p.wasm, p.lg)
+		return NewZKProverGo(p.libDir, p.zkey, Wasm2Name, p.lg)
 	}
 	return nil, fmt.Errorf("invalid zk prover implementation: %d", p.zkProverImpl)
 }

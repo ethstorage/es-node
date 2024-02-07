@@ -49,7 +49,7 @@ The `--miner.zk-prover-impl` flag specifies the type of zkSNARK implementation.
 
 Its default value is `1` which represents snarkjs. You have the option to override the flag and set it to `2` in order to utilize go-rapidsnark, which enhances the performance of zk proof generation on certain platforms, such as Ubuntu.
 
-Before overriding the option, be sure to [verify the corresponding dependencies](#install-rapidsnark-dependencies).
+If you want to build an es-node with go-rapidsnark on Ubuntu, be sure to [verify the corresponding dependencies](#install-rapidsnark-dependencies).
 
 ## From pre-built executables
 
@@ -87,8 +87,10 @@ docker run --name es  -d  \
           -p 9222:9222 \
           -p 30305:30305/udp \
           --entrypoint /es-node/run.sh \
-          ghcr.io/ethstorage/es-node:v0.1.6
+          ghcr.io/ethstorage/es-node:v0.1.6 \
+          --miner.zk-prover-impl 2
 ```
+Note that ` --miner.zk-prover-impl 2` is used to generate zk proofs using go-rapidsnark instead of snarkjs for better performance.
 
 You can check docker logs using the following command:
 ```sh

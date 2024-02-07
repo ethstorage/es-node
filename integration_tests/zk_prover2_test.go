@@ -57,7 +57,7 @@ func TestZKProver_GenerateZKProof(t *testing.T) {
 
 	for i, p := range prvs {
 		t.Run(fmt.Sprintf("zk test %d", i), func(t *testing.T) {
-			inputsBytes, err := p.GenerateInputs(encodingKeys, sampleIdxs)
+			inputsBytes, err := prover.GenerateInputs(encodingKeys, sampleIdxs)
 			if err != nil {
 				t.Errorf("ZKProver.GenerateInputs() error = %v", err)
 				return

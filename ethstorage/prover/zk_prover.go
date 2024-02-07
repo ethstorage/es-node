@@ -4,7 +4,6 @@
 package prover
 
 import (
-	"encoding/json"
 	"fmt"
 	"math/big"
 	"os"
@@ -12,10 +11,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
 	"github.com/crate-crypto/go-proto-danksharding-crypto/eth"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
 )
@@ -71,7 +68,7 @@ func (p *ZKProver) GenerateZKProofRaw(encodingKeys []common.Hash, sampleIdxs []u
 		p.lg.Info("Generate zk proof done", "sampleIdx", sampleIdxs, "timeUsed(s)", dur.Seconds())
 	}(start)
 
-	pubInputs, err := p.GenerateInputs(encodingKeys, sampleIdxs)
+	pubInputs, err := GenerateInputs(encodingKeys, sampleIdxs)
 	if err != nil {
 		p.lg.Error("Generate inputs failed", "error", err)
 		return nil, nil, err
@@ -90,31 +87,6 @@ func (p *ZKProver) GenerateZKProofRaw(encodingKeys []common.Hash, sampleIdxs []u
 	return proof, publics, nil
 }
 
-func (p *ZKProver) GenerateInputs(encodingKeys []common.Hash, sampleIdxs []uint64) ([]byte, error) {
-	var encodingKeyModStr, xInStr []string
-	for i, sampleIdx := range sampleIdxs {
-		var b fr.Element
-		var exp big.Int
-		exp.Div(exp.Sub(fr.Modulus(), common.Big1), big.NewInt(int64(eth.FieldElementsPerBlob)))
-		ru := b.Exp(*b.SetInt64(5), &exp)
-		xIn := ru.Exp(*ru, new(big.Int).SetUint64(sampleIdx))
-		xInStr = append(xInStr, xIn.String())
-		encodingKeyMod := fr.Modulus().Mod(encodingKeys[i].Big(), fr.Modulus())
-		encodingKeyModStr = append(encodingKeyModStr, hexutil.Encode(encodingKeyMod.Bytes()))
-	}
-	inputObj := InputPairV2{
-		EncodingKeyIn: encodingKeyModStr,
-		XIn:           xInStr,
-	}
-	inputs, err := json.Marshal(inputObj)
-	if err != nil {
-		p.lg.Error("Encode input failed", "error", err)
-		return nil, err
-	}
-	p.lg.Debug("Generate zk proof", "input", inputObj)
-	return inputs, nil
-}
-
 func (p *ZKProver) GenerateZKProofPerSample(encodingKey common.Hash, sampleIdx uint64) ([]byte, *big.Int, error) {
 	p.lg.Debug("Generate zk proof", "encodingKey", encodingKey.Hex(), "sampleIdx", sampleIdx)
 	if int(sampleIdx) >= eth.FieldElementsPerBlob {
@@ -126,7 +98,7 @@ func (p *ZKProver) GenerateZKProofPerSample(encodingKey common.Hash, sampleIdx u
 		p.lg.Info("Generate zk proof done", "sampleIdx", sampleIdx, "timeUsed(s)", dur.Seconds())
 	}(start)
 
-	pubInput, err := p.GenerateInput(encodingKey, sampleIdx)
+	pubInput, err := GenerateInput(encodingKey, sampleIdx)
 	if err != nil {
 		p.lg.Error("Generate input failed", "error", err)
 		return nil, nil, err
@@ -144,26 +116,6 @@ func (p *ZKProver) GenerateZKProofPerSample(encodingKey common.Hash, sampleIdx u
 	}
 	os.RemoveAll(filepath.Dir(publicFile))
 	return proof, mask, nil
-}
-
-func (p *ZKProver) GenerateInput(encodingKey common.Hash, sampleIdx uint64) ([]byte, error) {
-	var b fr.Element
-	var exp big.Int
-	exp.Div(exp.Sub(fr.Modulus(), common.Big1), big.NewInt(int64(eth.FieldElementsPerBlob)))
-	ru := b.Exp(*b.SetInt64(5), &exp)
-	xIn := ru.Exp(*ru, big.NewInt(int64(sampleIdx)))
-	encodingKeyMod := fr.Modulus().Mod(encodingKey.Big(), fr.Modulus())
-	inputObj := InputPair{
-		EncodingKeyIn: hexutil.Encode(encodingKeyMod.Bytes()),
-		XIn:           xIn.String(),
-	}
-	input, err := json.Marshal(inputObj)
-	if err != nil {
-		p.lg.Error("Encode input failed", "error", err)
-		return nil, err
-	}
-	p.lg.Debug("Generate zk proof", "input", inputObj)
-	return input, nil
 }
 
 func (p *ZKProver) prove(dir string, pubInputs []byte) ([]byte, string, error) {

@@ -7,7 +7,8 @@ RUN make
 # Pull ES node into a second stage deploy alpine container
 FROM alpine:latest
 COPY --from=builder /es-node/build/ /es-node/build/
-RUN apk add --no-cache bash curl grep libstdc++ gcompat libgomp nodejs npm
+RUN apk add --no-cache bash libstdc++ gcompat libgomp nodejs npm
+RUN npm install -g snarkjs
 
 # Entrypoint
 COPY --from=builder /es-node/run.sh /es-node/

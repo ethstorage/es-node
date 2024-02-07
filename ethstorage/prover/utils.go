@@ -9,7 +9,11 @@ import (
 	"math/big"
 	"os"
 
+	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
+	"github.com/crate-crypto/go-proto-danksharding-crypto/eth"
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/iden3/go-rapidsnark/types"
 )
 
@@ -231,4 +235,39 @@ func readMaskFrom(publicFile string) (*big.Int, error) {
 		return nil, err
 	}
 	return readMask(dat)
+}
+
+// Generate public inputs (mode 2)
+func GenerateInputs(encodingKeys []common.Hash, sampleIdxs []uint64) ([]byte, error) {
+	var encodingKeyModStr, xInStr []string
+	for i, sampleIdx := range sampleIdxs {
+		var b fr.Element
+		var exp big.Int
+		exp.Div(exp.Sub(fr.Modulus(), common.Big1), big.NewInt(int64(eth.FieldElementsPerBlob)))
+		ru := b.Exp(*b.SetInt64(5), &exp)
+		xIn := ru.Exp(*ru, new(big.Int).SetUint64(sampleIdx))
+		xInStr = append(xInStr, xIn.String())
+		encodingKeyMod := fr.Modulus().Mod(encodingKeys[i].Big(), fr.Modulus())
+		encodingKeyModStr = append(encodingKeyModStr, hexutil.Encode(encodingKeyMod.Bytes()))
+	}
+	inputObj := InputPairV2{
+		EncodingKeyIn: encodingKeyModStr,
+		XIn:           xInStr,
+	}
+	return json.Marshal(inputObj)
+}
+
+// Generate public input (mode 1)
+func GenerateInput(encodingKey common.Hash, sampleIdx uint64) ([]byte, error) {
+	var b fr.Element
+	var exp big.Int
+	exp.Div(exp.Sub(fr.Modulus(), common.Big1), big.NewInt(int64(eth.FieldElementsPerBlob)))
+	ru := b.Exp(*b.SetInt64(5), &exp)
+	xIn := ru.Exp(*ru, big.NewInt(int64(sampleIdx)))
+	encodingKeyMod := fr.Modulus().Mod(encodingKey.Big(), fr.Modulus())
+	inputObj := InputPair{
+		EncodingKeyIn: hexutil.Encode(encodingKeyMod.Bytes()),
+		XIn:           xIn.String(),
+	}
+	return json.Marshal(inputObj)
 }
