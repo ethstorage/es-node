@@ -371,6 +371,7 @@ func (n *NodeP2P) DiscoveryProcess(ctx context.Context, log log.Logger, l1ChainI
 			log.Info("Stopped peer discovery")
 			return // no ctx error, expected close
 		case found := <-randomNodesCh:
+			// get the most recent version of the node record in case it change deal to the remote node TCP or UDP port change.
 			node := n.dv5Udp.Resolve(found)
 			var dat protocol.EthStorageENRData
 			if err := node.Load(&dat); err != nil { // we already filtered on chain ID and Version
@@ -395,7 +396,7 @@ func (n *NodeP2P) DiscoveryProcess(ctx context.Context, log log.Logger, l1ChainI
 			n.ConnectionManager().TagPeer(info.ID, fmt.Sprintf("ethstorage-%d-%d", dat.ChainID, dat.Version), 42)
 			log.Debug("Discovered peer", "peer", info.ID, "nodeID", node.ID(), "addr", info.Addrs[0])
 		case <-connectTicker.C:
-			connected := n.syncCl.Peers()
+			connected := n.Host().Network().Peers()
 			log.Debug("Peering tick", "connected", len(connected),
 				"advertisedUdp", n.dv5Local.Node().UDP(),
 				"advertisedTcp", n.dv5Local.Node().TCP(),
@@ -411,7 +412,7 @@ func (n *NodeP2P) DiscoveryProcess(ctx context.Context, log log.Logger, l1ChainI
 
 				existing := make(map[peer.ID]struct{})
 				for _, p := range connected {
-					existing[p.ID()] = struct{}{}
+					existing[p] = struct{}{}
 				}
 
 				// Keep using these peers, and don't try new discovery/connections.
