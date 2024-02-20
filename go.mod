@@ -177,7 +177,4 @@ require (
 	rsc.io/tmplfunc v0.0.3 // indirect
 )
 
-replace (
-	github.com/ethereum/go-ethereum v1.13.5 => github.com/ping-ke/go-ethereum v0.0.0-20240124051950-820607e07eb9
-	github.com/iden3/go-iden3-crypto => github.com/ethstorage/go-iden3-crypto v0.0.0-20230406080944-d89aec086425
-)
+replace github.com/iden3/go-iden3-crypto => github.com/ethstorage/go-iden3-crypto v0.0.0-20230406080944-d89aec086425
