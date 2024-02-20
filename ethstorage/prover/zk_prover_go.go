@@ -60,12 +60,7 @@ func (p *ZKProverGo) GenerateZKProof(encodingKeys []common.Hash, sampleIdxs []ui
 }
 
 func (p *ZKProverGo) GenerateZKProofRaw(encodingKeys []common.Hash, sampleIdxs []uint64) ([]byte, []*big.Int, error) {
-	for i, idx := range sampleIdxs {
-		p.lg.Debug("Generate zk proof", "encodingKey", encodingKeys[i], "sampleIdx", sampleIdxs[i])
-		if int(idx) >= eth.FieldElementsPerBlob {
-			return nil, nil, fmt.Errorf("chunk index out of scope: %d", idx)
-		}
-	}
+	p.lg.Debug("Generate zk proof", "encodingKeys", encodingKeys, "sampleIndexes", sampleIdxs)
 	start := time.Now()
 	defer func(start time.Time) {
 		dur := time.Since(start)

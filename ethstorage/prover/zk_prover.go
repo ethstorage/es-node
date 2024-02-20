@@ -56,18 +56,13 @@ func (p *ZKProver) GenerateZKProof(encodingKeys []common.Hash, sampleIdxs []uint
 }
 
 func (p *ZKProver) GenerateZKProofRaw(encodingKeys []common.Hash, sampleIdxs []uint64) ([]byte, []*big.Int, error) {
-	for i, idx := range sampleIdxs {
-		p.lg.Debug("Generate zk proof", "encodingKey", encodingKeys[i], "sampleIdx", sampleIdxs[i])
-		if int(idx) >= eth.FieldElementsPerBlob {
-			return nil, nil, fmt.Errorf("chunk index out of scope: %d", idx)
-		}
-	}
 	start := time.Now()
 	defer func(start time.Time) {
 		dur := time.Since(start)
 		p.lg.Info("Generate zk proof done", "sampleIdx", sampleIdxs, "timeUsed(s)", dur.Seconds())
 	}(start)
 
+	p.lg.Debug("Generate zk proof", "encodingKeys", encodingKeys, "sampleIndexes", sampleIdxs)
 	pubInputs, err := GenerateInputs(encodingKeys, sampleIdxs)
 	if err != nil {
 		p.lg.Error("Generate inputs failed", "error", err)

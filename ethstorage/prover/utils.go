@@ -241,6 +241,9 @@ func readMaskFrom(publicFile string) (*big.Int, error) {
 func GenerateInputs(encodingKeys []common.Hash, sampleIdxs []uint64) ([]byte, error) {
 	var encodingKeyModStr, xInStr []string
 	for i, sampleIdx := range sampleIdxs {
+		if int(sampleIdx) >= eth.FieldElementsPerBlob {
+			return nil, fmt.Errorf("chunk index out of scope: %d", sampleIdx)
+		}
 		var b fr.Element
 		var exp big.Int
 		exp.Div(exp.Sub(fr.Modulus(), common.Big1), big.NewInt(int64(eth.FieldElementsPerBlob)))

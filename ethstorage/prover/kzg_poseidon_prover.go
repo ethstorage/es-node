@@ -44,11 +44,6 @@ type KZGPoseidonProver struct {
 // zkProverImpl specifies the implementation of the snark prover, 1 for snarkjs, 2 for go-rapidsnark
 // lg specifies the logger to log the info
 // returns a prover that can generate a combined KZG + zk proof
-func NewKZGPoseidonProverWithLogger(workingDir, zkeyFileName string, zkProverMode, zkProverImpl uint64, lg log.Logger) KZGPoseidonProver {
-	return NewKZGPoseidonProver(workingDir, zkeyFileName, zkProverMode, zkProverImpl, lg)
-}
-
-// returns a prover that can generate a combined KZG + zk proof
 func NewKZGPoseidonProver(workingDir, zkeyFileName string, zkProverMode, zkProverImpl uint64, lg log.Logger) KZGPoseidonProver {
 	// check dependencies when es-node starts
 	libDir := filepath.Join(workingDir, SnarkLib)
