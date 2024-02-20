@@ -29,6 +29,8 @@ const (
 	epoch = 12 * time.Second
 )
 
+var divisor = new(big.Int).SetUint64(10000000000)
+
 var (
 	listenAddrFlag  = flag.String("address", "0.0.0.0", "Listener address")
 	portFlag        = flag.Int("port", 8300, "Listener port for the devp2p connection")
@@ -46,8 +48,8 @@ type miningEvent struct {
 	Difficulty   *big.Int
 	BlockMined   *big.Int
 	Miner        common.Address
-	GasFee       uint64
-	Reward       uint64
+	GasFee       *big.Int
+	Reward       *big.Int
 }
 
 type dashboard struct {
@@ -161,7 +163,7 @@ func (d *dashboard) RefreshMiningMetrics() {
 	}
 
 	for _, event := range events {
-		d.m.SetMiningInfo(event.ShardId, event.Difficulty.Uint64(), event.LastMineTime, event.BlockMined.Uint64(), event.Miner, event.GasFee, event.Reward)
+		d.m.SetMiningInfo(event.ShardId, event.Difficulty.Uint64(), event.LastMineTime, event.BlockMined.Uint64(), event.Miner, event.GasFee.Uint64(), event.Reward.Uint64())
 		d.logger.Info("Refresh mining info", "TxHash", event.TxHash.Hex(), "blockMined", event.BlockMined, "lastMineTime", event.LastMineTime,
 			"Difficulty", event.Difficulty, "Miner", event.Miner, "GasFee", event.GasFee, "Reward", event.Reward)
 	}
@@ -189,8 +191,8 @@ func (d *dashboard) FetchMiningEvents(start, end uint64) ([]*miningEvent, uint64
 			BlockMined:   new(big.Int).SetBytes(l.Topics[3].Bytes()),
 			LastMineTime: new(big.Int).SetBytes(l.Data[:32]).Uint64(),
 			Miner:        common.BytesToAddress(l.Data[44:64]),
-			Reward:       new(big.Int).SetBytes(l.Data[64:96]).Uint64() / 10000000000,
-			GasFee:       receipt.GasUsed * receipt.EffectiveGasPrice.Uint64() / 10000000000,
+			Reward:       new(big.Int).Div(new(big.Int).SetBytes(l.Data[64:96]), divisor),
+			GasFee:       new(big.Int).Div(new(big.Int).Mul(new(big.Int).SetUint64(receipt.GasUsed), receipt.EffectiveGasPrice), divisor),
 		})
 	}
 	return events, end + 1, nil
