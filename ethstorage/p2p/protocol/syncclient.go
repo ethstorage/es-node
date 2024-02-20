@@ -516,10 +516,6 @@ func (s *SyncClient) RemovePeer(id peer.ID) {
 	}
 }
 
-func (s *SyncClient) Peers() map[peer.ID]*Peer {
-	return s.peers
-}
-
 // Close will shut down the sync client and all attached work, and block until shutdown is complete.
 // This will block if the Start() has not created the main background loop.
 func (s *SyncClient) Close() error {
