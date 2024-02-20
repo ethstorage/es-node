@@ -28,11 +28,7 @@ import (
 
 var zkp1Contract = common.HexToAddress(os.Getenv("ES_NODE_STORAGE_L1CONTRACT_ZKP1"))
 
-const (
-	l1ContractV1 = "0xc3208C27285ed9516F21a89053326Bb895DD78F7"
-	prPath       = "../ethstorage/prover"
-	zkeyName     = "blob_poseidon.zkey"
-)
+const zkeyName = "blob_poseidon.zkey"
 
 func TestZKProver_GenerateZKProofPerSample(t *testing.T) {
 	proverPath, _ := filepath.Abs(prPath)
