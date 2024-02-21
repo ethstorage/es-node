@@ -13,12 +13,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/log"
 	ethRPC "github.com/ethereum/go-ethereum/rpc"
@@ -43,6 +40,7 @@ var (
 )
 
 type miningEvent struct {
+	TxHash       common.Hash
 	ShardId      uint64
 	LastMineTime uint64
 	Difficulty   *big.Int
@@ -107,10 +105,11 @@ func newDashboard(rpcURL string, l1Contract common.Address) (*dashboard, error) 
 		}
 	}
 
-	shardEntryBits, err := readUintFromContract(ctx, l1.Client, l1Contract, "shardEntryBits")
+	result, err := l1.ReadContractField("shardEntryBits", nil)
 	if err != nil {
 		return nil, err
 	}
+	shardEntryBits := new(big.Int).SetBytes(result).Uint64()
 
 	return &dashboard{
 		ctx:        ctx,
@@ -163,7 +162,7 @@ func (d *dashboard) RefreshMiningMetrics() {
 
 	for _, event := range events {
 		d.m.SetMiningInfo(event.ShardId, event.Difficulty.Uint64(), event.LastMineTime, event.BlockMined.Uint64(), event.Miner, event.GasFee, event.Reward)
-		d.logger.Info("Refresh mining info", "blockMined", event.BlockMined, "lastMineTime", event.LastMineTime,
+		d.logger.Info("Refresh mining info", "TxHash", event.TxHash.Hex(), "blockMined", event.BlockMined, "lastMineTime", event.LastMineTime,
 			"Difficulty", event.Difficulty, "Miner", event.Miner, "GasFee", event.GasFee, "Reward", event.Reward)
 	}
 	d.startBlock = next
@@ -178,68 +177,48 @@ func (d *dashboard) FetchMiningEvents(start, end uint64) ([]*miningEvent, uint64
 
 	events := make([]*miningEvent, 0)
 	for _, l := range logs {
-		tx, err := d.GetTransactionByHash(l.TxHash)
+		receipt, err := d.GetTransactionReceiptByHash(l.TxHash)
 		if err != nil {
 			return nil, start, fmt.Errorf("GetTransactionByHash fail, tx hash: %s, error: %s", l.TxHash.Hex(), err.Error())
 		}
 
-		// TODO: update when new version contract deployed, use the reward in the new MinedBlock event
-		balance, nErr := d.l1Source.BalanceAt(d.ctx, d.l1Contract, new(big.Int).SetUint64(l.BlockNumber))
-		if nErr != nil {
-			return nil, start, fmt.Errorf("BalanceAt fail, block: %d, error: %s", l.BlockNumber, err.Error())
-		}
-		balanceBefore, oErr := d.l1Source.BalanceAt(d.ctx, d.l1Contract, new(big.Int).SetUint64(l.BlockNumber-1))
-		if oErr != nil {
-			return nil, start, fmt.Errorf("BalanceAt fail, block: %d, error: %s", l.BlockNumber-1, err.Error())
-		}
-		reward := new(big.Int).Sub(balanceBefore, balance).Uint64() * 99 / 100 // reward = balance diff * 99% because 1% goes to the treasury
-
 		events = append(events, &miningEvent{
+			TxHash:       l.TxHash,
 			ShardId:      new(big.Int).SetBytes(l.Topics[1].Bytes()).Uint64(),
 			Difficulty:   new(big.Int).SetBytes(l.Topics[2].Bytes()),
 			BlockMined:   new(big.Int).SetBytes(l.Topics[3].Bytes()),
 			LastMineTime: new(big.Int).SetBytes(l.Data[:32]).Uint64(),
-			// TODO: update when new version contract deployed, use the miner in the new MinedBlock event
-			Miner:  common.BytesToAddress(tx.Data()[80:100]),
-			Reward: reward / 10000000000,
-			GasFee: tx.Gas() * tx.GasPrice().Uint64() / 10000000000,
+			Miner:        common.BytesToAddress(l.Data[44:64]),
+			Reward:       new(big.Int).SetBytes(l.Data[64:96]).Uint64() / 10000000000,
+			GasFee:       receipt.GasUsed * receipt.EffectiveGasPrice.Uint64() / 10000000000,
 		})
 	}
 	return events, end + 1, nil
 }
 
-func (d *dashboard) GetTransactionByHash(hash common.Hash) (*types.Transaction, error) {
-	tx, _, err := d.l1Source.TransactionByHash(context.Background(), hash)
+func (d *dashboard) GetTransactionReceiptByHash(hash common.Hash) (*types.Receipt, error) {
+	receipt, err := d.l1Source.TransactionReceipt(context.Background(), hash)
 	if err != nil {
 		return nil, err
 	}
-	if len(tx.Data()) < 100 {
-		return nil, fmt.Errorf("invalid data len for tx %d", len(tx.Data()))
+	if receipt.Status == types.ReceiptStatusFailed {
+		return nil, fmt.Errorf("tx successfully published but reverted")
 	}
-	return tx, nil
+	return receipt, nil
 }
 
-func readSlotFromContract(ctx context.Context, client *ethclient.Client, l1Contract common.Address, fieldName string) ([]byte, error) {
-	h := crypto.Keccak256Hash([]byte(fieldName + "()"))
-	msg := ethereum.CallMsg{
-		To:   &l1Contract,
-		Data: h[0:4],
-	}
-	bs, err := client.CallContract(ctx, msg, nil)
+func (d *dashboard) InitMetrics() error {
+	lastMineTimeVal, err := d.l1Source.ReadContractField("prepaidLastMineTime", new(big.Int).SetUint64(d.startBlock))
 	if err != nil {
-		return nil, fmt.Errorf("failed to get %s from contract: %v", fieldName, err)
+		return err
 	}
-	return bs, nil
-}
-
-func readUintFromContract(ctx context.Context, client *ethclient.Client, l1Contract common.Address, fieldName string) (uint64, error) {
-	bs, err := readSlotFromContract(ctx, client, l1Contract, fieldName)
+	minDiffVal, err := d.l1Source.ReadContractField("minimumDiff", new(big.Int).SetUint64(d.startBlock))
 	if err != nil {
-		return 0, err
+		return err
 	}
-	value := new(big.Int).SetBytes(bs).Uint64()
-	log.Info("Read uint from contract", "field", fieldName, "value", value)
-	return value, nil
+	d.m.SetMiningInfo(0, new(big.Int).SetBytes(minDiffVal).Uint64(), new(big.Int).SetBytes(lastMineTimeVal).Uint64(),
+		0, common.Address{}, 0, 0)
+	return nil
 }
 
 func main() {
@@ -254,7 +233,10 @@ func main() {
 	if err != nil {
 		log.Crit("New dashboard fail", "err", err)
 	}
-
+	err = d.InitMetrics()
+	if err != nil {
+		log.Crit("Init metrics value fail", "err", err.Error())
+	}
 	l1LatestBlockSub := eth.PollBlockChanges(d.ctx, d.logger, d.l1Source, d.RefreshMetrics, ethRPC.LatestBlockNumber, epoch, epoch)
 	defer l1LatestBlockSub.Unsubscribe()
 
