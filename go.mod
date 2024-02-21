@@ -25,6 +25,7 @@ require (
 	github.com/status-im/keycard-go v0.2.0
 	github.com/urfave/cli v1.22.9
 	golang.org/x/crypto v0.19.0
+	golang.org/x/exp v0.0.0-20231110203233-9a3e6036ecaa
 	golang.org/x/sys v0.17.0
 	golang.org/x/term v0.17.0
 	golang.org/x/time v0.5.0
@@ -71,7 +72,6 @@ require (
 	github.com/urfave/cli/v2 v2.27.1 // indirect
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
 	go.uber.org/mock v0.3.0 // indirect
-	golang.org/x/exp v0.0.0-20231110203233-9a3e6036ecaa // indirect
 	golang.org/x/sync v0.6.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/tools v0.16.1 // indirect
@@ -179,3 +179,5 @@ require (
 )
 
 replace github.com/iden3/go-iden3-crypto => github.com/ethstorage/go-iden3-crypto v0.0.0-20230406080944-d89aec086425
+
+replace github.com/ethereum/go-ethereum v1.13.8 => github.com/ethereum-optimism/op-geth v1.101308.1-rc.1
