@@ -6,7 +6,7 @@ package node
 import (
 	"bytes"
 	"errors"
-
+	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -15,7 +15,6 @@ import (
 	"github.com/ethstorage/go-ethstorage/cmd/es-utils/utils"
 	"github.com/ethstorage/go-ethstorage/ethstorage"
 	"github.com/ethstorage/go-ethstorage/ethstorage/downloader"
-	op "github.com/ethstorage/go-ethstorage/ethstorage/encoder"
 )
 
 type esAPI struct {
@@ -73,8 +72,11 @@ func (api *esAPI) GetBlob(kvIndex uint64, blobHash common.Hash, decodeType Decod
 	if decodeType == PaddingPer31Bytes {
 		ret = utils.DecodeBlob(blob)
 	} else if decodeType == OptimismCompactBlob {
+		var opBlob = eth.Blob{}
+		copy(opBlob[:], blob)
+
 		var err error
-		ret, err = op.ToData(blob)
+		ret, err = opBlob.ToData()
 		if err != nil {
 			return nil, err
 		}
