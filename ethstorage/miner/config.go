@@ -32,6 +32,7 @@ type Config struct {
 	ZKeyFileName     string
 	ZKWorkingDir     string
 	ZKProverMode     uint64
+	ZKProverImpl     uint64
 	ThreadsPerShard  uint64
 	SignerFnFactory  signer.SignerFactory
 	SignerAddr       common.Address
@@ -50,6 +51,7 @@ var DefaultConfig = Config{
 	ZKeyFileName:     "blob_poseidon2.zkey",
 	ZKWorkingDir:     filepath.Join("build", "bin"),
 	ZKProverMode:     2,
+	ZKProverImpl:     1,
 	ThreadsPerShard:  uint64(2 * runtime.NumCPU()),
 	MinimumProfit:    common.Big0,
 }

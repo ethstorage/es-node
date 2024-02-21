@@ -50,7 +50,8 @@ else
             -p 30305:30305/udp \
             -d \
             --entrypoint /es-node/run.sh \
-            $image_name
+            $image_name \
+            --miner.zk-prover-impl 2
         echo "container $container_name started"
     fi
 fi

@@ -24,6 +24,7 @@ type L1API interface {
 	GetMiningInfo(ctx context.Context, contract common.Address, shardIdx uint64) (*miningInfo, error)
 	SubmitMinedResult(ctx context.Context, contract common.Address, rst result, config Config) (common.Hash, error)
 	GetDataHashes(ctx context.Context, contract common.Address, kvIdxes []uint64) ([]common.Hash, error)
+	BlockNumber(ctx context.Context) (uint64, error)
 }
 
 type MiningProver interface {

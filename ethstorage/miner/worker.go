@@ -20,13 +20,12 @@ import (
 )
 
 const (
-	chainHeadChanSize = 1
-	taskQueueSize     = 1
-	resultQueueSize   = 10
-	sampleSizeBits    = 5 // 32 bytes
-	// always use new block hash to mine for each slot
-	mineTimeOut              = 12 // seconds
-	miningTransactionTimeout = 25 // seconds
+	chainHeadChanSize        = 1
+	taskQueueSize            = 1
+	resultQueueSize          = 10
+	sampleSizeBits           = 5  // 32 bytes
+	slot                     = 12 // seconds
+	miningTransactionTimeout = 50 // seconds
 )
 
 var (
@@ -171,7 +170,7 @@ func (w *worker) newWorkLoop() {
 			if !w.isRunning() {
 				break
 			}
-			w.lg.Info("Updating tasks with L1 new head", "blockNumber", block.Number, "blockTime", block.Time, "now", uint64(time.Now().Unix()))
+			w.lg.Info("Updating tasks with L1 new head", "blockNumber", block.Number, "blockTime", block.Time, "blockHash", block.Hash, "now", uint64(time.Now().Unix()))
 			// TODO suspend mining if:
 			// 1) a mining tx is already submitted; or
 			// 2) if the last mining time is too close (the reward is not enough).
@@ -242,7 +241,7 @@ func (w *worker) updateDifficulty(shardIdx, blockTime uint64) (*big.Int, error) 
 		w.lg.Warn("Failed to get es mining info", "error", err.Error())
 		return nil, err
 	}
-	w.lg.Info("Mining info retrieved", "shard", shardIdx, "LastMineTime", info.LastMineTime, "Difficulty", info.Difficulty, "proofsSubmitted", info.BlockMined)
+	w.lg.Info("Mining info retrieved", "shard", shardIdx, "lastMineTime", info.LastMineTime, "difficulty", info.Difficulty, "proofsSubmitted", info.BlockMined)
 	reqDiff := new(big.Int).Div(maxUint256, expectedDiff(
 		info.LastMineTime,
 		blockTime,
@@ -306,6 +305,19 @@ func (w *worker) resultLoop() {
 				continue
 			}
 			w.lg.Info("Mining result loop get result", "shard", result.startShardId, "block", result.blockNumber, "nonce", result.nonce)
+			// check block number to avoid `blockNumber == block.number` in the contract, loop for 5 times in case of empty slots
+			for i := 0; i < 5; i++ {
+				latest, err := w.l1API.BlockNumber(context.Background())
+				if err != nil {
+					w.lg.Warn("Failed to get L1 block number", "error", err.Error())
+					continue
+				}
+				if latest > result.blockNumber.Uint64() {
+					break
+				}
+				w.lg.Info("Will wait a slot for the block number to increase")
+				time.Sleep(slot * time.Second)
+			}
 			txHash, err := w.l1API.SubmitMinedResult(
 				context.Background(),
 				w.storageMgr.ContractAddress(),
@@ -393,7 +405,8 @@ func (w *worker) mineTask(t *taskItem) (bool, error) {
 	nonce := t.nonceStart
 	w.lg.Debug("Mining task started", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonces", fmt.Sprintf("%d~%d", t.nonceStart, t.nonceEnd))
 	for w.isRunning() {
-		if time.Since(startTime).Seconds() > mineTimeOut {
+		// always use new randao to mine for each slot
+		if time.Since(startTime).Seconds() > slot {
 			if t.thread == 0 {
 				nonceTriedTotal := (nonce - t.nonceStart) * w.config.ThreadsPerShard
 				w.lg.Warn("Mining tasks timed out", "shard", t.shardIdx, "block", t.blockNumber,

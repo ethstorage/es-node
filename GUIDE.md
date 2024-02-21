@@ -43,6 +43,14 @@ You can run es-node from a pre-built Docker image, a pre-built executable, or fr
  
  - If you prefer to build [from the source code](#from-source-code), you will also need to install Go besides Node.js and snarkjs.
 
+ ### About the option of zk prover implementation
+
+The `--miner.zk-prover-impl` flag specifies the type of zkSNARK implementation. 
+
+Its default value is `1` which represents snarkjs. You have the option to override the flag and set it to `2` in order to utilize go-rapidsnark, which enhances the performance of zk proof generation on certain platforms, such as Ubuntu.
+
+If you want to build an es-node with go-rapidsnark on Ubuntu, be sure to [verify the corresponding dependencies](#install-rapidsnark-dependencies).
+
 ## From pre-built executables
 
 Before running es-node from the pre-built executables, ensure that you have installed [Node.js](#install-nodejs), [snarkjs](#install-snarkjs) and [WSL](https://learn.microsoft.com/en-us/windows/wsl/install) if you are on Windows. 
@@ -79,8 +87,10 @@ docker run --name es  -d  \
           -p 9222:9222 \
           -p 30305:30305/udp \
           --entrypoint /es-node/run.sh \
-          ghcr.io/ethstorage/es-node:v0.1.6
+          ghcr.io/ethstorage/es-node:v0.1.6 \
+          --miner.zk-prover-impl 2
 ```
+Note that ` --miner.zk-prover-impl 2` is used to generate zk proofs using go-rapidsnark instead of snarkjs for better performance.
 
 You can check docker logs using the following command:
 ```sh
@@ -162,6 +172,22 @@ nvm use 20
 npm install -g snarkjs
 ```
 
+### Install RapidSNARK dependencies
+
+Check if `build-essential` and `libomp-dev packages` are installed on your Ubuntu system:
+
+```
+dpkg -l | grep build-essential
+dpkg -l | grep libomp-dev
+```
+Install the build-essential and libomp-dev packages if no information printed:
+
+```
+apt update
+apt install build-essential
+apt install libomp-dev
+```
+
 ## Two phases after es-node launch
 
 After the launch of ES node, it basically goes through two main stages.
@@ -219,7 +245,7 @@ However, this high-intensity processing occurs primarily when large volumes of d
 
 If there is a need to conserve CPU power anyway, you can tune down the values of syncing performance related flags, namely `--p2p.sync.concurrency` and `--p2p.fill-empty.concurrency`. See [here](#how-to-tune-the-performance-of-syncing) for detailed information.
 
-### What does it means when the log shows "The nonces are exhausted in this slot"
+### What does it means when the log shows "The nonces are exhausted in this slot"?
 
 When you see "The nonces are exhausted in this slot...", it indicates that your node has successfully completed all the sampling tasks within a slot, and you do not need to do anything about it. 
 
