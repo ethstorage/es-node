@@ -75,7 +75,7 @@ The full list of options that you can use to configure an es-node are as follows
 |`--l1.rpc`|Address of L1 User JSON-RPC endpoint to use (eth namespace required)||✓|
 |`--l2.chain_id`|Chain id of L2 chain endpoint to use|`3333`||
 |`--log.color`|Color the log output if in terminal mode|||
-|`--log.format`|Format the log output. Supported formats: 'text', 'terminal', 'logfmt', 'json', 'json-pretty',|`text`||
+|`--log.format`|Format the log output. Supported formats: 'text', 'terminal', 'logfmt', 'json'|`text`||
 |`--log.level`|The lowest log level that will be output|`info`||
 |`--metrics.enable`|Enable metrics|||
 |`--miner.enabled`|Storage mining enabled|||
