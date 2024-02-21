@@ -373,6 +373,9 @@ func (n *NodeP2P) DiscoveryProcess(ctx context.Context, log log.Logger, l1ChainI
 		case found := <-randomNodesCh:
 			// get the most recent version of the node record in case it change deal to the remote node TCP or UDP port change.
 			node := n.dv5Udp.Resolve(found)
+			if node.Seq() != found.Seq() {
+				log.Info("Remote node ENR changed", "ID", node.ID(), "remote IP", node.IP(), "ENR", node.String())
+			}
 			var dat protocol.EthStorageENRData
 			if err := node.Load(&dat); err != nil { // we already filtered on chain ID and Version
 				continue

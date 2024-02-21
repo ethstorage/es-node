@@ -32,8 +32,8 @@ type NodeP2P struct {
 	host    host.Host           // p2p host (optional, may be nil)
 	gater   ConnectionGater     // p2p gater, to ban/unban peers with, may be nil even with p2p enabled
 	connMgr connmgr.ConnManager // p2p conn manager, to keep a reliable number of peers, may be nil even with p2p enabled
+	isIPSet bool
 	// the below components are all optional, and may be nil. They require the host to not be nil.
-	isIPSet        bool
 	dv5Local       *enode.LocalNode // p2p discovery identity
 	dv5Udp         *discover.UDPv5  // p2p discovery service
 	gs             *pubsub.PubSub   // p2p gossip router
