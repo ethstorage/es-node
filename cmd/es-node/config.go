@@ -10,7 +10,7 @@ import (
 	"math/big"
 	"os"
 
-	oppprof "github.com/ethereum-optimism/optimism/op-service/pprof"
+	"github.com/ethereum-optimism/optimism/op-service/oppprof"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/log"
@@ -96,9 +96,9 @@ func NewConfig(ctx *cli.Context, log log.Logger) (*node.Config, error) {
 			ListenPort: ctx.GlobalInt(flags.MetricsPortFlag.Name),
 		},
 		Pprof: oppprof.CLIConfig{
-			Enabled:    ctx.GlobalBool(flags.PprofEnabledFlag.Name),
-			ListenAddr: ctx.GlobalString(flags.PprofAddrFlag.Name),
-			ListenPort: ctx.GlobalInt(flags.PprofPortFlag.Name),
+			ListenEnabled: ctx.GlobalBool(flags.PprofEnabledFlag.Name),
+			ListenAddr:    ctx.GlobalString(flags.PprofAddrFlag.Name),
+			ListenPort:    ctx.GlobalInt(flags.PprofPortFlag.Name),
 		},
 		P2P: p2pConfig,
 		// 	P2PSigner:           p2pSignerSetup,
