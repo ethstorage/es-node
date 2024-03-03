@@ -4,7 +4,7 @@ This tutorial provides practical steps to start an es-node instance for connecti
 
 For setting up a new private EthStorage testnet, please refer to this [guide](/SETUP.md). 
 
-For a detailed explanation for es-node please consult the [README](/README.md). 
+For a detailed explanation of es-node please consult the [README](/README.md). 
 
 ## Testnet spec
 
@@ -215,11 +215,11 @@ To enhance syncing performance or limit the usage of CPU power, you can adjust t
 
 During data synchronization, the CPUs are fully utilized as the es-node is engaged in intensive data processing tasks like encoding and writing.
 
-However, this high-intensity processing occurs primarily when large volumes of data need to be synchronized, such as during the initial startup of the es-node. Once the synchronization is complete, and the es-node enters the mining phase, the CPU usage decreases significantly. So, generaly speaking, the es-node does not require high-end hardware, particularly for the CPU.
+However, this high-intensity processing occurs primarily when large volumes of data need to be synchronized, such as during the initial startup of the es-node. Once the synchronization is complete, and the es-node enters the mining phase, the CPU usage decreases significantly. So, generally speaking, the es-node does not require high-end hardware, particularly for the CPU.
 
 If there is a need to conserve CPU power anyway, you can tune down the values of syncing performance related flags, namely `--p2p.sync.concurrency` and `--p2p.fill-empty.concurrency`. See [here](#how-to-tune-the-performance-of-syncing) for detailed information.
 
-### What does it means when the log shows "The nonces are exhausted in this slot"
+### What does it mean when the log shows "The nonces are exhausted in this slot"
 
 When you see "The nonces are exhausted in this slot...", it indicates that your node has successfully completed all the sampling tasks within a slot, and you do not need to do anything about it. 
 
