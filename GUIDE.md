@@ -242,7 +242,7 @@ INFO [01-19|14:41:49.018] Mining transaction accounting (in ether) reward=0.0101
 
 ```
 
-You can also visit [the EthStorage dashboard](https://grafana.ethstorage.io/d/es-node-mining-state-sepolia/ethstorage-monitoring-sepolia?orgId=2&refresh=5m&var-Miner=All) for real-time mining statistics.
+You can also visit [the EthStorage dashboard](https://grafana.ethstorage.io/) for real-time mining statistics.
 
 Finally, pay attention to the balance change of your miner's address which reflects the mining income.
 
