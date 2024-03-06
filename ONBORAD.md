@@ -2,7 +2,7 @@
 
 Welcome aboard the EthStorage Public Testnet 1. The Ethereum Dencun upgrade was completed for the Sepolia testnet on Jan. 30 and will soon be launched on the mainnet. Following the Dencun upgrade, the EthStorage team deployed its public testnet on Sepolia. Here's a brief introduction:
 
-- EthStorage supports multiple storage shards, with the first public testnet comprising a single shard of 512GB. Until now, the team has uploaded over 2 million blobs to the testnet. Anyone wishing to build with EthStorage is invited to upload their data as well.
+- EthStorage supports multiple storage shards, with the first public testnet comprising a single shard of 512GB. Until now, the team has uploaded over 2 million BLOBs to the testnet. Anyone wishing to build with EthStorage is invited to upload their data as well.
 - The target interval between two storage proofs is 3 hours, and the permanent storage cost per blob is 1,500,000 Gwei. Thus, a storage provider submitting a storage proof successfully 3 hours after the last submission can earn approximately 0.1 ETH as a reward. For more details, check out the [calculator](https://docs.google.com/spreadsheets/d/11DHhSang1UZxIFAKYw6_Qxxb-V40Wh1lsYjY2dbIP5k/edit?usp=sharing).
 - View the network status and miner rankings on our [dashboard](https://grafana.ethstorage.io).
 - Find the [tutorial](https://docs.ethstorage.io/storage-provider-guide/tutorials) for quickly launching an es-node.
