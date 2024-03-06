@@ -15,7 +15,7 @@ For prerequisites and detailed instructions to run es-node please read [the Stor
 
 # Contact
 
-Please join our [Discord](https://discord.com/invite/xhCwaMp7ps) for any technical questions, and stay informed about news about EthStorage by following our [Twitter](https://twitter.com/EthStorage) account.
+Please join our [Discord](https://discord.com/invite/xhCwaMp7ps) for any technical questions, and stay informed about news of EthStorage by following our [Twitter](https://twitter.com/EthStorage) account.
 
 # License
 
