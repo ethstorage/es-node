@@ -7,6 +7,6 @@ Welcome aboard the EthStorage Public Testnet 1. The Ethereum Dencun upgrade was 
 - View the network status and miner rankings on our [dashboard](https://grafana.ethstorage.io).
 - Find the [tutorial](https://docs.ethstorage.io/storage-provider-guide/tutorials) for quickly launching an es-node.
 - Learn what to expect after launching an es-node [here](https://docs.ethstorage.io/storage-provider-guide/tutorials#two-phases-after-es-node-launch), and for additional information, consult the [FAQ](https://docs.ethstorage.io/storage-provider-guide/storage-provider-faq).
-- Please join our [Discord](https://discord.com/invite/xhCwaMp7ps) for any questions, and stay informed about news about EthStorage by following our [Twitter](https://twitter.com/EthStorage) account.
+- Please join our [Discord](https://discord.com/invite/xhCwaMp7ps) for any questions, and stay informed about news of EthStorage by following our [Twitter](https://twitter.com/EthStorage) account.
 
 For those interested in exploring the Dencun upgrade, we've developed a tool named [eth-blob-uploader](https://www.npmjs.com/package/eth-blob-uploader). This tool allows you to upload any local file using EIP-4844 BLOBs, and you can inspect these data on-chain with [blobscan](https://blobscan.com).
