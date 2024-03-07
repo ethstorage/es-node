@@ -57,8 +57,8 @@ echo "zk prover mode is $zkp_mode"
 
 # download zkey if not yet
 zkey_name="blob_poseidon2.zkey"
-zkey_size=560300809
-zkey_url="https://drive.usercontent.google.com/download?id=1olfJvXPJ25Rbcjj9udFlIVr08cUCgE4l&export=download&confirm=t&uuid=724a4ed0-c344-4cc1-9078-f50751028725"
+zkey_size=560301223
+zkey_url="https://drive.usercontent.google.com/download?id=1G7LmOx7hNE5GHc-M6yOjVB3ZZ4J6xUYO&export=download&confirm=t&uuid=d605a067-612f-41d0-b004-21ee6f0ec858"
 if [ "$zkp_mode" = 1 ]; then
   zkey_name="blob_poseidon.zkey"
   zkey_size=280151245

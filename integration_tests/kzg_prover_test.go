@@ -124,7 +124,8 @@ func uploadBlob(t *testing.T, data []byte) common.Hash {
 		Data:  calldata,
 	})
 	if err != nil {
-		lg.Crit("Estimate gas failed", "error", err.Error())
+		// estimate gas of blobhash does not work correctly but exec works
+		lg.Warn("Estimate gas failed", "error", err.Error())
 	}
 	lg.Info("Estimated gas done", "gas", estimatedGas)
 
@@ -139,7 +140,7 @@ func uploadBlob(t *testing.T, data []byte) common.Hash {
 		510000,
 		"",
 		"",
-		"100000000",
+		"40000000000",
 		chainID.String(),
 		"0x"+common.Bytes2Hex(calldata),
 	)
