@@ -111,7 +111,6 @@ func SendBlobTx(
 			log.Crit("Gas price is too high!", "value", val.String())
 		}
 		log.Info("SendBlobTx", "gasPriceSuggested", gasPrice256)
-		gasPrice256 = gasPrice256.Mul(gasPrice256, uint256.NewInt(2))
 	} else {
 		gasPrice256, err = DecodeUint256String(gasPrice)
 		if err != nil {
