@@ -298,6 +298,15 @@ func (w *worker) notifyResultLoop() {
 // resultLoop is a standalone goroutine to submit mining result to L1 contract.
 func (w *worker) resultLoop() {
 	defer w.wg.Done()
+	type miningError struct {
+		shardIdx uint64
+		block    *big.Int
+		err      error
+	}
+	errorCache := make([]miningError, 0)
+	totalSubmitted := 0
+	ticker := time.NewTicker(1 * time.Minute)
+	defer ticker.Stop()
 	for {
 		select {
 		case <-w.resultCh:
@@ -312,7 +321,9 @@ func (w *worker) resultLoop() {
 				*result,
 				w.config,
 			)
+			totalSubmitted++
 			if err != nil {
+				errorCache = append(errorCache, miningError{result.startShardId, result.blockNumber, err})
 				w.lg.Error("Failed to submit mined result", "shard", result.startShardId, "block", result.blockNumber, "error", err.Error())
 			}
 			if txHash != (common.Hash{}) {
@@ -336,6 +347,12 @@ func (w *worker) resultLoop() {
 			}
 			// optimistically check next result if exists
 			w.notifyResultLoop()
+		case <-ticker.C:
+			if len(errorCache) > 0 {
+				log.Error("Mining stats", "totalSubmitted", totalSubmitted, "totalErrors", len(errorCache), "lastError", errorCache[len(errorCache)-1])
+			} else {
+				log.Info("Mining stats", "totalSubmitted", totalSubmitted, "totalErrors", len(errorCache))
+			}
 		case <-w.exitCh:
 			w.lg.Warn("Worker is exiting from result loop...")
 			return
