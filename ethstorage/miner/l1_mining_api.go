@@ -170,7 +170,7 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 			"profitEstimated", weiToEther(profit),
 			"minimumProfit", weiToEther(cfg.MinimumProfit),
 		)
-		return common.Hash{}, fmt.Errorf("dropped: not enough profit")
+		return common.Hash{}, nil
 	}
 
 	chainID, err := m.NetworkID(ctx)
