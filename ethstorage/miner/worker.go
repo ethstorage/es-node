@@ -31,6 +31,7 @@ const (
 
 var (
 	minedEventSig = crypto.Keccak256Hash([]byte("MinedBlock(uint256,uint256,uint256,uint256,address,uint256)"))
+	errCh         = make(chan miningError, 10)
 )
 
 type task struct {
@@ -52,6 +53,16 @@ type taskItem struct {
 
 func (t *taskItem) String() string {
 	return fmt.Sprintf("shard: %d, thread: %d, block: %v", t.shardIdx, t.thread, t.blockNumber)
+}
+
+type miningError struct {
+	shardIdx uint64
+	block    *big.Int
+	err      error
+}
+
+func (e miningError) String() string {
+	return fmt.Sprintf("shard %d: block %v: %s", e.shardIdx, e.block, e.err.Error())
 }
 
 type result struct {
@@ -262,6 +273,11 @@ func (w *worker) taskLoop(taskCh chan *taskItem) {
 		case ti := <-taskCh:
 			success, err := w.mineTask(ti)
 			if err != nil {
+				select {
+				case errCh <- miningError{ti.shardIdx, ti.blockNumber, err}:
+				default:
+					w.lg.Warn("Sent miningError to errCh failed", "lenOfCh", len(errCh))
+				}
 				w.lg.Warn("Mine task fail", "shard", ti.shardIdx, "thread", ti.thread, "block", ti.blockNumber, "err", err.Error())
 			}
 			if success {
@@ -298,6 +314,10 @@ func (w *worker) notifyResultLoop() {
 // resultLoop is a standalone goroutine to submit mining result to L1 contract.
 func (w *worker) resultLoop() {
 	defer w.wg.Done()
+	errorCache := make([]miningError, 0)
+	totalSubmitted := 0
+	ticker := time.NewTicker(1 * time.Minute)
+	defer ticker.Stop()
 	for {
 		select {
 		case <-w.resultCh:
@@ -312,7 +332,9 @@ func (w *worker) resultLoop() {
 				*result,
 				w.config,
 			)
+			totalSubmitted++
 			if err != nil {
+				errorCache = append(errorCache, miningError{result.startShardId, result.blockNumber, err})
 				w.lg.Error("Failed to submit mined result", "shard", result.startShardId, "block", result.blockNumber, "error", err.Error())
 			}
 			if txHash != (common.Hash{}) {
@@ -336,6 +358,14 @@ func (w *worker) resultLoop() {
 			}
 			// optimistically check next result if exists
 			w.notifyResultLoop()
+		case <-ticker.C:
+			if len(errorCache) > 0 {
+				log.Error("Mining stats", "totalSubmitted", totalSubmitted, "totalErrors", len(errorCache), "lastError", errorCache[len(errorCache)-1])
+			} else {
+				log.Info("Mining stats", "totalSubmitted", totalSubmitted, "totalErrors", len(errorCache))
+			}
+		case err := <-errCh:
+			errorCache = append(errorCache, err)
 		case <-w.exitCh:
 			w.lg.Warn("Worker is exiting from result loop...")
 			return
