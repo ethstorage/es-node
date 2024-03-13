@@ -346,13 +346,17 @@ func (w *worker) resultLoop() {
 						log.Warn("Waiting for mining transaction confirm timed out", "txHash", txHash)
 						break
 					}
+
+					checked++
 					_, isPending, err := w.l1API.TransactionByHash(context.Background(), txHash)
-					if err == nil && !isPending {
+					if err != nil {
+						log.Error("Querying transaction by hash failed", "error", err, "txHash", txHash)
+						continue
+					} else if !isPending {
 						log.Info("Mining transaction confirmed", "txHash", txHash)
 						w.checkTxStatus(txHash, result.miner)
 						break
 					}
-					checked++
 				}
 				ticker.Stop()
 			}
