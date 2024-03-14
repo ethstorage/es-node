@@ -5,6 +5,7 @@ package miner
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/big"
 	"sync"
@@ -32,6 +33,7 @@ const (
 var (
 	minedEventSig = crypto.Keccak256Hash([]byte("MinedBlock(uint256,uint256,uint256,uint256,address,uint256)"))
 	errCh         = make(chan miningError, 10)
+	errDropped    = errors.New("dropped: not enough profit")
 )
 
 type task struct {
@@ -314,8 +316,8 @@ func (w *worker) notifyResultLoop() {
 // resultLoop is a standalone goroutine to submit mining result to L1 contract.
 func (w *worker) resultLoop() {
 	defer w.wg.Done()
+	var succeeded, dropped int
 	errorCache := make([]miningError, 0)
-	totalSubmitted := 0
 	ticker := time.NewTicker(1 * time.Minute)
 	defer ticker.Stop()
 	for {
@@ -332,10 +334,15 @@ func (w *worker) resultLoop() {
 				*result,
 				w.config,
 			)
-			totalSubmitted++
 			if err != nil {
-				errorCache = append(errorCache, miningError{result.startShardId, result.blockNumber, err})
-				w.lg.Error("Failed to submit mined result", "shard", result.startShardId, "block", result.blockNumber, "error", err.Error())
+				if err == errDropped {
+					dropped++
+				} else {
+					errorCache = append(errorCache, miningError{result.startShardId, result.blockNumber, err})
+					w.lg.Error("Failed to submit mined result", "shard", result.startShardId, "block", result.blockNumber, "error", err.Error())
+				}
+			} else {
+				succeeded++
 			}
 			if txHash != (common.Hash{}) {
 				// waiting for tx confirmation or timeout
@@ -360,9 +367,9 @@ func (w *worker) resultLoop() {
 			w.notifyResultLoop()
 		case <-ticker.C:
 			if len(errorCache) > 0 {
-				log.Error("Mining stats", "totalSubmitted", totalSubmitted, "totalErrors", len(errorCache), "lastError", errorCache[len(errorCache)-1])
+				log.Error("Mining stats", "succeeded", succeeded, "failed", len(errorCache), "dropped", dropped, "lastError", errorCache[len(errorCache)-1])
 			} else {
-				log.Info("Mining stats", "totalSubmitted", totalSubmitted, "totalErrors", len(errorCache))
+				log.Info("Mining stats", "succeeded", succeeded, "failed", len(errorCache), "dropped", dropped)
 			}
 		case err := <-errCh:
 			errorCache = append(errorCache, err)
