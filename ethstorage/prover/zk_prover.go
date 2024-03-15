@@ -66,7 +66,7 @@ func newZKProver(workingDir, zkeyFile string, cleanup bool, lg log.Logger) *ZKPr
 	}
 }
 
-// Generate ZK Proof for the given encoding keys and chunck indexes using snarkjs
+// Generate ZK Proof for the given encoding keys and chunk indexes using snarkjs
 func (p *ZKProver) GenerateZKProof(encodingKeys []common.Hash, sampleIdxs []uint64) ([]byte, []*big.Int, error) {
 	proof, publics, err := p.GenerateZKProofRaw(encodingKeys, sampleIdxs)
 	if err != nil {
@@ -78,7 +78,7 @@ func (p *ZKProver) GenerateZKProof(encodingKeys []common.Hash, sampleIdxs []uint
 	return proof, publics[4:], nil
 }
 
-// Generate ZK Proof for the given encoding keys and chunck indexes using snarkjs
+// Generate ZK Proof for the given encoding keys and chunk indexes using snarkjs
 func (p *ZKProver) GenerateZKProofRaw(encodingKeys []common.Hash, sampleIdxs []uint64) ([]byte, []*big.Int, error) {
 	for i, idx := range sampleIdxs {
 		p.lg.Debug("Generate zk proof", "encodingKey", encodingKeys[i], "sampleIdx", sampleIdxs[i])
@@ -191,7 +191,7 @@ func (p *ZKProver) GenerateZKProofRaw(encodingKeys []common.Hash, sampleIdxs []u
 	return proof, publics, nil
 }
 
-// Generate ZK Proof for the given encoding key and chunck index using snarkjs
+// Generate ZK Proof for the given encoding key and chunk index using snarkjs
 func (p *ZKProver) GenerateZKProofPerSample(encodingKey common.Hash, sampleIdx uint64) ([]byte, *big.Int, error) {
 	p.lg.Debug("Generate zk proof", "encodingKey", encodingKey.Hex(), "sampleIdx", sampleIdx)
 	if int(sampleIdx) >= eth.FieldElementsPerBlob {
