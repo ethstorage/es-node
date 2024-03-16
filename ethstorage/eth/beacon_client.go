@@ -12,7 +12,6 @@ import (
 
 	"github.com/crate-crypto/go-proto-danksharding-crypto/eth"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/log"
 )
 
 type BeaconClient struct {
@@ -61,7 +60,6 @@ func (c *BeaconClient) DownloadBlobs(slot uint64) (map[common.Hash]Blob, error) 
 	// We should do the corresponding change when it takes effect, maybe 4844-devnet-6?
 	// The details here: https://github.com/sigp/lighthouse/issues/4317
 	beaconUrl, err := url.JoinPath(c.beaconURL, fmt.Sprintf("eth/v1/beacon/blob_sidecars/%d", slot))
-	log.Info("DownloadBlobs", "beaconURL", beaconUrl)
 	if err != nil {
 		return nil, err
 	}
