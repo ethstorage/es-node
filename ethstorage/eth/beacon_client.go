@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 
 	"github.com/crate-crypto/go-proto-danksharding-crypto/eth"
 	"github.com/ethereum/go-ethereum/common"
@@ -58,8 +59,11 @@ func (c *BeaconClient) DownloadBlobs(slot uint64) (map[common.Hash]Blob, error) 
 	// TODO: @Qiang There will be a change to the URL schema and a new indices query parameter
 	// We should do the corresponding change when it takes effect, maybe 4844-devnet-6?
 	// The details here: https://github.com/sigp/lighthouse/issues/4317
-	url := fmt.Sprintf("%s/eth/v1/beacon/blob_sidecars/%d", c.beaconURL, slot)
-	resp, err := http.Get(url)
+	beaconUrl, err := url.JoinPath(c.beaconURL, fmt.Sprintf("eth/v1/beacon/blob_sidecars/%d", slot))
+	if err != nil {
+		return nil, err
+	}
+	resp, err := http.Get(beaconUrl)
 	if err != nil {
 		return nil, err
 	}
