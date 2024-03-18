@@ -9,6 +9,7 @@ import (
 	"io"
 	"math/rand"
 	"net"
+	"strconv"
 	"time"
 
 	decredSecp "github.com/decred/dcrd/dcrec/secp256k1/v4"
@@ -38,33 +39,31 @@ const (
 	tableKickoffDelay      = time.Second * 3
 	discoveredAddrTTL      = time.Hour * 24
 	collectiveDialTimeout  = time.Second * 30
-	p2pVersion             = 0
+	// if the node do not have AdvertiseIP and public ip (like run in the docker or behind a nat), we can get the public IP
+	// and the TCP port from the libp2p.host's addresses (get from the nat service or address observed by peers) and set
+	// to the node discovery. As the host's addresses would not show when it start, so we will check it every initLocalNodeAddrInterval.
+	// After the public IP and the TCP port initialized, we will also refresh the address in case the address change.
+	initLocalNodeAddrInterval    = time.Second * 30
+	refreshLocalNodeAddrInterval = time.Minute * 10
+	p2pVersion                   = 0
 )
 
-func (conf *Config) Discovery(log log.Logger, l1ChainID uint64, tcpPort uint16, addrs []ma.Multiaddr) (*enode.LocalNode, *discover.UDPv5, error) {
+func (conf *Config) Discovery(log log.Logger, l1ChainID uint64, tcpPort uint16, fallbackIP net.IP) (*enode.LocalNode, *discover.UDPv5, bool, error) {
+	isIPSet := false
 	if conf.NoDiscovery {
-		return nil, nil, nil
+		return nil, nil, isIPSet, nil
 	}
+
 	priv := (*decredSecp.PrivateKey)(conf.Priv).ToECDSA()
 	// use the geth curve definition. Same crypto, but geth needs to detect it as *their* definition of the curve.
 	priv.Curve = gcrypto.S256()
 	localNode := enode.NewLocalNode(conf.DiscoveryDB, priv)
 	if conf.AdvertiseIP != nil {
 		localNode.SetStaticIP(conf.AdvertiseIP)
-	} else {
-		for _, addr := range addrs {
-			ipStr, err := addr.ValueForProtocol(4)
-			if err != nil {
-				continue
-			}
-			ip := net.ParseIP(ipStr)
-			if ip.IsPrivate() || ip.IsLoopback() {
-				continue
-			}
-			localNode.SetStaticIP(ip)
-			break
-		}
-		// TODO: if no external IP found, use NAT protocol to find external IP
+		isIPSet = true
+	} else if fallbackIP != nil {
+		localNode.SetFallbackIP(fallbackIP)
+		isIPSet = true
 	}
 	if conf.AdvertiseUDPPort != 0 { // explicitly advertised port gets priority
 		localNode.SetFallbackUDP(int(conf.AdvertiseUDPPort))
@@ -78,7 +77,7 @@ func (conf *Config) Discovery(log log.Logger, l1ChainID uint64, tcpPort uint16, 
 	} else if conf.ListenTCPPort != 0 { // otherwise default to the port we configured it to listen on
 		localNode.Set(enr.TCP(conf.ListenTCPPort))
 	} else {
-		return nil, nil, fmt.Errorf("no TCP port to put in discovery record")
+		return nil, nil, isIPSet, fmt.Errorf("no TCP port to put in discovery record")
 	}
 	dat := protocol.EthStorageENRData{
 		ChainID: l1ChainID,
@@ -97,7 +96,7 @@ func (conf *Config) Discovery(log log.Logger, l1ChainID uint64, tcpPort uint16, 
 
 	conn, err := net.ListenUDP("udp", udpAddr)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, isIPSet, err
 	}
 	if udpAddr.Port == 0 { // if we picked a port dynamically, then find the port we got, and update our node record
 		localUDPAddr := conn.LocalAddr().(*net.UDPAddr)
@@ -114,7 +113,7 @@ func (conf *Config) Discovery(log log.Logger, l1ChainID uint64, tcpPort uint16, 
 	}
 	udpV5, err := discover.ListenV5(conn, localNode, cfg)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, isIPSet, err
 	}
 
 	log.Info("Started discovery service", "enr", localNode.Node(), "id", localNode.ID(), "port", udpV5.Self().UDP())
@@ -122,7 +121,30 @@ func (conf *Config) Discovery(log log.Logger, l1ChainID uint64, tcpPort uint16, 
 	// TODO: periodically we can pull the external IP and TCP port from libp2p NAT service,
 	// and add it as a statement to keep the localNode accurate (if we trust the NAT device more than the discv5 statements)
 
-	return localNode, udpV5, nil
+	return localNode, udpV5, isIPSet, nil
+}
+
+func updateLocalNodeIPAndTCP(addrs []ma.Multiaddr, localNode *enode.LocalNode) bool {
+	for _, addr := range addrs {
+		ipStr, err := addr.ValueForProtocol(4)
+		if err != nil {
+			continue
+		}
+		ip := net.ParseIP(ipStr)
+		if ip.IsPrivate() || !ip.IsGlobalUnicast() {
+			continue
+		}
+		tcpStr, err := addr.ValueForProtocol(ma.P_TCP)
+		if err != nil {
+			continue
+		}
+		tcpPort, _ := strconv.Atoi(tcpStr)
+		localNode.SetFallbackIP(ip)
+		localNode.Set(enr.TCP(tcpPort))
+		log.Debug("update LocalNode IP and TCP", "IP", localNode.Node().IP(), "tcp", localNode.Node().TCP())
+		return true
+	}
+	return false
 }
 
 // Secp256k1 is like the geth Secp256k1 enr entry type, but using the libp2p pubkey representation instead
@@ -258,15 +280,37 @@ func (n *NodeP2P) DiscoveryProcess(ctx context.Context, log log.Logger, l1ChainI
 				return
 			}
 			addrs := n.Host().Peerstore().Addrs(id)
-			log.Debug("Attempting connection", "peer", id)
+			log.Debug("Attempting connection", "peer", id, "Addr", addrs)
 			ctx, cancel := context.WithTimeout(ctx, time.Second*10)
 			err := n.Host().Connect(ctx, peer.AddrInfo{ID: id, Addrs: addrs})
 			cancel()
 			if err != nil {
-				log.Debug("Failed connection attempt", "peer", id, "err", err)
+				log.Debug("Failed connection attempt", "peer", id, "Addr", addrs, "err", err)
 			}
 		}
 	}
+
+	go func() {
+		if n.isIPSet {
+			return
+		}
+		updateLocalNodeTicker := time.NewTicker(initLocalNodeAddrInterval)
+		initialized := false
+		defer updateLocalNodeTicker.Stop()
+		for {
+			select {
+			case <-updateLocalNodeTicker.C:
+				if updateLocalNodeIPAndTCP(n.host.Addrs(), n.dv5Local) && !initialized {
+					initialized = true
+					updateLocalNodeTicker.Reset(refreshLocalNodeAddrInterval)
+					log.Info("Update TCP IP address", "ip", n.dv5Local.Node().IP(), "udp", n.dv5Local.Node().UDP(),
+						"tcp", n.dv5Local.Node().TCP(), "seq", n.dv5Local.Seq(), "enr", n.dv5Local.Node().String())
+				}
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
 
 	// stops all the workers when we are done
 	defer close(connAttempts)
@@ -327,11 +371,16 @@ func (n *NodeP2P) DiscoveryProcess(ctx context.Context, log log.Logger, l1ChainI
 			log.Info("Stopped peer discovery")
 			return // no ctx error, expected close
 		case found := <-randomNodesCh:
+			// get the most recent version of the node record in case it change deal to the remote node TCP or UDP port change.
+			node := n.dv5Udp.Resolve(found)
+			if node.Seq() != found.Seq() {
+				log.Info("Remote node ENR changed", "ID", node.ID(), "remote IP", node.IP(), "ENR", node.String())
+			}
 			var dat protocol.EthStorageENRData
-			if err := found.Load(&dat); err != nil { // we already filtered on chain ID and Version
+			if err := node.Load(&dat); err != nil { // we already filtered on chain ID and Version
 				continue
 			}
-			info, pub, err := enrToAddrInfo(found)
+			info, pub, err := enrToAddrInfo(node)
 			if err != nil {
 				continue
 			}
@@ -348,7 +397,7 @@ func (n *NodeP2P) DiscoveryProcess(ctx context.Context, log log.Logger, l1ChainI
 			// or peers on different chains, or anyone we have not seen via discovery.
 			// There is no tag score decay yet, so just set it to 42.
 			n.ConnectionManager().TagPeer(info.ID, fmt.Sprintf("ethstorage-%d-%d", dat.ChainID, dat.Version), 42)
-			log.Debug("Discovered peer", "peer", info.ID, "nodeID", found.ID(), "addr", info.Addrs[0])
+			log.Debug("Discovered peer", "peer", info.ID, "nodeID", node.ID(), "addr", info.Addrs[0])
 		case <-connectTicker.C:
 			connected := n.Host().Network().Peers()
 			log.Debug("Peering tick", "connected", len(connected),
