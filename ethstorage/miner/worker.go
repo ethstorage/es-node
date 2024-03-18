@@ -5,6 +5,7 @@ package miner
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/big"
 	"sync"
@@ -31,6 +32,8 @@ const (
 
 var (
 	minedEventSig = crypto.Keccak256Hash([]byte("MinedBlock(uint256,uint256,uint256,uint256,address,uint256)"))
+	errCh         = make(chan miningError, 10)
+	errDropped    = errors.New("dropped: not enough profit")
 )
 
 type task struct {
@@ -52,6 +55,16 @@ type taskItem struct {
 
 func (t *taskItem) String() string {
 	return fmt.Sprintf("shard: %d, thread: %d, block: %v", t.shardIdx, t.thread, t.blockNumber)
+}
+
+type miningError struct {
+	shardIdx uint64
+	block    *big.Int
+	err      error
+}
+
+func (e miningError) String() string {
+	return fmt.Sprintf("shard %d: block %v: %s", e.shardIdx, e.block, e.err.Error())
 }
 
 type result struct {
@@ -262,6 +275,11 @@ func (w *worker) taskLoop(taskCh chan *taskItem) {
 		case ti := <-taskCh:
 			success, err := w.mineTask(ti)
 			if err != nil {
+				select {
+				case errCh <- miningError{ti.shardIdx, ti.blockNumber, err}:
+				default:
+					w.lg.Warn("Sent miningError to errCh failed", "lenOfCh", len(errCh))
+				}
 				w.lg.Warn("Mine task fail", "shard", ti.shardIdx, "thread", ti.thread, "block", ti.blockNumber, "err", err.Error())
 			}
 			if success {
@@ -298,6 +316,10 @@ func (w *worker) notifyResultLoop() {
 // resultLoop is a standalone goroutine to submit mining result to L1 contract.
 func (w *worker) resultLoop() {
 	defer w.wg.Done()
+	var succeeded, dropped int
+	errorCache := make([]miningError, 0)
+	ticker := time.NewTicker(1 * time.Minute)
+	defer ticker.Stop()
 	for {
 		select {
 		case <-w.resultCh:
@@ -313,7 +335,14 @@ func (w *worker) resultLoop() {
 				w.config,
 			)
 			if err != nil {
-				w.lg.Error("Failed to submit mined result", "shard", result.startShardId, "block", result.blockNumber, "error", err.Error())
+				if err == errDropped {
+					dropped++
+				} else {
+					errorCache = append(errorCache, miningError{result.startShardId, result.blockNumber, err})
+					w.lg.Error("Failed to submit mined result", "shard", result.startShardId, "block", result.blockNumber, "error", err.Error())
+				}
+			} else {
+				succeeded++
 			}
 			if txHash != (common.Hash{}) {
 				// waiting for tx confirmation or timeout
@@ -336,6 +365,14 @@ func (w *worker) resultLoop() {
 			}
 			// optimistically check next result if exists
 			w.notifyResultLoop()
+		case <-ticker.C:
+			if len(errorCache) > 0 {
+				log.Error("Mining stats", "succeeded", succeeded, "failed", len(errorCache), "dropped", dropped, "lastError", errorCache[len(errorCache)-1])
+			} else {
+				log.Info("Mining stats", "succeeded", succeeded, "failed", len(errorCache), "dropped", dropped)
+			}
+		case err := <-errCh:
+			errorCache = append(errorCache, err)
 		case <-w.exitCh:
 			w.lg.Warn("Worker is exiting from result loop...")
 			return
@@ -387,7 +424,7 @@ func weiToEther(wei *big.Int) *big.Float {
 	return f.Quo(fWei.SetInt(wei), big.NewFloat(params.Ether))
 }
 
-// mineTask acturally executes a mining task
+// mineTask actually executes a mining task
 func (w *worker) mineTask(t *taskItem) (bool, error) {
 	startTime := time.Now()
 	nonce := t.nonceStart

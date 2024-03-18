@@ -14,7 +14,7 @@ COPY --from=builder /es-node/build/ /es-node/build/
 
 # For zk proof
 RUN npm install -g snarkjs
-RUN apk add --no-cache curl grep
+RUN apk add --no-cache bash curl grep
 
 # Entrypoint
 COPY --from=builder /es-node/run.sh /es-node/
