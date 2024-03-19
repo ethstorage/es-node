@@ -90,12 +90,13 @@ func Create(filename string, chunkIdxStart, chunkIdxLen, epoch, maxKvSize, encod
 
 	file, err := os.Create(filename)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create file error: " + err.Error())
 	}
+	offset := int64((chunkSize + 32) * chunkIdxLen)
 	// actual initialization is done when synchronize
-	err = fallocate.Fallocate(file, int64((chunkSize+32)*chunkIdxLen), int64(HEADER_SIZE))
+	err = fallocate.Fallocate(file, offset, int64(HEADER_SIZE))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("fallocate failed. offset=%d, error=%s", offset, err.Error())
 	}
 	dataFile := &DataFile{
 		file:          file,

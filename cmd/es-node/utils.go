@@ -170,7 +170,7 @@ func createDataFile(cfg *storage.StorageConfig, shardIdxList []uint64, datadir s
 
 		df, err := es.Create(dataFile, startChunkId, chunkPerKv*cfg.KvEntriesPerShard, 0, cfg.KvSize, uint64(encodingType), cfg.Miner, cfg.ChunkSize)
 		if err != nil {
-			log.Error("Creating data file", "error", err)
+			log.Error("Creating data file", "file", dataFile, "error", err)
 			return nil, err
 		}
 		log.Info("Data file created", "shard", shardIdx, "file", dataFile, "kvIdxStart", df.KvIdxStart(), "kvIdxEnd", df.KvIdxEnd(), "miner", df.Miner())
