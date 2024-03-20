@@ -366,10 +366,12 @@ func loadSyncerParams(conf *p2p.Config, ctx *cli.Context) error {
 	maxRequestSize := ctx.GlobalUint64(flags.MaxRequestSize.Name)
 	syncConcurrency := ctx.GlobalUint64(flags.SyncConcurrency.Name)
 	fillEmptyConcurrency := ctx.GlobalInt(flags.FillEmptyConcurrency.Name)
+	maxPeers := ctx.GlobalInt(flags.PeersLo.Name)
 	if syncConcurrency < 1 {
 		return fmt.Errorf("p2p.sync.concurrency param is invalid: the value should larger than 0")
 	}
 	conf.SyncParams = &protocol.SyncerParams{
+		MaxPeers:              maxPeers,
 		MaxRequestSize:        maxRequestSize,
 		SyncConcurrency:       syncConcurrency,
 		FillEmptyConcurrency:  fillEmptyConcurrency,
