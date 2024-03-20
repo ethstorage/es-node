@@ -56,6 +56,8 @@ func NewConfig(ctx *cli.Context, log log.Logger) (*node.Config, error) {
 	if err != nil {
 		return nil, err
 	}
+	log.Info("Read L1 config", flags.L1NodeAddr.Name, l1Endpoint.L1NodeAddr)
+	log.Info("Read L1 config", flags.L1BeaconAddr.Name, l1Endpoint.L1BeaconURL)
 	defer client.Close()
 
 	storageConfig, err := NewStorageConfig(ctx, client)
