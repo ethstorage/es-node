@@ -93,7 +93,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 					shards       = make(map[common.Address][]uint64)
 					remotePeerId = conn.RemotePeer()
 				)
-				shards[n.storageManager.ContractAddress()] = []uint64{0}
+				//	shards[n.storageManager.ContractAddress()] = []uint64{0}
 				if len(n.host.Peerstore().Addrs(remotePeerId)) == 0 {
 					// As the node host enable NATService, which will create a new connection with another
 					// peer id and its Addrs will not be set to Peerstore, so if len of peer Addrs is 0,
@@ -101,23 +101,24 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 					log.Debug("No addresses to get shard list, return without close conn", "peer", remotePeerId)
 					return
 				}
-				// css, err := n.Host().Peerstore().Get(remotePeerId, protocol.EthStorageENRKey)
-				// if err != nil {
-				// 	// for node which is new to the ethstorage network, and it dial the nodes which do not contain
-				// 	// the new node's enr, so the nodes do not know its shard list from enr, so it needs to call
-				// 	// n.RequestShardList to fetch the shard list of the new node.
-				// 	remoteShardList, e := n.RequestShardList(remotePeerId)
-				// 	if e != nil {
-				// 		log.Info("Get remote shard list fail", "peer", remotePeerId, "err", e.Error())
-				// 		conn.Close()
-				// 		return
-				// 	}
-				// 	log.Debug("Get remote shard list success", "peer", remotePeerId, "shards", remoteShardList)
-				// 	n.Host().Peerstore().Put(remotePeerId, protocol.EthStorageENRKey, remoteShardList)
-				// 	shards = protocol.ConvertToShardList(remoteShardList)
-				// } else {
-				// 	shards = protocol.ConvertToShardList(css.([]*protocol.ContractShards))
-				// }
+				css, err := n.Host().Peerstore().Get(remotePeerId, protocol.EthStorageENRKey)
+				if err != nil {
+					log.Info("Fail to get css from peer store", "peer", remotePeerId, "address", conn.RemoteMultiaddr())
+					// for node which is new to the ethstorage network, and it dial the nodes which do not contain
+					// the new node's enr, so the nodes do not know its shard list from enr, so it needs to call
+					// n.RequestShardList to fetch the shard list of the new node.
+					remoteShardList, e := n.RequestShardList(remotePeerId)
+					if e != nil {
+						log.Info("Get remote shard list fail", "peer", remotePeerId, "err", e.Error())
+						conn.Close()
+						return
+					}
+					log.Info("Get remote shard list success", "peer", remotePeerId, "shards", remoteShardList)
+					n.Host().Peerstore().Put(remotePeerId, protocol.EthStorageENRKey, remoteShardList)
+					shards = protocol.ConvertToShardList(remoteShardList)
+				} else {
+					shards = protocol.ConvertToShardList(css.([]*protocol.ContractShards))
+				}
 				added := n.syncCl.AddPeer(remotePeerId, shards, conn.Stat().Direction)
 				if !added {
 					log.Info("Close connection as AddPeer fail", "peer", remotePeerId)
