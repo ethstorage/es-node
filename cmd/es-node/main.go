@@ -15,7 +15,7 @@ import (
 	"strings"
 	"syscall"
 
-	oppprof "github.com/ethereum-optimism/optimism/op-service/pprof"
+	"github.com/ethereum-optimism/optimism/op-service/oppprof"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/log"
@@ -139,13 +139,15 @@ func EsNodeMain(ctx *cli.Context) error {
 	m.RecordInfo(VersionWithMeta)
 	m.RecordUp()
 	// TODO: heartbeat
-	if cfg.Pprof.Enabled {
+	if cfg.Pprof.ListenEnabled {
 		pprofCtx, pprofCancel := context.WithCancel(context.Background())
 		go func() {
 			log.Info("pprof server started", "addr", net.JoinHostPort(cfg.Pprof.ListenAddr, strconv.Itoa(cfg.Pprof.ListenPort)))
-			if err := oppprof.ListenAndServe(pprofCtx, cfg.Pprof.ListenAddr, cfg.Pprof.ListenPort); err != nil {
+			service := oppprof.New(cfg.Pprof.ListenEnabled, cfg.Pprof.ListenAddr, cfg.Pprof.ListenPort, "", "", "")
+			if err := service.Start(); err != nil {
 				log.Error("error starting pprof", "err", err)
 			}
+			defer service.Stop(pprofCtx)
 		}()
 		defer pprofCancel()
 	}
