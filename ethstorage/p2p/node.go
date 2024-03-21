@@ -90,7 +90,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 		n.host.Network().Notify(&network.NotifyBundle{
 			ConnectedF: func(nw network.Network, conn network.Conn) {
 				var (
-					shards       map[common.Address][]uint64
+					shards       = make(map[common.Address][]uint64)
 					remotePeerId = conn.RemotePeer()
 				)
 				shards[n.storageManager.ContractAddress()] = []uint64{0}
