@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"strconv"
+	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethdb"
@@ -40,6 +41,14 @@ type NodeP2P struct {
 	syncCl         *protocol.SyncClient
 	syncSrv        *protocol.SyncServer
 	storageManager *ethstorage.StorageManager
+
+	log            log.Logger
+	lock           sync.Mutex
+	done           chan struct{}
+	addPeerChan    chan struct{}
+	removePeerChan chan struct{}
+	peersToAdd     map[peer.ID]network.Conn
+	PeersToRemove  map[peer.ID]network.Conn
 }
 
 // NewNodeP2P creates a new p2p node, and returns a reference to it. If the p2p is disabled, it returns nil.
@@ -67,6 +76,12 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 	storageManager *ethstorage.StorageManager, db ethdb.Database, m metrics.Metricer, feed *event.Feed) error {
 	bwc := p2pmetrics.NewBandwidthCounter()
 	n.storageManager = storageManager
+	n.log = log
+	n.addPeerChan = make(chan struct{}, 1)
+	n.removePeerChan = make(chan struct{}, 1)
+	n.done = make(chan struct{}, 1)
+	n.peersToAdd = make(map[peer.ID]network.Conn)
+	n.PeersToRemove = make(map[peer.ID]network.Conn)
 
 	var err error
 	// nil if disabled.
@@ -89,38 +104,22 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 		n.syncCl = protocol.NewSyncClient(log, rollupCfg, n.host.NewStream, storageManager, setup.SyncerParams(), db, m, feed)
 		n.host.Network().Notify(&network.NotifyBundle{
 			ConnectedF: func(nw network.Network, conn network.Conn) {
-				var (
-					shards       map[common.Address][]uint64
-					remotePeerId = conn.RemotePeer()
-				)
-				if len(n.host.Peerstore().Addrs(remotePeerId)) == 0 {
+				if len(n.host.Peerstore().Addrs(conn.RemotePeer())) == 0 {
 					// As the node host enable NATService, which will create a new connection with another
 					// peer id and its Addrs will not be set to Peerstore, so if len of peer Addrs is 0,
 					// then ignore this connection.
-					log.Debug("No addresses to get shard list, return without close conn", "peer", remotePeerId)
+					log.Debug("No addresses to get shard list, return without close conn", "peer", conn.RemotePeer())
 					return
 				}
-				css, err := n.Host().Peerstore().Get(remotePeerId, protocol.EthStorageENRKey)
-				if err != nil {
-					// for node which is new to the ethstorage network, and it dial the nodes which do not contain
-					// the new node's enr, so the nodes do not know its shard list from enr, so it needs to call
-					// n.RequestShardList to fetch the shard list of the new node.
-					remoteShardList, e := n.RequestShardList(remotePeerId)
-					if e != nil {
-						log.Info("Get remote shard list fail", "peer", remotePeerId, "err", e.Error())
-						conn.Close()
-						return
-					}
-					log.Debug("Get remote shard list success", "peer", remotePeerId, "shards", remoteShardList)
-					n.Host().Peerstore().Put(remotePeerId, protocol.EthStorageENRKey, remoteShardList)
-					shards = protocol.ConvertToShardList(remoteShardList)
-				} else {
-					shards = protocol.ConvertToShardList(css.([]*protocol.ContractShards))
+				n.lock.Lock()
+				if _, ok := n.PeersToRemove[conn.RemotePeer()]; ok {
+					delete(n.PeersToRemove, conn.RemotePeer())
 				}
-				added := n.syncCl.AddPeer(remotePeerId, shards, conn.Stat().Direction)
-				if !added {
-					log.Info("Close connection as AddPeer fail", "peer", remotePeerId)
-					conn.Close()
+				n.peersToAdd[conn.RemotePeer()] = conn
+				n.lock.Unlock()
+				select {
+				case n.addPeerChan <- struct{}{}:
+				default:
 				}
 			},
 			DisconnectedF: func(nw network.Network, conn network.Conn) {
@@ -128,7 +127,16 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 					log.Debug("No addresses in peer store, return without remove peer", "peer", conn.RemotePeer())
 					return
 				}
-				n.syncCl.RemovePeer(conn.RemotePeer())
+				n.lock.Lock()
+				if _, ok := n.peersToAdd[conn.RemotePeer()]; ok {
+					delete(n.peersToAdd, conn.RemotePeer())
+				}
+				n.PeersToRemove[conn.RemotePeer()] = conn
+				n.lock.Unlock()
+				select {
+				case n.removePeerChan <- struct{}{}:
+				default:
+				}
 			},
 		})
 		n.syncCl.UpdateMaxPeers(int(setup.(*Config).PeersHi))
@@ -147,6 +155,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 				conn.Close()
 			}
 		}
+		go n.AddOrRemovePeers()
 		go n.syncCl.ReportPeerSummary()
 		n.syncSrv = protocol.NewSyncServer(rollupCfg, storageManager, m)
 
@@ -184,6 +193,77 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 		}
 	}
 	return nil
+}
+
+func (n *NodeP2P) AddOrRemovePeers() {
+	for {
+		select {
+		case <-n.addPeerChan:
+			conn := n.GetNextPeerToAdd()
+			for conn != nil {
+				n.AddPeer(conn)
+				conn = n.GetNextPeerToAdd()
+			}
+		case <-n.removePeerChan:
+			conn := n.GetNextPeerToRemve()
+			for conn != nil {
+				n.syncCl.RemovePeer(conn.RemotePeer())
+				conn = n.GetNextPeerToRemve()
+			}
+		case <-n.done:
+			return
+		}
+	}
+}
+
+func (n *NodeP2P) GetNextPeerToAdd() network.Conn {
+	n.lock.Lock()
+	defer n.lock.Unlock()
+	for peerId, conn := range n.peersToAdd {
+		delete(n.peersToAdd, peerId)
+		return conn
+	}
+	return nil
+}
+
+func (n *NodeP2P) GetNextPeerToRemve() network.Conn {
+	n.lock.Lock()
+	defer n.lock.Unlock()
+	for peerId, conn := range n.PeersToRemove {
+		delete(n.PeersToRemove, peerId)
+		return conn
+	}
+	return nil
+}
+
+func (n *NodeP2P) AddPeer(conn network.Conn) {
+	var (
+		shards       = make(map[common.Address][]uint64)
+		remotePeerId = conn.RemotePeer()
+	)
+	css, err := n.Host().Peerstore().Get(remotePeerId, protocol.EthStorageENRKey)
+	if err != nil {
+		n.log.Info("Fail to get css from peer store", "peer", remotePeerId, "address", conn.RemoteMultiaddr())
+		// for node which is new to the ethstorage network, and it dial the nodes which do not contain
+		// the new node's enr, so the nodes do not know its shard list from enr, so it needs to call
+		// n.RequestShardList to fetch the shard list of the new node.
+		remoteShardList, e := n.RequestShardList(remotePeerId)
+		if e != nil {
+			n.log.Info("Get remote shard list fail", "peer", remotePeerId, "err", e.Error())
+			conn.Close()
+			return
+		}
+		n.log.Info("Get remote shard list success", "peer", remotePeerId, "shards", remoteShardList)
+		n.Host().Peerstore().Put(remotePeerId, protocol.EthStorageENRKey, remoteShardList)
+		shards = protocol.ConvertToShardList(remoteShardList)
+	} else {
+		shards = protocol.ConvertToShardList(css.([]*protocol.ContractShards))
+	}
+	added := n.syncCl.AddPeer(remotePeerId, shards, conn.Stat().Direction)
+	if !added {
+		n.log.Info("Close connection as AddPeer fail", "peer", remotePeerId)
+		conn.Close()
+	}
 }
 
 func (n *NodeP2P) RequestL2Range(ctx context.Context, start, end uint64) (uint64, error) {
@@ -238,6 +318,7 @@ func (n *NodeP2P) Start() error {
 }
 
 func (n *NodeP2P) Close() error {
+	n.done <- struct{}{}
 	var result *multierror.Error
 	if n.dv5Udp != nil {
 		n.dv5Udp.Close()
