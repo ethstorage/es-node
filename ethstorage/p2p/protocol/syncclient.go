@@ -38,9 +38,11 @@ const (
 	// timeout for writing the request as client. Can be as long as serverReadRequestTimeout
 	clientWriteRequestTimeout = time.Second * 10
 	// timeout for reading a response of a serving peer as client. Can be as long as serverWriteChunkTimeout
-	clientReadResponsetimeout = time.Second * 10
+	clientReadResponseTimeout = time.Second * 10
 	// after the rate-limit reservation hits the max throttle delay, give up on serving a request and just close the stream
 	maxThrottleDelay = time.Second * 20
+
+	NewStreamTimeout = time.Second * 15
 
 	defaultMaxPeerCount = 30
 

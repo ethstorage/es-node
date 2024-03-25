@@ -4,10 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net"
-	"strconv"
-	"time"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
@@ -26,6 +22,8 @@ import (
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	ma "github.com/multiformats/go-multiaddr"
+	"net"
+	"strconv"
 )
 
 // NodeP2P is a p2p node, which can be used to gossip messages.
@@ -194,7 +192,7 @@ func (n *NodeP2P) RequestL2Range(ctx context.Context, start, end uint64) (uint64
 // RequestShardList fetches shard list from remote peer
 func (n *NodeP2P) RequestShardList(remotePeer peer.ID) ([]*protocol.ContractShards, error) {
 	remoteShardList := make([]*protocol.ContractShards, 0)
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, _ := context.WithTimeout(context.Background(), protocol.NewStreamTimeout)
 	s, err := n.Host().NewStream(ctx, remotePeer, protocol.RequestShardList)
 	if err != nil {
 		return remoteShardList, err
