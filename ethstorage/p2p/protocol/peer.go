@@ -91,7 +91,9 @@ func (p *Peer) RequestBlobsByRange(id uint64, contract common.Address, shardId u
 	p.logger.Trace("Fetching KVs", "reqId", id, "contract", contract,
 		"shardId", shardId, "origin", origin, "limit", limit)
 
-	ctx, _ := context.WithTimeout(p.resCtx, NewStreamTimeout)
+	ctx, cancel := context.WithTimeout(p.resCtx, NewStreamTimeout)
+	defer cancel()
+
 	stream, err := p.newStreamFn(ctx, p.id, GetProtocolID(RequestBlobsByRangeProtocolID, p.chainId))
 	if err != nil {
 		return clientError, err
@@ -118,7 +120,9 @@ func (p *Peer) RequestBlobsByList(id uint64, contract common.Address, shardId ui
 	p.logger.Trace("Fetching KVs", "reqId", id, "contract", contract,
 		"shardId", shardId, "count", len(kvList))
 
-	ctx, _ := context.WithTimeout(p.resCtx, NewStreamTimeout)
+	ctx, cancel := context.WithTimeout(p.resCtx, NewStreamTimeout)
+	defer cancel()
+
 	stream, err := p.newStreamFn(ctx, p.id, GetProtocolID(RequestBlobsByListProtocolID, p.chainId))
 	if err != nil {
 		return clientError, err

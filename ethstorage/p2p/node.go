@@ -193,7 +193,9 @@ func (n *NodeP2P) RequestL2Range(ctx context.Context, start, end uint64) (uint64
 // RequestShardList fetches shard list from remote peer
 func (n *NodeP2P) RequestShardList(remotePeer peer.ID) ([]*protocol.ContractShards, error) {
 	remoteShardList := make([]*protocol.ContractShards, 0)
-	ctx, _ := context.WithTimeout(context.Background(), protocol.NewStreamTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), protocol.NewStreamTimeout)
+	defer cancel()
+
 	s, err := n.Host().NewStream(ctx, remotePeer, protocol.RequestShardList)
 	if err != nil {
 		return remoteShardList, err
