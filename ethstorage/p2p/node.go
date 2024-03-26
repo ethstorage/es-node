@@ -131,7 +131,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 				n.syncCl.RemovePeer(conn.RemotePeer())
 			},
 		})
-		n.syncCl.UpdateMaxPeers(int(setup.(*Config).PeersHi))
+
 		// the host may already be connected to peers, add them all to the sync client
 		for _, conn := range n.host.Network().Conns() {
 			shards := make(map[common.Address][]uint64)
