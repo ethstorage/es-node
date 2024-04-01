@@ -1087,11 +1087,11 @@ func (s *SyncClient) checkBlobCommit(decodedBlob []byte, payload *BlobPayload) b
 	recordDur()
 
 	if err != nil {
-		s.log.Warn("Get proof fail", "idx", payload.BlobIndex, "err", err.Error())
+		s.log.Error("Get proof fail", "idx", payload.BlobIndex, "err", err.Error())
 		return false
 	}
 	if !bytes.Equal(root[:ethstorage.HashSizeInContract], payload.BlobCommit[:ethstorage.HashSizeInContract]) {
-		s.log.Warn("Compare blob failed", "idx", payload.BlobIndex, "err",
+		s.log.Info("Compare blob failed", "idx", payload.BlobIndex, "err",
 			fmt.Sprintf("verify blob fail: root: %s; MetaHash hash (24): %s, providerAddr %s, data len %d",
 				common.Bytes2Hex(root[:ethstorage.HashSizeInContract]), common.Bytes2Hex(payload.BlobCommit[:ethstorage.HashSizeInContract]),
 				payload.MinerAddress.Hex(), len(payload.EncodedBlob)))
