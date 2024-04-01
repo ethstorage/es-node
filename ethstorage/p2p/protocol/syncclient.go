@@ -43,7 +43,7 @@ const (
 	// after the rate-limit reservation hits the max throttle delay, give up on serving a request and just close the stream
 	maxThrottleDelay = time.Second * 20
 
-	defaultMaxPeerCount = 30
+	NewStreamTimeout = time.Second * 15
 
 	defaultMinPeersPerShard = 5
 
@@ -216,19 +216,11 @@ func NewSyncClient(log log.Logger, cfg *rollup.EsConfig, newStream newStreamFn, 
 		resCancel:                  cancel,
 		storageManager:             storageManager,
 		prover:                     prv.NewKZGProver(log),
-		maxPeers:                   defaultMaxPeerCount,
-		minPeersPerShard:           getMinPeersPerShard(defaultMaxPeerCount, shardCount),
+		maxPeers:                   params.MaxPeers,
+		minPeersPerShard:           getMinPeersPerShard(params.MaxPeers, shardCount),
 		syncerParams:               params,
 	}
 	return c
-}
-
-func (s *SyncClient) UpdateMaxPeers(maxPeers int) {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-	s.maxPeers = maxPeers
-	shardCount := len(s.storageManager.Shards())
-	s.minPeersPerShard = getMinPeersPerShard(maxPeers, shardCount)
 }
 
 func getMinPeersPerShard(maxPeers, shardCount int) int {
@@ -482,7 +474,8 @@ func (s *SyncClient) AddPeer(id peer.ID, shards map[common.Address][]uint64, dir
 		return false
 	}
 	if !s.needThisPeer(shards) {
-		s.log.Info("No need this peer, the connection would be closed later", "peer", id.String(), "shards", shards)
+		s.log.Info("No need this peer, the connection would be closed later", "maxPeers", s.maxPeers,
+			"Peer count", len(s.peers), "peer", id.String(), "shards", shards)
 		s.metrics.IncDropPeerCount()
 		s.lock.Unlock()
 		return false

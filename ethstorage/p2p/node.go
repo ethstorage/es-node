@@ -131,7 +131,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 				n.syncCl.RemovePeer(conn.RemotePeer())
 			},
 		})
-		n.syncCl.UpdateMaxPeers(int(setup.(*Config).PeersHi))
+
 		// the host may already be connected to peers, add them all to the sync client
 		for _, conn := range n.host.Network().Conns() {
 			shards := make(map[common.Address][]uint64)
@@ -193,7 +193,10 @@ func (n *NodeP2P) RequestL2Range(ctx context.Context, start, end uint64) (uint64
 // RequestShardList fetches shard list from remote peer
 func (n *NodeP2P) RequestShardList(remotePeer peer.ID) ([]*protocol.ContractShards, error) {
 	remoteShardList := make([]*protocol.ContractShards, 0)
-	s, err := n.Host().NewStream(context.Background(), remotePeer, protocol.RequestShardList)
+	ctx, cancel := context.WithTimeout(context.Background(), protocol.NewStreamTimeout)
+	defer cancel()
+
+	s, err := n.Host().NewStream(ctx, remotePeer, protocol.RequestShardList)
 	if err != nil {
 		return remoteShardList, err
 	}
