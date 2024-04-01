@@ -195,6 +195,11 @@ var (
 		EnvVar: prefixEnvVar("RPC_ESCALL_URL"),
 		Value:  "http://127.0.0.1:8545",
 	}
+	StateUploadURL = cli.StringFlag{
+		Name:   "state.upload.url",
+		Usage:  "API that update es-node state to, the node will upload state to API for statistic if it has been set correctly.",
+		EnvVar: prefixEnvVar("STATE_UPLOAD_URL"),
+	}
 )
 
 // Not use 'Required' field in order to avoid unnecessary check when use 'init' subcommand
@@ -233,6 +238,7 @@ var optionalFlags = []cli.Flag{
 	RPCListenAddr,
 	RPCListenPort,
 	RPCESCallURL,
+	StateUploadURL,
 }
 
 // Flags contains the list of configuration options available to the binary.

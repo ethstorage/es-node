@@ -562,6 +562,7 @@ func (s *StorageManager) MaxKvSize() uint64 {
 func (s *StorageManager) MaxKvSizeBits() uint64 {
 	return s.shardManager.kvSizeBits
 }
+
 func (s *StorageManager) ChunksPerKvBits() uint64 {
 	return s.shardManager.chunksPerKvBits
 }

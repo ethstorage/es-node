@@ -84,8 +84,9 @@ func NewConfig(ctx *cli.Context, log log.Logger) (*node.Config, error) {
 		Rollup:     *rollupConfig,
 		Downloader: *dlConfig,
 
-		DataDir:  datadir,
-		DBConfig: db.DefaultDBConfig(),
+		DataDir:        datadir,
+		StateUploadURL: ctx.GlobalString(flags.StateUploadURL.Name),
+		DBConfig:       db.DefaultDBConfig(),
 		// 	Driver: *driverConfig,
 		RPC: node.RPCConfig{
 			ListenAddr: ctx.GlobalString(flags.RPCListenAddr.Name),

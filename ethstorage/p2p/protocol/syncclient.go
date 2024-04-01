@@ -177,6 +177,7 @@ type SyncClient struct {
 	saveTime       time.Time // Time instance when state was last saved to DB
 	storageManager StorageManager
 
+	syncStates       map[uint64]*SyncState
 	totalSecondsUsed uint64
 	blobsSynced      uint64
 	syncedBytes      common.StorageSize
@@ -196,6 +197,10 @@ func NewSyncClient(log log.Logger, cfg *rollup.EsConfig, newStream newStreamFn, 
 	shardCount := len(storageManager.Shards())
 	if m == nil {
 		m = metrics.NoopMetrics
+	}
+	syncStates := make(map[uint64]*SyncState)
+	for _, shardId := range storageManager.Shards() {
+		syncStates[shardId] = &SyncState{0, 0, 0, 0, 0, 0, 0}
 	}
 
 	c := &SyncClient{
@@ -217,6 +222,7 @@ func NewSyncClient(log log.Logger, cfg *rollup.EsConfig, newStream newStreamFn, 
 		maxPeers:                   params.MaxPeers,
 		minPeersPerShard:           getMinPeersPerShard(params.MaxPeers, shardCount),
 		syncerParams:               params,
+		syncStates:                 syncStates,
 	}
 	return c
 }
@@ -1143,6 +1149,16 @@ func (s *SyncClient) reportSyncState() {
 		if !t.done {
 			taskRemain++
 		}
+
+		if syncState, ok := s.syncStates[t.ShardId]; ok {
+			if !t.done {
+
+			} else {
+				syncState.SyncProgress = 10000
+				syncState.SyncTimeRemain = 0
+			}
+			syncState.SyncedSeconds = totalSecondsUsed
+		}
 	}
 
 	etaSecondsLeft := totalSecondsUsed * blobsToSync / synced
@@ -1213,7 +1229,6 @@ func (s *SyncClient) ReportPeerSummary() {
 			return
 		}
 	}
-
 }
 
 func (s *SyncClient) needThisPeer(contractShards map[common.Address][]uint64) bool {
@@ -1260,4 +1275,64 @@ func (s *SyncClient) removePeerFromTask(peerID peer.ID, contractShards map[commo
 			}
 		}
 	}
+}
+
+func (s *SyncClient) GetState() map[uint64]*SyncState {
+	var (
+		totalSecondsUsed = s.totalSecondsUsed
+		synced           = s.blobsSynced
+		filled           = s.emptyBlobsFilled
+	)
+	for _, t := range s.tasks {
+		blobsToSync := uint64(0)
+		emptyToFill := uint64(0)
+
+		for _, st := range t.SubTasks {
+			blobsToSync = blobsToSync + (st.Last - st.next)
+		}
+		blobsToSync = blobsToSync + uint64(t.healTask.count())
+
+		for _, est := range t.SubEmptyTasks {
+			emptyToFill += est.Last - est.First
+		}
+
+		if syncState, ok := s.syncStates[t.ShardId]; ok {
+			if !t.done {
+				syncState.SyncProgress = (synced * 10000) / (synced + blobsToSync)
+				if synced == 0 {
+					syncState.SyncTimeRemain = 999999
+				} else {
+					syncState.SyncTimeRemain = blobsToSync * totalSecondsUsed / synced
+				}
+
+				syncState.FillEmptyProgress = (filled * 10000) / (filled + emptyToFill)
+				if filled == 0 {
+					syncState.FillEmptyTimeRemain = 999999
+				} else {
+					syncState.FillEmptyTimeRemain = emptyToFill * totalSecondsUsed / filled
+				}
+			} else {
+				syncState.SyncProgress = 10000
+				syncState.SyncTimeRemain = 0
+				syncState.FillEmptyProgress = 10000
+				syncState.FillEmptyTimeRemain = 0
+			}
+			syncState.SyncedSeconds = totalSecondsUsed
+			syncState.FillEmptySeconds = totalSecondsUsed
+		}
+	}
+
+	for _, shardId := range s.storageManager.Shards() {
+		state := s.syncStates[shardId]
+		peers := 0
+		for _, p := range s.peers {
+			for _, sId := range p.shards[s.storageManager.ContractAddress()] {
+				if sId == shardId {
+					peers++
+				}
+			}
+		}
+		state.PeerCount = peers
+	}
+	return s.syncStates
 }

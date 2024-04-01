@@ -141,3 +141,13 @@ type SyncerParams struct {
 	FillEmptyConcurrency  int
 	MetaDownloadBatchSize uint64
 }
+
+type SyncState struct {
+	PeerCount           int    `json:"peer_count"`
+	SyncProgress        uint64 `json:"sync_progress"`
+	SyncedSeconds       uint64 `json:"sync_seconds"`
+	SyncTimeRemain      uint64 `json:"sync_time_remain"`
+	FillEmptyProgress   uint64 `json:"fill_empty_progress"`
+	FillEmptySeconds    uint64 `json:"fill_empty_seconds"`
+	FillEmptyTimeRemain uint64 `json:"fill_empty_time_remain"`
+}
