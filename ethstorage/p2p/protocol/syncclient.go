@@ -1072,7 +1072,7 @@ func (s *SyncClient) decodeKV(payload *BlobPayload) ([]byte, bool) {
 		payload.MinerAddress, payload.EncodeType)
 	if err != nil || !found {
 		if err != nil {
-			s.log.Info("Failed to decode", "kvIdx", payload.BlobIndex, "error", err)
+			s.log.Error("Failed to decode", "kvIdx", payload.BlobIndex, "error", err)
 		} else {
 			s.log.Info("Failed to decode", "kvIdx", payload.BlobIndex, "error", "not found")
 		}
