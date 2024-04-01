@@ -18,7 +18,7 @@ import (
 const clientError = 255
 
 func WriteMsg(stream network.Stream, msg *Msg) error {
-	_ = stream.SetWriteDeadline(time.Now().Add(clientWriteRequestTimeout))
+	_ = stream.SetWriteDeadline(time.Now().Add(p2pReadWriteTimeout))
 	// write return code
 	n, err := stream.Write([]byte{msg.ReturnCode})
 	if err != nil {
@@ -49,7 +49,7 @@ func WriteMsg(stream network.Stream, msg *Msg) error {
 }
 
 func ReadMsg(stream network.Stream) ([]byte, byte, error) {
-	_ = stream.SetReadDeadline(time.Now().Add(clientReadResponsetimeout))
+	_ = stream.SetReadDeadline(time.Now().Add(p2pReadWriteTimeout))
 	var returnCode [1]byte
 	if _, err := io.ReadFull(stream, returnCode[:]); err != nil {
 		return nil, clientError, fmt.Errorf("failed to read result part of response: %w", err)

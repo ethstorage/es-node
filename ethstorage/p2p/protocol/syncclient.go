@@ -26,6 +26,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/protocol"
+	"github.com/libp2p/go-yamux/v4"
 )
 
 // StreamCtxFn provides a new context to use when handling stream requests
@@ -35,10 +36,10 @@ type StreamCtxFn func() context.Context
 // Rate-limits always apply, and are making sure the request/response throughput is not too fast, instead of too slow.
 const (
 	maxGossipSize = 10 * (1 << 20)
-	// timeout for writing the request as client. Can be as long as serverReadRequestTimeout
-	clientWriteRequestTimeout = time.Second * 10
-	// timeout for reading a response of a serving peer as client. Can be as long as serverWriteChunkTimeout
-	clientReadResponsetimeout = time.Second * 10
+
+	// timeout for reading / writing the request / response through P2P.
+	p2pReadWriteTimeout = time.Second * 10
+
 	// after the rate-limit reservation hits the max throttle delay, give up on serving a request and just close the stream
 	maxThrottleDelay = time.Second * 20
 
@@ -157,9 +158,9 @@ type SyncClient struct {
 	peers                      map[peer.ID]*Peer
 	idlerPeers                 map[peer.ID]struct{} // Peers that aren't serving requests
 	runningFillEmptyTaskTreads int                  // Number of working threads for processing empty task
-
-	peerJoin chan peer.ID
-	update   chan struct{} // Notification channel for possible sync progression
+	rates                      *Trackers            // Message throughput rates for peers
+	peerJoin                   chan peer.ID
+	update                     chan struct{} // Notification channel for possible sync progression
 
 	// resource context: all peers and mainLoop tasks inherit this, and origin shutting down once resCancel() is called.
 	resCtx    context.Context
@@ -210,6 +211,7 @@ func NewSyncClient(log log.Logger, cfg *rollup.EsConfig, newStream newStreamFn, 
 		peerJoin:                   make(chan peer.ID, 1),
 		update:                     make(chan struct{}, 1),
 		runningFillEmptyTaskTreads: 0,
+		rates:                      NewTrackers(log.New("proto", "ethstorage")),
 		resCtx:                     ctx,
 		resCancel:                  cancel,
 		storageManager:             storageManager,
@@ -488,6 +490,7 @@ func (s *SyncClient) AddPeer(id peer.ID, shards map[common.Address][]uint64, dir
 	// add new peer routine
 	pr := NewPeer(0, s.cfg.L2ChainID, id, s.newStreamFn, direction, shards)
 	s.peers[id] = pr
+	s.rates.Track(id.String(), NewTracker(float64(s.syncerParams.MaxRequestSize)/float64(s.storageManager.MaxKvSize())))
 
 	s.idlerPeers[id] = struct{}{}
 	s.addPeerToTask(id, shards)
@@ -508,6 +511,7 @@ func (s *SyncClient) RemovePeer(id peer.ID) {
 	}
 	pr.resCancel() // once loop exits
 	delete(s.peers, id)
+	s.rates.Untrack(id.String())
 	s.removePeerFromTask(id, pr.shards)
 	s.metrics.DecPeerCount()
 	delete(s.idlerPeers, id)
@@ -693,6 +697,10 @@ func (s *SyncClient) assignBlobRangeTasks() {
 
 				if err != nil {
 					log.Warn("Failed to request blobs", "peer", pr.id.String(), "err", err)
+					_, ok := err.(*yamux.Error)
+					if ok {
+						s.rates.Update(id.String(), 0, 0)
+					}
 					return
 				}
 
@@ -707,6 +715,7 @@ func (s *SyncClient) assignBlobRangeTasks() {
 					Blobs: packet.Blobs,
 					time:  time.Now(),
 				}
+				s.rates.Update(id.String(), time.Since(req.time), len(packet.Blobs))
 				s.OnBlobsByRange(res)
 			}(pr.id)
 		}
@@ -775,7 +784,11 @@ func (s *SyncClient) assignBlobHealTasks() {
 			s.lock.Unlock()
 
 			if err != nil {
-				log.Warn("Failed to request packet", "peer", pr.id.String(), "err", err)
+				log.Debug("Failed to request packet", "peer", pr.id.String(), "err", err)
+				_, ok := err.(*yamux.Error)
+				if ok {
+					s.rates.Update(id.String(), 0, 0)
+				}
 				return
 			}
 			if req.id != packet.ID || req.contract != packet.Contract || req.shardId != packet.ShardId {
@@ -789,6 +802,7 @@ func (s *SyncClient) assignBlobHealTasks() {
 				Blobs: packet.Blobs,
 				time:  time.Now(),
 			}
+			s.rates.Update(id.String(), time.Since(req.time), len(packet.Blobs))
 			s.OnBlobsByList(res)
 		}(pr.ID())
 	}
@@ -856,6 +870,10 @@ func (s *SyncClient) getIdlePeerForTask(t *task) *Peer {
 			continue
 		}
 		p := s.peers[id]
+		if p == nil {
+			log.Error("=========================================================")
+			return nil
+		}
 		if p.IsShardExist(t.Contract, t.ShardId) {
 			return p
 		}
