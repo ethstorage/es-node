@@ -22,6 +22,7 @@ import (
 	"github.com/ethstorage/go-ethstorage/ethstorage/miner"
 	"github.com/ethstorage/go-ethstorage/ethstorage/p2p"
 	"github.com/ethstorage/go-ethstorage/ethstorage/prover"
+	"github.com/ethstorage/go-ethstorage/ethstorage/sidecar"
 	"github.com/hashicorp/go-multierror"
 )
 
@@ -54,6 +55,8 @@ type EsNode struct {
 	miner          *miner.Miner
 	// feed to notify miner of the sync done event to start mining
 	feed *event.Feed
+	// long term blob provider API for rollups
+	sidecarAPI *sidecar.APIService
 }
 
 func New(ctx context.Context, cfg *Config, log log.Logger, appVersion string, m metrics.Metricer) (*EsNode, error) {
@@ -115,6 +118,9 @@ func (n *EsNode) init(ctx context.Context, cfg *Config) error {
 		return err
 	}
 	if err := n.initMetricsServer(ctx, cfg); err != nil {
+		return err
+	}
+	if err := n.initSidecar(ctx, cfg); err != nil {
 		return err
 	}
 	return nil
@@ -256,6 +262,16 @@ func (n *EsNode) initMiner(ctx context.Context, cfg *Config) error {
 	)
 	n.miner = miner.New(cfg.Mining, n.storageManager, l1api, &pvr, n.feed, n.log)
 	log.Info("Initialized miner")
+	return nil
+}
+
+func (n *EsNode) initSidecar(ctx context.Context, cfg *Config) error {
+	if cfg.Sidecar == nil {
+		// not enabled
+		return nil
+	}
+	n.sidecarAPI = sidecar.NewService(*cfg.Sidecar, n.downloader, n.storageManager, n.l1Beacon, n.log)
+	n.log.Info("Initialized blob API")
 	return nil
 }
 

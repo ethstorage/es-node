@@ -4,6 +4,7 @@
 package eth
 
 import (
+	"context"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -82,7 +83,7 @@ func (c *BeaconClient) DownloadBlobs(slot uint64) (map[common.Hash]Blob, error) 
 		if err != nil {
 			return nil, err
 		}
-		hash, err := kzgToVersionedHash(beaconBlob.KZGCommitment)
+		hash, err := KzgToVersionedHash(beaconBlob.KZGCommitment)
 		if err != nil {
 			return nil, err
 		}
@@ -92,7 +93,7 @@ func (c *BeaconClient) DownloadBlobs(slot uint64) (map[common.Hash]Blob, error) 
 	return res, nil
 }
 
-func kzgToVersionedHash(commit string) (common.Hash, error) {
+func KzgToVersionedHash(commit string) (common.Hash, error) {
 	b, err := hex.DecodeString(commit[2:])
 	if err != nil {
 		return common.Hash{}, err
@@ -101,4 +102,23 @@ func kzgToVersionedHash(commit string) (common.Hash, error) {
 	c := [48]byte{}
 	copy(c[:], b[:])
 	return common.Hash(eth.KZGToVersionedHash(c)), nil
+}
+
+func (c *BeaconClient) BeaconBlockRootHash(ctx context.Context, block string) (*common.Hash, error) {
+	beaconUrl, err := url.JoinPath(c.beaconURL, fmt.Sprintf("/eth/v1/beacon/blocks/%s/root", block))
+	if err != nil {
+		return nil, err
+	}
+	resp, err := http.Get(beaconUrl)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var hash common.Hash
+	err = json.NewDecoder(resp.Body).Decode(&hash)
+	if err != nil {
+		return nil, err
+	}
+	return &hash, nil
 }

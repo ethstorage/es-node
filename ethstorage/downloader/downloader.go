@@ -8,6 +8,8 @@ import (
 	"context"
 	"encoding/binary"
 	"encoding/hex"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"math/big"
 	"os"
@@ -402,4 +404,21 @@ func (s *Downloader) eventsToBlocks(events []types.Log) ([]*blockBlobs, error) {
 	}
 
 	return blocks, nil
+}
+
+func (s *Downloader) ReadBlobs(hash common.Hash) (*eth.BlobSidecarsInput, error) {
+	ret, err := s.db.Get(hash[:])
+	if err != nil {
+		return nil, err
+	}
+	if len(ret) == 0 {
+		return nil, errors.New("blob not found")
+	}
+	var result eth.BlobSidecarsInput
+	err = json.Unmarshal(ret, &result)
+	if err != nil {
+		s.log.Warn("error decoding blob", "err", err, "hash", hash.String())
+		return nil, errors.New("error decoding blob")
+	}
+	return &result, nil
 }

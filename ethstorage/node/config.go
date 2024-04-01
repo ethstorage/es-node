@@ -17,6 +17,7 @@ import (
 	"github.com/ethstorage/go-ethstorage/ethstorage/miner"
 	"github.com/ethstorage/go-ethstorage/ethstorage/p2p"
 	"github.com/ethstorage/go-ethstorage/ethstorage/rollup"
+	"github.com/ethstorage/go-ethstorage/ethstorage/sidecar"
 	"github.com/ethstorage/go-ethstorage/ethstorage/storage"
 )
 
@@ -54,6 +55,8 @@ type Config struct {
 	// Tracer    Tracer
 	// Heartbeat HeartbeatConfig
 	Mining *miner.Config
+
+	Sidecar *sidecar.Config
 }
 
 type MetricsConfig struct {

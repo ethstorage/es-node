@@ -9,6 +9,7 @@ import (
 
 	eslog "github.com/ethstorage/go-ethstorage/ethstorage/log"
 	"github.com/ethstorage/go-ethstorage/ethstorage/miner"
+	"github.com/ethstorage/go-ethstorage/ethstorage/sidecar"
 	"github.com/ethstorage/go-ethstorage/ethstorage/signer"
 	"github.com/urfave/cli"
 )
@@ -243,6 +244,7 @@ func init() {
 	optionalFlags = append(optionalFlags, eslog.CLIFlags(envVarPrefix)...)
 	optionalFlags = append(optionalFlags, signer.CLIFlags(envVarPrefix)...)
 	optionalFlags = append(optionalFlags, miner.CLIFlags(envVarPrefix)...)
+	optionalFlags = append(optionalFlags, sidecar.CLIFlags(envVarPrefix)...)
 	Flags = append(requiredFlags, optionalFlags...)
 }
 
