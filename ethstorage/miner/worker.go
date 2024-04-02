@@ -262,7 +262,7 @@ func (w *worker) assignTasks(task task, block eth.L1BlockRef, reqDiff *big.Int) 
 			w.lg.Debug("Mining task queued", "shard", ti.shardIdx, "thread", ti.thread, "block", ti.blockNumber, "blockTime", block.Time, "now", uint64(time.Now().Unix()))
 		}
 	}
-	w.lg.Info("Mining tasks assigned", "shard", task.shardIdx, "threads", w.config.ThreadsPerShard, "block", block.Number, "nonces", w.config.NonceLimit)
+	w.lg.Info("Mining tasks assigned", "miner", task.miner, "shard", task.shardIdx, "threads", w.config.ThreadsPerShard, "block", block.Number, "nonces", w.config.NonceLimit)
 }
 
 func (w *worker) updateDifficulty(shardIdx, blockTime uint64) (*big.Int, error) {
@@ -336,8 +336,8 @@ func (w *worker) notifyResultLoop() {
 // resultLoop is a standalone goroutine to submit mining result to L1 contract.
 func (w *worker) resultLoop() {
 	defer w.wg.Done()
+	var startTime = time.Now().Format("2006-01-02 15:04:05")
 	var lastError *miningError
-	// errorCache := make([]miningError, 0)
 	ticker := time.NewTicker(1 * time.Minute)
 	defer ticker.Stop()
 	for {
@@ -394,10 +394,10 @@ func (w *worker) resultLoop() {
 			w.notifyResultLoop()
 		case <-ticker.C:
 			for shardId, s := range w.submissionStates {
-				log.Info("Mining stats", "shard", shardId, "succeeded", s.Succeeded, "failed", s.Failed, "dropped", s.Dropped)
+				log.Info(fmt.Sprintf("Mining stats since %s", startTime), "shard", shardId, "succeeded", s.Succeeded, "failed", s.Failed, "dropped", s.Dropped)
 			}
 			if lastError != nil {
-				log.Error("Mining stats", "lastError", lastError)
+				log.Error(fmt.Sprintf("Mining stats since %s", startTime), "lastError", lastError)
 			}
 		case err := <-errCh:
 			if s, ok := w.submissionStates[err.shardIdx]; ok {
@@ -479,13 +479,13 @@ func (w *worker) mineTask(t *taskItem) (bool, error) {
 			break
 		}
 		if nonce >= t.nonceEnd {
+			samplingTime := fmt.Sprintf("%.1fs", time.Since(startTime).Seconds())
 			if t.thread == 0 {
-				w.lg.Info("The nonces are exhausted in this slot, waiting for the next block",
-					"samplingTime", fmt.Sprintf("%.1fs", time.Since(startTime).Seconds()), "shard", t.shardIdx, "block", t.blockNumber)
+				w.lg.Info("Sampling done with all nonces",
+					"samplingTime", samplingTime, "shard", t.shardIdx, "block", t.blockNumber)
 			}
-			w.lg.Debug("The nonces are exhausted in this slot, waiting for the next block",
-				"samplingTime", fmt.Sprintf("%.1fs", time.Since(startTime).Seconds()),
-				"shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonceEnd", nonce)
+			w.lg.Debug("Sampling done with all nonces",
+				"samplingTime", samplingTime, "shard", t.shardIdx, "block", t.blockNumber, "thread", t.thread, "nonceEnd", nonce)
 			miningState.SamplingTime = uint64(time.Since(startTime).Microseconds())
 			break
 		}
