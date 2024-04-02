@@ -463,7 +463,7 @@ func (s *SyncClient) Start() error {
 func (s *SyncClient) AddPeer(id peer.ID, shards map[common.Address][]uint64, direction network.Direction) bool {
 	s.lock.Lock()
 	if _, ok := s.peers[id]; ok {
-		s.log.Warn("Cannot register peer for sync duties, peer was already registered", "peer", id)
+		s.log.Debug("Cannot register peer for sync duties, peer was already registered", "peer", id)
 		s.lock.Unlock()
 		return true
 	}
@@ -496,7 +496,7 @@ func (s *SyncClient) RemovePeer(id peer.ID) {
 	defer s.lock.Unlock()
 	pr, ok := s.peers[id]
 	if !ok {
-		s.log.Info("Cannot remove peer from sync duties, peer was not registered", "peer", id)
+		s.log.Debug("Cannot remove peer from sync duties, peer was not registered", "peer", id)
 		return
 	}
 	pr.resCancel() // once loop exits
@@ -685,12 +685,12 @@ func (s *SyncClient) assignBlobRangeTasks() {
 				s.lock.Unlock()
 
 				if err != nil {
-					log.Warn("Failed to request blobs", "peer", pr.id.String(), "err", err)
+					log.Info("Failed to request blobs", "peer", pr.id.String(), "err", err)
 					return
 				}
 
 				if req.id != packet.ID || req.contract != packet.Contract || req.shardId != packet.ShardId {
-					log.Warn("Req mismatch with res", "reqId", req.id, "packetId", packet.ID,
+					log.Info("Req mismatch with res", "reqId", req.id, "packetId", packet.ID,
 						"reqContract", req.contract.Hex(), "packetContract", packet.Contract.Hex(),
 						"reqShardId", req.shardId, "packetShardId", packet.ShardId)
 					return
@@ -768,11 +768,11 @@ func (s *SyncClient) assignBlobHealTasks() {
 			s.lock.Unlock()
 
 			if err != nil {
-				log.Warn("Failed to request packet", "peer", pr.id.String(), "err", err)
+				log.Info("Failed to request packet", "peer", pr.id.String(), "err", err)
 				return
 			}
 			if req.id != packet.ID || req.contract != packet.Contract || req.shardId != packet.ShardId {
-				log.Warn("Req mismatch with res", "reqId", req.id, "packetId", packet.ID,
+				log.Info("Req mismatch with res", "reqId", req.id, "packetId", packet.ID,
 					"reqContract", req.contract.Hex(), "packetContract", packet.Contract.Hex(),
 					"reqShardId", req.shardId, "packetShardId", packet.ShardId)
 				return
@@ -890,7 +890,7 @@ func (s *SyncClient) OnBlobsByRange(res *blobsByRangeResponse) {
 	// the requested Data. For blob range queries that means the peer is not
 	// yet synced.
 	if len(blobsInRange) == 0 {
-		s.log.Warn("Peer rejected get blob by range request")
+		s.log.Info("Peer rejected get blob by range request")
 		s.lock.Lock()
 		if _, ok := s.peers[req.peer]; ok {
 			req.subTask.task.statelessPeers[req.peer] = struct{}{}
@@ -972,7 +972,7 @@ func (s *SyncClient) OnBlobsByList(res *blobsByListResponse) {
 	// the requested Data. For kv range queries that means the peer is not
 	// yet synced.
 	if len(blobsInRange) == 0 {
-		s.log.Warn("Peer rejected get blobs by list request")
+		s.log.Info("Peer rejected get blobs by list request")
 		s.lock.Lock()
 		if _, ok := s.peers[req.peer]; ok {
 			req.healTask.task.statelessPeers[req.peer] = struct{}{}
@@ -1074,7 +1074,7 @@ func (s *SyncClient) decodeKV(payload *BlobPayload) ([]byte, bool) {
 		if err != nil {
 			s.log.Error("Failed to decode", "kvIdx", payload.BlobIndex, "error", err)
 		} else {
-			s.log.Error("Failed to decode", "kvIdx", payload.BlobIndex, "error", "not found")
+			s.log.Info("Failed to decode", "kvIdx", payload.BlobIndex, "error", "not found")
 		}
 		return []byte{}, false
 	}
@@ -1091,7 +1091,7 @@ func (s *SyncClient) checkBlobCommit(decodedBlob []byte, payload *BlobPayload) b
 		return false
 	}
 	if !bytes.Equal(root[:ethstorage.HashSizeInContract], payload.BlobCommit[:ethstorage.HashSizeInContract]) {
-		s.log.Error("Compare blob failed", "idx", payload.BlobIndex, "err",
+		s.log.Info("Compare blob failed", "idx", payload.BlobIndex, "err",
 			fmt.Sprintf("verify blob fail: root: %s; MetaHash hash (24): %s, providerAddr %s, data len %d",
 				common.Bytes2Hex(root[:ethstorage.HashSizeInContract]), common.Bytes2Hex(payload.BlobCommit[:ethstorage.HashSizeInContract]),
 				payload.MinerAddress.Hex(), len(payload.EncodedBlob)))
