@@ -486,7 +486,7 @@ func (w *worker) mineTask(t *taskItem) (bool, error) {
 			}
 			w.lg.Debug("Sampling done with all nonces",
 				"samplingTime", samplingTime, "shard", t.shardIdx, "block", t.blockNumber, "thread", t.thread, "nonceEnd", nonce)
-			miningState.SamplingTime = uint64(time.Since(startTime).Microseconds())
+			miningState.SamplingTime = uint64(time.Since(startTime).Milliseconds())
 			break
 		}
 		hash0 := initHash(t.miner, t.mixHash, nonce)
