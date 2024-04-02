@@ -12,12 +12,12 @@ import (
 	"time"
 
 	"github.com/attestantio/go-eth2-client/api"
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
+	"github.com/gorilla/mux"
 )
 
 type httpError struct {
@@ -74,7 +74,6 @@ func newOutOfRangeError(input uint64, blobCount int) *httpError {
 type API struct {
 	retriever    *Retriever
 	beaconClient *eth.BeaconClient
-	router       *chi.Mux
 	logger       log.Logger
 }
 
@@ -82,18 +81,8 @@ func NewAPI(beaconClient *eth.BeaconClient, retriever *Retriever, logger log.Log
 	result := &API{
 		beaconClient: beaconClient,
 		retriever:    retriever,
-		router:       chi.NewRouter(),
 		logger:       logger,
 	}
-
-	r := result.router
-	r.Use(middleware.Logger)
-	r.Use(middleware.Timeout(serverTimeout))
-	r.Use(middleware.Recoverer)
-	r.Use(middleware.Heartbeat("/healthz"))
-	r.Use(middleware.Compress(5, jsonAcceptType))
-
-	r.Get("/eth/v1/beacon/blob_sidecars/{id}", result.blobSidecarHandler)
 
 	return result
 }
@@ -131,7 +120,7 @@ func (a *API) toBeaconBlockHash(id string) (common.Hash, *httpError) {
 			return common.Hash{}, errServerError
 		}
 
-		return *result, nil
+		return result, nil
 	} else {
 		return common.Hash{}, newBlockIdError(id)
 	}
@@ -140,18 +129,22 @@ func (a *API) toBeaconBlockHash(id string) (common.Hash, *httpError) {
 // blobSidecarHandler implements the /eth/v1/beacon/blob_sidecars/{id} endpoint, using the underlying DataStoreReader
 // to fetch blobs instead of the beacon node. This allows clients to fetch expired blobs.
 func (a *API) blobSidecarHandler(w http.ResponseWriter, r *http.Request) {
-	param := chi.URLParam(r, "id")
-	beaconBlockHash, err := a.toBeaconBlockHash(param)
+	a.logger.Info("Blob sidecar request", "url", r.RequestURI)
+	id := mux.Vars(r)["id"]
+	beaconBlockHash, err := a.toBeaconBlockHash(id)
 	if err != nil {
+		a.logger.Error("Failed to get beacon block root hash", "id", id, "err", err)
 		err.write(w)
 		return
 	}
-	result, storageErr := a.retriever.GetOPBlobs(beaconBlockHash)
+	a.logger.Info("Blob sidecar request", "beaconBlockHash", beaconBlockHash, "id", id)
+	result, storageErr := a.retriever.BlobSidecars(beaconBlockHash)
 	if storageErr != nil {
-		if errors.Is(storageErr, errors.New("blob not found")) {
+		if errors.Is(storageErr, ethereum.NotFound) {
+			a.logger.Info("Blob not found", "beaconBlockHash", beaconBlockHash, "id", id)
 			errUnknownBlock.write(w)
 		} else {
-			a.logger.Info("unexpected error fetching blobs", "err", storageErr, "beaconBlockHash", beaconBlockHash.String(), "param", param)
+			a.logger.Info("Unexpected error fetching blobs", "err", storageErr, "beaconBlockHash", beaconBlockHash.String(), "id", id)
 			errServerError.write(w)
 		}
 		return
@@ -176,7 +169,7 @@ func (a *API) blobSidecarHandler(w http.ResponseWriter, r *http.Request) {
 
 // filterBlobs filters the blobs based on the indices query provided.
 // If no indices are provided, all blobs are returned. If invalid indices are provided, an error is returned.
-func filterBlobs(blobs []*eth.BlobSidecarOut, indices string) ([]*eth.BlobSidecarOut, *httpError) {
+func filterBlobs(blobs []*eth.BlobSidecar, indices string) ([]*eth.BlobSidecar, *httpError) {
 	if indices == "" {
 		return blobs, nil
 	}
@@ -200,7 +193,7 @@ func filterBlobs(blobs []*eth.BlobSidecarOut, indices string) ([]*eth.BlobSideca
 		indicesMap[parsedInt] = struct{}{}
 	}
 
-	filteredBlobs := make([]*eth.BlobSidecarOut, 0)
+	filteredBlobs := make([]*eth.BlobSidecar, 0)
 	for _, blob := range blobs {
 		if _, ok := indicesMap[blob.Index]; ok {
 			filteredBlobs = append(filteredBlobs, blob)

@@ -271,7 +271,10 @@ func (n *EsNode) initSidecar(ctx context.Context, cfg *Config) error {
 		return nil
 	}
 	n.sidecarAPI = sidecar.NewService(*cfg.Sidecar, n.downloader, n.storageManager, n.l1Beacon, n.log)
-	n.log.Info("Initialized blob API")
+	n.log.Info("Initialized blob sidecar API")
+	if err := n.sidecarAPI.Start(ctx); err != nil {
+		return fmt.Errorf("unable to start blob sidecar API server: %w", err)
+	}
 	return nil
 }
 
@@ -367,6 +370,9 @@ func (n *EsNode) Close() error {
 		n.miner.Close()
 	}
 
+	if n.sidecarAPI != nil {
+		n.sidecarAPI.Stop(context.Background())
+	}
 	// close L2 driver
 	// if n.l2Driver != nil {
 	// 	if err := n.l2Driver.Close(); err != nil {

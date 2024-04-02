@@ -15,6 +15,7 @@ import (
 	"github.com/ethstorage/go-ethstorage/ethstorage"
 	"github.com/ethstorage/go-ethstorage/ethstorage/downloader"
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
+	"github.com/gorilla/mux"
 )
 
 func NewService(cfg Config, downloader *downloader.Downloader, storageMgr *ethstorage.StorageManager, l1Beacon *eth.BeaconClient, l log.Logger) *APIService {
@@ -39,32 +40,31 @@ type APIService struct {
 }
 
 func (a *APIService) Start(ctx context.Context) error {
-	a.log.Debug("starting API server", "address", a.cfg.ListenAddr)
-
+	a.log.Debug("starting blob sidecar API server", "address", a.cfg.ListenAddr)
 	endpoint := net.JoinHostPort(a.cfg.ListenAddr, strconv.Itoa(a.cfg.ListenPort))
-
 	listener, err := net.Listen("tcp", endpoint)
 	if err != nil {
 		return err
 	}
-	a.apiServer = httputil.NewHttpServer(a.api.router)
+	r := mux.NewRouter()
+	r.HandleFunc("/eth/v1/beacon/blob_sidecars/{id}", a.api.blobSidecarHandler)
+
+	a.apiServer = httputil.NewHttpServer(r)
 	go func() {
-		if err := a.apiServer.Serve(listener); err != nil && !errors.Is(err, http.ErrServerClosed) { // todo improve error handling
+		if err := a.apiServer.Serve(listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			a.log.Error("Http server failed", "err", err)
 		}
 	}()
-	a.log.Info("API server started", "address", listener.Addr().String())
+	a.log.Info("Blob sidecar API server started", "address", listener.Addr().String())
 	return nil
 }
 
-func (a *APIService) Stop(ctx context.Context) error {
-	a.log.Info("Stopping API")
-
+func (a *APIService) Stop(ctx context.Context) {
+	a.log.Debug("Stopping blob sidecar API")
 	if a.apiServer != nil {
 		if err := a.apiServer.Shutdown(ctx); err != nil {
-			return err
+			a.log.Error("Error stopping blob sidecar API server", "err", err)
 		}
 	}
-
-	return nil
+	a.log.Info("Blob sidecar API server stopped")
 }

@@ -21,12 +21,12 @@ type Retriever struct {
 	log        log.Logger
 }
 
-func (r *Retriever) GetOPBlobs(beaconBlockHash common.Hash) (*eth.BlobSidecarsOutput, error) {
-	output, err := r.downloader.ReadBlobs(beaconBlockHash)
+func (r *Retriever) BlobSidecars(beaconBlockHash common.Hash) (*eth.BlobSidecars, error) {
+	output, err := r.downloader.ReadBlobSidecars(beaconBlockHash)
 	if err != nil {
 		return nil, err
 	}
-	bso := eth.BlobSidecarsOutput{}
+	bso := eth.BlobSidecars{}
 	for _, sidecar := range output.Data {
 		log.Info("blob", "index", sidecar.Index, "kvIndex", sidecar.KvIndex)
 
@@ -57,9 +57,9 @@ func (r *Retriever) GetOPBlobs(beaconBlockHash common.Hash) (*eth.BlobSidecarsOu
 		for i := 0; i < len(blobData); i++ {
 			blb[i] = blobData[i]
 		}
-		sidecarOut := &eth.BlobSidecarOut{
-			BlobSidecarIn: *sidecar,
-			Blob:          blb,
+		sidecarOut := &eth.BlobSidecar{
+			BlobSidecarMeta: *&sidecar.BlobSidecarMeta,
+			Blob:            blb,
 		}
 		bso.Data = append(bso.Data, sidecarOut)
 	}

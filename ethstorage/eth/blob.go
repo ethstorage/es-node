@@ -18,12 +18,11 @@ type BlobSidecarsInput struct {
 	Data []*BlobSidecarIn `json:"data"`
 }
 
-type BlobSidecarsOutput struct {
-	Data []*BlobSidecarOut `json:"data"`
+type BlobSidecars struct {
+	Data []*BlobSidecar `json:"data"`
 }
 
-type BlobSidecarIn struct {
-	KvIndex                     uint64                      `json:"kv_index"`
+type BlobSidecarMeta struct {
 	Index                       uint64                      `json:"index"`
 	KZGCommitment               [48]byte                    `json:"kzg_commitment"`
 	KZGProof                    [48]byte                    `json:"kzg_proof"`
@@ -31,8 +30,13 @@ type BlobSidecarIn struct {
 	KZGCommitmentInclusionProof KZGCommitmentInclusionProof `json:"kzg_commitment_inclusion_proof"`
 }
 
-type BlobSidecarOut struct {
-	BlobSidecarIn
+type BlobSidecarIn struct {
+	BlobSidecarMeta
+	KvIndex uint64 `json:"kv_index"`
+}
+
+type BlobSidecar struct {
+	BlobSidecarMeta
 	Blob [BlobSize]byte `json:"blob"`
 }
 

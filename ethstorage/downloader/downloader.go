@@ -17,6 +17,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethdb"
@@ -406,18 +407,19 @@ func (s *Downloader) eventsToBlocks(events []types.Log) ([]*blockBlobs, error) {
 	return blocks, nil
 }
 
-func (s *Downloader) ReadBlobs(hash common.Hash) (*eth.BlobSidecarsInput, error) {
-	ret, err := s.db.Get(hash[:])
+func (s *Downloader) ReadBlobSidecars(beaconBlockHash common.Hash) (*eth.BlobSidecarsInput, error) {
+	ret, err := s.db.Get(beaconBlockHash[:])
 	if err != nil {
+		s.log.Error("Error get from db", "err", err, "hash", beaconBlockHash.String())
 		return nil, err
 	}
 	if len(ret) == 0 {
-		return nil, errors.New("blob not found")
+		return nil, ethereum.NotFound
 	}
 	var result eth.BlobSidecarsInput
 	err = json.Unmarshal(ret, &result)
 	if err != nil {
-		s.log.Warn("error decoding blob", "err", err, "hash", hash.String())
+		s.log.Warn("Error decoding blob", "err", err, "hash", beaconBlockHash.String())
 		return nil, errors.New("error decoding blob")
 	}
 	return &result, nil

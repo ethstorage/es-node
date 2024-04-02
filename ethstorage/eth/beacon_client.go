@@ -104,21 +104,28 @@ func KzgToVersionedHash(commit string) (common.Hash, error) {
 	return common.Hash(eth.KZGToVersionedHash(c)), nil
 }
 
-func (c *BeaconClient) BeaconBlockRootHash(ctx context.Context, block string) (*common.Hash, error) {
+type Data struct {
+	Root string `json:"root"`
+}
+type rootHashResp struct {
+	Data Data `json:"data"`
+}
+
+func (c *BeaconClient) BeaconBlockRootHash(ctx context.Context, block string) (common.Hash, error) {
 	beaconUrl, err := url.JoinPath(c.beaconURL, fmt.Sprintf("/eth/v1/beacon/blocks/%s/root", block))
 	if err != nil {
-		return nil, err
+		return common.Hash{}, err
 	}
 	resp, err := http.Get(beaconUrl)
 	if err != nil {
-		return nil, err
+		return common.Hash{}, err
 	}
 	defer resp.Body.Close()
 
-	var hash common.Hash
-	err = json.NewDecoder(resp.Body).Decode(&hash)
+	var respObj rootHashResp
+	err = json.NewDecoder(resp.Body).Decode(&respObj)
 	if err != nil {
-		return nil, err
+		return common.Hash{}, err
 	}
-	return &hash, nil
+	return common.HexToHash(respObj.Data.Root), nil
 }
