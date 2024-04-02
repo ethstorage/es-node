@@ -336,9 +336,12 @@ func (n *EsNode) UploadNodeState(url string) {
 
 			data, err := json.Marshal(state)
 			if err != nil {
+				log.Info("Fail to Marshal node state", "error", err.Error())
+			}
+			_, err = sendMessage(stateUrl, string(data))
+			if err != nil {
 				log.Info("Fail to upload node state", "error", err.Error())
 			}
-			sendMessage(stateUrl, string(data))
 		case <-n.resourcesCtx.Done():
 			return
 		}

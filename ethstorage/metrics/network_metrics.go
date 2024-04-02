@@ -148,7 +148,7 @@ func NewNetworkMetrics() *NetworkMetrics {
 }
 
 func (m *NetworkMetrics) SetPeerInfo(id, version, address string) {
-	m.PeerInfo.WithLabelValues(id, version, address).Set(float64(time.Now().Unix()))
+	m.PeerInfo.WithLabelValues(id, version, address).Set(float64(time.Now().UnixMilli()))
 }
 
 func (m *NetworkMetrics) SetSyncState(id, shardId string, miner common.Address, peerCount int, syncProgress, syncedSeconds,
