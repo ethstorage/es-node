@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"errors"
 
+	"github.com/attestantio/go-eth2-client/spec/deneb"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
@@ -21,21 +22,21 @@ type Retriever struct {
 	log        log.Logger
 }
 
-func (r *Retriever) BlobSidecars(beaconBlockHash common.Hash) (*eth.BlobSidecars, error) {
+func (r *Retriever) GetBlobSidecars(beaconBlockHash common.Hash) (*eth.BlobSidecars, error) {
 	output, err := r.downloader.ReadBlobSidecars(beaconBlockHash)
 	if err != nil {
 		return nil, err
 	}
 	bso := eth.BlobSidecars{}
 	for _, sidecar := range output.Data {
-		log.Info("blob", "index", sidecar.Index, "kvIndex", sidecar.KvIndex)
+		log.Info("Retrieve Blob Sidecars", "index", sidecar.Index, "kvIndex", sidecar.KvIndex)
 
 		commit, _, err := r.storageMgr.TryReadMeta(sidecar.KvIndex)
 		if err != nil {
 			return nil, err
 		}
 		s := ethstorage.HashSizeInContract
-		blobHash, err := eth.KzgToVersionedHash(string(sidecar.KZGCommitment[:]))
+		blobHash, err := eth.KzgToVersionedHash(sidecar.KZGCommitment[:])
 		if err != nil {
 			return nil, err
 		}
@@ -53,13 +54,19 @@ func (r *Retriever) BlobSidecars(beaconBlockHash common.Hash) (*eth.BlobSidecars
 		if !found {
 			return nil, ethereum.NotFound
 		}
-		var blb [eth.BlobSize]byte
+		var blb [deneb.BlobLength]byte
 		for i := 0; i < len(blobData); i++ {
 			blb[i] = blobData[i]
 		}
-		sidecarOut := &eth.BlobSidecar{
-			BlobSidecarMeta: *&sidecar.BlobSidecarMeta,
-			Blob:            blb,
+		sidecarOut := &deneb.BlobSidecar{
+			Index:                       sidecar.Index,
+			KZGCommitment:               sidecar.KZGCommitment,
+			KZGProof:                    sidecar.KZGProof,
+			SignedBlockHeader:           sidecar.SignedBlockHeader,
+			KZGCommitmentInclusionProof: sidecar.KZGCommitmentInclusionProof,
+			// TODO
+			// BlobSidecarMeta: *&sidecar.BlobSidecarMeta,
+			Blob: blb,
 		}
 		bso.Data = append(bso.Data, sidecarOut)
 	}

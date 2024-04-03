@@ -5,11 +5,11 @@ package eth
 
 import (
 	"context"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 
 	"github.com/crate-crypto/go-proto-danksharding-crypto/eth"
 	"github.com/ethereum/go-ethereum/common"
@@ -23,23 +23,9 @@ type BeaconClient struct {
 }
 
 type Blob struct {
+	Index         uint64
 	VersionedHash common.Hash
 	Data          []byte
-}
-
-type beaconBlobs struct {
-	Data []beaconBlobData `json:"data"`
-}
-
-type beaconBlobData struct {
-	BlockRoot       string `json:"block_root"`
-	Index           string `json:"index"`
-	Slot            string `json:"slot"`
-	BlockParentRoot string `json:"block_parent_root"`
-	ProposerIndex   string `json:"proposer_index"`
-	Blob            string `json:"blob"`
-	KZGCommitment   string `json:"kzg_commitment"`
-	KZGProof        string `json:"kzg_proof"`
 }
 
 func NewBeaconClient(url string, basedTime uint64, basedSlot uint64, slotTime uint64) *BeaconClient {
@@ -56,59 +42,51 @@ func (c *BeaconClient) Timestamp2Slot(time uint64) uint64 {
 	return (time-c.basedTime)/c.slotTime + c.basedSlot
 }
 
-func (c *BeaconClient) DownloadBlobs(slot uint64) (map[common.Hash]Blob, error) {
+func (c *BeaconClient) DownloadBlobs(slot uint64) (map[common.Hash]Blob, *BeaconSidecars, error) {
 	// TODO: @Qiang There will be a change to the URL schema and a new indices query parameter
 	// We should do the corresponding change when it takes effect, maybe 4844-devnet-6?
 	// The details here: https://github.com/sigp/lighthouse/issues/4317
 	beaconUrl, err := url.JoinPath(c.beaconURL, fmt.Sprintf("eth/v1/beacon/blob_sidecars/%d", slot))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	resp, err := http.Get(beaconUrl)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer resp.Body.Close()
 
-	var blobs beaconBlobs
+	var blobs BlobSidecars
 	err = json.NewDecoder(resp.Body).Decode(&blobs)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-
 	res := map[common.Hash]Blob{}
 	for _, beaconBlob := range blobs.Data {
-		// decode hex string to bytes
-		asciiBytes, err := hex.DecodeString(beaconBlob.Blob[2:])
+		hash, err := KzgToVersionedHash(beaconBlob.KZGCommitment[:])
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		hash, err := KzgToVersionedHash(beaconBlob.KZGCommitment)
-		if err != nil {
-			return nil, err
-		}
-		res[hash] = Blob{VersionedHash: hash, Data: asciiBytes}
+		res[hash] = Blob{Index: uint64(beaconBlob.Index), VersionedHash: hash, Data: beaconBlob.Blob[:]}
 	}
 
-	return res, nil
-}
-
-func KzgToVersionedHash(commit string) (common.Hash, error) {
-	b, err := hex.DecodeString(commit[2:])
+	clHash, err := c.BeaconBlockRootHash(context.Background(), strconv.FormatUint(slot, 10))
 	if err != nil {
-		return common.Hash{}, err
+		return nil, nil, err
+	}
+	//TODO: save sidecar meta data only
+	bsc := &BeaconSidecars{
+		BeaconRoot:   clHash,
+		BlobSidecars: blobs,
 	}
 
-	c := [48]byte{}
-	copy(c[:], b[:])
-	return common.Hash(eth.KZGToVersionedHash(c)), nil
+	return res, bsc, nil
 }
 
-type Data struct {
-	Root string `json:"root"`
-}
-type rootHashResp struct {
-	Data Data `json:"data"`
+func KzgToVersionedHash(commit []byte) (common.Hash, error) {
+	c := [48]byte{}
+	copy(c[:], commit[:])
+	return common.Hash(eth.KZGToVersionedHash(c)), nil
 }
 
 func (c *BeaconClient) BeaconBlockRootHash(ctx context.Context, block string) (common.Hash, error) {
@@ -121,6 +99,13 @@ func (c *BeaconClient) BeaconBlockRootHash(ctx context.Context, block string) (c
 		return common.Hash{}, err
 	}
 	defer resp.Body.Close()
+
+	type Data struct {
+		Root string `json:"root"`
+	}
+	type rootHashResp struct {
+		Data Data `json:"data"`
+	}
 
 	var respObj rootHashResp
 	err = json.NewDecoder(resp.Body).Decode(&respObj)

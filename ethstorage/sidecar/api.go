@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/attestantio/go-eth2-client/api"
+	"github.com/attestantio/go-eth2-client/spec/deneb"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -133,23 +134,24 @@ func (a *API) blobSidecarHandler(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 	beaconBlockHash, err := a.toBeaconBlockHash(id)
 	if err != nil {
-		a.logger.Error("Failed to get beacon block root hash", "id", id, "err", err)
+		a.logger.Error("Failed to get beacon block root hash", "beaconID", id, "err", err)
 		err.write(w)
 		return
 	}
-	a.logger.Info("Blob sidecar request", "beaconBlockHash", beaconBlockHash, "id", id)
-	result, storageErr := a.retriever.BlobSidecars(beaconBlockHash)
+	a.logger.Info("Blob sidecar request", "beaconID", id, "beaconBlockHash", beaconBlockHash)
+	result, storageErr := a.retriever.GetBlobSidecars(beaconBlockHash)
 	if storageErr != nil {
 		if errors.Is(storageErr, ethereum.NotFound) {
-			a.logger.Info("Blob not found", "beaconBlockHash", beaconBlockHash, "id", id)
+			a.logger.Info("Blob not found", "beaconBlockHash", beaconBlockHash)
 			errUnknownBlock.write(w)
 		} else {
-			a.logger.Info("Unexpected error fetching blobs", "err", storageErr, "beaconBlockHash", beaconBlockHash.String(), "id", id)
+			a.logger.Info("Unexpected error fetching blobs", "err", storageErr, "beaconBlockHash", beaconBlockHash.String())
 			errServerError.write(w)
 		}
 		return
 	}
 
+	a.logger.Info("Blob sidecar request", "length", len(result.Data))
 	filteredBlobSidecars, err := filterBlobs(result.Data, r.URL.Query().Get("indices"))
 	if err != nil {
 		err.write(w)
@@ -158,6 +160,7 @@ func (a *API) blobSidecarHandler(w http.ResponseWriter, r *http.Request) {
 
 	result.Data = filteredBlobSidecars
 
+	a.logger.Info("Blob sidecar request filtered", "length", len(result.Data))
 	w.Header().Set("Content-Type", jsonAcceptType)
 	encodingErr := json.NewEncoder(w).Encode(result)
 	if encodingErr != nil {
@@ -169,7 +172,7 @@ func (a *API) blobSidecarHandler(w http.ResponseWriter, r *http.Request) {
 
 // filterBlobs filters the blobs based on the indices query provided.
 // If no indices are provided, all blobs are returned. If invalid indices are provided, an error is returned.
-func filterBlobs(blobs []*eth.BlobSidecar, indices string) ([]*eth.BlobSidecar, *httpError) {
+func filterBlobs(blobs []*deneb.BlobSidecar, indices string) ([]*deneb.BlobSidecar, *httpError) {
 	if indices == "" {
 		return blobs, nil
 	}
@@ -179,7 +182,7 @@ func filterBlobs(blobs []*eth.BlobSidecar, indices string) ([]*eth.BlobSidecar, 
 		return blobs, nil
 	}
 
-	indicesMap := map[uint64]struct{}{}
+	indicesMap := map[deneb.BlobIndex]struct{}{}
 	for _, index := range splits {
 		parsedInt, err := strconv.ParseUint(index, 10, 64)
 		if err != nil {
@@ -190,10 +193,11 @@ func filterBlobs(blobs []*eth.BlobSidecar, indices string) ([]*eth.BlobSidecar, 
 			return nil, newOutOfRangeError(parsedInt, len(blobs))
 		}
 
-		indicesMap[parsedInt] = struct{}{}
+		blobIndex := deneb.BlobIndex(parsedInt)
+		indicesMap[blobIndex] = struct{}{}
 	}
 
-	filteredBlobs := make([]*eth.BlobSidecar, 0)
+	filteredBlobs := make([]*deneb.BlobSidecar, 0)
 	for _, blob := range blobs {
 		if _, ok := indicesMap[blob.Index]; ok {
 			filteredBlobs = append(filteredBlobs, blob)
