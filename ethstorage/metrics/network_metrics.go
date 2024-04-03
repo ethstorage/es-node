@@ -154,17 +154,17 @@ func (m *NetworkMetrics) SetPeerInfo(id, version, address string) {
 func (m *NetworkMetrics) SetSyncState(id, shardId string, miner common.Address, peerCount int, syncProgress, syncedSeconds,
 	syncTimeRemain, fillEmptyProgress, fillEmptySeconds, fillEmptyTimeRemain, providedBlobs uint64) {
 	m.SyncState.WithLabelValues(id, shardId, miner.Hex(), "PeerCount").Set(float64(peerCount))
-	m.SyncState.WithLabelValues(id, shardId, miner.Hex(), "SyncProgress").Set(float64(syncProgress) / 10000)
+	m.SyncState.WithLabelValues(id, shardId, miner.Hex(), "SyncProgress").Set(float64(syncProgress) / 100)
 	m.SyncState.WithLabelValues(id, shardId, miner.Hex(), "SyncedSeconds").Set(float64(syncedSeconds) / 3600)
 	m.SyncState.WithLabelValues(id, shardId, miner.Hex(), "SyncTimeRemain").Set(float64(syncTimeRemain) / 3600)
-	m.SyncState.WithLabelValues(id, shardId, miner.Hex(), "FillEmptyProgress").Set(float64(fillEmptyProgress) / 10000)
+	m.SyncState.WithLabelValues(id, shardId, miner.Hex(), "FillEmptyProgress").Set(float64(fillEmptyProgress) / 100)
 	m.SyncState.WithLabelValues(id, shardId, miner.Hex(), "FillEmptySeconds").Set(float64(fillEmptySeconds) / 3600)
 	m.SyncState.WithLabelValues(id, shardId, miner.Hex(), "FillEmptyTimeRemain").Set(float64(fillEmptyTimeRemain) / 3600)
 	m.SyncState.WithLabelValues(id, shardId, miner.Hex(), "ProvidedBlobs").Set(float64(providedBlobs))
 }
 
 func (m *NetworkMetrics) SetMiningState(id, shardId string, miner common.Address, miningPower, samplingTime uint64) {
-	m.MiningState.WithLabelValues(id, shardId, miner.Hex(), "MiningPower").Set(float64(miningPower) / 10000)
+	m.MiningState.WithLabelValues(id, shardId, miner.Hex(), "MiningPower").Set(float64(miningPower) / 100)
 	m.MiningState.WithLabelValues(id, shardId, miner.Hex(), "SamplingTime").Set(float64(samplingTime) / 1000)
 }
 
