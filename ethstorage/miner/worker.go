@@ -140,7 +140,7 @@ func newWorker(
 		lg:               lg,
 	}
 	for _, shardId := range storageMgr.Shards() {
-		worker.miningStates[shardId] = &MiningState{MiningPower: 0, SamplingTime: 0}
+		worker.miningStates[shardId] = &MiningState{MiningPower: 10000, SamplingTime: 0}
 		worker.submissionStates[shardId] = &SubmissionState{Succeeded: 0, Failed: 0, Dropped: 0}
 	}
 	worker.wg.Add(2)
@@ -460,12 +460,7 @@ func (w *worker) mineTask(t *taskItem) (bool, error) {
 	startTime := time.Now()
 	nonce := t.nonceStart
 	w.lg.Debug("Mining task started", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonces", fmt.Sprintf("%d~%d", t.nonceStart, t.nonceEnd))
-	miningState := MiningState{10000, 0}
-	defer func() {
-		if miningState.SamplingTime > 0 {
-			w.miningStates[t.shardIdx] = &miningState
-		}
-	}()
+	miningState := w.miningStates[t.shardIdx]
 	for w.isRunning() {
 		if time.Since(startTime).Seconds() > mineTimeOut {
 			if t.thread == 0 {
