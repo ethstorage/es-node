@@ -188,14 +188,14 @@ var (
 		Name:     "p2p.peers.lo",
 		Usage:    "Low-tide peer count. The node actively searches for new peer connections if below this amount.",
 		Required: false,
-		Value:    20,
+		Value:    60,
 		EnvVar:   p2pEnv("PEERS_LO"),
 	}
 	PeersHi = cli.UintFlag{
 		Name:     "p2p.peers.hi",
 		Usage:    "High-tide peer count. The node starts pruning peer connections slowly after reaching this number.",
 		Required: false,
-		Value:    30,
+		Value:    70,
 		EnvVar:   p2pEnv("PEERS_HI"),
 	}
 	PeersGrace = cli.DurationFlag{

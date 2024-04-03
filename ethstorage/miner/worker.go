@@ -242,7 +242,7 @@ func (w *worker) assignTasks(task task, block eth.L1BlockRef, reqDiff *big.Int) 
 			w.lg.Debug("Mining task queued", "shard", ti.shardIdx, "thread", ti.thread, "block", ti.blockNumber, "blockTime", block.Time, "now", uint64(time.Now().Unix()))
 		}
 	}
-	w.lg.Info("Mining tasks assigned", "shard", task.shardIdx, "threads", w.config.ThreadsPerShard, "block", block.Number, "nonces", w.config.NonceLimit)
+	w.lg.Info("Mining tasks assigned", "miner", task.miner, "shard", task.shardIdx, "threads", w.config.ThreadsPerShard, "block", block.Number, "nonces", w.config.NonceLimit)
 }
 
 func (w *worker) updateDifficulty(shardIdx, blockTime uint64) (*big.Int, error) {
@@ -316,6 +316,7 @@ func (w *worker) notifyResultLoop() {
 // resultLoop is a standalone goroutine to submit mining result to L1 contract.
 func (w *worker) resultLoop() {
 	defer w.wg.Done()
+	var startTime = time.Now().Format("2006-01-02 15:04:05")
 	var succeeded, dropped int
 	errorCache := make([]miningError, 0)
 	ticker := time.NewTicker(1 * time.Minute)
@@ -371,9 +372,18 @@ func (w *worker) resultLoop() {
 			w.notifyResultLoop()
 		case <-ticker.C:
 			if len(errorCache) > 0 {
-				log.Error("Mining stats", "succeeded", succeeded, "failed", len(errorCache), "dropped", dropped, "lastError", errorCache[len(errorCache)-1])
+				log.Error(fmt.Sprintf("Mining stats since %s", startTime),
+					"succeeded", succeeded,
+					"failed", len(errorCache),
+					"dropped", dropped,
+					"lastError", errorCache[len(errorCache)-1],
+				)
 			} else {
-				log.Info("Mining stats", "succeeded", succeeded, "failed", len(errorCache), "dropped", dropped)
+				log.Info(fmt.Sprintf("Mining stats since %s", startTime),
+					"succeeded", succeeded,
+					"failed", len(errorCache),
+					"dropped", dropped,
+				)
 			}
 		case err := <-errCh:
 			errorCache = append(errorCache, err)
@@ -445,13 +455,13 @@ func (w *worker) mineTask(t *taskItem) (bool, error) {
 			break
 		}
 		if nonce >= t.nonceEnd {
+			samplingTime := fmt.Sprintf("%.1fs", time.Since(startTime).Seconds())
 			if t.thread == 0 {
-				w.lg.Info("The nonces are exhausted in this slot, waiting for the next block",
-					"samplingTime", fmt.Sprintf("%.1fs", time.Since(startTime).Seconds()), "shard", t.shardIdx, "block", t.blockNumber)
+				w.lg.Info("Sampling done with all nonces",
+					"samplingTime", samplingTime, "shard", t.shardIdx, "block", t.blockNumber)
 			}
-			w.lg.Debug("The nonces are exhausted in this slot, waiting for the next block",
-				"samplingTime", fmt.Sprintf("%.1fs", time.Since(startTime).Seconds()),
-				"shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonceEnd", nonce)
+			w.lg.Debug("Sampling done with all nonces",
+				"samplingTime", samplingTime, "shard", t.shardIdx, "block", t.blockNumber, "thread", t.thread, "nonceEnd", nonce)
 			break
 		}
 		hash0 := initHash(t.miner, t.mixHash, nonce)

@@ -148,6 +148,7 @@ func (conf *Config) Host(log log.Logger, reporter metrics.Reporter) (host.Host, 
 		return nil, fmt.Errorf("failed to open connection gater: %w", err)
 	}
 
+	// TODO as we have MaxPeers to limit the connection count, do we still need this?
 	connMngr, err := conf.ConnMngr(conf)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open connection manager: %w", err)
