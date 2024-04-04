@@ -106,7 +106,7 @@ func NewNetworkMetrics() *NetworkMetrics {
 		PeerState: factory.NewGaugeVec(prometheus.GaugeOpts{
 			Namespace: ns,
 			Subsystem: SubsystemName,
-			Name:      "sync_state",
+			Name:      "peer_state",
 			Help:      "The sync state of each peer",
 		}, []string{
 			"key",
