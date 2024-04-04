@@ -5,6 +5,7 @@ package miner
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 	es "github.com/ethstorage/go-ethstorage/ethstorage"
@@ -31,9 +33,10 @@ const (
 )
 
 var (
-	minedEventSig = crypto.Keccak256Hash([]byte("MinedBlock(uint256,uint256,uint256,uint256,address,uint256)"))
-	errCh         = make(chan miningError, 10)
-	errDropped    = errors.New("dropped: not enough profit")
+	minedEventSig       = crypto.Keccak256Hash([]byte("MinedBlock(uint256,uint256,uint256,uint256,address,uint256)"))
+	errCh               = make(chan miningError, 10)
+	errDropped          = errors.New("dropped: not enough profit")
+	submissionStatusKey = []byte("SubmissionStatusKey")
 )
 
 type MiningState struct {
@@ -95,6 +98,7 @@ type worker struct {
 	config     Config
 	l1API      L1API
 	prover     MiningProver
+	db         ethdb.Database
 	storageMgr *es.StorageManager
 
 	chainHeadCh chan eth.L1BlockRef
@@ -117,12 +121,19 @@ type worker struct {
 
 func newWorker(
 	config Config,
+	db ethdb.Database,
 	storageMgr *es.StorageManager,
 	api L1API,
 	chainHeadCh chan eth.L1BlockRef,
 	prover MiningProver,
 	lg log.Logger,
 ) *worker {
+	var submissionStates map[uint64]SubmissionState
+	if status, _ := db.Get(submissionStatusKey); status != nil {
+		if err := json.Unmarshal(status, &submissionStates); err != nil {
+			log.Error("Failed to decode submission states", "err", err)
+		}
+	}
 	worker := &worker{
 		config:           config,
 		l1API:            api,
@@ -137,10 +148,17 @@ func newWorker(
 		resultLock:       sync.Mutex{},
 		resultMap:        make(map[uint64]*result),
 		storageMgr:       storageMgr,
+		db:               db,
 		lg:               lg,
 	}
 	for _, shardId := range storageMgr.Shards() {
 		worker.miningStates[shardId] = &MiningState{MiningPower: 10000, SamplingTime: 0}
+		if submissionStates != nil {
+			if state, ok := submissionStates[shardId]; ok {
+				worker.submissionStates[shardId] = &state
+				continue
+			}
+		}
 		worker.submissionStates[shardId] = &SubmissionState{Succeeded: 0, Failed: 0, Dropped: 0}
 	}
 	worker.wg.Add(2)
@@ -172,6 +190,13 @@ func (w *worker) close() {
 		for _, ch := range task.taskChs {
 			close(ch)
 		}
+	}
+	status, err := json.Marshal(w.submissionStates)
+	if err != nil {
+		panic(err) // This can only fail during implementation
+	}
+	if err := w.db.Put(submissionStatusKey, status); err != nil {
+		log.Error("Failed to store sync status", "err", err)
 	}
 }
 

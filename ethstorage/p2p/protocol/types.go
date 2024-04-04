@@ -143,11 +143,13 @@ type SyncerParams struct {
 }
 
 type SyncState struct {
-	PeerCount           int    `json:"peer_count"`
-	SyncProgress        uint64 `json:"sync_progress"`
-	SyncedSeconds       uint64 `json:"sync_seconds"`
-	SyncTimeRemain      uint64 `json:"sync_time_remain"`
-	FillEmptyProgress   uint64 `json:"fill_empty_progress"`
-	FillEmptySeconds    uint64 `json:"fill_empty_seconds"`
-	FillEmptyTimeRemain uint64 `json:"fill_empty_time_remain"`
+	PeerCount         int    `json:"peer_count"`
+	BlobsSynced       uint64 `json:"blobs_synced"`
+	BlobsToSync       uint64 `json:"blobs_to_sync"`
+	SyncProgress      uint64 `json:"sync_progress"`
+	SyncedSeconds     uint64 `json:"sync_seconds"`
+	EmptyFilled       uint64 `json:"empty_filled"`
+	EmptyToFill       uint64 `json:"empty_to_fill"`
+	FillEmptyProgress uint64 `json:"fill_empty_progress"`
+	FillEmptySeconds  uint64 `json:"fill_empty_seconds"`
 }

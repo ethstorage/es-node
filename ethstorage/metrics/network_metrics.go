@@ -31,10 +31,8 @@ type NetworkMetrics struct {
 	PeersOfPhase    *prometheus.GaugeVec
 
 	// peer metrics
-	PeerInfo        *prometheus.GaugeVec
-	SyncState       *prometheus.GaugeVec
-	MiningState     *prometheus.GaugeVec
-	SubmissionState *prometheus.GaugeVec
+	PeerInfo  *prometheus.GaugeVec
+	PeerState *prometheus.GaugeVec
 
 	registry *prometheus.Registry
 	factory  metrics.Factory
@@ -105,39 +103,13 @@ func NewNetworkMetrics() *NetworkMetrics {
 			"Address",
 		}),
 
-		SyncState: factory.NewGaugeVec(prometheus.GaugeOpts{
+		PeerState: factory.NewGaugeVec(prometheus.GaugeOpts{
 			Namespace: ns,
 			Subsystem: SubsystemName,
 			Name:      "sync_state",
 			Help:      "The sync state of each peer",
 		}, []string{
-			"peer_id",
-			"shard_id",
-			"miner",
-			"type",
-		}),
-
-		MiningState: factory.NewGaugeVec(prometheus.GaugeOpts{
-			Namespace: ns,
-			Subsystem: SubsystemName,
-			Name:      "mining_state",
-			Help:      "The mining state of each peer",
-		}, []string{
-			"peer_id",
-			"shard_id",
-			"miner",
-			"type",
-		}),
-
-		SubmissionState: factory.NewGaugeVec(prometheus.GaugeOpts{
-			Namespace: ns,
-			Subsystem: SubsystemName,
-			Name:      "submission_state",
-			Help:      "The submission state of each peer",
-		}, []string{
-			"peer_id",
-			"shard_id",
-			"miner",
+			"key",
 			"type",
 		}),
 
@@ -151,27 +123,25 @@ func (m *NetworkMetrics) SetPeerInfo(id, version, address string) {
 	m.PeerInfo.WithLabelValues(id, version, address).Set(float64(time.Now().UnixMilli()))
 }
 
-func (m *NetworkMetrics) SetSyncState(id, shardId string, miner common.Address, peerCount int, syncProgress, syncedSeconds,
-	syncTimeRemain, fillEmptyProgress, fillEmptySeconds, fillEmptyTimeRemain, providedBlobs uint64) {
-	m.SyncState.WithLabelValues(id, shardId, miner.Hex(), "PeerCount").Set(float64(peerCount))
-	m.SyncState.WithLabelValues(id, shardId, miner.Hex(), "SyncProgress").Set(float64(syncProgress) / 100)
-	m.SyncState.WithLabelValues(id, shardId, miner.Hex(), "SyncedSeconds").Set(float64(syncedSeconds) / 3600)
-	m.SyncState.WithLabelValues(id, shardId, miner.Hex(), "SyncTimeRemain").Set(float64(syncTimeRemain) / 3600)
-	m.SyncState.WithLabelValues(id, shardId, miner.Hex(), "FillEmptyProgress").Set(float64(fillEmptyProgress) / 100)
-	m.SyncState.WithLabelValues(id, shardId, miner.Hex(), "FillEmptySeconds").Set(float64(fillEmptySeconds) / 3600)
-	m.SyncState.WithLabelValues(id, shardId, miner.Hex(), "FillEmptyTimeRemain").Set(float64(fillEmptyTimeRemain) / 3600)
-	m.SyncState.WithLabelValues(id, shardId, miner.Hex(), "ProvidedBlobs").Set(float64(providedBlobs))
+func (m *NetworkMetrics) SetSyncState(id string, shardId uint64, miner common.Address, peerCount int, syncProgress, syncedSeconds,
+	fillEmptyProgress, fillEmptySeconds, providedBlobs uint64) {
+	m.PeerState.WithLabelValues(fmt.Sprintf("%s_%d_%s", id, shardId, miner.Hex()), "PeerCount").Set(float64(peerCount))
+	m.PeerState.WithLabelValues(fmt.Sprintf("%s_%d_%s", id, shardId, miner.Hex()), "SyncProgress").Set(float64(syncProgress) / 100)
+	m.PeerState.WithLabelValues(fmt.Sprintf("%s_%d_%s", id, shardId, miner.Hex()), "SyncedSeconds").Set(float64(syncedSeconds) / 3600)
+	m.PeerState.WithLabelValues(fmt.Sprintf("%s_%d_%s", id, shardId, miner.Hex()), "FillEmptyProgress").Set(float64(fillEmptyProgress) / 100)
+	m.PeerState.WithLabelValues(fmt.Sprintf("%s_%d_%s", id, shardId, miner.Hex()), "FillEmptySeconds").Set(float64(fillEmptySeconds) / 3600)
+	m.PeerState.WithLabelValues(fmt.Sprintf("%s_%d_%s", id, shardId, miner.Hex()), "ProvidedBlobs").Set(float64(providedBlobs))
 }
 
-func (m *NetworkMetrics) SetMiningState(id, shardId string, miner common.Address, miningPower, samplingTime uint64) {
-	m.MiningState.WithLabelValues(id, shardId, miner.Hex(), "MiningPower").Set(float64(miningPower) / 100)
-	m.MiningState.WithLabelValues(id, shardId, miner.Hex(), "SamplingTime").Set(float64(samplingTime) / 1000)
+func (m *NetworkMetrics) SetMiningState(id string, shardId uint64, miner common.Address, miningPower, samplingTime uint64) {
+	m.PeerState.WithLabelValues(fmt.Sprintf("%s_%d_%s", id, shardId, miner.Hex()), "MiningPower").Set(float64(miningPower) / 100)
+	m.PeerState.WithLabelValues(fmt.Sprintf("%s_%d_%s", id, shardId, miner.Hex()), "SamplingTime").Set(float64(samplingTime) / 1000)
 }
 
-func (m *NetworkMetrics) SetSubmissionState(id, shardId string, miner common.Address, succeeded, failed, dropped int) {
-	m.SubmissionState.WithLabelValues(id, shardId, miner.Hex(), "Succeeded").Set(float64(succeeded))
-	m.SubmissionState.WithLabelValues(id, shardId, miner.Hex(), "Failed").Set(float64(failed))
-	m.SubmissionState.WithLabelValues(id, shardId, miner.Hex(), "Dropped").Set(float64(dropped))
+func (m *NetworkMetrics) SetSubmissionState(id string, shardId uint64, miner common.Address, succeeded, failed, dropped int) {
+	m.PeerState.WithLabelValues(fmt.Sprintf("%s_%d_%s", id, shardId, miner.Hex()), "Succeeded").Set(float64(succeeded))
+	m.PeerState.WithLabelValues(fmt.Sprintf("%s_%d_%s", id, shardId, miner.Hex()), "Failed").Set(float64(failed))
+	m.PeerState.WithLabelValues(fmt.Sprintf("%s_%d_%s", id, shardId, miner.Hex()), "Dropped").Set(float64(dropped))
 }
 
 func (m *NetworkMetrics) SetStaticMetrics(peersTotal int, minerOfShards map[uint64]map[common.Address]struct{},

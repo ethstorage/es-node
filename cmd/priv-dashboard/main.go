@@ -88,10 +88,10 @@ func (d *dashboard) ReportStateHandler(w http.ResponseWriter, r *http.Request) {
 	d.m.SetPeerInfo(state.Id, state.Version, state.Address)
 	for _, shard := range state.Shards {
 		sync, mining, submission := shard.SyncState, shard.MiningState, shard.SubmissionState
-		d.m.SetSyncState(state.Id, fmt.Sprintf("%d", shard.ShardId), shard.Miner, sync.PeerCount, sync.SyncProgress,
-			sync.SyncedSeconds, sync.SyncTimeRemain, sync.FillEmptyProgress, sync.FillEmptySeconds, sync.FillEmptyTimeRemain, shard.ProvidedBlob)
-		d.m.SetMiningState(state.Id, fmt.Sprintf("%d", shard.ShardId), shard.Miner, mining.MiningPower, mining.SamplingTime)
-		d.m.SetSubmissionState(state.Id, fmt.Sprintf("%d", shard.ShardId), shard.Miner, submission.Succeeded, submission.Failed, submission.Dropped)
+		d.m.SetSyncState(state.Id, shard.ShardId, shard.Miner, sync.PeerCount, sync.SyncProgress,
+			sync.SyncedSeconds, sync.FillEmptyProgress, sync.FillEmptySeconds, shard.ProvidedBlob)
+		d.m.SetMiningState(state.Id, shard.ShardId, shard.Miner, mining.MiningPower, mining.SamplingTime)
+		d.m.SetSubmissionState(state.Id, shard.ShardId, shard.Miner, submission.Succeeded, submission.Failed, submission.Dropped)
 	}
 	w.Write([]byte(`{"status":"ok"}`))
 }
