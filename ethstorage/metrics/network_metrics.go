@@ -125,23 +125,23 @@ func (m *NetworkMetrics) SetPeerInfo(id, version, address string) {
 
 func (m *NetworkMetrics) SetSyncState(id string, shardId uint64, miner common.Address, peerCount int, syncProgress, syncedSeconds,
 	fillEmptyProgress, fillEmptySeconds, providedBlobs uint64) {
-	m.PeerState.WithLabelValues(fmt.Sprintf("%s_%d_%s", id, shardId, miner.Hex()), "PeerCount").Set(float64(peerCount))
-	m.PeerState.WithLabelValues(fmt.Sprintf("%s_%d_%s", id, shardId, miner.Hex()), "SyncProgress").Set(float64(syncProgress) / 100)
-	m.PeerState.WithLabelValues(fmt.Sprintf("%s_%d_%s", id, shardId, miner.Hex()), "SyncedSeconds").Set(float64(syncedSeconds) / 3600)
-	m.PeerState.WithLabelValues(fmt.Sprintf("%s_%d_%s", id, shardId, miner.Hex()), "FillEmptyProgress").Set(float64(fillEmptyProgress) / 100)
-	m.PeerState.WithLabelValues(fmt.Sprintf("%s_%d_%s", id, shardId, miner.Hex()), "FillEmptySeconds").Set(float64(fillEmptySeconds) / 3600)
-	m.PeerState.WithLabelValues(fmt.Sprintf("%s_%d_%s", id, shardId, miner.Hex()), "ProvidedBlobs").Set(float64(providedBlobs))
+	m.PeerState.WithLabelValues(fmt.Sprintf("{\"id\":\"%s\",\"shardid\":%d, \"miner\":\"%s\"}", id, shardId, miner.Hex()), "PeerCount").Set(float64(peerCount))
+	m.PeerState.WithLabelValues(fmt.Sprintf("{\"id\":\"%s\",\"shardid\":%d, \"miner\":\"%s\"}", id, shardId, miner.Hex()), "SyncProgress").Set(float64(syncProgress) / 100)
+	m.PeerState.WithLabelValues(fmt.Sprintf("{\"id\":\"%s\",\"shardid\":%d, \"miner\":\"%s\"}", id, shardId, miner.Hex()), "SyncedSeconds").Set(float64(syncedSeconds) / 3600)
+	m.PeerState.WithLabelValues(fmt.Sprintf("{\"id\":\"%s\",\"shardid\":%d, \"miner\":\"%s\"}", id, shardId, miner.Hex()), "FillEmptyProgress").Set(float64(fillEmptyProgress) / 100)
+	m.PeerState.WithLabelValues(fmt.Sprintf("{\"id\":\"%s\",\"shardid\":%d, \"miner\":\"%s\"}", id, shardId, miner.Hex()), "FillEmptySeconds").Set(float64(fillEmptySeconds) / 3600)
+	m.PeerState.WithLabelValues(fmt.Sprintf("{\"id\":\"%s\",\"shardid\":%d, \"miner\":\"%s\"}", id, shardId, miner.Hex()), "ProvidedBlobs").Set(float64(providedBlobs))
 }
 
 func (m *NetworkMetrics) SetMiningState(id string, shardId uint64, miner common.Address, miningPower, samplingTime uint64) {
-	m.PeerState.WithLabelValues(fmt.Sprintf("%s_%d_%s", id, shardId, miner.Hex()), "MiningPower").Set(float64(miningPower) / 100)
-	m.PeerState.WithLabelValues(fmt.Sprintf("%s_%d_%s", id, shardId, miner.Hex()), "SamplingTime").Set(float64(samplingTime) / 1000)
+	m.PeerState.WithLabelValues(fmt.Sprintf("{\"id\":\"%s\",\"shardid\":%d, \"miner\":\"%s\"}", id, shardId, miner.Hex()), "MiningPower").Set(float64(miningPower) / 100)
+	m.PeerState.WithLabelValues(fmt.Sprintf("{\"id\":\"%s\",\"shardid\":%d, \"miner\":\"%s\"}", id, shardId, miner.Hex()), "SamplingTime").Set(float64(samplingTime) / 1000)
 }
 
 func (m *NetworkMetrics) SetSubmissionState(id string, shardId uint64, miner common.Address, succeeded, failed, dropped int) {
-	m.PeerState.WithLabelValues(fmt.Sprintf("%s_%d_%s", id, shardId, miner.Hex()), "Succeeded").Set(float64(succeeded))
-	m.PeerState.WithLabelValues(fmt.Sprintf("%s_%d_%s", id, shardId, miner.Hex()), "Failed").Set(float64(failed))
-	m.PeerState.WithLabelValues(fmt.Sprintf("%s_%d_%s", id, shardId, miner.Hex()), "Dropped").Set(float64(dropped))
+	m.PeerState.WithLabelValues(fmt.Sprintf("{\"id\":\"%s\",\"shardid\":%d, \"miner\":\"%s\"}", id, shardId, miner.Hex()), "Succeeded").Set(float64(succeeded))
+	m.PeerState.WithLabelValues(fmt.Sprintf("{\"id\":\"%s\",\"shardid\":%d, \"miner\":\"%s\"}", id, shardId, miner.Hex()), "Failed").Set(float64(failed))
+	m.PeerState.WithLabelValues(fmt.Sprintf("{\"id\":\"%s\",\"shardid\":%d, \"miner\":\"%s\"}", id, shardId, miner.Hex()), "Dropped").Set(float64(dropped))
 }
 
 func (m *NetworkMetrics) SetStaticMetrics(peersTotal int, minerOfShards map[uint64]map[common.Address]struct{},
