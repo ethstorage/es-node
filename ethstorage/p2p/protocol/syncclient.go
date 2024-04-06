@@ -1208,8 +1208,8 @@ func (s *SyncClient) ReportPeerSummary() {
 					outbound++
 				}
 			}
-			s.lock.Unlock()
 			log.Info("P2P Summary", "activePeers", len(s.peers), "inbound", inbound, "outbound", outbound)
+			s.lock.Unlock()
 		case <-s.resCtx.Done():
 			log.Info("P2P summary stop")
 			return
