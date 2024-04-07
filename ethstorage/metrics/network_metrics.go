@@ -125,10 +125,11 @@ func (m *NetworkMetrics) SetMiningState(id, version, address string, shardId uin
 	m.PeerState.WithLabelValues(fmt.Sprintf("{\"id\":\"%s\", \"version\":\"%s\", \"address\":\"%s\", \"shardid\":%d, \"miner\":\"%s\"}", id, version, address, shardId, miner.Hex()), "SamplingTime").Set(float64(samplingTime) / 1000)
 }
 
-func (m *NetworkMetrics) SetSubmissionState(id, version, address string, shardId uint64, miner common.Address, succeeded, failed, dropped int) {
+func (m *NetworkMetrics) SetSubmissionState(id, version, address string, shardId uint64, miner common.Address, succeeded, failed, dropped int, lastSucceededTime int64) {
 	m.PeerState.WithLabelValues(fmt.Sprintf("{\"id\":\"%s\", \"version\":\"%s\", \"address\":\"%s\", \"shardid\":%d, \"miner\":\"%s\"}", id, version, address, shardId, miner.Hex()), "Succeeded").Set(float64(succeeded))
 	m.PeerState.WithLabelValues(fmt.Sprintf("{\"id\":\"%s\", \"version\":\"%s\", \"address\":\"%s\", \"shardid\":%d, \"miner\":\"%s\"}", id, version, address, shardId, miner.Hex()), "Failed").Set(float64(failed))
 	m.PeerState.WithLabelValues(fmt.Sprintf("{\"id\":\"%s\", \"version\":\"%s\", \"address\":\"%s\", \"shardid\":%d, \"miner\":\"%s\"}", id, version, address, shardId, miner.Hex()), "Dropped").Set(float64(dropped))
+	m.PeerState.WithLabelValues(fmt.Sprintf("{\"id\":\"%s\", \"version\":\"%s\", \"address\":\"%s\", \"shardid\":%d, \"miner\":\"%s\"}", id, version, address, shardId, miner.Hex()), "LastSucceededTime").Set(float64(lastSucceededTime))
 }
 
 func (m *NetworkMetrics) SetStaticMetrics(peersTotal int, minerOfShards map[uint64]map[common.Address]struct{},
