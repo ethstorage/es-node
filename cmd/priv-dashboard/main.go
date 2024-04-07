@@ -91,7 +91,8 @@ func (d *dashboard) ReportStateHandler(w http.ResponseWriter, r *http.Request) {
 		d.m.SetSyncState(state.Id, state.Version, state.Address, shard.ShardId, shard.Miner, sync.PeerCount, sync.SyncProgress,
 			sync.SyncedSeconds, sync.FillEmptyProgress, sync.FillEmptySeconds, shard.ProvidedBlob)
 		d.m.SetMiningState(state.Id, state.Version, state.Address, shard.ShardId, shard.Miner, mining.MiningPower, mining.SamplingTime)
-		d.m.SetSubmissionState(state.Id, state.Version, state.Address, shard.ShardId, shard.Miner, submission.Succeeded, submission.Failed, submission.Dropped)
+		d.m.SetSubmissionState(state.Id, state.Version, state.Address, shard.ShardId, shard.Miner, submission.Succeeded,
+			submission.Failed, submission.Dropped, submission.LastSucceededTime)
 	}
 	w.Write([]byte(`{"status":"ok"}`))
 }
