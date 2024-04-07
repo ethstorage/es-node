@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/attestantio/go-eth2-client/spec/deneb"
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethdb"
@@ -75,10 +76,11 @@ type blob struct {
 }
 
 type blockBlobs struct {
-	timestamp uint64
-	number    uint64
-	hash      common.Hash
-	blobs     []*blob
+	timestamp  uint64
+	number     uint64
+	hash       common.Hash
+	blobs      []*blob
+	beaconInfo *eth.BlobSidecarsInput
 }
 
 func NewDownloader(
@@ -284,7 +286,6 @@ func (s *Downloader) download() {
 			s.log.Info("LastDownloadedBlock saved into db", "lastDownloadedBlock", end)
 
 			s.dumpBlobsIfNeeded(blobs)
-			s.log.Info("Sidecars to save", "slotsToSave", len(sidecarsPerBlocks))
 			for _, sidecarsPerBlock := range sidecarsPerBlocks {
 				err := s.saveBlobSidecars(sidecarsPerBlock)
 				if err != nil {
@@ -323,9 +324,10 @@ func (s *Downloader) downloadRange(start int64, end int64, toCache bool) ([]blob
 	var sidecarsToSave []*eth.BlobSidecarsInput
 	for _, elBlock := range elBlocks {
 		// attempt to read the blobs from the cache first
-		res := s.Cache.Blobs(elBlock.hash)
-		if res != nil {
-			blobs = append(blobs, res...)
+		blbs, scs := s.Cache.Blobs(elBlock.hash)
+		if blbs != nil {
+			blobs = append(blobs, blbs...)
+			sidecarsToSave = append(sidecarsToSave, scs)
 			s.log.Info("Blob found in the cache, continue to the next block", "blockNumber", elBlock.number)
 			continue
 		} else {
@@ -366,12 +368,13 @@ func (s *Downloader) downloadRange(start int64, end int64, toCache bool) ([]blob
 			kvIndexAssigned = append(kvIndexAssigned, sidecarIn.KvIndex)
 			sidecarIns = append(sidecarIns, sidecarIn)
 		}
-		s.log.Info("KvIndices assigned", "slot", slot, "kvIndices", kvIndexAssigned)
+		s.log.Info("KvIndices bound", "slot", slot, "block", elBlock.number, "kvIndices", kvIndexAssigned)
 		sidecarsInput := &eth.BlobSidecarsInput{
 			BeaconRoot: sidecarsPerBlock.BeaconRoot,
 			Data:       sidecarIns,
 		}
 		if toCache {
+			elBlock.beaconInfo = sidecarsInput
 			s.Cache.SetBlockBlobs(elBlock)
 		}
 		s.log.Info("Download range", "sidecarsInputLen", len(sidecarsInput.Data))
@@ -447,24 +450,21 @@ func (s *Downloader) eventsToBlocks(events []types.Log) ([]*blockBlobs, error) {
 func (s *Downloader) ReadBlobSidecars(beaconBlockHash common.Hash) (*eth.BlobSidecarsInput, error) {
 	has, err := s.db.Has(beaconBlockHash[:])
 	if err != nil {
-		s.log.Error("Error get from db", "err", err, "hash", beaconBlockHash.String())
+		s.log.Error("Error get from db", "err", err, "beaconRoot", beaconBlockHash.String())
 		return nil, err
 	}
 	if !has {
-		return nil, errors.New("blob not found")
+		return nil, ethereum.NotFound
 	}
 	ret, err := s.db.Get(beaconBlockHash[:])
 	if err != nil {
-		s.log.Error("Error get from db", "err", err, "hash", beaconBlockHash.String())
+		s.log.Error("Error get from db", "err", err, "beaconRoot", beaconBlockHash.String())
 		return nil, err
-	}
-	if len(ret) == 0 {
-		return nil, errors.New("blob not found")
 	}
 	var result eth.BlobSidecarsInput
 	err = json.Unmarshal(ret, &result)
 	if err != nil {
-		s.log.Warn("Error decoding blob", "err", err, "hash", beaconBlockHash.String())
+		s.log.Warn("Error decoding blob", "err", err, "beaconRoot", beaconBlockHash.String())
 		return nil, errors.New("error decoding blob")
 	}
 	return &result, nil

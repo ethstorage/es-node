@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/ethstorage/go-ethstorage/ethstorage"
+	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
 )
 
 type BlobCache struct {
@@ -29,19 +30,19 @@ func (c *BlobCache) SetBlockBlobs(block *blockBlobs) {
 	c.blocks[block.hash] = block
 }
 
-func (c *BlobCache) Blobs(hash common.Hash) []blob {
+func (c *BlobCache) Blobs(hash common.Hash) ([]blob, *eth.BlobSidecarsInput) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
 	if _, exist := c.blocks[hash]; !exist {
-		return nil
+		return nil, nil
 	}
 
 	res := []blob{}
 	for _, blob := range c.blocks[hash].blobs {
 		res = append(res, *blob)
 	}
-	return res
+	return res, c.blocks[hash].beaconInfo
 }
 
 func (c *BlobCache) GetKeyValueByIndex(idx uint64, hash common.Hash) []byte {

@@ -29,7 +29,7 @@ func (r *Retriever) GetBlobSidecars(beaconBlockHash common.Hash) (*eth.BlobSidec
 	}
 	bso := eth.BlobSidecars{}
 	for _, sidecar := range output.Data {
-		log.Info("Retrieve Blob Sidecars", "index", sidecar.Index, "kvIndex", sidecar.KvIndex)
+		log.Info("Retrieved blob sidecars", "index", sidecar.Index, "kvIndex", sidecar.KvIndex)
 
 		commit, _, err := r.storageMgr.TryReadMeta(sidecar.KvIndex)
 		if err != nil {
@@ -64,9 +64,7 @@ func (r *Retriever) GetBlobSidecars(beaconBlockHash common.Hash) (*eth.BlobSidec
 			KZGProof:                    sidecar.KZGProof,
 			SignedBlockHeader:           sidecar.SignedBlockHeader,
 			KZGCommitmentInclusionProof: sidecar.KZGCommitmentInclusionProof,
-			// TODO
-			// BlobSidecarMeta: *&sidecar.BlobSidecarMeta,
-			Blob: blb,
+			Blob:                        blb,
 		}
 		bso.Data = append(bso.Data, sidecarOut)
 	}

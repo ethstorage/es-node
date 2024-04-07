@@ -138,29 +138,27 @@ func (a *API) blobSidecarHandler(w http.ResponseWriter, r *http.Request) {
 		err.write(w)
 		return
 	}
-	a.logger.Info("Blob sidecar request", "beaconID", id, "beaconBlockHash", beaconBlockHash)
+	a.logger.Info("BeaconID to beacon root hash", "beaconID", id, "beaconRoot", beaconBlockHash)
 	result, storageErr := a.retriever.GetBlobSidecars(beaconBlockHash)
 	if storageErr != nil {
 		if errors.Is(storageErr, ethereum.NotFound) {
-			a.logger.Info("Blob not found", "beaconBlockHash", beaconBlockHash)
+			a.logger.Info("Blob not found", "beaconRoot", beaconBlockHash)
 			errUnknownBlock.write(w)
 		} else {
-			a.logger.Info("Unexpected error fetching blobs", "err", storageErr, "beaconBlockHash", beaconBlockHash.String())
+			a.logger.Info("Unexpected error fetching blobs", "err", storageErr, "beaconRoot", beaconBlockHash.String())
 			errServerError.write(w)
 		}
 		return
 	}
 
-	a.logger.Info("Blob sidecar request", "length", len(result.Data))
 	filteredBlobSidecars, err := filterBlobs(result.Data, r.URL.Query().Get("indices"))
 	if err != nil {
 		err.write(w)
 		return
 	}
-
+	a.logger.Info("Blob sidecar request handled", "blobs", len(filteredBlobSidecars))
 	result.Data = filteredBlobSidecars
 
-	a.logger.Info("Blob sidecar request filtered", "length", len(result.Data))
 	w.Header().Set("Content-Type", jsonAcceptType)
 	encodingErr := json.NewEncoder(w).Encode(result)
 	if encodingErr != nil {
