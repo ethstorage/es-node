@@ -1,4 +1,4 @@
-package sidecar
+package archiver
 
 import (
 	"context"

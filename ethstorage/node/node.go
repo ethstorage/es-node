@@ -16,13 +16,13 @@ import (
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethstorage/go-ethstorage/ethstorage"
+	"github.com/ethstorage/go-ethstorage/ethstorage/archiver"
 	"github.com/ethstorage/go-ethstorage/ethstorage/downloader"
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
 	"github.com/ethstorage/go-ethstorage/ethstorage/metrics"
 	"github.com/ethstorage/go-ethstorage/ethstorage/miner"
 	"github.com/ethstorage/go-ethstorage/ethstorage/p2p"
 	"github.com/ethstorage/go-ethstorage/ethstorage/prover"
-	"github.com/ethstorage/go-ethstorage/ethstorage/sidecar"
 	"github.com/hashicorp/go-multierror"
 )
 
@@ -56,7 +56,7 @@ type EsNode struct {
 	// feed to notify miner of the sync done event to start mining
 	feed *event.Feed
 	// long term blob provider API for rollups
-	sidecarAPI *sidecar.APIService
+	sidecarAPI *archiver.APIService
 }
 
 func New(ctx context.Context, cfg *Config, log log.Logger, appVersion string, m metrics.Metricer) (*EsNode, error) {
@@ -270,7 +270,7 @@ func (n *EsNode) initSidecar(ctx context.Context, cfg *Config) error {
 		// not enabled
 		return nil
 	}
-	n.sidecarAPI = sidecar.NewService(*cfg.Sidecar, n.downloader, n.storageManager, n.l1Beacon, n.log)
+	n.sidecarAPI = archiver.NewService(*cfg.Sidecar, n.downloader, n.storageManager, n.l1Beacon, n.log)
 	n.log.Info("Initialized blob sidecar API")
 	if err := n.sidecarAPI.Start(ctx); err != nil {
 		return fmt.Errorf("unable to start blob sidecar API server: %w", err)

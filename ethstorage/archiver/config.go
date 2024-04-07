@@ -1,7 +1,7 @@
 // Copyright 2022-2023, EthStorage.
 // For license information, see https://github.com/ethstorage/es-node/blob/main/LICENSE
 
-package sidecar
+package archiver
 
 import (
 	"github.com/ethstorage/go-ethstorage/ethstorage/rollup"
@@ -9,9 +9,9 @@ import (
 )
 
 const (
-	EnabledFlagName    = "sidecar.enabled"
-	ListenAddrFlagName = "sidecar.addr"
-	ListenPortFlagName = "sidecar.port"
+	EnabledFlagName    = "archiver.enabled"
+	ListenAddrFlagName = "archiver.addr"
+	ListenPortFlagName = "archiver.port"
 )
 
 type Config struct {
@@ -21,22 +21,22 @@ type Config struct {
 }
 
 func CLIFlags(envPrefix string) []cli.Flag {
-	envPrefix += "_SIDECAR"
+	envPrefix += "_ARCHIVER"
 	flags := []cli.Flag{
 		cli.BoolFlag{
 			Name:   EnabledFlagName,
-			Usage:  "Blob sidecar API enabled",
+			Usage:  "Blob archiver enabled",
 			EnvVar: rollup.PrefixEnvVar(envPrefix, "ENABLED"),
 		},
 		cli.StringFlag{
 			Name:   ListenAddrFlagName,
-			Usage:  "Blob sidecar API listening address",
+			Usage:  "Blob archiver listening address",
 			EnvVar: rollup.PrefixEnvVar(envPrefix, "ADDRESS"),
 			Value:  "127.0.0.1",
 		},
 		cli.IntFlag{
 			Name:   ListenPortFlagName,
-			Usage:  "Blob sidecar API listening port",
+			Usage:  "Blob archiver listening port",
 			EnvVar: rollup.PrefixEnvVar(envPrefix, "PORT"),
 			Value:  9645,
 		},

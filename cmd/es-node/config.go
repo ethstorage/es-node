@@ -14,6 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethstorage/go-ethstorage/ethstorage/archiver"
 	"github.com/ethstorage/go-ethstorage/ethstorage/db"
 	"github.com/ethstorage/go-ethstorage/ethstorage/downloader"
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
@@ -22,7 +23,6 @@ import (
 	"github.com/ethstorage/go-ethstorage/ethstorage/node"
 	p2pcli "github.com/ethstorage/go-ethstorage/ethstorage/p2p/cli"
 	"github.com/ethstorage/go-ethstorage/ethstorage/rollup"
-	"github.com/ethstorage/go-ethstorage/ethstorage/sidecar"
 	"github.com/ethstorage/go-ethstorage/ethstorage/signer"
 	"github.com/ethstorage/go-ethstorage/ethstorage/storage"
 	"github.com/urfave/cli"
@@ -71,7 +71,7 @@ func NewConfig(ctx *cli.Context, log log.Logger) (*node.Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to load miner config: %w", err)
 	}
-	sidecarConfig := sidecar.NewConfig(ctx)
+	sidecarConfig := archiver.NewConfig(ctx)
 	// l2Endpoint, err := NewL2EndpointConfig(ctx, log)
 	// if err != nil {
 	// 	return nil, fmt.Errorf("failed to load l2 endpoints info: %w", err)

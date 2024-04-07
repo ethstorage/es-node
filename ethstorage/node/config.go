@@ -11,13 +11,13 @@ import (
 	"time"
 
 	oppprof "github.com/ethereum-optimism/optimism/op-service/pprof"
+	"github.com/ethstorage/go-ethstorage/ethstorage/archiver"
 	"github.com/ethstorage/go-ethstorage/ethstorage/db"
 	"github.com/ethstorage/go-ethstorage/ethstorage/downloader"
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
 	"github.com/ethstorage/go-ethstorage/ethstorage/miner"
 	"github.com/ethstorage/go-ethstorage/ethstorage/p2p"
 	"github.com/ethstorage/go-ethstorage/ethstorage/rollup"
-	"github.com/ethstorage/go-ethstorage/ethstorage/sidecar"
 	"github.com/ethstorage/go-ethstorage/ethstorage/storage"
 )
 
@@ -56,7 +56,7 @@ type Config struct {
 	// Heartbeat HeartbeatConfig
 	Mining *miner.Config
 
-	Sidecar *sidecar.Config
+	Sidecar *archiver.Config
 }
 
 type MetricsConfig struct {
