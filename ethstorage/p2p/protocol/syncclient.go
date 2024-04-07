@@ -240,6 +240,9 @@ func (s *SyncClient) loadSyncStatus() {
 			log.Error("Failed to decode storage sync status", "err", err)
 		} else {
 			for _, t := range progress.Tasks {
+				// TODO if t.State is nil, that mean the status is marshal by old state,
+				// set process value to SyncState to make it compatible.
+				// it can be removed after public test done.
 				if t.State == nil {
 					t.State = &SyncState{
 						PeerCount:         0,
