@@ -107,7 +107,7 @@ func NewNetworkMetrics() *NetworkMetrics {
 }
 
 func (m *NetworkMetrics) SetPeerInfo(id, version, address string, shardId uint64, miner common.Address) {
-	m.PeerState.WithLabelValues(fmt.Sprintf("{\"id\":\"%s\", \"version\":%s, \"address\":%s, \"shardid\":%d, \"miner\":\"%s\"}", id, version, address, shardId, miner.Hex()), "PeerCount").Set(float64(time.Now().UnixMilli()))
+	m.PeerState.WithLabelValues(fmt.Sprintf("{\"id\":\"%s\", \"version\":%s, \"address\":%s, \"shardid\":%d, \"miner\":\"%s\"}", id, version, address, shardId, miner.Hex()), "UpdateTime").Set(float64(time.Now().UnixMilli()))
 }
 
 func (m *NetworkMetrics) SetSyncState(id, version, address string, shardId uint64, miner common.Address, peerCount int, syncProgress, syncedSeconds,
