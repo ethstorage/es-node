@@ -153,7 +153,7 @@ func newWorker(
 		lg:               lg,
 	}
 	for _, shardId := range storageMgr.Shards() {
-		worker.miningStates[shardId] = &MiningState{MiningPower: 10000, SamplingTime: 0}
+		worker.miningStates[shardId] = &MiningState{MiningPower: 0, SamplingTime: 0}
 		if submissionStates != nil {
 			if state, ok := submissionStates[shardId]; ok {
 				worker.submissionStates[shardId] = &state
