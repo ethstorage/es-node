@@ -5,7 +5,6 @@ package protocol
 
 import (
 	"context"
-	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -55,16 +54,6 @@ func (p *Peer) Version() uint {
 
 func (p *Peer) Shards() map[common.Address][]uint64 {
 	return p.shards
-}
-
-// SetShards this should only be set when doing handshake.
-func (p *Peer) SetShards(shards map[common.Address][]uint64) error {
-	// shards can only be set once.
-	if p.shards != nil {
-		return fmt.Errorf("peer shards has been set multi times")
-	}
-	p.shards = shards
-	return nil
 }
 
 // IsShardExist checks whether one specific shard is supported by this peer.
