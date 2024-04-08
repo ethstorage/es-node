@@ -84,7 +84,7 @@ func (d *dashboard) ReportStateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Info("Get state from peer", "peer id", state.Id)
+	log.Info("Get state from peer", "peer id", state.Id, "state", string(body))
 	d.nodes[state.Id] = &record{receivedTime: time.Now(), state: &state}
 	for _, shard := range state.Shards {
 		d.m.SetPeerInfo(state.Id, state.Version, state.Address, shard.ShardId, shard.Miner)

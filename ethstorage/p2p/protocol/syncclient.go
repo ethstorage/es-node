@@ -269,7 +269,6 @@ func (s *SyncClient) loadSyncStatus() {
 				}
 				for _, sEmptyTask := range t.SubEmptyTasks {
 					sEmptyTask.task = t
-					t.State.EmptyToFill += sEmptyTask.Last - sEmptyTask.First
 				}
 			}
 		}
@@ -452,8 +451,6 @@ func (s *SyncClient) cleanTasks() {
 	if allDone {
 		s.setSyncDone()
 		log.Info("Storage sync done", "subTaskCount", len(s.tasks))
-
-		s.report(true)
 	}
 }
 
@@ -532,8 +529,8 @@ func (s *SyncClient) Close() error {
 	s.resCancel()
 	s.wg.Wait()
 	s.cleanTasks()
-	s.saveSyncStatus(true)
 	s.report(true)
+	s.saveSyncStatus(true)
 	return nil
 }
 
@@ -591,6 +588,7 @@ func (s *SyncClient) mainLoop() {
 		// Remove all completed tasks and terminate sync if everything's done
 		s.cleanTasks()
 		if s.syncDone {
+			s.report(true)
 			s.saveSyncStatus(true)
 			return
 		}
@@ -841,11 +839,6 @@ func (s *SyncClient) assignFillEmptyBlobTasks() {
 				s.lock.Lock()
 				state := eTask.task.State
 				state.EmptyFilled += filled
-				if state.EmptyToFill >= filled {
-					state.EmptyToFill -= filled
-				} else {
-					state.EmptyToFill = 0
-				}
 				eTask.First = next
 				if eTask.First >= eTask.Last {
 					eTask.done = true
@@ -1131,6 +1124,9 @@ func (s *SyncClient) report(force bool) {
 	}
 	s.logTime = time.Now()
 
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
 	s.reportSyncState(duration)
 	s.reportFillEmptyState(duration)
 }
@@ -1142,7 +1138,10 @@ func (s *SyncClient) reportSyncState(duration uint64) {
 			blobsToSync = blobsToSync + (st.Last - st.next)
 		}
 		t.State.BlobsToSync = blobsToSync + uint64(t.healTask.count())
-		t.State.SyncProgress = t.State.BlobsSynced * 10000 / (t.State.BlobsSynced + t.State.BlobsToSync)
+		if t.State.BlobsSynced+t.State.BlobsToSync != 0 {
+			t.State.SyncProgress = t.State.BlobsSynced * 10000 / (t.State.BlobsSynced + t.State.BlobsToSync)
+		}
+
 		// If sync is complete, stop adding sync time
 		if t.State.BlobsToSync != 0 {
 			t.State.SyncedSeconds = t.State.SyncedSeconds + duration
@@ -1163,10 +1162,18 @@ func (s *SyncClient) reportSyncState(duration uint64) {
 
 func (s *SyncClient) reportFillEmptyState(duration uint64) {
 	for _, t := range s.tasks {
-		if t.State.EmptyToFill+t.State.EmptyFilled == 0 {
+		if t.State.EmptyFilled == 0 && len(t.SubEmptyTasks) == 0 {
 			continue
 		}
-		t.State.FillEmptyProgress = t.State.EmptyFilled * 10000 / (t.State.EmptyFilled + t.State.EmptyToFill)
+		emptyToFill := uint64(0)
+		for _, st := range t.SubEmptyTasks {
+			emptyToFill = emptyToFill + (st.Last - st.First)
+		}
+		t.State.EmptyToFill = emptyToFill
+		if t.State.EmptyFilled+t.State.EmptyToFill != 0 {
+			t.State.FillEmptyProgress = t.State.EmptyFilled * 10000 / (t.State.EmptyFilled + t.State.EmptyToFill)
+		}
+
 		// If fill empty is complete, stop adding sync time
 		if t.State.EmptyToFill != 0 {
 			t.State.FillEmptySeconds = t.State.FillEmptySeconds + duration

@@ -495,6 +495,7 @@ func (w *worker) mineTask(t *taskItem) (bool, error) {
 				w.lg.Warn("Mining tasks timed out", "shard", t.shardIdx, "block", t.blockNumber,
 					"noncesTried", fmt.Sprintf("%d(%.1f%%)", nonceTriedTotal, float64(nonceTriedTotal*100)/float64(w.config.NonceLimit)),
 				)
+				miningState.SamplingTime = uint64(time.Since(startTime).Milliseconds())
 				miningState.MiningPower = nonceTriedTotal * 10000 / w.config.NonceLimit
 			}
 			w.lg.Debug("Mining task timed out", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "noncesTried", nonce-t.nonceStart)
@@ -509,6 +510,7 @@ func (w *worker) mineTask(t *taskItem) (bool, error) {
 			w.lg.Debug("Sampling done with all nonces",
 				"samplingTime", samplingTime, "shard", t.shardIdx, "block", t.blockNumber, "thread", t.thread, "nonceEnd", nonce)
 			miningState.SamplingTime = uint64(time.Since(startTime).Milliseconds())
+			miningState.MiningPower = 10000
 			break
 		}
 		hash0 := initHash(t.miner, t.mixHash, nonce)
