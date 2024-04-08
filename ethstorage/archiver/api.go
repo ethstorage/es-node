@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/attestantio/go-eth2-client/api"
-	"github.com/attestantio/go-eth2-client/spec/deneb"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -170,7 +169,7 @@ func (a *API) blobSidecarHandler(w http.ResponseWriter, r *http.Request) {
 
 // filterBlobs filters the blobs based on the indices query provided.
 // If no indices are provided, all blobs are returned. If invalid indices are provided, an error is returned.
-func filterBlobs(blobs []*deneb.BlobSidecar, indices string) ([]*deneb.BlobSidecar, *httpError) {
+func filterBlobs(blobs []*eth.APIBlobSidecar, indices string) ([]*eth.APIBlobSidecar, *httpError) {
 	if indices == "" {
 		return blobs, nil
 	}
@@ -180,7 +179,7 @@ func filterBlobs(blobs []*deneb.BlobSidecar, indices string) ([]*deneb.BlobSidec
 		return blobs, nil
 	}
 
-	indicesMap := map[deneb.BlobIndex]struct{}{}
+	indicesMap := map[string]struct{}{}
 	for _, index := range splits {
 		parsedInt, err := strconv.ParseUint(index, 10, 64)
 		if err != nil {
@@ -191,13 +190,14 @@ func filterBlobs(blobs []*deneb.BlobSidecar, indices string) ([]*deneb.BlobSidec
 			return nil, newOutOfRangeError(parsedInt, len(blobs))
 		}
 
-		blobIndex := deneb.BlobIndex(parsedInt)
+		blobIndex := strconv.FormatUint(parsedInt, 10)
 		indicesMap[blobIndex] = struct{}{}
 	}
 
-	filteredBlobs := make([]*deneb.BlobSidecar, 0)
+	filteredBlobs := make([]*eth.APIBlobSidecar, 0)
 	for _, blob := range blobs {
-		if _, ok := indicesMap[blob.Index]; ok {
+		blobIndex := strconv.FormatUint(blob.Index, 10)
+		if _, ok := indicesMap[blobIndex]; ok {
 			filteredBlobs = append(filteredBlobs, blob)
 		}
 	}

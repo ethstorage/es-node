@@ -17,7 +17,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/attestantio/go-eth2-client/spec/deneb"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -386,7 +385,7 @@ func (s *Downloader) downloadRange(start int64, end int64, toCache bool) ([]blob
 	return blobs, sidecarsToSave, nil
 }
 
-func getSidecarByIndex(bscs *eth.BeaconSidecars, index uint64) *deneb.BlobSidecar {
+func getSidecarByIndex(bscs *eth.BeaconSidecars, index uint64) *eth.BlobSidecar {
 	for _, sidecar := range bscs.Data {
 		if uint64(sidecar.Index) == index {
 			return sidecar

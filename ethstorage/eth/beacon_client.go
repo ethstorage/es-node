@@ -56,7 +56,7 @@ func (c *BeaconClient) DownloadBlobs(slot uint64) (map[common.Hash]Blob, *Beacon
 	}
 	defer resp.Body.Close()
 
-	var blobs BlobSidecars
+	var blobs APIBlobSidecars
 	err = json.NewDecoder(resp.Body).Decode(&blobs)
 	if err != nil {
 		return nil, nil, err
@@ -74,10 +74,10 @@ func (c *BeaconClient) DownloadBlobs(slot uint64) (map[common.Hash]Blob, *Beacon
 	if err != nil {
 		return nil, nil, err
 	}
-	//TODO: save sidecar meta data only
+
 	bsc := &BeaconSidecars{
 		BeaconRoot:   clHash,
-		BlobSidecars: blobs,
+		BlobSidecars: blobs.toBlobSidecars(),
 	}
 
 	return res, bsc, nil
