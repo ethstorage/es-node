@@ -856,8 +856,8 @@ func (s *SyncClient) getIdlePeerForTask(t *task) *Peer {
 		if _, ok := t.statelessPeers[id]; ok {
 			continue
 		}
-		p := s.peers[id]
-		if p.IsShardExist(t.Contract, t.ShardId) {
+		p, ok := s.peers[id]
+		if ok && p.IsShardExist(t.Contract, t.ShardId) {
 			return p
 		}
 	}
@@ -1199,6 +1199,7 @@ func (s *SyncClient) ReportPeerSummary() {
 		select {
 		case <-ticker.C:
 			inbound, outbound := 0, 0
+			s.lock.Lock()
 			for _, p := range s.peers {
 				if p.direction == network.DirInbound {
 					inbound++
@@ -1207,6 +1208,7 @@ func (s *SyncClient) ReportPeerSummary() {
 				}
 			}
 			log.Info("P2P Summary", "activePeers", len(s.peers), "inbound", inbound, "outbound", outbound)
+			s.lock.Unlock()
 		case <-s.resCtx.Done():
 			log.Info("P2P summary stop")
 			return
@@ -1215,6 +1217,9 @@ func (s *SyncClient) ReportPeerSummary() {
 }
 
 func (s *SyncClient) needThisPeer(contractShards map[common.Address][]uint64) bool {
+	if contractShards == nil {
+		return false
+	}
 	for contract, shards := range contractShards {
 		for _, shard := range shards {
 			for _, t := range s.tasks {
