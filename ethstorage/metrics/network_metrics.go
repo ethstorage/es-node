@@ -3,13 +3,13 @@ package metrics
 import (
 	"context"
 	"fmt"
-	"github.com/ethereum/go-ethereum/common"
 	"net"
 	"strconv"
 	"time"
 
 	ophttp "github.com/ethereum-optimism/optimism/op-service/httputil"
 	"github.com/ethereum-optimism/optimism/op-service/metrics"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -21,8 +21,6 @@ const (
 
 // NetworkMetrics tracks all the metrics for the es-node.
 type NetworkMetrics struct {
-	lastSubmissionTimes map[uint64]uint64
-
 	// static Status
 	PeersTotal      prometheus.Gauge
 	MinersOfShards  *prometheus.GaugeVec
