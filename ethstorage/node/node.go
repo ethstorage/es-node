@@ -266,11 +266,11 @@ func (n *EsNode) initMiner(ctx context.Context, cfg *Config) error {
 }
 
 func (n *EsNode) initSidecar(ctx context.Context, cfg *Config) error {
-	if cfg.Sidecar == nil {
+	if cfg.Archiver == nil {
 		// not enabled
 		return nil
 	}
-	n.sidecarAPI = archiver.NewService(*cfg.Sidecar, n.downloader, n.storageManager, n.l1Beacon, n.log)
+	n.sidecarAPI = archiver.NewService(*cfg.Archiver, n.downloader, n.storageManager, n.l1Beacon, n.log)
 	n.log.Info("Initialized blob sidecar API")
 	if err := n.sidecarAPI.Start(ctx); err != nil {
 		return fmt.Errorf("unable to start blob sidecar API server: %w", err)

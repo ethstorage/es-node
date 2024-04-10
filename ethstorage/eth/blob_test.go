@@ -4,6 +4,7 @@
 package eth
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -13,13 +14,15 @@ import (
 func TestRoundTrip(t *testing.T) {
 
 	var cmt, proof [48]byte
-	copy(cmt[:], common.Hex2Bytes("0xad5d75d9cec4d87686a060fc42b22658404be576113e89e462c41f14c9caa9f74f5c36e9ada58fcea42dbbce261e13e3"))
-	copy(proof[:], common.Hex2Bytes("0x90f47f5cf58b581f2ebe01d6a36ccc6a97dc2f589925c236abd0f8ded6abeba2e2b27d6560cd16cecc2401d923b14083"))
+	copy(cmt[:], common.Hex2Bytes("ad5d75d9cec4d87686a060fc42b22658404be576113e89e462c41f14c9caa9f74f5c36e9ada58fcea42dbbce261e13e3"))
+	copy(proof[:], common.Hex2Bytes("90f47f5cf58b581f2ebe01d6a36ccc6a97dc2f589925c236abd0f8ded6abeba2e2b27d6560cd16cecc2401d923b14083"))
 	blob := BlobSidecar{
 		Index:         4,
 		KZGCommitment: cmt,
 		KZGProof:      proof,
 	}
+
+	fmt.Println(blob.String())
 
 	jsonData, err := blob.MarshalJSON()
 	if err != nil {

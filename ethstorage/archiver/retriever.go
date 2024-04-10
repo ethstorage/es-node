@@ -13,6 +13,7 @@ import (
 	"github.com/ethstorage/go-ethstorage/ethstorage"
 	"github.com/ethstorage/go-ethstorage/ethstorage/downloader"
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
+	"github.com/status-im/keycard-go/hexutils"
 )
 
 type Retriever struct {
@@ -28,7 +29,7 @@ func (r *Retriever) GetBlobSidecars(beaconBlockHash common.Hash) (*eth.APIBlobSi
 	}
 	bso := eth.APIBlobSidecars{}
 	for _, sidecar := range output.Data {
-		log.Info("Retrieved blob sidecars", "index", sidecar.Index, "kvIndex", sidecar.KvIndex)
+		log.Info("Retrieved blob sidecars", "index", sidecar.Index, "kvIndex", sidecar.KvIndex, "commitment", hexutils.BytesToHex(sidecar.KZGCommitment[:]))
 
 		commit, _, err := r.storageMgr.TryReadMeta(sidecar.KvIndex)
 		if err != nil {
@@ -42,10 +43,10 @@ func (r *Retriever) GetBlobSidecars(beaconBlockHash common.Hash) (*eth.APIBlobSi
 		if !bytes.Equal(commit[0:s], blobHash[0:s]) {
 			return nil, errors.New("commits not same")
 		}
-
 		readCommit := common.Hash{}
 		copy(readCommit[0:s], blobHash[0:s])
 
+		log.Info("Commits same", "versionedHash", blobHash.String(), "readCommit", readCommit.String())
 		blobData, found, err := r.storageMgr.TryRead(sidecar.KvIndex, int(r.storageMgr.MaxKvSize()), readCommit)
 		if err != nil {
 			return nil, err

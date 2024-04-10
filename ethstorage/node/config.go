@@ -56,7 +56,7 @@ type Config struct {
 	// Heartbeat HeartbeatConfig
 	Mining *miner.Config
 
-	Sidecar *archiver.Config
+	Archiver *archiver.Config
 }
 
 type MetricsConfig struct {

@@ -4,11 +4,11 @@
 package eth
 
 import (
-	"bytes"
 	"encoding/json"
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
 const BlobLength = 131072
@@ -65,6 +65,14 @@ type BlobSidecar struct {
 	// signed_block_header and inclusion-proof are ignored
 }
 
+func (a *BlobSidecar) String() string {
+	return "BlobSidecar{" +
+		"Index: " + strconv.FormatUint(a.Index, 10) + ", " +
+		"KZGCommitment: " + hexutil.Encode(a.KZGCommitment[:]) + ", " +
+		"KZGProof: " + hexutil.Encode(a.KZGProof[:]) +
+		"}"
+}
+
 func (a *BlobSidecar) MarshalJSON() ([]byte, error) {
 	type Alias BlobSidecar
 	return json.Marshal(&struct {
@@ -74,8 +82,8 @@ func (a *BlobSidecar) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Index:         strconv.FormatUint(a.Index, 10),
-		KZGCommitment: string(a.KZGCommitment[:]),
-		KZGProof:      string(a.KZGProof[:]),
+		KZGCommitment: hexutil.Encode(a.KZGCommitment[:]),
+		KZGProof:      hexutil.Encode(a.KZGProof[:]),
 		Alias:         (*Alias)(a),
 	})
 }
@@ -98,17 +106,15 @@ func (a *BlobSidecar) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	a.Index = num
-	copy(a.KZGCommitment[:], aux.KZGCommitment)
-	copy(a.KZGProof[:], aux.KZGProof)
-
-	return nil
-}
-
-func format(in []byte) string {
-	var out bytes.Buffer
-	err := json.Indent(&out, in, "", "\t")
+	commitment, err := hexutil.Decode(aux.KZGCommitment)
 	if err != nil {
-		return string(in)
+		return err
 	}
-	return out.String()
+	proof, err := hexutil.Decode(aux.KZGProof)
+	if err != nil {
+		return err
+	}
+	copy(a.KZGCommitment[:], commitment)
+	copy(a.KZGProof[:], proof)
+	return nil
 }
