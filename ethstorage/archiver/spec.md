@@ -4,7 +4,7 @@ Es-node Archiver Specification
 # Requirements
 
 1. As a long-term data availability solution for rollups, the es-node archiver will serve as a fallback source of blob sidecars besides Ethereum Layer 1.  
-2. The way to provide blob is the same as the [getBlobSidecars beacon API](https://ethereum.github.io/beacon-APIs/#/Beacon/getBlobSidecars)  beacon API `/eth/v1/beacon/blob_sidecars/{block_id}` , where you can provide `block_id` in path and `indices` as a query string to download blob sidecars as an array in json format. A live example:
+2. The way to provide blob is the same as the [getBlobSidecars beacon API](https://ethereum.github.io/beacon-APIs/#/Beacon/getBlobSidecars)  beacon API `/eth/v1/beacon/blob_sidecars/{block_id}`, where you can provide `block_id` in path and `indices` as a query string to download blob sidecars as an array in json format. A live example:
 ```sh
 curl -X 'GET'   'http://88.99.30.186:3500/eth/v1/beacon/blob_sidecars/4700280?indices=0,2'   -H 'accept: application/json' 
 ```
@@ -49,8 +49,25 @@ For comparison, the `/eth/v1/beacon/blob_sidecars/{block_id}` beacon API returns
 	]
 }
 ```
-4. Es-node archiver should save all blobs managed by the EthStorage contract instead of only binding to Optimism's BatchInbox contract.
-5. Es-node archiver may need to provide the hash of the blob transaction for data verification, but this is depend on the clarification of requirements for Portal network integration.
+4. Es-node archiver should follow beacon API for error handling including:
+```json
+[
+{
+  "code": 400,
+  "message": "Invalid block ID: current"
+}
+{
+  "code": 404,
+  "message": "Block not found"
+}
+{
+  "code": 500,
+  "message": "Internal server error"
+}
+]
+```
+5. Es-node archiver should save all blobs managed by the EthStorage contract instead of only binding to Optimism's BatchInbox contract.
+6. Es-node archiver may need to provide the hash of the blob transaction for data verification, but this depends on clarifying requirements for Portal network integration.
 
 # Solutions
 
