@@ -61,7 +61,16 @@ While an HTTP server will be provided by es-node archiver as an external API ser
 1. Download:
 In downloader, the metadata (`kzg_commitment`, `kzg_proof`) can be downloaded with blob content through the `/eth/v1/beacon/blob_sidecars/{block_id}` beacon API,  and saved with kv index to leveldb as following:
 ```
-BeaconRootHash->{kv_index,kzg_commitment,kzg_proof}
+BeaconRootHash->{
+		"data": [
+			{
+			"kv_index": 0,
+			"kzg_commitment": "0x...",
+			"kzg_proof": "0x...",
+			},
+			...
+			]
+		}
 ```
 where `BeaconRootHash` can be queried from `/eth/v1/beacon/blocks/{block_id}/root`
 
