@@ -42,6 +42,27 @@ func (p *KZGProver) GetProof(data []byte, nChunkBits, chunkIdx, chunkSize uint64
 	return p.GenerateKZGProof(data, chunkIdx)
 }
 
+func (p *KZGProver) GetKZGCommitmentAndBlobKZGProof(data []byte) ([48]byte, [48]byte, error) {
+	empty := [48]byte{}
+	if len(data) == 0 {
+		return empty, empty, nil
+	}
+	if len(data) != blobSize {
+		return empty, empty, fmt.Errorf("invalid blob size: %v", len(data))
+	}
+	var blob gokzg4844.Blob
+	copy(blob[:], data)
+	commitment, err := p.ctx.BlobToKZGCommitment(blob, -1)
+	if err != nil {
+		return empty, empty, fmt.Errorf("could not convert blob to commitment: %v", err)
+	}
+	proof, err := p.ctx.ComputeBlobKZGProof(blob, commitment, -1)
+	if err != nil {
+		return empty, empty, fmt.Errorf("could not compute blob KZG proof: %v", err)
+	}
+	return [48]byte(commitment), [48]byte(proof), nil
+}
+
 func (p *KZGProver) GetRoot(data []byte, chunkPerKV, chunkSize uint64) (common.Hash, error) {
 	if len(data) == 0 {
 		return common.Hash{}, nil
