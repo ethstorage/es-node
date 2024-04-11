@@ -9,13 +9,14 @@ Es-node Archiver Specification
 curl -X 'GET'   'http://88.99.30.186:3500/eth/v1/beacon/blob_sidecars/4700280?indices=0,2'   -H 'accept: application/json' 
 ```
  
-3. The difference in returned data between es-node archiver API and beacon API is that for each blob es-node archiver only returns blob content, kzg commitment, and kzg proof. Other elements will be omitted according to how Optimism uses the service.
+3. The difference in returned data between es-node archiver API and beacon API is that for each blob es-node archiver only returns blob content, index, kzg commitment, and kzg proof. Other elements will be omitted according to how Optimism uses the service.
 
 Result of es-node archiver API:
 ```json
 {
 	"data": [
 		{
+		"index": 0,
 		"blob": "0x...",
 		"kzg_commitment": "0x...",
 		"kzg_proof": "0x...",
@@ -141,6 +142,8 @@ func (p *KZGProver) GenerateKZGProof(data []byte, sampleIdx  uint64) ([]byte, er
 5. Retrieve:
 
 When the API is queried, the content of blobs is loaded to generate `kzg_commitment` and `kzg_proof` on demand and served by the server.
+
+One thing worth noting is how the blob's index is determined. We need to use the order of blob kzg commitments obtained in the beacon API `/eth/v2/beacon/blocks/{block_id}`, and use the corresponding relationship between `versionedash` and kzg commitment to obtain the index of the blob in the block.
 
 ### Considerations for  Solution 2:
 
