@@ -104,14 +104,14 @@ func kzgToVersionedHash(commit string) (common.Hash, error) {
 	return common.Hash(eth.KZGToVersionedHash(c)), nil
 }
 
-func (c *BeaconClient) BeaconToExectutionBlockNumber(clBlock string) (uint64, error) {
+func (c *BeaconClient) QueryElBlockNumberAndKzg(clBlock string) (uint64, []string, error) {
 	beaconUrl, err := url.JoinPath(c.beaconURL, fmt.Sprintf("/eth/v2/beacon/blocks/%s", clBlock))
 	if err != nil {
-		return 0, err
+		return 0, nil, err
 	}
 	resp, err := http.Get(beaconUrl)
 	if err != nil {
-		return 0, err
+		return 0, nil, err
 	}
 	defer resp.Body.Close()
 
@@ -122,18 +122,19 @@ func (c *BeaconClient) BeaconToExectutionBlockNumber(clBlock string) (uint64, er
 					ExecutionPayload struct {
 						BlockNumber string `json:"block_number"`
 					} `json:"execution_payload"`
+					BlobKzgCommitments []string `json:"blob_kzg_commitments"`
 				} `json:"body"`
 			} `json:"message"`
 		} `json:"data"`
 	}{}
 	err = json.NewDecoder(resp.Body).Decode(&respObj)
 	if err != nil {
-		return 0, err
+		return 0, nil, err
 	}
-	elBlock, err := strconv.ParseUint(respObj.Data.Message.Body.ExecutionPayload.BlockNumber, 10, 64)
+	body := respObj.Data.Message.Body
+	elBlock, err := strconv.ParseUint(body.ExecutionPayload.BlockNumber, 10, 64)
 	if err != nil {
-		return 0, err
+		return 0, nil, err
 	}
-
-	return elBlock, nil
+	return elBlock, body.BlobKzgCommitments, nil
 }
