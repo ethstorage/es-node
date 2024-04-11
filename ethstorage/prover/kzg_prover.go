@@ -42,7 +42,7 @@ func (p *KZGProver) GetProof(data []byte, nChunkBits, chunkIdx, chunkSize uint64
 	return p.GenerateKZGProof(data, chunkIdx)
 }
 
-func (p *KZGProver) GetKZGCommitmentAndBlobKZGProof(data []byte) ([48]byte, [48]byte, error) {
+func (p *KZGProver) ComputeKZGCommitmentAndBlobKZGProof(data []byte) ([48]byte, [48]byte, error) {
 	empty := [48]byte{}
 	if len(data) == 0 {
 		return empty, empty, nil

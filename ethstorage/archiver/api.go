@@ -8,13 +8,10 @@ import (
 	"fmt"
 	"math/big"
 	"net/http"
-	"slices"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethstorage/go-ethstorage/ethstorage"
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
@@ -36,15 +33,14 @@ func (e httpError) Error() string {
 	return e.Message
 }
 
-const (
-	jsonAcceptType = "application/json"
-	serverTimeout  = 60 * time.Second
-)
-
 var (
 	errUnknownBlock = &httpError{
 		Code:    http.StatusNotFound,
 		Message: "Block not found",
+	}
+	errBlobNotInES = &httpError{
+		Code:    http.StatusNotFound,
+		Message: "Block not stored in EthStorage",
 	}
 	errServerError = &httpError{
 		Code:    http.StatusInternalServerError,
@@ -81,8 +77,9 @@ type API struct {
 	logger       log.Logger
 }
 
-func NewAPI(beaconClient *eth.BeaconClient, l1Source *eth.PollingClient, logger log.Logger) *API {
+func NewAPI(storageMgr *ethstorage.StorageManager, beaconClient *eth.BeaconClient, l1Source *eth.PollingClient, logger log.Logger) *API {
 	result := &API{
+		storageMgr:   storageMgr,
 		beaconClient: beaconClient,
 		l1Source:     l1Source,
 		prover:       prover.NewKZGProver(logger),
@@ -92,28 +89,10 @@ func NewAPI(beaconClient *eth.BeaconClient, l1Source *eth.PollingClient, logger 
 	return result
 }
 
-func isHash(s string) bool {
-	if len(s) != 66 || !strings.HasPrefix(s, "0x") {
-		return false
-	}
-
-	_, err := hexutil.Decode(s)
-	return err == nil
-}
-
-func isSlot(id string) bool {
-	_, err := strconv.ParseUint(id, 10, 64)
-	return err == nil
-}
-
-func isKnownIdentifier(id string) bool {
-	return slices.Contains([]string{"genesis", "finalized", "head"}, id)
-}
-
 // blobSidecarHandler implements the /eth/v1/beacon/blob_sidecars/{id} endpoint, using the underlying DataStoreReader
 // to fetch blobs instead of the beacon node. This allows clients to fetch expired blobs.
 func (a *API) blobSidecarHandler(w http.ResponseWriter, r *http.Request) {
-	a.logger.Info("Blob sidecar request", "url", r.RequestURI)
+	a.logger.Info("Blob archiver API request", "url", r.RequestURI)
 	id := mux.Vars(r)["id"]
 	elBlock, err := a.beaconClient.BeaconToExectutionBlockNumber(id)
 	if err != nil {
@@ -129,41 +108,41 @@ func (a *API) blobSidecarHandler(w http.ResponseWriter, r *http.Request) {
 		errServerError.write(w)
 		return
 	}
+	if len(events) == 0 {
+		a.logger.Info("Not stored by EthStorage", "beaconID", id)
+		errBlobNotInES.write(w)
+		return
+	}
 
 	result := BlobSidecars{}
 	for _, event := range events {
 		kvIndex := big.NewInt(0).SetBytes(event.Topics[1][:]).Uint64()
-		hash := common.Hash{}
-		copy(hash[:], event.Topics[3][:])
-		blobData, found, err := a.storageMgr.TryRead(kvIndex, int(a.storageMgr.MaxKvSize()), hash)
+		blobHash := common.Hash{}
+		copy(blobHash[:], event.Topics[3][:])
+		blobData, found, err := a.storageMgr.TryRead(kvIndex, int(a.storageMgr.MaxKvSize()), blobHash)
 		if err != nil {
 			a.logger.Error("Failed to read blob", "err", err)
 			errServerError.write(w)
 			return
 		}
 		if !found {
-			a.logger.Info("Blob not found", "kvIndex", kvIndex, "hash", hash)
+			a.logger.Info("Blob not found", "kvIndex", kvIndex, "blobHash", blobHash)
 			errUnknownBlock.write(w)
 			return
 		}
 
-		kzgCommitment, kzgProof, err := a.prover.GetKZGCommitmentAndBlobKZGProof(blobData)
+		kzgCommitment, kzgProof, err := a.prover.ComputeKZGCommitmentAndBlobKZGProof(blobData)
 		if err != nil {
 			a.logger.Error("Failed to get KZG commitment and proof", "err", err)
 			errServerError.write(w)
 			return
 		}
-
-		var blb [BlobLength]byte
-		for i := 0; i < len(blobData); i++ {
-			blb[i] = blobData[i]
-		}
-		sidecarOut := &BlobSidecar{
-			Blob:          [BlobLength]byte(blb),
+		sidecar := &BlobSidecar{
+			Blob:          [BlobLength]byte(blobData),
 			KZGCommitment: kzgCommitment,
 			KZGProof:      kzgProof,
 		}
-		result.Data = append(result.Data, sidecarOut)
+		result.Data = append(result.Data, sidecar)
 	}
 
 	filteredBlobSidecars, hErr := filterBlobs(result.Data, r.URL.Query().Get("indices"))
@@ -171,10 +150,10 @@ func (a *API) blobSidecarHandler(w http.ResponseWriter, r *http.Request) {
 		hErr.write(w)
 		return
 	}
-	a.logger.Info("Blob sidecar request handled", "blobs", len(filteredBlobSidecars))
+	a.logger.Info("Blob archiver API request handled", "blobs", len(filteredBlobSidecars))
 	result.Data = filteredBlobSidecars
-
-	w.Header().Set("Content-Type", jsonAcceptType)
+	a.logger.Info("Blob archiver API request handled", "result", result)
+	w.Header().Set("Content-Type", "application/json")
 	encodingErr := json.NewEncoder(w).Encode(result)
 	if encodingErr != nil {
 		a.logger.Error("unable to encode blob sidecars to JSON", "err", encodingErr)

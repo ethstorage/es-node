@@ -18,7 +18,7 @@ import (
 )
 
 func NewService(cfg Config, storageMgr *ethstorage.StorageManager, l1Beacon *eth.BeaconClient, l1Source *eth.PollingClient, l log.Logger) *APIService {
-	api := NewAPI(l1Beacon, l1Source, l)
+	api := NewAPI(storageMgr, l1Beacon, l1Source, l)
 	return &APIService{
 		cfg: cfg,
 		api: api,

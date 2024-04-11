@@ -104,32 +104,6 @@ func kzgToVersionedHash(commit string) (common.Hash, error) {
 	return common.Hash(eth.KZGToVersionedHash(c)), nil
 }
 
-func (c *BeaconClient) BeaconBlockRootHash(block string) (common.Hash, error) {
-	beaconUrl, err := url.JoinPath(c.beaconURL, fmt.Sprintf("/eth/v1/beacon/blocks/%s/root", block))
-	if err != nil {
-		return common.Hash{}, err
-	}
-	resp, err := http.Get(beaconUrl)
-	if err != nil {
-		return common.Hash{}, err
-	}
-	defer resp.Body.Close()
-
-	type Data struct {
-		Root string `json:"root"`
-	}
-	type rootHashResp struct {
-		Data Data `json:"data"`
-	}
-
-	var respObj rootHashResp
-	err = json.NewDecoder(resp.Body).Decode(&respObj)
-	if err != nil {
-		return common.Hash{}, err
-	}
-	return common.HexToHash(respObj.Data.Root), nil
-}
-
 func (c *BeaconClient) BeaconToExectutionBlockNumber(clBlock string) (uint64, error) {
 	beaconUrl, err := url.JoinPath(c.beaconURL, fmt.Sprintf("/eth/v2/beacon/blocks/%s", clBlock))
 	if err != nil {
@@ -141,7 +115,7 @@ func (c *BeaconClient) BeaconToExectutionBlockNumber(clBlock string) (uint64, er
 	}
 	defer resp.Body.Close()
 
-	type rootHashResp struct {
+	respObj := &struct {
 		Data struct {
 			Message struct {
 				Body struct {
@@ -151,9 +125,7 @@ func (c *BeaconClient) BeaconToExectutionBlockNumber(clBlock string) (uint64, er
 				} `json:"body"`
 			} `json:"message"`
 		} `json:"data"`
-	}
-
-	var respObj rootHashResp
+	}{}
 	err = json.NewDecoder(resp.Body).Decode(&respObj)
 	if err != nil {
 		return 0, err
