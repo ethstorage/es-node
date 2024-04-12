@@ -42,7 +42,7 @@ var (
 	}
 	errBlobNotInES = &httpError{
 		Code:    http.StatusNotFound,
-		Message: "Blob not stored in EthStorage",
+		Message: "Blob not found in EthStorage",
 	}
 	errServerError = &httpError{
 		Code:    http.StatusInternalServerError,
@@ -91,68 +91,31 @@ func NewAPI(storageMgr *ethstorage.StorageManager, beaconClient *eth.BeaconClien
 
 // blobSidecarHandler implements the /eth/v1/beacon/blob_sidecars/{id} endpoint, but allows clients to fetch expired blobs.
 func (a *API) blobSidecarHandler(w http.ResponseWriter, r *http.Request) {
-	a.logger.Info("Blob archiver API request", "url", r.RequestURI)
-	result := BlobSidecars{}
 	start := time.Now()
-	defer func(start time.Time, blobs int) {
+	defer func(start time.Time) {
 		dur := time.Since(start)
-		a.logger.Info("Blob archiver API request handled", "blobs", len(result.Data), "took(s)", dur.Seconds())
-	}(start, len(result.Data))
+		a.logger.Info("Blob archiver API request handled", "took(s)", dur.Seconds())
+	}(start)
 
-	// query execution layer block number from beacon block id
+	a.logger.Info("Blob archiver API request", "url", r.RequestURI)
 	id := mux.Vars(r)["id"]
-	elBlock, kzgCommits, err := a.beaconClient.QueryElBlockNumberAndKzg(id)
-	if err != nil {
-		a.logger.Error("Failed to get execution block number", "beaconID", id, "err", err)
-		errUnknownBlock.write(w)
-		return
+	var indices []uint64
+	indicesStr := r.URL.Query().Get("indices")
+	if indicesStr != "" {
+		splits := strings.Split(indicesStr, ",")
+		for _, index := range splits {
+			parsedInt, err := strconv.ParseUint(index, 10, 64)
+			if err != nil {
+				newIndicesError(index).write(w)
+				return
+			}
+			indices = append(indices, parsedInt)
+		}
 	}
-	a.logger.Info("BeaconID to execution block number", "beaconID", id, "elBlock", elBlock)
-	fmt.Printf("QueryElBlockNumberAndKzg took %.1fs\n", time.Since(start).Seconds())
-
-	// filter by indices if provided
-	indices := r.URL.Query().Get("indices")
-	filteredCommitments, hErr := filterCommitments(kzgCommits, indices)
+	result, hErr := a.queryBlobSidecars(id, indices)
 	if hErr != nil {
 		hErr.write(w)
 		return
-	}
-	a.logger.Info("Filtered by indices", "indices", indices, "filtered", len(filteredCommitments))
-
-	// hashToIndex is used to determine correct blob index
-	hashToIndex := make(map[common.Hash]uint64)
-	for i, c := range filteredCommitments {
-		bh := gkzg.KZGToVersionedHash(gkzg.KZGCommitment(common.FromHex(c)))
-		hashToIndex[common.Hash(bh)] = uint64(i)
-		a.logger.Info("BlobhHash to index", "blobHash", common.Hash(bh), "index", i)
-	}
-
-	// get event logs on the block
-	blockBN := big.NewInt(int64(elBlock))
-	start1 := time.Now()
-	events, err := a.l1Source.FilterLogsByBlockRange(blockBN, blockBN, eth.PutBlobEvent)
-	if err != nil {
-		a.logger.Error("Failed to get events", "err", err)
-		errServerError.write(w)
-		return
-	}
-	fmt.Printf("FilterLogsByBlockRange took %.1fs\n", time.Since(start1).Seconds())
-	for i, event := range events {
-		blobHash := event.Topics[3]
-		a.logger.Info("Parsing event", "blobHash", blobHash, "event", fmt.Sprintf("%d of %d", i, len(events)))
-		// parse event to get kv_index with queried index
-		if index, ok := hashToIndex[blobHash]; ok {
-			kvIndex := big.NewInt(0).SetBytes(event.Topics[1][:]).Uint64()
-			a.logger.Info("BlobHash matched", "blobHash", blobHash, "index", index, "kvIndex", kvIndex)
-			sidecar, hErr := a.buildSideCar(kvIndex, common.FromHex(kzgCommits[index]), blobHash)
-			if hErr != nil {
-				hErr.write(w)
-				return
-			}
-			sidecar.Index = index
-			a.logger.Info("Sidecar built", "index", index, "sidecar", sidecar)
-			result.Data = append(result.Data, sidecar)
-		}
 	}
 
 	if len(result.Data) == 0 {
@@ -170,26 +133,70 @@ func (a *API) blobSidecarHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func filterCommitments(commitments []string, indices string) ([]string, *httpError) {
-	if indices == "" {
-		return commitments, nil
+func (a *API) queryBlobSidecars(id string, indices []uint64) (*BlobSidecars, *httpError) {
+	start := time.Now()
+	a.logger.Info("Querying blob sidecars", "beaconID", id, "indices", indices)
+
+	// query el block
+	elBlock, kzgCommitsAll, err := a.beaconClient.QueryElBlockNumberAndKzg(id)
+	if err != nil {
+		a.logger.Error("Failed to get execution block number", "beaconID", id, "err", err)
+		return nil, errUnknownBlock
 	}
-	splits := strings.Split(indices, ",")
-	if len(splits) == 0 {
-		return commitments, nil
-	}
-	filtered := make([]string, 0)
-	for _, index := range splits {
-		parsedInt, err := strconv.ParseUint(index, 10, 64)
-		if err != nil {
-			return nil, newIndicesError(index)
+	a.logger.Info("BeaconID to execution block number", "beaconID", id, "elBlock", elBlock)
+	fmt.Printf("QueryElBlockNumberAndKzg took %.1fs\n", time.Since(start).Seconds())
+
+	kzgCommits := kzgCommitsAll
+	if indices != nil {
+		// filter by indices if provided
+		var filtered []string
+		for _, index := range indices {
+			if index >= uint64(len(kzgCommitsAll)) {
+				return nil, newOutOfRangeError(index, len(kzgCommitsAll))
+			}
+			filtered = append(filtered, kzgCommitsAll[index])
 		}
-		if parsedInt >= uint64(len(commitments)) {
-			return nil, newOutOfRangeError(parsedInt, len(commitments))
-		}
-		filtered = append(filtered, commitments[parsedInt])
+		a.logger.Info("Filtered by indices", "indices", indices, "filtered", len(filtered))
+		kzgCommits = filtered
 	}
-	return filtered, nil
+
+	// hashToIndex is used to determine correct blob index
+	hashToIndex := make(map[common.Hash]uint64)
+	for i, c := range kzgCommits {
+		bh := gkzg.KZGToVersionedHash(gkzg.KZGCommitment(common.FromHex(c)))
+		hashToIndex[common.Hash(bh)] = uint64(i)
+		a.logger.Info("BlobhHash to index", "blobHash", common.Hash(bh), "index", i)
+	}
+
+	start1 := time.Now()
+	// get event logs on the block
+	blockBN := big.NewInt(int64(elBlock))
+	events, err := a.l1Source.FilterLogsByBlockRange(blockBN, blockBN, eth.PutBlobEvent)
+	if err != nil {
+		a.logger.Error("Failed to get events", "err", err)
+		return nil, errServerError
+	}
+	fmt.Printf("FilterLogsByBlockRange took %.1fs\n", time.Since(start1).Seconds())
+	var result BlobSidecars
+	for i, event := range events {
+		blobHash := event.Topics[3]
+		a.logger.Info("Parsing event", "blobHash", blobHash, "event", fmt.Sprintf("%d of %d", i, len(events)))
+		// parse event to get kv_index with queried index
+		if index, ok := hashToIndex[blobHash]; ok {
+			kvIndex := big.NewInt(0).SetBytes(event.Topics[1][:]).Uint64()
+			a.logger.Info("BlobHash matched", "blobHash", blobHash, "index", index, "kvIndex", kvIndex)
+			sidecar, hErr := a.buildSideCar(kvIndex, common.FromHex(kzgCommitsAll[index]), blobHash)
+			if hErr != nil {
+				a.logger.Error("Failed to build sidecar", "err", hErr)
+				return nil, hErr
+			}
+			sidecar.Index = index
+			a.logger.Info("Sidecar built", "index", index, "sidecar", sidecar)
+			result.Data = append(result.Data, sidecar)
+		}
+	}
+	a.logger.Info("Query blob sidecars done", "blobs", len(result.Data))
+	return &result, nil
 }
 
 func (a *API) buildSideCar(kvIndex uint64, kzgCommitment []byte, blobHash common.Hash) (*BlobSidecar, *httpError) {
