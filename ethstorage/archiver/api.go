@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto/kzg4844"
@@ -41,7 +42,7 @@ var (
 	}
 	errBlobNotInES = &httpError{
 		Code:    http.StatusNotFound,
-		Message: "Block not stored in EthStorage",
+		Message: "Blob not stored in EthStorage",
 	}
 	errServerError = &httpError{
 		Code:    http.StatusInternalServerError,
@@ -66,7 +67,7 @@ func newIndicesError(input string) *httpError {
 func newOutOfRangeError(input uint64, blobCount int) *httpError {
 	return &httpError{
 		Code:    http.StatusBadRequest,
-		Message: fmt.Sprintf("invalid index: %d block contains %d blobs", input, blobCount),
+		Message: fmt.Sprintf("invalid index: %d - block contains %d blobs", input, blobCount),
 	}
 }
 
@@ -91,6 +92,12 @@ func NewAPI(storageMgr *ethstorage.StorageManager, beaconClient *eth.BeaconClien
 // blobSidecarHandler implements the /eth/v1/beacon/blob_sidecars/{id} endpoint, but allows clients to fetch expired blobs.
 func (a *API) blobSidecarHandler(w http.ResponseWriter, r *http.Request) {
 	a.logger.Info("Blob archiver API request", "url", r.RequestURI)
+	result := BlobSidecars{}
+	start := time.Now()
+	defer func(start time.Time, blobs int) {
+		dur := time.Since(start)
+		a.logger.Info("Blob archiver API request handled", "blobs", len(result.Data), "took(s)", dur.Seconds())
+	}(start, len(result.Data))
 
 	// query execution layer block number from beacon block id
 	id := mux.Vars(r)["id"]
@@ -101,6 +108,7 @@ func (a *API) blobSidecarHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.logger.Info("BeaconID to execution block number", "beaconID", id, "elBlock", elBlock)
+	fmt.Printf("QueryElBlockNumberAndKzg took %.1fs\n", time.Since(start).Seconds())
 
 	// filter by indices if provided
 	indices := r.URL.Query().Get("indices")
@@ -121,19 +129,14 @@ func (a *API) blobSidecarHandler(w http.ResponseWriter, r *http.Request) {
 
 	// get event logs on the block
 	blockBN := big.NewInt(int64(elBlock))
+	start1 := time.Now()
 	events, err := a.l1Source.FilterLogsByBlockRange(blockBN, blockBN, eth.PutBlobEvent)
 	if err != nil {
 		a.logger.Error("Failed to get events", "err", err)
 		errServerError.write(w)
 		return
 	}
-	if len(events) == 0 {
-		a.logger.Info("Not stored by EthStorage", "beaconID", id)
-		errBlobNotInES.write(w)
-		return
-	}
-
-	result := BlobSidecars{}
+	fmt.Printf("FilterLogsByBlockRange took %.1fs\n", time.Since(start1).Seconds())
 	for i, event := range events {
 		blobHash := event.Topics[3]
 		a.logger.Info("Parsing event", "blobHash", blobHash, "event", fmt.Sprintf("%d of %d", i, len(events)))
@@ -152,7 +155,12 @@ func (a *API) blobSidecarHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	a.logger.Info("Blob archiver API request handled", "count", len(result.Data))
+	if len(result.Data) == 0 {
+		a.logger.Info("Not stored by EthStorage", "beaconID", id)
+		errBlobNotInES.write(w)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	encodingErr := json.NewEncoder(w).Encode(result)
 	if encodingErr != nil {
@@ -166,29 +174,31 @@ func filterCommitments(commitments []string, indices string) ([]string, *httpErr
 	if indices == "" {
 		return commitments, nil
 	}
-
 	splits := strings.Split(indices, ",")
 	if len(splits) == 0 {
 		return commitments, nil
 	}
-
 	filtered := make([]string, 0)
 	for _, index := range splits {
 		parsedInt, err := strconv.ParseUint(index, 10, 64)
 		if err != nil {
 			return nil, newIndicesError(index)
 		}
-
 		if parsedInt >= uint64(len(commitments)) {
 			return nil, newOutOfRangeError(parsedInt, len(commitments))
 		}
 		filtered = append(filtered, commitments[parsedInt])
 	}
-
 	return filtered, nil
 }
 
 func (a *API) buildSideCar(kvIndex uint64, kzgCommitment []byte, blobHash common.Hash) (*BlobSidecar, *httpError) {
+	start := time.Now()
+	defer func(start time.Time) {
+		dur := time.Since(start)
+		a.logger.Info("buildSideCar", "took(s)", dur.Seconds())
+	}(start)
+
 	blobData, found, err := a.storageMgr.TryRead(kvIndex, int(a.storageMgr.MaxKvSize()), blobHash)
 	if err != nil {
 		a.logger.Error("Failed to read blob", "err", err)
@@ -198,12 +208,14 @@ func (a *API) buildSideCar(kvIndex uint64, kzgCommitment []byte, blobHash common
 		a.logger.Info("Blob not found", "kvIndex", kvIndex, "blobHash", blobHash)
 		return nil, errBlobNotInES
 	}
-
+	fmt.Printf("storageMgr.TryRead took %.1fs\n", time.Since(start).Seconds())
+	start1 := time.Now()
 	kzgProof, err := kzg4844.ComputeBlobProof(kzg4844.Blob(blobData), kzg4844.Commitment(kzgCommitment))
 	if err != nil {
 		a.logger.Error("Failed to get kzg proof", "err", err)
 		return nil, errServerError
 	}
+	fmt.Printf("ComputeBlobProof took %.1fs\n", time.Since(start1).Seconds())
 	return &BlobSidecar{
 		Blob:          [BlobLength]byte(blobData),
 		KZGCommitment: [48]byte(kzgCommitment),
