@@ -91,6 +91,8 @@ func NewAPI(storageMgr *ethstorage.StorageManager, beaconClient *eth.BeaconClien
 // blobSidecarHandler implements the /eth/v1/beacon/blob_sidecars/{id} endpoint, but allows clients to fetch expired blobs.
 func (a *API) blobSidecarHandler(w http.ResponseWriter, r *http.Request) {
 	a.logger.Info("Blob archiver API request", "url", r.RequestURI)
+
+	// query execution layer block number from beacon block id
 	id := mux.Vars(r)["id"]
 	elBlock, kzgCommits, err := a.beaconClient.QueryElBlockNumberAndKzg(id)
 	if err != nil {
@@ -100,22 +102,24 @@ func (a *API) blobSidecarHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	a.logger.Info("BeaconID to execution block number", "beaconID", id, "elBlock", elBlock)
 
+	// filter by indices if provided
 	indices := r.URL.Query().Get("indices")
-	a.logger.Info("Filtering commitments", "indices", indices, "kzgCommits", kzgCommits)
 	filteredCommitments, hErr := filterCommitments(kzgCommits, indices)
 	if hErr != nil {
 		hErr.write(w)
 		return
 	}
-	a.logger.Info("Filtered commitments", "indices", indices, "kzgCommitsFiltered", filteredCommitments)
+	a.logger.Info("Filtered by indices", "indices", indices, "filtered", len(filteredCommitments))
 
 	// hashToIndex is used to determine correct blob index
 	hashToIndex := make(map[common.Hash]uint64)
 	for i, c := range filteredCommitments {
 		bh := gkzg.KZGToVersionedHash(gkzg.KZGCommitment(common.FromHex(c)))
 		hashToIndex[common.Hash(bh)] = uint64(i)
+		a.logger.Info("BlobhHash to index", "blobHash", common.Hash(bh), "index", i)
 	}
-	a.logger.Info("Hash to index", "hashToIndex", hashToIndex)
+
+	// get event logs on the block
 	blockBN := big.NewInt(int64(elBlock))
 	events, err := a.l1Source.FilterLogsByBlockRange(blockBN, blockBN, eth.PutBlobEvent)
 	if err != nil {
@@ -131,19 +135,19 @@ func (a *API) blobSidecarHandler(w http.ResponseWriter, r *http.Request) {
 
 	result := BlobSidecars{}
 	for i, event := range events {
-		blobHash := common.Hash{}
-		copy(blobHash[:], event.Topics[3][:])
-		a.logger.Info("Parsing event", "event", i, "blobHash", blobHash.String())
+		blobHash := event.Topics[3]
+		a.logger.Info("Parsing event", "blobHash", blobHash, "event", fmt.Sprintf("%d of %d", i, len(events)))
+		// parse event to get kv_index with queried index
 		if index, ok := hashToIndex[blobHash]; ok {
 			kvIndex := big.NewInt(0).SetBytes(event.Topics[1][:]).Uint64()
-			a.logger.Info("BlobHash matched", "blobHash", blobHash.String(), "index", index, "kvIndex", kvIndex)
+			a.logger.Info("BlobHash matched", "blobHash", blobHash, "index", index, "kvIndex", kvIndex)
 			sidecar, hErr := a.buildSideCar(kvIndex, common.FromHex(kzgCommits[index]), blobHash)
 			if hErr != nil {
 				hErr.write(w)
 				return
 			}
 			sidecar.Index = index
-			a.logger.Info("Parsing event", "index", index, "sidecar", sidecar)
+			a.logger.Info("Sidecar built", "index", index, "sidecar", sidecar)
 			result.Data = append(result.Data, sidecar)
 		}
 	}

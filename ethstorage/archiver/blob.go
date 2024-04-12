@@ -21,7 +21,7 @@ type BlobSidecar struct {
 	KZGCommitment [48]byte         `json:"kzg_commitment"`
 	KZGProof      [48]byte         `json:"kzg_proof"`
 	Blob          [BlobLength]byte `json:"blob"`
-	// signed_block_header and inclusion-proof are ignored
+	// signed_block_header and inclusion-proof are ignored compared to beacon API
 }
 
 func (a *BlobSidecar) String() string {
@@ -33,33 +33,28 @@ func (a *BlobSidecar) String() string {
 		"}, "
 }
 
+type alias BlobSidecar
+type blobSidecarAlias struct {
+	Index         string `json:"index"`
+	KZGCommitment string `json:"kzg_commitment"`
+	KZGProof      string `json:"kzg_proof"`
+	Blob          string `json:"blob"`
+	*alias
+}
+
 func (a *BlobSidecar) MarshalJSON() ([]byte, error) {
-	type Alias BlobSidecar
-	return json.Marshal(&struct {
-		Index         string `json:"index"`
-		KZGCommitment string `json:"kzg_commitment"`
-		KZGProof      string `json:"kzg_proof"`
-		Blob          string `json:"blob"`
-		*Alias
-	}{
+	return json.Marshal(&blobSidecarAlias{
 		Index:         strconv.FormatUint(a.Index, 10),
 		KZGCommitment: hexutil.Encode(a.KZGCommitment[:]),
 		KZGProof:      hexutil.Encode(a.KZGProof[:]),
 		Blob:          hexutil.Encode(a.Blob[:]),
-		Alias:         (*Alias)(a),
+		alias:         (*alias)(a),
 	})
 }
 
 func (a *BlobSidecar) UnmarshalJSON(data []byte) error {
-	type Alias BlobSidecar
-	aux := &struct {
-		Index         string `json:"index"`
-		KZGCommitment string `json:"kzg_commitment"`
-		KZGProof      string `json:"kzg_proof"`
-		Blob          string `json:"blob"`
-		*Alias
-	}{
-		Alias: (*Alias)(a),
+	aux := &blobSidecarAlias{
+		alias: (*alias)(a),
 	}
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return err
