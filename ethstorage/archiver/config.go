@@ -32,7 +32,7 @@ func CLIFlags(envPrefix string) []cli.Flag {
 			Name:   ListenAddrFlagName,
 			Usage:  "Blob archiver listening address",
 			EnvVar: rollup.PrefixEnvVar(envPrefix, "ADDRESS"),
-			Value:  "127.0.0.1",
+			Value:  "0.0.0.0",
 		},
 		cli.IntFlag{
 			Name:   ListenPortFlagName,

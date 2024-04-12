@@ -271,9 +271,9 @@ func (n *EsNode) initArchiver(ctx context.Context, cfg *Config) error {
 		return nil
 	}
 	n.archiverAPI = archiver.NewService(*cfg.Archiver, n.storageManager, n.l1Beacon, n.l1Source, n.log)
-	n.log.Info("Initialized blob sidecar API")
+	n.log.Info("Initialized blob archiver API server")
 	if err := n.archiverAPI.Start(ctx); err != nil {
-		return fmt.Errorf("unable to start blob sidecar API server: %w", err)
+		return fmt.Errorf("unable to start blob archiver API server: %w", err)
 	}
 	return nil
 }
