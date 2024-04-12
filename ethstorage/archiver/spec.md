@@ -16,7 +16,7 @@ Result of es-node archiver API:
 {
 	"data": [
 		{
-		"index": 0,
+		"index": "0",
 		"blob": "0x...",
 		"kzg_commitment": "0x...",
 		"kzg_proof": "0x...",
@@ -60,6 +60,10 @@ For comparison, the `/eth/v1/beacon/blob_sidecars/{block_id}` beacon API returns
 {
   "code": 404,
   "message": "Block not found"
+}
+{
+  "code": 404,
+  "message": "Blob not found in EthStorage"
 }
 {
   "code": 500,
