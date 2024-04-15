@@ -8,9 +8,13 @@ import (
 	"fmt"
 	"math/big"
 	"net/http"
+	"slices"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto/kzg4844"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethstorage/go-ethstorage/ethstorage"
@@ -26,22 +30,28 @@ type API struct {
 }
 
 func NewAPI(storageMgr *ethstorage.StorageManager, beaconClient *eth.BeaconClient, l1Source *eth.PollingClient, logger log.Logger) *API {
-	result := &API{
+	return &API{
 		storageMgr:   storageMgr,
 		beaconClient: beaconClient,
 		l1Source:     l1Source,
 		logger:       logger,
 	}
-
-	return result
 }
 
 func (a *API) queryBlobSidecars(id string, indices []uint64) (*BlobSidecars, *httpError) {
+	if hErr := validateBlockID(id); hErr != nil {
+		return nil, hErr
+	}
 	// query EL block
-	elBlock, kzgCommitsAll, err := a.beaconClient.QueryElBlockNumberAndKzg(id)
+	queryUrl, err := a.beaconClient.QueryUrlForV2BeaconBlock(id)
 	if err != nil {
-		a.logger.Error("Failed to get execution block number", "beaconID", id, "err", err)
+		a.logger.Error("Invalid beaconID", "beaconID", id, "err", err)
 		return nil, errUnknownBlock
+	}
+	elBlock, kzgCommitsAll, hErr := queryElBlockNumberAndKzg(queryUrl)
+	if hErr != nil {
+		a.logger.Error("Failed to get execution block number", "beaconID", id, "err", err)
+		return nil, hErr
 	}
 	a.logger.Info("BeaconID to execution block number", "beaconID", id, "elBlock", elBlock)
 
@@ -74,7 +84,7 @@ func (a *API) queryBlobSidecars(id string, indices []uint64) (*BlobSidecars, *ht
 		a.logger.Error("Failed to get events", "err", err)
 		return nil, errServerError
 	}
-	var result BlobSidecars
+	var res BlobSidecars
 	for i, event := range events {
 		blobHash := event.Topics[3]
 		a.logger.Info("Parsing event", "blobHash", blobHash, "event", fmt.Sprintf("%d of %d", i, len(events)))
@@ -89,11 +99,42 @@ func (a *API) queryBlobSidecars(id string, indices []uint64) (*BlobSidecars, *ht
 			}
 			sidecar.Index = index
 			a.logger.Info("Sidecar built", "index", index, "sidecar", sidecar)
-			result.Data = append(result.Data, sidecar)
+			res.Data = append(res.Data, sidecar)
 		}
 	}
-	a.logger.Info("Query blob sidecars done", "blobs", len(result.Data))
-	return &result, nil
+	a.logger.Info("Query blob sidecars done", "blobs", len(res.Data))
+	return &res, nil
+}
+
+func queryElBlockNumberAndKzg(queryUrl string) (uint64, []string, *httpError) {
+	resp, err := http.Get(queryUrl)
+	if err != nil {
+		return 0, nil, errServerError
+	}
+	defer resp.Body.Close()
+
+	respObj := &struct {
+		Data struct {
+			Message struct {
+				Body struct {
+					ExecutionPayload struct {
+						BlockNumber string `json:"block_number"`
+					} `json:"execution_payload"`
+					BlobKzgCommitments []string `json:"blob_kzg_commitments"`
+				} `json:"body"`
+			} `json:"message"`
+		} `json:"data"`
+	}{}
+	err = json.NewDecoder(resp.Body).Decode(&respObj)
+	if err != nil {
+		return 0, nil, errUnknownBlock
+	}
+	body := respObj.Data.Message.Body
+	elBlock, err := strconv.ParseUint(body.ExecutionPayload.BlockNumber, 10, 64)
+	if err != nil {
+		return 0, nil, errUnknownBlock
+	}
+	return elBlock, body.BlobKzgCommitments, nil
 }
 
 func (a *API) buildSidecar(kvIndex uint64, kzgCommitment []byte, blobHash common.Hash) (*BlobSidecar, *httpError) {
@@ -123,6 +164,30 @@ func (a *API) buildSidecar(kvIndex uint64, kzgCommitment []byte, blobHash common
 		KZGCommitment: [48]byte(kzgCommitment),
 		KZGProof:      kzgProof,
 	}, nil
+}
+
+func validateBlockID(id string) *httpError {
+	if isHash(id) || isSlot(id) || isKnownIdentifier(id) {
+		return nil
+	}
+	return newBlockIdError(id)
+}
+
+func isHash(s string) bool {
+	if len(s) != 66 || !strings.HasPrefix(s, "0x") {
+		return false
+	}
+	_, err := hexutil.Decode(s)
+	return err == nil
+}
+
+func isSlot(id string) bool {
+	_, err := strconv.ParseUint(id, 10, 64)
+	return err == nil
+}
+
+func isKnownIdentifier(id string) bool {
+	return slices.Contains([]string{"genesis", "finalized", "head"}, id)
 }
 
 type httpError struct {

@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strconv"
 
 	"github.com/crate-crypto/go-proto-danksharding-crypto/eth"
 	"github.com/ethereum/go-ethereum/common"
@@ -104,37 +103,6 @@ func kzgToVersionedHash(commit string) (common.Hash, error) {
 	return common.Hash(eth.KZGToVersionedHash(c)), nil
 }
 
-func (c *BeaconClient) QueryElBlockNumberAndKzg(clBlock string) (uint64, []string, error) {
-	beaconUrl, err := url.JoinPath(c.beaconURL, fmt.Sprintf("/eth/v2/beacon/blocks/%s", clBlock))
-	if err != nil {
-		return 0, nil, err
-	}
-	resp, err := http.Get(beaconUrl)
-	if err != nil {
-		return 0, nil, err
-	}
-	defer resp.Body.Close()
-
-	respObj := &struct {
-		Data struct {
-			Message struct {
-				Body struct {
-					ExecutionPayload struct {
-						BlockNumber string `json:"block_number"`
-					} `json:"execution_payload"`
-					BlobKzgCommitments []string `json:"blob_kzg_commitments"`
-				} `json:"body"`
-			} `json:"message"`
-		} `json:"data"`
-	}{}
-	err = json.NewDecoder(resp.Body).Decode(&respObj)
-	if err != nil {
-		return 0, nil, err
-	}
-	body := respObj.Data.Message.Body
-	elBlock, err := strconv.ParseUint(body.ExecutionPayload.BlockNumber, 10, 64)
-	if err != nil {
-		return 0, nil, err
-	}
-	return elBlock, body.BlobKzgCommitments, nil
+func (c *BeaconClient) QueryUrlForV2BeaconBlock(clBlock string) (string, error) {
+	return url.JoinPath(c.beaconURL, fmt.Sprintf("/eth/v2/beacon/blocks/%s", clBlock))
 }
