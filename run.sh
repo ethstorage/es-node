@@ -25,10 +25,23 @@ if [ ${#ES_NODE_SIGNER_PRIVATE_KEY} -ne 64 ]; then
   exit 1
 fi
 
+# check node js version
+node_version=$(node -v)
+major_version=$(echo $node_version | cut -d'v' -f2 | cut -d'.' -f1)
+
+if [ "$major_version" -lt 16 ]; then
+    echo "Error: Node.js version is too old"
+    exit 1
+fi
+
 # install snarkjs if not
 if ! [ "$(command -v snarkjs)" ]; then
     echo "snarkjs not found, start installing..."
     npm install -g snarkjs
+  if ! [ "$(command -v snarkjs)" ]; then
+    echo "Error: snarkjs installation failed"
+    exit 1
+  fi
 fi
 
 # ZK prover mode, 1: one proof per sample, 2: one proof for multiple samples.
