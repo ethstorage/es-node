@@ -5,7 +5,6 @@ package protocol
 
 import (
 	"context"
-	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -57,16 +56,6 @@ func (p *Peer) Shards() map[common.Address][]uint64 {
 	return p.shards
 }
 
-// SetShards this should only be set when doing handshake.
-func (p *Peer) SetShards(shards map[common.Address][]uint64) error {
-	// shards can only be set once.
-	if p.shards != nil {
-		return fmt.Errorf("peer shards has been set multi times")
-	}
-	p.shards = shards
-	return nil
-}
-
 // IsShardExist checks whether one specific shard is supported by this peer.
 func (p *Peer) IsShardExist(contract common.Address, shardId uint64) bool {
 	if ids, ok := p.shards[contract]; ok {
@@ -91,7 +80,10 @@ func (p *Peer) RequestBlobsByRange(id uint64, contract common.Address, shardId u
 	p.logger.Trace("Fetching KVs", "reqId", id, "contract", contract,
 		"shardId", shardId, "origin", origin, "limit", limit)
 
-	stream, err := p.newStreamFn(p.resCtx, p.id, GetProtocolID(RequestBlobsByRangeProtocolID, p.chainId))
+	ctx, cancel := context.WithTimeout(p.resCtx, NewStreamTimeout)
+	defer cancel()
+
+	stream, err := p.newStreamFn(ctx, p.id, GetProtocolID(RequestBlobsByRangeProtocolID, p.chainId))
 	if err != nil {
 		return clientError, err
 	}
@@ -117,7 +109,10 @@ func (p *Peer) RequestBlobsByList(id uint64, contract common.Address, shardId ui
 	p.logger.Trace("Fetching KVs", "reqId", id, "contract", contract,
 		"shardId", shardId, "count", len(kvList))
 
-	stream, err := p.newStreamFn(p.resCtx, p.id, GetProtocolID(RequestBlobsByListProtocolID, p.chainId))
+	ctx, cancel := context.WithTimeout(p.resCtx, NewStreamTimeout)
+	defer cancel()
+
+	stream, err := p.newStreamFn(ctx, p.id, GetProtocolID(RequestBlobsByListProtocolID, p.chainId))
 	if err != nil {
 		return clientError, err
 	}
