@@ -58,6 +58,7 @@ const (
 var (
 	maxKvCountPerReq            = uint64(16)
 	syncStatusKey               = []byte("SyncStatus")
+	syncTasksKey                = []byte("SyncTask")
 	maxFillEmptyTaskTreads      = 1
 	requestTimeoutInMillisecond = 1000 * time.Millisecond // Millisecond
 )
@@ -176,12 +177,6 @@ type SyncClient struct {
 	logTime        time.Time // Time instance when status was last reported
 	saveTime       time.Time // Time instance when state was last saved to DB
 	storageManager StorageManager
-
-	totalSecondsUsed uint64
-	blobsSynced      uint64
-	syncedBytes      common.StorageSize
-	emptyBlobsToFill uint64
-	emptyBlobsFilled uint64
 }
 
 func NewSyncClient(log log.Logger, cfg *rollup.EsConfig, newStream newStreamFn, storageManager StorageManager, params *SyncerParams,
@@ -234,41 +229,48 @@ func (s *SyncClient) setSyncDone() {
 	if s.mux != nil {
 		s.mux.Send(EthStorageSyncDone{DoneType: AllShardDone})
 	}
-	log.Info("Sync done", "timeUsed", s.totalSecondsUsed)
+	log.Info("Sync done")
 }
 
 func (s *SyncClient) loadSyncStatus() {
-	// Start a fresh sync for retrieval.
-	s.blobsSynced, s.syncedBytes = 0, 0
-	s.emptyBlobsToFill, s.emptyBlobsFilled = 0, 0
-	s.totalSecondsUsed = 0
 	var progress SyncProgress
 
 	if status, _ := s.db.Get(syncStatusKey); status != nil {
 		if err := json.Unmarshal(status, &progress); err != nil {
 			log.Error("Failed to decode storage sync status", "err", err)
 		} else {
-			for _, task := range progress.Tasks {
-				log.Debug("Load sync subTask", "contract", task.Contract.Hex(),
-					"shard", task.ShardId, "count", len(task.SubTasks))
-				task.healTask = &healTask{
-					Indexes: make(map[uint64]int64),
-					task:    task,
+			for _, t := range progress.Tasks {
+				// TODO if t.State is nil, that mean the status is marshal by old state,
+				// set process value to SyncState to make it compatible.
+				// it can be removed after public test done.
+				if t.State == nil {
+					t.State = &SyncState{
+						PeerCount:         0,
+						BlobsToSync:       0,
+						BlobsSynced:       progress.BlobsSynced,
+						SyncProgress:      0,
+						SyncedSeconds:     progress.TotalSecondsUsed,
+						EmptyFilled:       progress.EmptyBlobsFilled,
+						EmptyToFill:       0,
+						FillEmptySeconds:  progress.TotalSecondsUsed,
+						FillEmptyProgress: 0,
+					}
 				}
-				task.statelessPeers = make(map[peer.ID]struct{})
-				task.peers = make(map[peer.ID]struct{})
-				for _, sTask := range task.SubTasks {
-					sTask.task = task
+				log.Debug("Load sync subTask", "contract", t.Contract.Hex(),
+					"shard", t.ShardId, "count", len(t.SubTasks))
+				t.healTask = &healTask{
+					Indexes: make(map[uint64]int64),
+					task:    t,
+				}
+				t.statelessPeers = make(map[peer.ID]struct{})
+				for _, sTask := range t.SubTasks {
+					sTask.task = t
 					sTask.next = sTask.First
 				}
-				for _, sEmptyTask := range task.SubEmptyTasks {
-					sEmptyTask.task = task
-					s.emptyBlobsToFill += sEmptyTask.Last - sEmptyTask.First
+				for _, sEmptyTask := range t.SubEmptyTasks {
+					sEmptyTask.task = t
 				}
 			}
-			s.blobsSynced, s.syncedBytes = progress.BlobsSynced, progress.SyncedBytes
-			s.emptyBlobsFilled = progress.EmptyBlobsFilled
-			s.totalSecondsUsed = progress.TotalSecondsUsed
 		}
 	}
 
@@ -298,7 +300,17 @@ func (s *SyncClient) createTask(sid uint64, lastKvIndex uint64) *task {
 		ShardId:        sid,
 		nextIdx:        0,
 		statelessPeers: make(map[peer.ID]struct{}),
-		peers:          make(map[peer.ID]struct{}),
+		State: &SyncState{
+			PeerCount:         0,
+			BlobsToSync:       0,
+			BlobsSynced:       0,
+			SyncProgress:      0,
+			SyncedSeconds:     0,
+			EmptyFilled:       0,
+			EmptyToFill:       0,
+			FillEmptySeconds:  0,
+			FillEmptyProgress: 0,
+		},
 	}
 
 	healTask := healTask{
@@ -343,7 +355,7 @@ func (s *SyncClient) createTask(sid uint64, lastKvIndex uint64) *task {
 
 	subEmptyTasks := make([]*subEmptyTask, 0)
 	if limitForEmpty > 0 {
-		s.emptyBlobsToFill += limitForEmpty - firstEmpty
+		task.State.EmptyToFill = limitForEmpty - firstEmpty
 		maxEmptyTaskSize := (limitForEmpty - firstEmpty + uint64(maxFillEmptyTaskTreads) - 1) / uint64(maxFillEmptyTaskTreads)
 		if maxEmptyTaskSize < minSubTaskSize {
 			maxEmptyTaskSize = minSubTaskSize
@@ -381,12 +393,13 @@ func (s *SyncClient) saveSyncStatus(force bool) {
 	defer s.lock.Unlock()
 	// Store the actual progress markers
 	progress := &SyncProgress{
-		Tasks:            s.tasks,
-		BlobsSynced:      s.blobsSynced,
-		SyncedBytes:      s.syncedBytes,
-		EmptyBlobsToFill: s.emptyBlobsToFill,
-		EmptyBlobsFilled: s.emptyBlobsFilled,
-		TotalSecondsUsed: s.totalSecondsUsed,
+		Tasks: s.tasks,
+		// TODO remote it before next test net
+		BlobsSynced:      0,
+		SyncedBytes:      0,
+		EmptyBlobsToFill: 0,
+		EmptyBlobsFilled: 0,
+		TotalSecondsUsed: 0,
 	}
 	status, err := json.Marshal(progress)
 	if err != nil {
@@ -438,8 +451,6 @@ func (s *SyncClient) cleanTasks() {
 	if allDone {
 		s.setSyncDone()
 		log.Info("Storage sync done", "subTaskCount", len(s.tasks))
-
-		s.report(true)
 	}
 }
 
@@ -518,8 +529,8 @@ func (s *SyncClient) Close() error {
 	s.resCancel()
 	s.wg.Wait()
 	s.cleanTasks()
-	s.saveSyncStatus(true)
 	s.report(true)
+	s.saveSyncStatus(true)
 	return nil
 }
 
@@ -577,6 +588,7 @@ func (s *SyncClient) mainLoop() {
 		// Remove all completed tasks and terminate sync if everything's done
 		s.cleanTasks()
 		if s.syncDone {
+			s.report(true)
 			s.saveSyncStatus(true)
 			return
 		}
@@ -825,12 +837,8 @@ func (s *SyncClient) assignFillEmptyBlobTasks() {
 				filled := next - start
 
 				s.lock.Lock()
-				s.emptyBlobsFilled += filled
-				if s.emptyBlobsToFill >= filled {
-					s.emptyBlobsToFill -= filled
-				} else {
-					s.emptyBlobsToFill = 0
-				}
+				state := eTask.task.State
+				state.EmptyFilled += filled
 				eTask.First = next
 				if eTask.First >= eTask.Last {
 					eTask.done = true
@@ -906,8 +914,6 @@ func (s *SyncClient) OnBlobsByRange(res *blobsByRangeResponse) {
 		return
 	}
 
-	s.blobsSynced += synced
-	s.syncedBytes += common.StorageSize(syncedBytes)
 	s.metrics.ClientOnBlobsByRange(req.peer.String(), reqCount, uint64(len(res.Blobs)), synced, time.Since(start))
 	log.Debug("Persisted set of kvs", "count", synced, "bytes", syncedBytes)
 
@@ -934,6 +940,8 @@ func (s *SyncClient) OnBlobsByRange(res *blobsByRangeResponse) {
 		}
 	}
 	s.lock.Lock()
+	state := req.subTask.task.State
+	state.BlobsSynced += uint64(len(inserted))
 	res.req.subTask.task.healTask.insert(missing)
 	if last == res.req.subTask.Last-1 {
 		res.req.subTask.done = true
@@ -989,13 +997,13 @@ func (s *SyncClient) OnBlobsByList(res *blobsByListResponse) {
 		return
 	}
 
-	s.blobsSynced += synced
-	s.syncedBytes += common.StorageSize(syncedBytes)
 	s.metrics.ClientOnBlobsByList(req.peer.String(), uint64(len(req.indexes)), uint64(len(res.Blobs)),
 		synced, time.Since(start))
 	log.Debug("Persisted set of kvs", "count", synced, "bytes", syncedBytes)
 
 	s.lock.Lock()
+	state := req.healTask.task.State
+	state.BlobsSynced += uint64(len(inserted))
 	// set peer to stateless peer if fail too much
 	if len(inserted) == 0 {
 		if _, ok := s.peers[req.peer]; ok {
@@ -1109,88 +1117,79 @@ func (s *SyncClient) commitBlobs(kvIndices []uint64, decodedBlobs [][]byte, comm
 
 // report calculates various status reports and provides it to the user.
 func (s *SyncClient) report(force bool) {
+	duration := uint64(time.Since(s.logTime).Seconds())
 	// Don't report all the events, just occasionally
-	if !force && time.Since(s.logTime) < 8*time.Second {
+	if !force && duration < 8 {
 		return
 	}
-	s.totalSecondsUsed = s.totalSecondsUsed + uint64(time.Since(s.logTime).Seconds())
 	s.logTime = time.Now()
 
-	s.reportSyncState()
-	s.reportFillEmptyState()
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	s.reportSyncState(duration)
+	s.reportFillEmptyState(duration)
 }
 
-func (s *SyncClient) reportSyncState() {
-	// Don't report anything until we have a meaningful progress
-	if s.blobsSynced == 0 {
-		return
-	}
-	var (
-		totalSecondsUsed = s.totalSecondsUsed
-		synced           = s.blobsSynced
-		syncedBytes      = s.syncedBytes
-		blobsToSync      = uint64(0)
-		taskRemain       = 0
-		subTaskRemain    = 0
-	)
-
+func (s *SyncClient) reportSyncState(duration uint64) {
 	for _, t := range s.tasks {
+		blobsToSync := uint64(0)
 		for _, st := range t.SubTasks {
 			blobsToSync = blobsToSync + (st.Last - st.next)
-			subTaskRemain++
 		}
-		blobsToSync = blobsToSync + uint64(t.healTask.count())
-		if !t.done {
-			taskRemain++
+		t.State.BlobsToSync = blobsToSync + uint64(t.healTask.count())
+		if t.State.BlobsSynced+t.State.BlobsToSync != 0 {
+			t.State.SyncProgress = t.State.BlobsSynced * 10000 / (t.State.BlobsSynced + t.State.BlobsToSync)
 		}
+
+		// If sync is complete, stop adding sync time
+		if t.State.BlobsToSync != 0 {
+			t.State.SyncedSeconds = t.State.SyncedSeconds + duration
+		}
+
+		estTime := "No estimated time"
+		progress := fmt.Sprintf("%.2f%%", float64(t.State.SyncProgress)/100)
+		if t.State.BlobsSynced != 0 {
+			etaSecondsLeft := t.State.SyncedSeconds * t.State.BlobsToSync / t.State.BlobsSynced
+			estTime = common.PrettyDuration(time.Duration(etaSecondsLeft) * time.Second).String()
+		}
+
+		log.Info("Storage sync in progress", "shardId", t.ShardId, "subTaskRemain", len(t.SubTasks), "peerCount",
+			t.State.PeerCount, "progress", progress, "blobsSynced", t.State.BlobsSynced, "blobsToSync", t.State.BlobsToSync,
+			"timeUsed", common.PrettyDuration(time.Duration(t.State.SyncedSeconds)*time.Second), "etaTimeLeft", estTime)
 	}
-
-	etaSecondsLeft := totalSecondsUsed * blobsToSync / synced
-
-	// Create a mega progress report
-	var (
-		progress    = fmt.Sprintf("%.2f%%", float64(synced)*100/float64(blobsToSync+synced))
-		tasksRemain = fmt.Sprintf("%d@%d", taskRemain, subTaskRemain)
-		blobsSynced = fmt.Sprintf("%v@%v", log.FormatLogfmtUint64(synced), syncedBytes.TerminalString())
-	)
-	log.Info("Storage sync in progress", "progress", progress, "peerCount", len(s.peers), "tasksRemain", tasksRemain,
-		"blobsSynced", blobsSynced, "blobsToSync", blobsToSync, "timeUsed", common.PrettyDuration(time.Duration(totalSecondsUsed)*time.Second),
-		"etaTimeLeft", common.PrettyDuration(time.Duration(etaSecondsLeft)*time.Second))
 }
 
-func (s *SyncClient) reportFillEmptyState() {
-	// Don't report anything until we have a meaningful progress
-	if s.emptyBlobsFilled == 0 {
-		return
-	}
-
-	var (
-		totalSecondsUsed  = s.totalSecondsUsed
-		emptyFilled       = s.emptyBlobsFilled
-		filledBytes       = common.StorageSize(s.emptyBlobsFilled * s.storageManager.MaxKvSize())
-		emptyToFill       = s.emptyBlobsToFill
-		taskRemain        = 0
-		subFillTaskRemain = 0
-	)
-
+func (s *SyncClient) reportFillEmptyState(duration uint64) {
 	for _, t := range s.tasks {
-		if !t.done {
-			taskRemain++
+		if t.State.EmptyFilled == 0 && len(t.SubEmptyTasks) == 0 {
+			continue
 		}
-		subFillTaskRemain = subFillTaskRemain + len(t.SubEmptyTasks)
+		emptyToFill := uint64(0)
+		for _, st := range t.SubEmptyTasks {
+			emptyToFill = emptyToFill + (st.Last - st.First)
+		}
+		t.State.EmptyToFill = emptyToFill
+		if t.State.EmptyFilled+t.State.EmptyToFill != 0 {
+			t.State.FillEmptyProgress = t.State.EmptyFilled * 10000 / (t.State.EmptyFilled + t.State.EmptyToFill)
+		}
+
+		// If fill empty is complete, stop adding sync time
+		if t.State.EmptyToFill != 0 {
+			t.State.FillEmptySeconds = t.State.FillEmptySeconds + duration
+		}
+
+		estTime := "No estimated time"
+		progress := fmt.Sprintf("%.2f%%", float64(t.State.FillEmptyProgress)/100)
+		if t.State.EmptyFilled != 0 {
+			etaSecondsLeft := t.State.FillEmptySeconds * t.State.EmptyToFill / t.State.EmptyFilled
+			estTime = common.PrettyDuration(time.Duration(etaSecondsLeft) * time.Second).String()
+		}
+
+		log.Info("Storage fill empty in progress", "shardId", t.ShardId, "subTaskRemain", len(t.SubEmptyTasks),
+			"progress", progress, "emptyFilled", t.State.EmptyFilled, "emptyToFill", t.State.EmptyToFill, "timeUsed",
+			common.PrettyDuration(time.Duration(t.State.FillEmptySeconds)*time.Second), "etaTimeLeft", estTime)
 	}
-
-	etaSecondsLeft := totalSecondsUsed * emptyToFill / emptyFilled
-
-	// Create a mega progress report
-	var (
-		progress    = fmt.Sprintf("%.2f%%", float64(emptyFilled)*100/float64(emptyFilled+emptyToFill))
-		tasksRemain = fmt.Sprintf("%d@%d", taskRemain, subFillTaskRemain)
-		blobsFilled = fmt.Sprintf("%v@%v", log.FormatLogfmtUint64(emptyFilled), filledBytes.TerminalString())
-	)
-	log.Info("Storage fill empty in progress", "progress", progress, "tasksRemain", tasksRemain,
-		"emptyFilled", blobsFilled, "emptyToFill", emptyToFill, "timeUsed", common.PrettyDuration(time.Duration(totalSecondsUsed)*time.Second),
-		"etaTimeLeft", common.PrettyDuration(time.Duration(etaSecondsLeft)*time.Second))
 }
 
 func (s *SyncClient) ReportPeerSummary() {
@@ -1215,7 +1214,6 @@ func (s *SyncClient) ReportPeerSummary() {
 			return
 		}
 	}
-
 }
 
 func (s *SyncClient) needThisPeer(contractShards map[common.Address][]uint64) bool {
@@ -1233,7 +1231,7 @@ func (s *SyncClient) needThisPeer(contractShards map[common.Address][]uint64) bo
 				// - SyncClient peer count smaller than maxPeers; or
 				// - task peer count smaller than minPeersPerShard
 				// otherwise, the peer will be disconnected.
-				if len(s.peers) < s.maxPeers || len(t.peers) < s.minPeersPerShard {
+				if len(s.peers) < s.maxPeers || t.State.PeerCount < s.minPeersPerShard {
 					return true
 				}
 			}
@@ -1248,7 +1246,7 @@ func (s *SyncClient) addPeerToTask(peerID peer.ID, contractShards map[common.Add
 		for _, shard := range shards {
 			for _, t := range s.tasks {
 				if t.Contract == contract && shard == t.ShardId {
-					t.peers[peerID] = struct{}{}
+					t.State.PeerCount++
 				}
 			}
 		}
@@ -1260,9 +1258,17 @@ func (s *SyncClient) removePeerFromTask(peerID peer.ID, contractShards map[commo
 		for _, shard := range shards {
 			for _, t := range s.tasks {
 				if t.Contract == contract && shard == t.ShardId {
-					delete(t.peers, peerID)
+					t.State.PeerCount--
 				}
 			}
 		}
 	}
+}
+
+func (s *SyncClient) GetState() map[uint64]*SyncState {
+	states := make(map[uint64]*SyncState)
+	for _, t := range s.tasks {
+		states[t.ShardId] = t.State
+	}
+	return states
 }

@@ -59,6 +59,7 @@ type SyncServerMetrics interface {
 type SyncServer struct {
 	cfg *rollup.EsConfig
 
+	providedBlobs  map[uint64]uint64
 	storageManager StorageManagerReader
 	metrics        SyncServerMetrics
 
@@ -79,9 +80,15 @@ func NewSyncServer(cfg *rollup.EsConfig, storageManager StorageManagerReader, m 
 	if m == nil {
 		m = metrics.NoopMetrics
 	}
+
+	providedBlobs := make(map[uint64]uint64)
+	for _, shardId := range storageManager.Shards() {
+		providedBlobs[shardId] = 0
+	}
 	return &SyncServer{
 		cfg:              cfg,
 		storageManager:   storageManager,
+		providedBlobs:    providedBlobs,
 		metrics:          m,
 		peerRateLimits:   peerRateLimits,
 		globalRequestsRL: globalRequestsRL,
@@ -175,6 +182,7 @@ func (srv *SyncServer) handleGetBlobsByRangeRequest(ctx context.Context, stream 
 		}
 	}
 	srv.metrics.ServerReadBlobs(peerID.String(), read, sucRead, time.Since(start))
+	srv.providedBlobs[req.ShardId] += uint64(len(res.Blobs))
 
 	recordDur := srv.metrics.ServerRecordTimeUsed("encodeResult")
 	data, err := rlp.EncodeToBytes(&res)
@@ -227,6 +235,7 @@ func (srv *SyncServer) handleGetBlobsByListRequest(ctx context.Context, stream n
 		}
 	}
 	srv.metrics.ServerReadBlobs(peerID.String(), read, sucRead, time.Since(start))
+	srv.providedBlobs[req.ShardId] += uint64(len(res.Blobs))
 
 	recordDur := srv.metrics.ServerRecordTimeUsed("encodeResult")
 	data, err := rlp.EncodeToBytes(&res)
@@ -310,4 +319,8 @@ func (srv *SyncServer) HandleRequestShardList(ctx context.Context, log log.Logge
 		log.Warn("Write response failed for HandleRequestShardList", "err", err.Error())
 	}
 	log.Debug("Write response done for HandleRequestShardList")
+}
+
+func (srv *SyncServer) ProvidedBlobs() map[uint64]uint64 {
+	return srv.providedBlobs
 }
