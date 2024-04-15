@@ -6,6 +6,7 @@ package miner
 import (
 	"context"
 	"fmt"
+	"github.com/ethereum/go-ethereum/ethdb"
 	"math/big"
 	"sync"
 
@@ -57,7 +58,7 @@ type Miner struct {
 	lg          log.Logger
 }
 
-func New(config *Config, storageMgr *ethstorage.StorageManager, api L1API, prover MiningProver, feed *event.Feed, lg log.Logger) *Miner {
+func New(config *Config, db ethdb.Database, storageMgr *ethstorage.StorageManager, api L1API, prover MiningProver, feed *event.Feed, lg log.Logger) *Miner {
 	chainHeadCh := make(chan eth.L1BlockRef, chainHeadChanSize)
 	miner := &Miner{
 		feed:        feed,
@@ -66,7 +67,7 @@ func New(config *Config, storageMgr *ethstorage.StorageManager, api L1API, prove
 		startCh:     make(chan struct{}),
 		stopCh:      make(chan struct{}),
 		lg:          lg,
-		worker:      newWorker(*config, storageMgr, api, chainHeadCh, prover, lg),
+		worker:      newWorker(*config, db, storageMgr, api, chainHeadCh, prover, lg),
 	}
 	miner.wg.Add(1)
 	go miner.update()
@@ -138,4 +139,8 @@ func (miner *Miner) Close() {
 
 func (miner *Miner) Mining() bool {
 	return miner.worker.isRunning()
+}
+
+func (miner *Miner) GetState() (map[uint64]*MiningState, map[uint64]*SubmissionState) {
+	return miner.worker.getState()
 }
