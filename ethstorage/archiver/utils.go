@@ -73,20 +73,20 @@ var (
 func newBlockIdError(input string) *httpError {
 	return &httpError{
 		Code:    http.StatusBadRequest,
-		Message: fmt.Sprintf("invalid block id: %s", input),
+		Message: fmt.Sprintf("Invalid block ID: %s", input),
 	}
 }
 
 func newIndicesError(input string) *httpError {
 	return &httpError{
 		Code:    http.StatusBadRequest,
-		Message: fmt.Sprintf("invalid index input: %s", input),
+		Message: fmt.Sprintf("Invalid index input: %s", input),
 	}
 }
 
 func newOutOfRangeError(input uint64, blobCount int) *httpError {
 	return &httpError{
 		Code:    http.StatusBadRequest,
-		Message: fmt.Sprintf("invalid index: %d - block contains %d blobs", input, blobCount),
+		Message: fmt.Sprintf("Invalid index: %d - block contains %d blobs", input, blobCount),
 	}
 }
