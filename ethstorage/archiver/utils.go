@@ -4,12 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
+
+var knownIds = []string{"genesis", "finalized", "head"}
 
 func validateBlockID(id string) *httpError {
 	if isHash(id) || isSlot(id) || isKnownIdentifier(id) {
@@ -32,7 +33,12 @@ func isSlot(id string) bool {
 }
 
 func isKnownIdentifier(id string) bool {
-	return slices.Contains([]string{"genesis", "finalized", "head"}, id)
+	for _, element := range knownIds {
+		if element == id {
+			return true
+		}
+	}
+	return false
 }
 
 type httpError struct {
