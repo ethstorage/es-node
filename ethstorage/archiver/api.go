@@ -45,7 +45,7 @@ func (a *API) queryBlobSidecars(id string, indices []uint64) (*BlobSidecars, *ht
 		a.logger.Error("Invalid beaconID", "beaconID", id, "err", err)
 		return nil, errUnknownBlock
 	}
-	elBlock, kzgCommitsAll, hErr := queryElBlockNumberAndKzg(queryUrl)
+	elBlock, kzgCommitsAll, hErr := a.queryElBlockNumberAndKzg(queryUrl)
 	if hErr != nil {
 		a.logger.Error("Failed to get execution block number", "beaconID", id, "err", err)
 		return nil, hErr
@@ -71,7 +71,6 @@ func (a *API) queryBlobSidecars(id string, indices []uint64) (*BlobSidecars, *ht
 	for i, c := range kzgCommits {
 		bh := gkzg.KZGToVersionedHash(gkzg.KZGCommitment(common.FromHex(c)))
 		hashToIndex[common.Hash(bh)] = uint64(i)
-		a.logger.Info("BlobhHash to index", "blobHash", common.Hash(bh), "index", i)
 	}
 
 	// get event logs on the block
@@ -88,7 +87,7 @@ func (a *API) queryBlobSidecars(id string, indices []uint64) (*BlobSidecars, *ht
 		// parse event to get kv_index with queried index
 		if index, ok := hashToIndex[blobHash]; ok {
 			kvIndex := big.NewInt(0).SetBytes(event.Topics[1][:]).Uint64()
-			a.logger.Info("BlobHash matched", "blobHash", blobHash, "index", index, "kvIndex", kvIndex)
+			a.logger.Info("Blobhash matched", "blobhash", blobHash, "index", index, "kvIndex", kvIndex)
 			sidecar, hErr := a.buildSidecar(kvIndex, common.FromHex(kzgCommitsAll[index]), blobHash)
 			if hErr != nil {
 				a.logger.Error("Failed to build sidecar", "err", hErr)
@@ -103,7 +102,13 @@ func (a *API) queryBlobSidecars(id string, indices []uint64) (*BlobSidecars, *ht
 	return &res, nil
 }
 
-func queryElBlockNumberAndKzg(queryUrl string) (uint64, []string, *httpError) {
+func (a *API) queryElBlockNumberAndKzg(queryUrl string) (uint64, []string, *httpError) {
+	start := time.Now()
+	defer func(start time.Time) {
+		dur := time.Since(start)
+		a.logger.Info("Query el block number and kzg", "took(s)", dur.Seconds())
+	}(start)
+
 	resp, err := http.Get(queryUrl)
 	if err != nil {
 		return 0, nil, errServerError
@@ -138,7 +143,7 @@ func (a *API) buildSidecar(kvIndex uint64, kzgCommitment []byte, blobHash common
 	start := time.Now()
 	defer func(start time.Time) {
 		dur := time.Since(start)
-		a.logger.Info("buildSidecar", "took(s)", dur.Seconds())
+		a.logger.Info("Build sidecar", "took(s)", dur.Seconds())
 	}(start)
 
 	blobData, found, err := a.storageMgr.TryRead(kvIndex, int(a.storageMgr.MaxKvSize()), blobHash)
