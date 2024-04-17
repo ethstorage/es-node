@@ -36,8 +36,8 @@ var (
 	minedEventSig       = crypto.Keccak256Hash([]byte("MinedBlock(uint256,uint256,uint256,uint256,address,uint256)"))
 	errCh               = make(chan miningError, 10)
 	errDropped          = errors.New("dropped: not enough profit")
-	submissionStatusKey = []byte("SubmissionStatusKey")
-	miningStatusKey     = []byte("MiningStatusKey")
+	SubmissionStatusKey = []byte("SubmissionStatusKey")
+	MiningStatusKey     = []byte("MiningStatusKey")
 )
 
 type MiningState struct {
@@ -131,7 +131,7 @@ func newWorker(
 	lg log.Logger,
 ) *worker {
 	var submissionStates map[uint64]SubmissionState
-	if status, _ := db.Get(submissionStatusKey); status != nil {
+	if status, _ := db.Get(SubmissionStatusKey); status != nil {
 		if err := json.Unmarshal(status, &submissionStates); err != nil {
 			log.Error("Failed to decode submission states", "err", err)
 		}
@@ -202,7 +202,7 @@ func (w *worker) saveStates() {
 		log.Error("Failed to marshal submission states", "err", err)
 		return
 	}
-	err = w.db.Put(submissionStatusKey, states)
+	err = w.db.Put(SubmissionStatusKey, states)
 	if err != nil {
 		log.Error("Failed to store submission states", "err", err)
 		return
@@ -213,7 +213,7 @@ func (w *worker) saveStates() {
 		log.Error("Failed to marshal mining states", "err", err)
 		return
 	}
-	err = w.db.Put(miningStatusKey, states)
+	err = w.db.Put(MiningStatusKey, states)
 	if err != nil {
 		log.Error("Failed to store mining states", "err", err)
 		return
