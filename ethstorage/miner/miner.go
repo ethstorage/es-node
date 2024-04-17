@@ -140,7 +140,3 @@ func (miner *Miner) Close() {
 func (miner *Miner) Mining() bool {
 	return miner.worker.isRunning()
 }
-
-func (miner *Miner) GetState() (map[uint64]*MiningState, map[uint64]*SubmissionState) {
-	return miner.worker.getState()
-}
