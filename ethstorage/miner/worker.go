@@ -385,6 +385,8 @@ func (w *worker) resultLoop() {
 	errorCache := make([]miningError, 0)
 	ticker := time.NewTicker(1 * time.Minute)
 	defer ticker.Stop()
+	saveStatesTicker := time.NewTicker(5 * time.Minute)
+	defer saveStatesTicker.Stop()
 	for {
 		select {
 		case <-w.resultCh:
@@ -445,6 +447,7 @@ func (w *worker) resultLoop() {
 			if len(errorCache) > 0 {
 				log.Error(fmt.Sprintf("Mining stats since %s", startTime), "lastError", errorCache[len(errorCache)-1])
 			}
+		case <-saveStatesTicker.C:
 			w.saveStates()
 		case err := <-errCh:
 			if s, ok := w.submissionStates[err.shardIdx]; ok {
