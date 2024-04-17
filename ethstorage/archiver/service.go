@@ -60,6 +60,10 @@ func (a *APIService) blobSidecarHandler(w http.ResponseWriter, r *http.Request) 
 			indices = append(indices, parsedInt)
 		}
 	}
+	if hErr := validateBlockID(id); hErr != nil {
+		hErr.write(w)
+		return
+	}
 	result, hErr := a.api.queryBlobSidecars(id, indices)
 	if hErr != nil {
 		hErr.write(w)

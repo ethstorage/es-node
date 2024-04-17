@@ -36,9 +36,6 @@ func NewAPI(storageMgr *ethstorage.StorageManager, beaconClient *eth.BeaconClien
 }
 
 func (a *API) queryBlobSidecars(id string, indices []uint64) (*BlobSidecars, *httpError) {
-	if hErr := validateBlockID(id); hErr != nil {
-		return nil, hErr
-	}
 	// query EL block
 	queryUrl, err := a.beaconClient.QueryUrlForV2BeaconBlock(id)
 	if err != nil {
@@ -52,25 +49,22 @@ func (a *API) queryBlobSidecars(id string, indices []uint64) (*BlobSidecars, *ht
 	}
 	a.logger.Info("BeaconID to execution block number", "beaconID", id, "elBlock", elBlock)
 
-	kzgCommits := kzgCommitsAll
+	blobsInBeacon := len(kzgCommitsAll)
 	if indices != nil {
-		// filter by indices if provided
-		var filtered []string
 		for _, index := range indices {
-			if index >= uint64(len(kzgCommitsAll)) {
-				return nil, newOutOfRangeError(index, len(kzgCommitsAll))
+			if int(index) >= blobsInBeacon {
+				return nil, newOutOfRangeError(index, blobsInBeacon)
 			}
-			filtered = append(filtered, kzgCommitsAll[index])
 		}
-		a.logger.Info("Filtered by indices", "indices", indices, "filtered", len(filtered))
-		kzgCommits = filtered
 	}
 
 	// hashToIndex is used to determine correct blob index
 	hashToIndex := make(map[common.Hash]uint64)
-	for i, c := range kzgCommits {
-		bh := gkzg.KZGToVersionedHash(gkzg.KZGCommitment(common.FromHex(c)))
-		hashToIndex[common.Hash(bh)] = uint64(i)
+	for i, c := range kzgCommitsAll {
+		if indexIncluded(uint64(i), indices) {
+			bh := gkzg.KZGToVersionedHash(gkzg.KZGCommitment(common.FromHex(c)))
+			hashToIndex[common.Hash(bh)] = uint64(i)
+		}
 	}
 
 	// get event logs on the block

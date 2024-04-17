@@ -41,6 +41,18 @@ func isKnownIdentifier(id string) bool {
 	return false
 }
 
+func indexIncluded(index uint64, indices []uint64) bool {
+	if indices == nil {
+		return true
+	}
+	for _, element := range indices {
+		if element == index {
+			return true
+		}
+	}
+	return false
+}
+
 type httpError struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
