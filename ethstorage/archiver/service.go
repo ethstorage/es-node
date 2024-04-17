@@ -54,8 +54,8 @@ func (a *APIService) blobSidecarHandler(w http.ResponseWriter, r *http.Request) 
 		for _, index := range splits {
 			parsedInt, err := strconv.ParseUint(index, 10, 64)
 			if err != nil {
-				newIndicesError(index).write(w)
-				return
+				// beacon API will ignore invalid indices and return all blobs
+				break
 			}
 			indices = append(indices, parsedInt)
 		}

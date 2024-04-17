@@ -53,7 +53,8 @@ func (a *API) queryBlobSidecars(id string, indices []uint64) (*BlobSidecars, *ht
 	if indices != nil {
 		for _, index := range indices {
 			if int(index) >= blobsInBeacon {
-				return nil, newOutOfRangeError(index, blobsInBeacon)
+				// beacon API will ignore invalid indices and return all blobs
+				indices = nil
 			}
 		}
 	}

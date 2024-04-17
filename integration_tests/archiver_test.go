@@ -1,5 +1,8 @@
 // Copyright 2022-2023, EthStorage.
 // For license information, see https://github.com/ethstorage/es-node/blob/main/LICENSE
+
+//go:build !ci
+
 package integration
 
 import (
@@ -51,18 +54,27 @@ func TestArchiveAPI(t *testing.T) {
 			archivedIndices: []uint64{3},
 		},
 		{
-			query:           "current",
-			archivedIndices: nil,
+			query:           "4756895?indices=0,3",
+			archivedIndices: []uint64{3},
 		},
 		{
-			query:           "4756895?indices=1",
-			archivedIndices: nil,
-			httpCode:        404,
-			msg:             "Blob not found in EthStorage",
+			query:    "4756895?indices=1",
+			httpCode: 404,
+			msg:      "Blob not found in EthStorage",
+		},
+		{
+			query: "current",
+		},
+		{
+			query: "8626176",
+		},
+		{
+			query: "4756895?indices=9",
 		},
 	}
 
-	for _, tt := range tests {
+	for i, tt := range tests {
+		t.Logf("=== test %d =====\n", i)
 		urla := fmt.Sprintf(urlPattern, archiverAddr, tt.query)
 		sidecarsa, codea, msga, err := makeQuery(t, urla)
 		if err != nil {
