@@ -4,6 +4,9 @@
 package archiver
 
 import (
+	"bytes"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -18,7 +21,7 @@ type BlobSidecars struct {
 }
 
 type BlobSidecar struct {
-	Index         uint64      `json:"index"`
+	Index         Index       `json:"index"`
 	KZGCommitment byte48      `json:"kzg_commitment"`
 	KZGProof      byte48      `json:"kzg_proof"`
 	Blob          blobContent `json:"blob"`
@@ -26,12 +29,30 @@ type BlobSidecar struct {
 }
 
 func (a *BlobSidecar) String() string {
-	return "BlobSidecar: {" +
-		"Index: " + strconv.FormatUint(a.Index, 10) + "," +
-		"KZGCommitment: " + hexutil.Encode(a.KZGCommitment[:]) + "," +
-		"KZGProof: " + hexutil.Encode(a.KZGProof[:]) + "," +
-		"Blob: " + hexutil.Encode(a.Blob[:20]) + "...," +
-		"}, "
+	jsn, _ := json.MarshalIndent(a, "", "  ")
+	return string(jsn)[:512] + "..."
+}
+
+type Index uint64
+
+func (i Index) MarshalJSON() ([]byte, error) {
+	return []byte(fmt.Sprintf(`"%d"`, i)), nil
+}
+
+func (i *Index) UnmarshalJSON(data []byte) error {
+	if !bytes.HasPrefix(data, []byte{'"'}) {
+		return errors.New("no prefix \"")
+	}
+	if !bytes.HasSuffix(data, []byte{'"'}) {
+		return errors.New("no suffix \"")
+	}
+
+	num, err := strconv.ParseUint(string(data[1:len(data)-1]), 10, 64)
+	if err != nil {
+		return err
+	}
+	*i = Index(num)
+	return nil
 }
 
 type byte48 [48]byte

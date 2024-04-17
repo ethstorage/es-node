@@ -60,11 +60,11 @@ func (a *API) queryBlobSidecars(id string, indices []uint64) (*BlobSidecars, *ht
 	}
 
 	// hashToIndex is used to determine correct blob index
-	hashToIndex := make(map[common.Hash]uint64)
+	hashToIndex := make(map[common.Hash]Index)
 	for i, c := range kzgCommitsAll {
 		if indexIncluded(uint64(i), indices) {
 			bh := gkzg.KZGToVersionedHash(gkzg.KZGCommitment(common.FromHex(c)))
-			hashToIndex[common.Hash(bh)] = uint64(i)
+			hashToIndex[common.Hash(bh)] = Index(i)
 		}
 	}
 

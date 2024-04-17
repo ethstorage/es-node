@@ -36,7 +36,7 @@ func (t *test) toUrl() string {
 	}
 	var strArr []string
 	for _, val := range t.archivedIndices {
-		strArr = append(strArr, strconv.FormatUint(val, 10))
+		strArr = append(strArr, strconv.FormatUint(uint64(val), 10))
 	}
 	query := fmt.Sprintf("%s?indices=%s", t.query, strings.Join(strArr, ","))
 	return fmt.Sprintf(urlPattern, archiverAddr, query)
@@ -162,7 +162,7 @@ func makeQuery(t *testing.T, url string) (map[uint64]*archiver.BlobSidecar, int,
 	// put blob sidecars into a map of indices to blobs
 	indexToSidecars := make(map[uint64]*archiver.BlobSidecar)
 	for _, blob := range res.Data {
-		indexToSidecars[blob.Index] = blob
+		indexToSidecars[uint64(blob.Index)] = blob
 		t.Logf("-> %d: %x", blob.Index, blob.Blob[:10])
 	}
 	t.Logf("-> blobs=%d", len(res.Data))
