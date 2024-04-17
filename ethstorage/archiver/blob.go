@@ -4,7 +4,8 @@
 package archiver
 
 import (
-	"encoding/json"
+	"fmt"
+	"reflect"
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -17,10 +18,10 @@ type BlobSidecars struct {
 }
 
 type BlobSidecar struct {
-	Index         uint64           `json:"index"`
-	KZGCommitment [48]byte         `json:"kzg_commitment"`
-	KZGProof      [48]byte         `json:"kzg_proof"`
-	Blob          [BlobLength]byte `json:"blob"`
+	Index         uint64      `json:"index"`
+	KZGCommitment byte48      `json:"kzg_commitment"`
+	KZGProof      byte48      `json:"kzg_proof"`
+	Blob          blobContent `json:"blob"`
 	// signed_block_header and inclusion-proof are ignored compared to beacon API
 }
 
@@ -33,51 +34,22 @@ func (a *BlobSidecar) String() string {
 		"}, "
 }
 
-type alias BlobSidecar
-type blobSidecarAlias struct {
-	Index         string `json:"index"`
-	KZGCommitment string `json:"kzg_commitment"`
-	KZGProof      string `json:"kzg_proof"`
-	Blob          string `json:"blob"`
-	*alias
+type byte48 [48]byte
+
+func (b byte48) MarshalJSON() ([]byte, error) {
+	return []byte(fmt.Sprintf(`"%#x"`, b)), nil
 }
 
-func (a *BlobSidecar) MarshalJSON() ([]byte, error) {
-	return json.Marshal(&blobSidecarAlias{
-		Index:         strconv.FormatUint(a.Index, 10),
-		KZGCommitment: hexutil.Encode(a.KZGCommitment[:]),
-		KZGProof:      hexutil.Encode(a.KZGProof[:]),
-		Blob:          hexutil.Encode(a.Blob[:]),
-		alias:         (*alias)(a),
-	})
+func (b *byte48) UnmarshalJSON(data []byte) error {
+	return hexutil.UnmarshalFixedJSON(reflect.TypeOf(b), data, b[:])
 }
 
-func (a *BlobSidecar) UnmarshalJSON(data []byte) error {
-	aux := &blobSidecarAlias{
-		alias: (*alias)(a),
-	}
-	if err := json.Unmarshal(data, &aux); err != nil {
-		return err
-	}
-	num, err := strconv.ParseUint(aux.Index, 10, 64)
-	if err != nil {
-		return err
-	}
-	a.Index = num
-	commitment, err := hexutil.Decode(aux.KZGCommitment)
-	if err != nil {
-		return err
-	}
-	proof, err := hexutil.Decode(aux.KZGProof)
-	if err != nil {
-		return err
-	}
-	blob, err := hexutil.Decode(aux.Blob)
-	if err != nil {
-		return err
-	}
-	copy(a.KZGCommitment[:], commitment)
-	copy(a.KZGProof[:], proof)
-	copy(a.Blob[:], blob)
-	return nil
+type blobContent [BlobLength]byte
+
+func (b blobContent) MarshalJSON() ([]byte, error) {
+	return []byte(fmt.Sprintf(`"%#x"`, b)), nil
+}
+
+func (b *blobContent) UnmarshalJSON(data []byte) error {
+	return hexutil.UnmarshalFixedJSON(reflect.TypeOf(b), data, b[:])
 }

@@ -159,6 +159,6 @@ func (a *API) buildSidecar(kvIndex uint64, kzgCommitment []byte, blobHash common
 	return &BlobSidecar{
 		Blob:          [BlobLength]byte(blobData),
 		KZGCommitment: [48]byte(kzgCommitment),
-		KZGProof:      kzgProof,
+		KZGProof:      [48]byte(kzgProof),
 	}, nil
 }
