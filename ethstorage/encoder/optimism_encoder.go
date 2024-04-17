@@ -26,9 +26,6 @@ var (
 	ErrBlobExtraneousDataFieldElement = errors.New("non-zero data encountered where field element should be empty")
 )
 
-type Blob [BlobSize]byte
-type Data []byte
-
 // FromData encodes the given input data into this blob. The encoding scheme is as follows:
 //
 // In each round we perform 7 reads of input of lengths (31,1,31,1,31,1,31) bytes respectively for
@@ -41,7 +38,7 @@ type Data []byte
 //
 // For only the very first output field, bytes [1:5] are used to encode the version and the length
 // of the data.
-func FromData(data Data) ([]byte, error) {
+func FromData(data []byte) ([]byte, error) {
 	if len(data) > MaxBlobDataSize {
 		return nil, fmt.Errorf("%w: len=%v", ErrBlobInputTooLarge, data)
 	}
@@ -145,7 +142,7 @@ func FromData(data Data) ([]byte, error) {
 // ToData decodes the blob into raw byte data. See FromData above for details on the encoding
 // format. If error is returned it will be one of InvalidFieldElementError,
 // InvalidEncodingVersionError and InvalidLengthError.
-func ToData(b []byte) (Data, error) {
+func ToData(b []byte) ([]byte, error) {
 	// check the version
 	if b[VersionOffset] != EncodingVersion {
 		return nil, fmt.Errorf(
@@ -160,7 +157,7 @@ func ToData(b []byte) (Data, error) {
 
 	// round 0 is special cased to copy only the remaining 27 bytes of the first field element into
 	// the output due to version/length encoding already occupying its first 5 bytes.
-	output := make(Data, MaxBlobDataSize)
+	output := make([]byte, MaxBlobDataSize)
 	copy(output[0:27], b[5:])
 
 	// now process remaining 3 field elements to complete round 0

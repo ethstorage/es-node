@@ -9,8 +9,8 @@ import (
 )
 
 func TestOpEncodeAndDecode(t *testing.T) {
-	data := make([]byte, 4096*31)
-	for i := 0; i < 4096*31; i++ {
+	data := make([]byte, MaxBlobDataSize)
+	for i := 0; i < MaxBlobDataSize; i++ {
 		data[i] = byte(i % 31)
 	}
 
