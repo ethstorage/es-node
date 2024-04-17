@@ -37,6 +37,7 @@ var (
 	errCh               = make(chan miningError, 10)
 	errDropped          = errors.New("dropped: not enough profit")
 	submissionStatusKey = []byte("SubmissionStatusKey")
+	miningStatusKey     = []byte("MiningStatusKey")
 )
 
 type MiningState struct {
@@ -192,12 +193,30 @@ func (w *worker) close() {
 			close(ch)
 		}
 	}
-	status, err := json.Marshal(w.submissionStates)
+	w.saveStates()
+}
+
+func (w *worker) saveStates() {
+	states, err := json.Marshal(w.submissionStates)
 	if err != nil {
-		panic(err) // This can only fail during implementation
+		log.Error("Failed to marshal submission states", "err", err)
+		return
 	}
-	if err := w.db.Put(submissionStatusKey, status); err != nil {
-		log.Error("Failed to store submission status", "err", err)
+	err = w.db.Put(submissionStatusKey, states)
+	if err != nil {
+		log.Error("Failed to store submission states", "err", err)
+		return
+	}
+
+	states, err = json.Marshal(w.miningStates)
+	if err != nil {
+		log.Error("Failed to marshal mining states", "err", err)
+		return
+	}
+	err = w.db.Put(miningStatusKey, states)
+	if err != nil {
+		log.Error("Failed to store mining states", "err", err)
+		return
 	}
 }
 
@@ -426,6 +445,7 @@ func (w *worker) resultLoop() {
 			if len(errorCache) > 0 {
 				log.Error(fmt.Sprintf("Mining stats since %s", startTime), "lastError", errorCache[len(errorCache)-1])
 			}
+			w.saveStates()
 		case err := <-errCh:
 			if s, ok := w.submissionStates[err.shardIdx]; ok {
 				s.Failed++
@@ -607,15 +627,4 @@ func (w *worker) getMiningData(t *task, sampleIdx []uint64) ([][]byte, []uint64,
 		}
 	}
 	return dataSet, kvIdxs, sampleIdxsInKv, encodingKeys, encodedSamples, nil
-}
-
-func (w *worker) getState() (map[uint64]*MiningState, map[uint64]*SubmissionState) {
-	msMap, ssMap := make(map[uint64]*MiningState), make(map[uint64]*SubmissionState)
-	for sid, ms := range w.miningStates {
-		msMap[sid] = ms
-	}
-	for sid, ss := range w.submissionStates {
-		ssMap[sid] = ss
-	}
-	return msMap, ssMap
 }
