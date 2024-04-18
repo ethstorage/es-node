@@ -42,7 +42,7 @@ func isKnownIdentifier(id string) bool {
 }
 
 func indexIncluded(index uint64, indices []uint64) bool {
-	if indices == nil {
+	if len(indices) == 0 {
 		return true
 	}
 	for _, element := range indices {
@@ -86,19 +86,5 @@ func newBlockIdError(input string) *httpError {
 	return &httpError{
 		Code:    http.StatusBadRequest,
 		Message: fmt.Sprintf("Invalid block ID: %s", input),
-	}
-}
-
-func newIndicesError(input string) *httpError {
-	return &httpError{
-		Code:    http.StatusBadRequest,
-		Message: fmt.Sprintf("Invalid index input: %s", input),
-	}
-}
-
-func newOutOfRangeError(input uint64, blobCount int) *httpError {
-	return &httpError{
-		Code:    http.StatusBadRequest,
-		Message: fmt.Sprintf("Invalid index: %d - block contains %d blobs", input, blobCount),
 	}
 }
