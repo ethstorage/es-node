@@ -9,7 +9,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     env:
       BUILD_DIR: es-node.${{ github.ref_name }}
       BIN_DIR: es-node.${{ github.ref_name }}/build/bin
