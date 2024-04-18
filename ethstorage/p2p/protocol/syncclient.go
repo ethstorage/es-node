@@ -57,8 +57,8 @@ const (
 
 var (
 	maxKvCountPerReq            = uint64(16)
-	syncStatusKey               = []byte("SyncStatus")
-	syncTasksKey                = []byte("SyncTask")
+	syncStatusKey               = []byte("SyncStatusKey")
+	syncTasksKey                = []byte("SyncStatus") // TODO this is the legacy value, change the value before next test net
 	maxFillEmptyTaskTreads      = 1
 	requestTimeoutInMillisecond = 1000 * time.Millisecond // Millisecond
 )
@@ -405,10 +405,23 @@ func (s *SyncClient) saveSyncStatus(force bool) {
 	if err != nil {
 		panic(err) // This can only fail during implementation
 	}
-	if err := s.db.Put(syncStatusKey, status); err != nil {
-		log.Error("Failed to store sync status", "err", err)
+	if err := s.db.Put(syncTasksKey, status); err != nil {
+		log.Error("Failed to store sync tasks", "err", err)
 	}
 	log.Debug("Save sync state to DB")
+
+	// save sync states to DB for status reporting
+	states := make(map[uint64]*SyncState)
+	for _, t := range s.tasks {
+		states[t.ShardId] = t.State
+	}
+	status, err = json.Marshal(states)
+	if err != nil {
+		panic(err) // This can only fail during implementation
+	}
+	if err := s.db.Put(syncStatusKey, status); err != nil {
+		log.Error("Failed to store sync states", "err", err)
+	}
 }
 
 // cleanTasks removes kv range retrieval tasks that have already been completed.
@@ -1263,12 +1276,4 @@ func (s *SyncClient) removePeerFromTask(peerID peer.ID, contractShards map[commo
 			}
 		}
 	}
-}
-
-func (s *SyncClient) GetState() map[uint64]*SyncState {
-	states := make(map[uint64]*SyncState)
-	for _, t := range s.tasks {
-		states[t.ShardId] = t.State
-	}
-	return states
 }

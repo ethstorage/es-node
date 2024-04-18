@@ -371,10 +371,10 @@ func createLocalHostAndSyncClient(t *testing.T, testLog log.Logger, rollupCfg *r
 }
 
 func createRemoteHost(t *testing.T, ctx context.Context, rollupCfg *rollup.EsConfig,
-	storageManager *mockStorageManagerReader, metrics SyncServerMetrics, testLog log.Logger) host.Host {
+	storageManager *mockStorageManagerReader, db ethdb.Database, metrics SyncServerMetrics, testLog log.Logger) host.Host {
 
 	remoteHost := getNetHost(t)
-	syncSrv := NewSyncServer(rollupCfg, storageManager, metrics)
+	syncSrv := NewSyncServer(rollupCfg, storageManager, db, metrics)
 	blobByRangeHandler := MakeStreamHandler(ctx, testLog, syncSrv.HandleGetBlobsByRangeRequest)
 	remoteHost.SetStreamHandler(GetProtocolID(RequestBlobsByRangeProtocolID, rollupCfg.L2ChainID), blobByRangeHandler)
 	blobByListHandler := MakeStreamHandler(ctx, testLog, syncSrv.HandleGetBlobsByListRequest)
@@ -563,7 +563,7 @@ func TestSync_RequestL2Range(t *testing.T) {
 		t.Fatal("Download blob metadata failed", "error", err)
 		return
 	}
-	remoteHost := createRemoteHost(t, ctx, rollupCfg, smr, m, testLog)
+	remoteHost := createRemoteHost(t, ctx, rollupCfg, smr, db, m, testLog)
 	connect(t, localHost, remoteHost, shards, shards)
 
 	time.Sleep(2 * time.Second)
@@ -635,7 +635,7 @@ func TestSync_RequestL2List(t *testing.T) {
 		t.Fatal("Download blob metadata failed", "error", err)
 		return
 	}
-	remoteHost := createRemoteHost(t, ctx, rollupCfg, smr, m, testLog)
+	remoteHost := createRemoteHost(t, ctx, rollupCfg, smr, db, m, testLog)
 	connect(t, localHost, remoteHost, shards, shards)
 
 	indexes := make([]uint64, 0)
@@ -823,7 +823,7 @@ func testSync(t *testing.T, chunkSize, kvSize, kvEntries uint64, localShards []u
 		}
 		rShardMap := make(map[common.Address][]uint64)
 		rShardMap[contract] = rPeer.shards
-		remoteHost := createRemoteHost(t, ctx, rollupCfg, smr, m, testLog)
+		remoteHost := createRemoteHost(t, ctx, rollupCfg, smr, db, m, testLog)
 		connect(t, localHost, remoteHost, localShardMap, rShardMap)
 	}
 
@@ -1044,7 +1044,7 @@ func TestAddPeerDuringSyncing(t *testing.T) {
 		shardMiner:      common.Address{},
 		blobPayloads:    pData,
 	}
-	remoteHost0 := createRemoteHost(t, ctx, rollupCfg, smr0, m, testLog)
+	remoteHost0 := createRemoteHost(t, ctx, rollupCfg, smr0, db, m, testLog)
 	connect(t, localHost, remoteHost0, shardMap, shardMap)
 	time.Sleep(2 * time.Second)
 
@@ -1062,7 +1062,7 @@ func TestAddPeerDuringSyncing(t *testing.T) {
 		shardMiner:      common.Address{},
 		blobPayloads:    data[contract],
 	}
-	remoteHost1 := createRemoteHost(t, ctx, rollupCfg, smr1, m, testLog)
+	remoteHost1 := createRemoteHost(t, ctx, rollupCfg, smr1, db, m, testLog)
 	connect(t, localHost, remoteHost1, shardMap, shardMap)
 	checkStall(t, 3, mux, cancel)
 
@@ -1180,7 +1180,7 @@ func TestAddPeerAfterSyncDone(t *testing.T) {
 		shardMiner:      common.Address{},
 		blobPayloads:    data[contract],
 	}
-	remoteHost0 := createRemoteHost(t, ctx, rollupCfg, smr0, m, testLog)
+	remoteHost0 := createRemoteHost(t, ctx, rollupCfg, smr0, db, m, testLog)
 	connect(t, localHost, remoteHost0, shardMap, shardMap)
 	checkStall(t, 3, mux, cancel)
 
@@ -1198,7 +1198,7 @@ func TestAddPeerAfterSyncDone(t *testing.T) {
 		shardMiner:      common.Address{},
 		blobPayloads:    data[contract],
 	}
-	remoteHost1 := createRemoteHost(t, ctx, rollupCfg, smr1, m, testLog)
+	remoteHost1 := createRemoteHost(t, ctx, rollupCfg, smr1, db, m, testLog)
 	connect(t, localHost, remoteHost1, shardMap, shardMap)
 
 	time.Sleep(10 * time.Millisecond)
