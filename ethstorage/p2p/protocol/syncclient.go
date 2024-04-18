@@ -235,7 +235,7 @@ func (s *SyncClient) setSyncDone() {
 func (s *SyncClient) loadSyncStatus() {
 	var progress SyncProgress
 
-	if status, _ := s.db.Get(syncStatusKey); status != nil {
+	if status, _ := s.db.Get(syncTasksKey); status != nil {
 		if err := json.Unmarshal(status, &progress); err != nil {
 			log.Error("Failed to decode storage sync status", "err", err)
 		} else {
