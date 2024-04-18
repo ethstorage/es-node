@@ -129,7 +129,7 @@ func (p *ZKProver) prove(dir string, pubInputs []byte) ([]byte, string, error) {
 	inputFile := filepath.Join(buildDir, inputName)
 	err = os.WriteFile(inputFile, pubInputs, 0644)
 	if err != nil {
-		fmt.Println("Unable to write file:", err)
+		p.lg.Error("Write input file failed", "error", err)
 		return nil, "", err
 	}
 	libDir := filepath.Join(p.dir, SnarkLib)
