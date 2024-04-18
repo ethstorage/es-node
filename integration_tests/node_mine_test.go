@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethstorage/go-ethstorage/cmd/es-utils/utils"
@@ -80,7 +81,8 @@ func TestMining(t *testing.T) {
 		miningConfig.ZKProverImpl,
 		lg,
 	)
-	mnr := miner.New(miningConfig, storageManager, l1api, &pvr, feed, lg)
+	db := rawdb.NewMemoryDatabase()
+	mnr := miner.New(miningConfig, db, storageManager, l1api, &pvr, feed, lg)
 	lg.Info("Initialized miner")
 
 	l1HeadsSub := event.ResubscribeErr(time.Second*10, func(ctx context.Context, err error) (event.Subscription, error) {
