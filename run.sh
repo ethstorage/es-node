@@ -123,7 +123,7 @@ es_node_start=" --network devnet \
   --l1.beacon-based-time 1706684472 \
   --l1.beacon-based-slot 4245906 \
   --download.thread 32 \
-  --state.upload.url http://65.109.63.154:8080 \
+  --state.upload.url http://metrics.ethstorage.io:8080 \
   --p2p.listen.udp 30305 \
   --p2p.max.request.size 4194304 \
   --p2p.sync.concurrency 32 \
