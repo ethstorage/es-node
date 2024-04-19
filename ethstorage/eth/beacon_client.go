@@ -102,3 +102,7 @@ func kzgToVersionedHash(commit string) (common.Hash, error) {
 	copy(c[:], b[:])
 	return common.Hash(eth.KZGToVersionedHash(c)), nil
 }
+
+func (c *BeaconClient) QueryUrlForV2BeaconBlock(clBlock string) (string, error) {
+	return url.JoinPath(c.beaconURL, fmt.Sprintf("/eth/v2/beacon/blocks/%s", clBlock))
+}
