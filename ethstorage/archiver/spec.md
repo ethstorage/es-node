@@ -152,9 +152,11 @@ One thing worth noting is how the blob's index is determined. We need to use the
 ### Considerations for  Solution 2:
 
 - It is assumed that the beacon API `/eth/v2/beacon/blocks/{block_id}` is always available for any blocks, and the event log data from the execution layer is always available for any blocks. As EIP-4444 comes and execution payload data may not be available, we may need a key-value db table to save the relationship between the beacon block and kv index such as:
-  ```
+
+```
 BeaconRootHash->{"kv_index":[0,1,2]}
-  ```
+```
+
 - If the performance is proven to be a problem, we may need to add a local cache/prefetch layer to save the metadata.
 - If the blob transaction hashes are required, they can also be retrieved through standard JSON-RPC API.
  

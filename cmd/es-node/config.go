@@ -14,6 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethstorage/go-ethstorage/ethstorage/archiver"
 	"github.com/ethstorage/go-ethstorage/ethstorage/db"
 	"github.com/ethstorage/go-ethstorage/ethstorage/downloader"
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
@@ -70,7 +71,7 @@ func NewConfig(ctx *cli.Context, log log.Logger) (*node.Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to load miner config: %w", err)
 	}
-
+	archiverConfig := archiver.NewConfig(ctx)
 	// l2Endpoint, err := NewL2EndpointConfig(ctx, log)
 	// if err != nil {
 	// 	return nil, fmt.Errorf("failed to load l2 endpoints info: %w", err)
@@ -111,8 +112,9 @@ func NewConfig(ctx *cli.Context, log log.Logger) (*node.Config, error) {
 		// 		Moniker: ctx.GlobalString(flags.HeartbeatMonikerFlag.Name),
 		// 		URL:     ctx.GlobalString(flags.HeartbeatURLFlag.Name),
 		// 	},
-		Storage: *storageConfig,
-		Mining:  minerConfig,
+		Storage:  *storageConfig,
+		Mining:   minerConfig,
+		Archiver: archiverConfig,
 	}
 	if err := cfg.Check(); err != nil {
 		return nil, err
