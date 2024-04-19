@@ -16,6 +16,7 @@ import (
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethstorage/go-ethstorage/ethstorage"
+	"github.com/ethstorage/go-ethstorage/ethstorage/archiver"
 	"github.com/ethstorage/go-ethstorage/ethstorage/downloader"
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
 	"github.com/ethstorage/go-ethstorage/ethstorage/metrics"
@@ -54,6 +55,8 @@ type EsNode struct {
 	miner          *miner.Miner
 	// feed to notify miner of the sync done event to start mining
 	feed *event.Feed
+	// long term blob provider API for rollups
+	archiverAPI *archiver.APIService
 }
 
 func New(ctx context.Context, cfg *Config, log log.Logger, appVersion string, m metrics.Metricer) (*EsNode, error) {
@@ -115,6 +118,9 @@ func (n *EsNode) init(ctx context.Context, cfg *Config) error {
 		return err
 	}
 	if err := n.initMetricsServer(ctx, cfg); err != nil {
+		return err
+	}
+	if err := n.initArchiver(ctx, cfg); err != nil {
 		return err
 	}
 	return nil
@@ -259,6 +265,19 @@ func (n *EsNode) initMiner(ctx context.Context, cfg *Config) error {
 	return nil
 }
 
+func (n *EsNode) initArchiver(ctx context.Context, cfg *Config) error {
+	if cfg.Archiver == nil {
+		// not enabled
+		return nil
+	}
+	n.archiverAPI = archiver.NewService(*cfg.Archiver, n.storageManager, n.l1Beacon, n.l1Source, n.log)
+	n.log.Info("Initialized blob archiver API server")
+	if err := n.archiverAPI.Start(ctx); err != nil {
+		return fmt.Errorf("unable to start blob archiver API server: %w", err)
+	}
+	return nil
+}
+
 func (n *EsNode) Start(ctx context.Context, cfg *Config) error {
 	n.startL1(cfg)
 
@@ -351,6 +370,9 @@ func (n *EsNode) Close() error {
 		n.miner.Close()
 	}
 
+	if n.archiverAPI != nil {
+		n.archiverAPI.Stop(context.Background())
+	}
 	// close L2 driver
 	// if n.l2Driver != nil {
 	// 	if err := n.l2Driver.Close(); err != nil {
