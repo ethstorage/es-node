@@ -117,6 +117,7 @@ func NewSyncServer(cfg *rollup.EsConfig, storageManager StorageManagerReader, db
 		}
 		server.providedBlobs[shardId] = 0
 	}
+	go server.SaveProvidedBlobs()
 	return &server
 }
 
