@@ -312,8 +312,21 @@ func (n *EsNode) UploadNodeState(url string) {
 				Address: fmt.Sprintf("%s:%d", localNode.IP().String(), localNode.TCP()),
 			}
 
+			var submissionStates map[uint64]*miner.SubmissionState
+			if status, _ := n.db.Get(miner.SubmissionStatusKey); status != nil {
+				if err := json.Unmarshal(status, &submissionStates); err != nil {
+					log.Error("Failed to decode submission states", "err", err)
+					continue
+				}
+			}
+			var miningStates map[uint64]*miner.MiningState
+			if status, _ := n.db.Get(miner.MiningStatusKey); status != nil {
+				if err := json.Unmarshal(status, &miningStates); err != nil {
+					log.Error("Failed to decode submission states", "err", err)
+					continue
+				}
+			}
 			providedBlobs, syncStates := n.p2pNode.GetState()
-			miningStates, submissionStates := n.miner.GetState()
 
 			shards := make([]*ShardState, 0)
 			for _, shardId := range n.storageManager.Shards() {
