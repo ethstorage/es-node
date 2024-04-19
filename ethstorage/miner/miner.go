@@ -6,7 +6,6 @@ package miner
 import (
 	"context"
 	"fmt"
-	"github.com/ethereum/go-ethereum/ethdb"
 	"math/big"
 	"sync"
 
@@ -140,8 +139,4 @@ func (miner *Miner) Close() {
 
 func (miner *Miner) Mining() bool {
 	return miner.worker.isRunning()
-}
-
-func (miner *Miner) GetState() (map[uint64]*MiningState, map[uint64]*SubmissionState) {
-	return miner.worker.getState()
 }
