@@ -686,11 +686,11 @@ func TestSaveAndLoadSyncStatus(t *testing.T) {
 	syncCl.tasks[0].healTask.insert(indexes)
 	syncCl.tasks[0].SubTasks[0].First = 1
 	syncCl.tasks[0].SubTasks[0].next = 33
-	syncCl.tasks[0].State.BlobsSynced = 30
-	syncCl.tasks[0].State.SyncedSeconds = expectedSecondsUsed
+	syncCl.tasks[0].state.BlobsSynced = 30
+	syncCl.tasks[0].state.SyncedSeconds = expectedSecondsUsed
 	syncCl.tasks[1].SubTasks = make([]*subTask, 0)
-	syncCl.tasks[1].State.BlobsSynced = entries
-	syncCl.tasks[1].State.SyncedSeconds = expectedSecondsUsed
+	syncCl.tasks[1].state.BlobsSynced = entries
+	syncCl.tasks[1].state.SyncedSeconds = expectedSecondsUsed
 
 	tasks := syncCl.tasks
 	syncCl.cleanTasks()
@@ -708,17 +708,17 @@ func TestSaveAndLoadSyncStatus(t *testing.T) {
 	if err := compareTasks(tasks, syncCl.tasks); err != nil {
 		t.Fatalf("compare kv task fail. err: %s", err.Error())
 	}
-	if syncCl.tasks[0].State.BlobsSynced != 30 {
-		t.Fatalf("compare BlobsSynced fail, expect %d, real %d", 30, syncCl.tasks[0].State.BlobsSynced)
+	if syncCl.tasks[0].state.BlobsSynced != 30 {
+		t.Fatalf("compare BlobsSynced fail, expect %d, real %d", 30, syncCl.tasks[0].state.BlobsSynced)
 	}
-	if syncCl.tasks[0].State.SyncedSeconds != expectedSecondsUsed {
-		t.Fatalf("compare totalSecondsUsed fail, expect %d, real %d", expectedSecondsUsed, syncCl.tasks[0].State.SyncedSeconds)
+	if syncCl.tasks[0].state.SyncedSeconds != expectedSecondsUsed {
+		t.Fatalf("compare totalSecondsUsed fail, expect %d, real %d", expectedSecondsUsed, syncCl.tasks[0].state.SyncedSeconds)
 	}
-	if syncCl.tasks[1].State.BlobsSynced != entries {
-		t.Fatalf("compare BlobsSynced fail, expect %d, real %d", entries, syncCl.tasks[1].State.BlobsSynced)
+	if syncCl.tasks[1].state.BlobsSynced != entries {
+		t.Fatalf("compare BlobsSynced fail, expect %d, real %d", entries, syncCl.tasks[1].state.BlobsSynced)
 	}
-	if syncCl.tasks[1].State.SyncedSeconds != expectedSecondsUsed {
-		t.Fatalf("compare totalSecondsUsed fail, expect %d, real %d", expectedSecondsUsed, syncCl.tasks[1].State.SyncedSeconds)
+	if syncCl.tasks[1].state.SyncedSeconds != expectedSecondsUsed {
+		t.Fatalf("compare totalSecondsUsed fail, expect %d, real %d", expectedSecondsUsed, syncCl.tasks[1].state.SyncedSeconds)
 	}
 }
 
@@ -848,7 +848,7 @@ func TestSimpleSync(t *testing.T) {
 		excludedList: make(map[uint64]struct{}),
 	}}
 
-	testSync(t, defaultChunkSize, kvSize, kvEntries, []uint64{0}, lastKvIndex, defaultEncodeType, 3, remotePeers, true)
+	testSync(t, defaultChunkSize, kvSize, kvEntries, []uint64{0}, lastKvIndex, defaultEncodeType, 4, remotePeers, true)
 }
 
 // TestMultiSubTasksSync test sync process with local node support a single big (its task contains multi subTask) shard
@@ -1115,7 +1115,7 @@ func TestCloseSyncWhileFillEmpty(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 	syncCl.Close()
 
-	t.Log("Fill empty status", "filled", syncCl.tasks[0].State.EmptyFilled, "toFill", syncCl.tasks[0].State.EmptyToFill)
+	t.Log("Fill empty status", "filled", syncCl.tasks[0].state.EmptyFilled, "toFill", syncCl.tasks[0].state.EmptyToFill)
 	if syncCl.syncDone {
 		t.Fatalf("fill empty should be cancel")
 	}
@@ -1256,10 +1256,10 @@ func TestFillEmpty(t *testing.T) {
 	if len(syncCl.tasks[0].SubEmptyTasks) > 0 {
 		t.Fatalf("fill empty should be done")
 	}
-	if syncCl.tasks[0].State.EmptyToFill != 0 {
-		t.Fatalf("emptyBlobsToFill should be 0, value %d", syncCl.tasks[0].State.EmptyToFill)
+	if syncCl.tasks[0].state.EmptyToFill != 0 {
+		t.Fatalf("emptyBlobsToFill should be 0, value %d", syncCl.tasks[0].state.EmptyToFill)
 	}
-	if syncCl.tasks[0].State.EmptyFilled != (kvEntries - lastKvIndex) {
-		t.Fatalf("emptyBlobsFilled is wrong, expect %d, value %d", kvEntries-lastKvIndex, syncCl.tasks[0].State.EmptyFilled)
+	if syncCl.tasks[0].state.EmptyFilled != (kvEntries - lastKvIndex) {
+		t.Fatalf("emptyBlobsFilled is wrong, expect %d, value %d", kvEntries-lastKvIndex, syncCl.tasks[0].state.EmptyFilled)
 	}
 }

@@ -22,7 +22,7 @@ type task struct {
 
 	// TODO: consider whether we need to retry those stateless peers or disconnect the peer
 	statelessPeers map[peer.ID]struct{} // Peers that failed to deliver kv Data
-	State          *SyncState
+	state          *SyncState
 
 	done bool // Flag whether the task has done
 }
