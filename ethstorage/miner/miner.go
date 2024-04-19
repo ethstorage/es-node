@@ -6,6 +6,7 @@ package miner
 import (
 	"context"
 	"fmt"
+	"github.com/ethereum/go-ethereum/ethdb"
 	"math/big"
 	"sync"
 
