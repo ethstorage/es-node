@@ -11,6 +11,7 @@ import (
 	"time"
 
 	oppprof "github.com/ethereum-optimism/optimism/op-service/pprof"
+	"github.com/ethstorage/go-ethstorage/ethstorage/archiver"
 	"github.com/ethstorage/go-ethstorage/ethstorage/db"
 	"github.com/ethstorage/go-ethstorage/ethstorage/downloader"
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
@@ -55,6 +56,8 @@ type Config struct {
 	// Tracer    Tracer
 	// Heartbeat HeartbeatConfig
 	Mining *miner.Config
+
+	Archiver *archiver.Config
 }
 
 type MetricsConfig struct {

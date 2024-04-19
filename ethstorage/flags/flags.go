@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ethstorage/go-ethstorage/ethstorage/archiver"
 	eslog "github.com/ethstorage/go-ethstorage/ethstorage/log"
 	"github.com/ethstorage/go-ethstorage/ethstorage/miner"
 	"github.com/ethstorage/go-ethstorage/ethstorage/signer"
@@ -249,6 +250,7 @@ func init() {
 	optionalFlags = append(optionalFlags, eslog.CLIFlags(envVarPrefix)...)
 	optionalFlags = append(optionalFlags, signer.CLIFlags(envVarPrefix)...)
 	optionalFlags = append(optionalFlags, miner.CLIFlags(envVarPrefix)...)
+	optionalFlags = append(optionalFlags, archiver.CLIFlags(envVarPrefix)...)
 	Flags = append(requiredFlags, optionalFlags...)
 }
 
