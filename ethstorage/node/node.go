@@ -15,10 +15,9 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
-	ethRPC "github.com/ethereum/go-ethereum/rpc"
-
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
+	ethRPC "github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethstorage/go-ethstorage/ethstorage"
 	"github.com/ethstorage/go-ethstorage/ethstorage/archiver"
 	"github.com/ethstorage/go-ethstorage/ethstorage/downloader"
@@ -26,6 +25,7 @@ import (
 	"github.com/ethstorage/go-ethstorage/ethstorage/metrics"
 	"github.com/ethstorage/go-ethstorage/ethstorage/miner"
 	"github.com/ethstorage/go-ethstorage/ethstorage/p2p"
+	"github.com/ethstorage/go-ethstorage/ethstorage/p2p/protocol"
 	"github.com/ethstorage/go-ethstorage/ethstorage/prover"
 	"github.com/hashicorp/go-multierror"
 )
@@ -320,7 +320,7 @@ func (n *EsNode) UploadNodeState(url string) {
 	if err != nil {
 		log.Warn("Send message to resp", "err", err.Error())
 	}
-	ticker := time.NewTicker(time.Minute)
+	ticker := time.NewTicker(5 * time.Minute)
 	defer ticker.Stop()
 	for {
 		select {
@@ -345,7 +345,20 @@ func (n *EsNode) UploadNodeState(url string) {
 					continue
 				}
 			}
-			providedBlobs, syncStates := n.p2pNode.GetState()
+			var providedBlobs map[uint64]uint64
+			if status, _ := n.db.Get(protocol.SyncStatusKey); status != nil {
+				if err := json.Unmarshal(status, &providedBlobs); err != nil {
+					log.Error("Failed to decode provided Blobs count", "err", err)
+					continue
+				}
+			}
+			var syncStates map[uint64]*protocol.SyncState
+			if status, _ := n.db.Get(protocol.SyncStatusKey); status != nil {
+				if err := json.Unmarshal(status, &syncStates); err != nil {
+					log.Error("Failed to decode sync states", "err", err)
+					continue
+				}
+			}
 
 			shards := make([]*ShardState, 0)
 			for _, shardId := range n.storageManager.Shards() {

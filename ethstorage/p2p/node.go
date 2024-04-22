@@ -217,10 +217,6 @@ func (n *NodeP2P) RequestShardList(remotePeer peer.ID) ([]*protocol.ContractShar
 	return remoteShardList, nil
 }
 
-func (n *NodeP2P) GetState() (map[uint64]uint64, map[uint64]*protocol.SyncState) {
-	return n.syncSrv.ProvidedBlobs(), n.syncCl.GetState()
-}
-
 func (n *NodeP2P) Host() host.Host {
 	return n.host
 }
