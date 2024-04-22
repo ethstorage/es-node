@@ -26,6 +26,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/protocol"
+	"github.com/libp2p/go-yamux/v4"
 )
 
 // StreamCtxFn provides a new context to use when handling stream requests
@@ -685,7 +686,11 @@ func (s *SyncClient) assignBlobRangeTasks() {
 				s.lock.Unlock()
 
 				if err != nil {
-					log.Info("Failed to request blobs", "peer", pr.id.String(), "err", err)
+					if e, ok := err.(*yamux.Error); ok && e.Timeout() {
+						log.Debug("Failed to request blobs", "peer", pr.id.String(), "err", err)
+					} else {
+						log.Info("Failed to request blobs", "peer", pr.id.String(), "err", err)
+					}
 					return
 				}
 
@@ -768,7 +773,11 @@ func (s *SyncClient) assignBlobHealTasks() {
 			s.lock.Unlock()
 
 			if err != nil {
-				log.Info("Failed to request packet", "peer", pr.id.String(), "err", err)
+				if e, ok := err.(*yamux.Error); ok && e.Timeout() {
+					log.Debug("Failed to request blobs", "peer", pr.id.String(), "err", err)
+				} else {
+					log.Info("Failed to request blobs", "peer", pr.id.String(), "err", err)
+				}
 				return
 			}
 			if req.id != packet.ID || req.contract != packet.Contract || req.shardId != packet.ShardId {
