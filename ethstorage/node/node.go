@@ -346,7 +346,7 @@ func (n *EsNode) UploadNodeState(url string) {
 				}
 			}
 			var providedBlobs map[uint64]uint64
-			if status, _ := n.db.Get(protocol.SyncStatusKey); status != nil {
+			if status, _ := n.db.Get(protocol.ProvidedBlobsKey); status != nil {
 				if err := json.Unmarshal(status, &providedBlobs); err != nil {
 					log.Error("Failed to decode provided Blobs count", "err", err)
 					continue
@@ -382,6 +382,7 @@ func (n *EsNode) UploadNodeState(url string) {
 			data, err := json.Marshal(state)
 			if err != nil {
 				log.Info("Fail to Marshal node state", "error", err.Error())
+				continue
 			}
 			_, err = sendMessage(stateUrl, string(data))
 			if err != nil {
