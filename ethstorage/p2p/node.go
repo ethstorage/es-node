@@ -148,7 +148,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 			}
 		}
 		go n.syncCl.ReportPeerSummary()
-		n.syncSrv = protocol.NewSyncServer(rollupCfg, storageManager, m)
+		n.syncSrv = protocol.NewSyncServer(rollupCfg, storageManager, db, m)
 
 		blobByRangeHandler := protocol.MakeStreamHandler(resourcesCtx, log.New("serve", "blobs_by_range"), n.syncSrv.HandleGetBlobsByRangeRequest)
 		n.host.SetStreamHandler(protocol.GetProtocolID(protocol.RequestBlobsByRangeProtocolID, rollupCfg.L2ChainID), blobByRangeHandler)
@@ -262,6 +262,9 @@ func (n *NodeP2P) Close() error {
 			if err := n.syncCl.Close(); err != nil {
 				result = multierror.Append(result, fmt.Errorf("failed to close p2p sync client cleanly: %w", err))
 			}
+		}
+		if n.syncSrv != nil {
+			n.syncSrv.Close()
 		}
 	}
 	return result.ErrorOrNil()
