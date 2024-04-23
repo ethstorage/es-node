@@ -24,7 +24,6 @@ const (
 type NetworkMetrics struct {
 	// static Status
 	PeersTotal      prometheus.Gauge
-	MinersOfShards  *prometheus.GaugeVec
 	PeersOfShards   *prometheus.GaugeVec
 	PeersOfVersions *prometheus.GaugeVec
 	PeersOfPhase    *prometheus.GaugeVec
@@ -51,15 +50,6 @@ func NewNetworkMetrics() *NetworkMetrics {
 			Subsystem: SubsystemName,
 			Name:      "peers",
 			Help:      "The number of peers existed in the last 10 minutes",
-		}),
-
-		MinersOfShards: factory.NewGaugeVec(prometheus.GaugeOpts{
-			Namespace: ns,
-			Subsystem: SubsystemName,
-			Name:      "miners",
-			Help:      "The number of miners existed in each shard",
-		}, []string{
-			"shard_id",
 		}),
 
 		PeersOfShards: factory.NewGaugeVec(prometheus.GaugeOpts{
@@ -135,10 +125,6 @@ func (m *NetworkMetrics) SetStaticMetrics(peersTotal int, minerOfShards map[uint
 	versions map[string]int, shards map[uint64]int, phasesOfShard map[uint64]map[string]int) {
 	m.PeersTotal.Set(float64(peersTotal))
 
-	m.MinersOfShards.Reset()
-	for shardId, miners := range minerOfShards {
-		m.MinersOfShards.WithLabelValues(fmt.Sprintf("%d", shardId)).Set(float64(len(miners)))
-	}
 	m.PeersOfShards.Reset()
 	for shardId, count := range shards {
 		m.PeersOfShards.WithLabelValues(fmt.Sprintf("%d", shardId)).Set(float64(count))

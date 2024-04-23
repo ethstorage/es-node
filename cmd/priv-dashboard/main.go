@@ -12,6 +12,7 @@ import (
 	"math"
 	"net/http"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -38,6 +39,7 @@ type record struct {
 
 type dashboard struct {
 	ctx    context.Context
+	lock   sync.Mutex
 	nodes  map[string]*record
 	m      *metrics.NetworkMetrics
 	logger log.Logger
@@ -85,7 +87,9 @@ func (d *dashboard) ReportStateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Info("Get state from peer", "peer id", state.Id, "state", string(body))
+	d.lock.Lock()
 	d.nodes[state.Id] = &record{receivedTime: time.Now(), state: &state}
+	d.lock.Unlock()
 	for _, shard := range state.Shards {
 		d.m.SetPeerInfo(state.Id, state.Version, state.Address, shard.ShardId, shard.Miner)
 		sync, mining, submission := shard.SyncState, shard.MiningState, shard.SubmissionState
@@ -99,11 +103,15 @@ func (d *dashboard) ReportStateHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (d *dashboard) Report() {
-	peersTotal := len(d.nodes)
-	minerOfShards := make(map[uint64]map[common.Address]struct{})
-	versions := make(map[string]int)
-	shards := make(map[uint64]int)
-	phasesOfShard := make(map[uint64]map[string]int)
+	var (
+		minerOfShards = make(map[uint64]map[common.Address]struct{})
+		versions      = make(map[string]int)
+		shards        = make(map[uint64]int)
+		phasesOfShard = make(map[uint64]map[string]int)
+	)
+
+	d.lock.Lock()
+	defer d.lock.Unlock()
 	for id, r := range d.nodes {
 		if time.Since(r.receivedTime) > timeoutTime {
 			delete(d.nodes, id)
@@ -146,7 +154,7 @@ func (d *dashboard) Report() {
 		}
 	}
 
-	d.m.SetStaticMetrics(peersTotal, minerOfShards, versions, shards, phasesOfShard)
+	d.m.SetStaticMetrics(len(d.nodes), minerOfShards, versions, shards, phasesOfShard)
 }
 
 func (d *dashboard) loop() {
