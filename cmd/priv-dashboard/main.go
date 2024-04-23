@@ -108,7 +108,7 @@ func (d *dashboard) Report() {
 		if time.Since(r.receivedTime) > timeoutTime {
 			delete(d.nodes, id)
 			for _, shard := range r.state.Shards {
-				d.m.Delete(r.state.Id, r.state.Version, r.state.Address, shard.ShardId, shard.Miner)
+				d.m.DeletePeerInfo(r.state.Id, r.state.Version, r.state.Address, shard.ShardId, shard.Miner)
 			}
 			continue
 		}
