@@ -1199,6 +1199,7 @@ func (s *SyncClient) reportSyncState(duration uint64) {
 func (s *SyncClient) reportFillEmptyState(duration uint64) {
 	for _, t := range s.tasks {
 		if t.state.EmptyFilled == 0 && len(t.SubEmptyTasks) == 0 {
+			t.state.FillEmptyProgress = 10000
 			continue
 		}
 		emptyToFill := uint64(0)
@@ -1208,8 +1209,6 @@ func (s *SyncClient) reportFillEmptyState(duration uint64) {
 		t.state.EmptyToFill = emptyToFill
 		if t.state.EmptyFilled+t.state.EmptyToFill != 0 {
 			t.state.FillEmptyProgress = t.state.EmptyFilled * 10000 / (t.state.EmptyFilled + t.state.EmptyToFill)
-		} else {
-			t.state.FillEmptyProgress = 10000
 		}
 
 		// If fill empty is complete, stop adding sync time
