@@ -193,7 +193,7 @@ func TestStorageManager_DownloadFinished(t *testing.T) {
 	err := storageManager.DownloadFinished(97529, []uint64{2}, [][]byte{{10}}, []common.Hash{h})
 
 	if err != nil {
-		t.Fatal("failed to Downloand Finished", err)
+		t.Fatal("failed to Download Finished", err)
 	}
 
 	bs, success, err := storageManager.TryReadMeta(2)
