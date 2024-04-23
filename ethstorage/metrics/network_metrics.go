@@ -155,8 +155,12 @@ func (m *NetworkMetrics) SetStaticMetrics(peersTotal int, minerOfShards map[uint
 	}
 }
 
-func (m *NetworkMetrics) Delete(id, version, address string, shardId uint64, miner common.Address) {
-	m.PeerState.DeleteLabelValues(fmt.Sprintf(format, id, version, address, shardId, miner.Hex()))
+func (m *NetworkMetrics) DeletePeerInfo(id, version, address string, shardId uint64, miner common.Address) {
+	types := []string{"UpdateTime", "PeerCount", "SyncProgress", "SyncedSeconds", "FillEmptyProgress", "FillEmptySeconds",
+		"MiningPower", "SamplingTime", "Succeeded", "Failed", "Dropped", "LastSucceededTime"}
+	for _, t := range types {
+		m.PeerState.DeleteLabelValues(fmt.Sprintf(format, id, version, address, shardId, miner.Hex()), t)
+	}
 }
 
 func (m *NetworkMetrics) Serve(ctx context.Context, hostname string, port int) error {
