@@ -1165,6 +1165,8 @@ func (s *SyncClient) reportSyncState(duration uint64) {
 		t.state.BlobsToSync = blobsToSync + uint64(t.healTask.count())
 		if t.state.BlobsSynced+t.state.BlobsToSync != 0 {
 			t.state.SyncProgress = t.state.BlobsSynced * 10000 / (t.state.BlobsSynced + t.state.BlobsToSync)
+		} else {
+			t.state.SyncProgress = 10000
 		}
 
 		// If sync is complete, stop adding sync time
@@ -1197,6 +1199,8 @@ func (s *SyncClient) reportFillEmptyState(duration uint64) {
 		t.state.EmptyToFill = emptyToFill
 		if t.state.EmptyFilled+t.state.EmptyToFill != 0 {
 			t.state.FillEmptyProgress = t.state.EmptyFilled * 10000 / (t.state.EmptyFilled + t.state.EmptyToFill)
+		} else {
+			t.state.FillEmptyProgress = 10000
 		}
 
 		// If fill empty is complete, stop adding sync time
