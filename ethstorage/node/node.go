@@ -319,6 +319,7 @@ func (n *EsNode) UploadNodeState(url string) {
 	_, err := sendMessage(helloUrl, id)
 	if err != nil {
 		log.Warn("Send message to resp", "err", err.Error())
+		return
 	}
 	ticker := time.NewTicker(5 * time.Minute)
 	defer ticker.Stop()
