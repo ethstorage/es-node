@@ -107,7 +107,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 					// n.RequestShardList to fetch the shard list of the new node.
 					remoteShardList, e := n.RequestShardList(remotePeerId)
 					if e != nil {
-						log.Info("Get remote shard list fail", "peer", remotePeerId, "err", e.Error())
+						log.Debug("Get remote shard list fail", "peer", remotePeerId, "err", e.Error())
 						conn.Close()
 						return
 					}
@@ -119,7 +119,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 				}
 				added := n.syncCl.AddPeer(remotePeerId, shards, conn.Stat().Direction)
 				if !added {
-					log.Info("Close connection as AddPeer fail", "peer", remotePeerId)
+					log.Debug("Close connection as AddPeer fail", "peer", remotePeerId)
 					conn.Close()
 				}
 			},
