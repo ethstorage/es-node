@@ -174,9 +174,7 @@ type SyncClient struct {
 	lock sync.Mutex
 
 	prover         prv.IProver
-	startTime      time.Time // Time instance when storage sync started
 	logTime        time.Time // Time instance when status was last reported
-	saveTime       time.Time // Time instance when state was last saved to DB
 	storageManager StorageManager
 }
 
@@ -396,12 +394,7 @@ func (s *SyncClient) createTask(sid uint64, lastKvIndex uint64) *task {
 }
 
 // saveSyncStatus marshals the remaining sync tasks into leveldb.
-func (s *SyncClient) saveSyncStatus(force bool) {
-	if !force && time.Since(s.saveTime) < 5*time.Minute {
-		return
-	}
-	s.saveTime = time.Now()
-
+func (s *SyncClient) saveSyncStatus() {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	// Store the actual progress markers
@@ -434,6 +427,23 @@ func (s *SyncClient) saveSyncStatus(force bool) {
 	}
 	if err := s.db.Put(SyncStatusKey, status); err != nil {
 		log.Error("Failed to store sync states", "err", err)
+	}
+}
+
+// saveSyncStatus marshals the remaining sync tasks into leveldb.
+func (s *SyncClient) saveSyncStatusLoop() {
+	defer s.wg.Done()
+
+	ticker := time.NewTicker(5 * time.Minute)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			s.saveSyncStatus()
+		case <-s.resCtx.Done():
+			s.log.Info("Stopped P2P sync client save status")
+			return
+		}
 	}
 }
 
@@ -481,18 +491,15 @@ func (s *SyncClient) cleanTasks() {
 }
 
 func (s *SyncClient) Start() error {
-	if s.startTime == (time.Time{}) {
-		s.startTime = time.Now()
-	}
-
 	// Retrieve the previous sync status from LevelDB and abort if already synced
 	s.loadSyncStatus()
 	s.lock.Lock()
 	s.closingPeers = false
 	s.lock.Unlock()
 
-	s.wg.Add(1)
+	s.wg.Add(2)
 	go s.mainLoop()
+	go s.saveSyncStatus()
 
 	return nil
 }
@@ -520,7 +527,7 @@ func (s *SyncClient) AddPeer(id peer.ID, shards map[common.Address][]uint64, dir
 	s.peers[id] = pr
 
 	s.idlerPeers[id] = struct{}{}
-	s.addPeerToTask(id, shards)
+	s.addPeerToTask(shards)
 	s.metrics.IncPeerCount()
 	s.lock.Unlock()
 
@@ -538,7 +545,7 @@ func (s *SyncClient) RemovePeer(id peer.ID) {
 	}
 	pr.resCancel() // once loop exits
 	delete(s.peers, id)
-	s.removePeerFromTask(id, pr.shards)
+	s.removePeerFromTask(pr.shards)
 	s.metrics.DecPeerCount()
 	delete(s.idlerPeers, id)
 	for _, t := range s.tasks {
@@ -556,7 +563,7 @@ func (s *SyncClient) Close() error {
 	s.wg.Wait()
 	s.cleanTasks()
 	s.report(true)
-	s.saveSyncStatus(true)
+	s.saveSyncStatus()
 	return nil
 }
 
@@ -615,7 +622,7 @@ func (s *SyncClient) mainLoop() {
 		s.cleanTasks()
 		if s.syncDone {
 			s.report(true)
-			s.saveSyncStatus(true)
+			s.saveSyncStatus()
 			return
 		}
 		s.assignBlobRangeTasks()
@@ -635,8 +642,7 @@ func (s *SyncClient) mainLoop() {
 			s.log.Info("Stopped P2P req-resp L2 block sync client")
 			return
 		}
-		// Report and save stats if something meaningful happened
-		s.saveSyncStatus(false)
+		// Report stats if something meaningful happened
 		s.report(false)
 	}
 }
@@ -1278,7 +1284,7 @@ func (s *SyncClient) needThisPeer(contractShards map[common.Address][]uint64) bo
 	return false
 }
 
-func (s *SyncClient) addPeerToTask(peerID peer.ID, contractShards map[common.Address][]uint64) {
+func (s *SyncClient) addPeerToTask(contractShards map[common.Address][]uint64) {
 	for contract, shards := range contractShards {
 		for _, shard := range shards {
 			for _, t := range s.tasks {
@@ -1290,7 +1296,7 @@ func (s *SyncClient) addPeerToTask(peerID peer.ID, contractShards map[common.Add
 	}
 }
 
-func (s *SyncClient) removePeerFromTask(peerID peer.ID, contractShards map[common.Address][]uint64) {
+func (s *SyncClient) removePeerFromTask(contractShards map[common.Address][]uint64) {
 	for contract, shards := range contractShards {
 		for _, shard := range shards {
 			for _, t := range s.tasks {
