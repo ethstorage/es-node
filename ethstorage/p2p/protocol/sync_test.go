@@ -88,7 +88,7 @@ func NewMockL1Source(lastBlobIndex uint64, metafile string) *mockL1Source {
 
 	file, err := os.OpenFile(metafile, os.O_RDONLY, 0600)
 	if err != nil {
-		panic(fmt.Sprintf("open metafile faiil with err %s", err.Error()))
+		panic(fmt.Sprintf("open metafile fail with err %s", err.Error()))
 	}
 	return &mockL1Source{lastBlobIndex: lastBlobIndex, metaFile: file}
 }
