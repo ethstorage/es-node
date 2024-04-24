@@ -697,7 +697,7 @@ func TestSaveAndLoadSyncStatus(t *testing.T) {
 	if !syncCl.tasks[1].done {
 		t.Fatalf("task 1 should be done.")
 	}
-	syncCl.saveSyncStatus(true)
+	syncCl.saveSyncStatus()
 
 	syncCl.tasks = make([]*task, 0)
 	syncCl.loadSyncStatus()
