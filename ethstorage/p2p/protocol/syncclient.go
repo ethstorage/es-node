@@ -431,7 +431,7 @@ func (s *SyncClient) saveSyncStatus() {
 }
 
 // saveSyncStatus marshals the remaining sync tasks into leveldb.
-func (s *SyncClient) saveSyncStatusLoop() {
+func (s *SyncClient) saveStatusLoop() {
 	defer s.wg.Done()
 
 	ticker := time.NewTicker(5 * time.Minute)
@@ -499,7 +499,7 @@ func (s *SyncClient) Start() error {
 
 	s.wg.Add(2)
 	go s.mainLoop()
-	go s.saveSyncStatus()
+	go s.saveStatusLoop()
 
 	return nil
 }
