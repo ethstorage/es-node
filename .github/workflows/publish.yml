@@ -24,9 +24,9 @@ jobs:
 
       - name: Set up build environment
         run: |
-          apt update
-          apt install build-essential
-          apt install libomp-dev
+          sudo apt update
+          sudo apt install build-essential
+          sudo apt install libomp-dev
 
       - name: Create package
         run: |
