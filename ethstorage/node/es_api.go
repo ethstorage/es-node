@@ -6,12 +6,10 @@ package node
 import (
 	"bytes"
 	"errors"
-
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/log"
-
 	"github.com/ethstorage/go-ethstorage/cmd/es-utils/utils"
 	"github.com/ethstorage/go-ethstorage/ethstorage"
 	"github.com/ethstorage/go-ethstorage/ethstorage/downloader"
@@ -29,6 +27,7 @@ type DecodeType uint64
 const (
 	RawData DecodeType = iota
 	PaddingPer31Bytes
+	OptimismCompact
 )
 
 func NewESAPI(config *RPCConfig, sm *ethstorage.StorageManager, dl *downloader.Downloader, log log.Logger) *esAPI {
@@ -70,6 +69,11 @@ func (api *esAPI) GetBlob(kvIndex uint64, blobHash common.Hash, decodeType Decod
 
 	if decodeType == PaddingPer31Bytes {
 		ret = utils.DecodeBlob(blob)
+	} else if decodeType == OptimismCompact {
+		var err error
+		if ret, err = utils.ToData(blob); err != nil {
+			return nil, err
+		}
 	}
 
 	if len(ret) < int(off+size) {

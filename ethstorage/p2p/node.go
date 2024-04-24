@@ -107,7 +107,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 					// n.RequestShardList to fetch the shard list of the new node.
 					remoteShardList, e := n.RequestShardList(remotePeerId)
 					if e != nil {
-						log.Info("Get remote shard list fail", "peer", remotePeerId, "err", e.Error())
+						log.Debug("Get remote shard list fail", "peer", remotePeerId, "err", e.Error())
 						conn.Close()
 						return
 					}
@@ -119,7 +119,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 				}
 				added := n.syncCl.AddPeer(remotePeerId, shards, conn.Stat().Direction)
 				if !added {
-					log.Info("Close connection as AddPeer fail", "peer", remotePeerId)
+					log.Debug("Close connection as AddPeer fail", "peer", remotePeerId)
 					conn.Close()
 				}
 			},
@@ -148,7 +148,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 			}
 		}
 		go n.syncCl.ReportPeerSummary()
-		n.syncSrv = protocol.NewSyncServer(rollupCfg, storageManager, m)
+		n.syncSrv = protocol.NewSyncServer(rollupCfg, storageManager, db, m)
 
 		blobByRangeHandler := protocol.MakeStreamHandler(resourcesCtx, log.New("serve", "blobs_by_range"), n.syncSrv.HandleGetBlobsByRangeRequest)
 		n.host.SetStreamHandler(protocol.GetProtocolID(protocol.RequestBlobsByRangeProtocolID, rollupCfg.L2ChainID), blobByRangeHandler)
@@ -258,6 +258,9 @@ func (n *NodeP2P) Close() error {
 			if err := n.syncCl.Close(); err != nil {
 				result = multierror.Append(result, fmt.Errorf("failed to close p2p sync client cleanly: %w", err))
 			}
+		}
+		if n.syncSrv != nil {
+			n.syncSrv.Close()
 		}
 	}
 	return result.ErrorOrNil()
