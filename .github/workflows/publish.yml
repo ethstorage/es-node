@@ -14,6 +14,13 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, macos-latest]
         arch: [amd64, amd64, arm64]
+        include: 
+          - os: ubuntu-latest
+            arch: amd64
+          - os: macos-latest
+            arch: amd64
+          - os: macos-latest
+            arch: arm64
     env:
       BUILD_DIR: es-node.${{ github.ref_name }}
       BIN_DIR: es-node.${{ github.ref_name }}/build/bin
