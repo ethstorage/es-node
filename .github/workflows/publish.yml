@@ -36,7 +36,7 @@ jobs:
 
       - name: Build
         run: |
-          make build TARGETOS=darwin TARGETARCH=arm64
+          make build TARGETOS=darwin TARGETARCH=arm64 CGO_CFLAGS="-Wno-error=unused-command-line-argument" 
           mv build/bin/es-node ${{ env.BIN_DIR }}/
           tar -czvf es-node.${{ github.ref_name }}.darwin-arm64.tar.gz ${{ env.BUILD_DIR }}
           make clean
