@@ -12,14 +12,10 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, macos-latest]
-        arch: [amd64, amd64, arm64]
-        include: 
+        os: [ubuntu-latest, macos-latest]
+        arch: [amd64, arm64]
+        exclude: 
           - os: ubuntu-latest
-            arch: amd64
-          - os: macos-latest
-            arch: amd64
-          - os: macos-latest
             arch: arm64
     env:
       BUILD_DIR: es-node.${{ github.ref_name }}
