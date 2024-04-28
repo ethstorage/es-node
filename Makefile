@@ -13,7 +13,7 @@ es-node: build
 	mkdir -p build/bin/snarkbuild
 
 build:
-	env GO111MODULE=on CGO_ENABLED=1 GOOS=$(TARGETOS) GOARCH=$(TARGETARCH) go build -v $(LDFLAGS) -o build/bin/es-node -tags rapidsnark_asm ./cmd/es-node/
+	env GO111MODULE=on CGO_ENABLED=1 GOOS=$(TARGETOS) GOARCH=$(TARGETARCH) CGO_CFLAGS="-Wno-error=unused-command-line-argument" go build -v $(LDFLAGS) -o build/bin/es-node -tags rapidsnark_asm ./cmd/es-node/
 
 clean:
 	rm -r build
