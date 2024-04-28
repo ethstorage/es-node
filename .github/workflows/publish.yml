@@ -20,6 +20,7 @@ jobs:
     env:
       BUILD_DIR: es-node.${{ github.ref_name }}
       BIN_DIR: es-node.${{ github.ref_name }}/build/bin
+      FILE_NAME: es-node.${{ github.ref_name }}.${{ matrix.os == 'ubuntu-latest' && 'linux' || 'darwin' }}-${{ matrix.arch }}.tar.gz
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -46,7 +47,20 @@ jobs:
         run: |
           make build TARGETOS=${{ matrix.os == 'ubuntu-latest' && 'linux' || 'darwin' }} TARGETARCH=${{ matrix.arch }}
           mv build/bin/es-node ${{ env.BIN_DIR }}/
-          tar -czvf es-node.${{ github.ref_name }}.${{ matrix.os == 'ubuntu-latest' && 'linux' || 'darwin' }}-${{ matrix.arch }}.tar.gz ${{ env.BUILD_DIR }}
+          tar -czvf ${{ env.FILE_NAME }} ${{ env.BUILD_DIR }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: es-node-${{ matrix.os }}-${{ matrix.arch }}
+          path: ${{ env.FILE_NAME }}
+
+release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
@@ -54,9 +68,7 @@ jobs:
           tag_name: ${{ github.ref }}
           name: Release ${{ github.ref_name }}
           files: |
-            es-node.${{ github.ref_name }}.linux-amd64.tar.gz
-            es-node.${{ github.ref_name }}.darwin-amd64.tar.gz
-            es-node.${{ github.ref_name }}.darwin-arm64.tar.gz
+            es-node-*.tar.gz
           generate_release_notes: true
 
   build-and-push-image:
