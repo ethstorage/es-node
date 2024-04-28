@@ -55,21 +55,21 @@ jobs:
           name: es-node-${{ matrix.os }}-${{ matrix.arch }}
           path: ${{ env.FILE_NAME }}
 
-release:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download artifacts
-        uses: actions/download-artifact@v3
+  release:
+      needs: build
+      runs-on: ubuntu-latest
+      steps:
+        - name: Download artifacts
+          uses: actions/download-artifact@v3
 
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ github.ref }}
-          name: Release ${{ github.ref_name }}
-          files: |
-            es-node-*.tar.gz
-          generate_release_notes: true
+        - name: Create Release
+          uses: softprops/action-gh-release@v1
+          with:
+            tag_name: ${{ github.ref }}
+            name: Release ${{ github.ref_name }}
+            files: |
+              es-node-*.tar.gz
+            generate_release_notes: true
 
   build-and-push-image:
     runs-on: ubuntu-latest
