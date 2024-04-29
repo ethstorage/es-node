@@ -72,7 +72,7 @@ func NewKZGPoseidonProver(workingDir, zkeyFileName string, zkProverMode, zkProve
 		zkProverImpl: zkProverImpl,
 		libDir:       libDir,
 		zkey:         zkeyFileName,
-		wasm:         wasmFile,
+		wasm:         wasmName,
 		lg:           lg,
 	}
 }
