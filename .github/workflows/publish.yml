@@ -63,12 +63,12 @@ jobs:
           uses: actions/download-artifact@v4
 
         - name: Create Release
-          uses: softprops/action-gh-release@v1
+          uses: softprops/action-gh-release@v2
           with:
             tag_name: ${{ github.ref }}
             name: Release ${{ github.ref_name }}
             files: |
-              es-node.${{ github.ref_name }}.*.tar.gz
+              ${{ env.FILE_NAME }}
             generate_release_notes: true
 
   build-and-push-image:
