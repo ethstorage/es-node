@@ -68,9 +68,7 @@ jobs:
             tag_name: ${{ github.ref }}
             name: Release ${{ github.ref_name }}
             files: |
-              es-node.${{ github.ref_name }}.linux-amd64.tar.gz
-              es-node.${{ github.ref_name }}.darwin-amd64.tar.gz
-              es-node.${{ github.ref_name }}.darwin-arm64.tar.gz
+              **/*
             fail_on_unmatched_files: true
             generate_release_notes: true
 
