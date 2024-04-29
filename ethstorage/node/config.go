@@ -27,8 +27,9 @@ type Config struct {
 	// L2     L2EndpointSetup
 	// L2Sync L2SyncEndpointSetup
 
-	DataDir  string
-	DBConfig *db.Config
+	DataDir        string
+	StateUploadURL string
+	DBConfig       *db.Config
 
 	// Driver driver.Config
 

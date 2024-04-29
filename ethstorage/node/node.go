@@ -5,16 +5,19 @@ package node
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
-	ethRPC "github.com/ethereum/go-ethereum/rpc"
-
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
+	ethRPC "github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethstorage/go-ethstorage/ethstorage"
 	"github.com/ethstorage/go-ethstorage/ethstorage/archiver"
 	"github.com/ethstorage/go-ethstorage/ethstorage/downloader"
@@ -22,6 +25,7 @@ import (
 	"github.com/ethstorage/go-ethstorage/ethstorage/metrics"
 	"github.com/ethstorage/go-ethstorage/ethstorage/miner"
 	"github.com/ethstorage/go-ethstorage/ethstorage/p2p"
+	"github.com/ethstorage/go-ethstorage/ethstorage/p2p/protocol"
 	"github.com/ethstorage/go-ethstorage/ethstorage/prover"
 	"github.com/hashicorp/go-multierror"
 )
@@ -299,7 +303,97 @@ func (n *EsNode) Start(ctx context.Context, cfg *Config) error {
 		}
 	}
 
+	if cfg.StateUploadURL != "" {
+		n.log.Info("Start upload node state")
+		go n.UploadNodeState(cfg.StateUploadURL)
+	}
+
 	return nil
+}
+
+func (n *EsNode) UploadNodeState(url string) {
+	<-time.After(2 * time.Minute)
+	localNode := n.p2pNode.Dv5Local().Node()
+	id := localNode.ID().String()
+	helloUrl := fmt.Sprintf(url + "/hello")
+	stateUrl := fmt.Sprintf(url + "/reportstate")
+	_, err := sendMessage(helloUrl, id)
+	if err != nil {
+		log.Warn("Send message to resp", "err", err.Error())
+		return
+	}
+	ticker := time.NewTicker(5 * time.Minute)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			state := NodeState{
+				Id:      id,
+				Version: n.appVersion,
+				Address: fmt.Sprintf("%s:%d", localNode.IP().String(), localNode.TCP()),
+			}
+
+			var submissionStates map[uint64]*miner.SubmissionState
+			if status, _ := n.db.Get(miner.SubmissionStatusKey); status != nil {
+				if err := json.Unmarshal(status, &submissionStates); err != nil {
+					log.Error("Failed to decode submission states", "err", err)
+					continue
+				}
+			}
+			var miningStates map[uint64]*miner.MiningState
+			if status, _ := n.db.Get(miner.MiningStatusKey); status != nil {
+				if err := json.Unmarshal(status, &miningStates); err != nil {
+					log.Error("Failed to decode submission states", "err", err)
+					continue
+				}
+			}
+			var providedBlobs map[uint64]uint64
+			if status, _ := n.db.Get(protocol.ProvidedBlobsKey); status != nil {
+				if err := json.Unmarshal(status, &providedBlobs); err != nil {
+					log.Error("Failed to decode provided Blobs count", "err", err)
+					continue
+				}
+			}
+			var syncStates map[uint64]*protocol.SyncState
+			if status, _ := n.db.Get(protocol.SyncStatusKey); status != nil {
+				if err := json.Unmarshal(status, &syncStates); err != nil {
+					log.Error("Failed to decode sync states", "err", err)
+					continue
+				}
+			}
+
+			shards := make([]*ShardState, 0)
+			for _, shardId := range n.storageManager.Shards() {
+				miner, _ := n.storageManager.GetShardMiner(shardId)
+				providedBlob, _ := providedBlobs[shardId]
+				syncState, _ := syncStates[shardId]
+				miningState, _ := miningStates[shardId]
+				submissionState, _ := submissionStates[shardId]
+				s := ShardState{
+					ShardId:         shardId,
+					Miner:           miner,
+					ProvidedBlob:    providedBlob,
+					SyncState:       syncState,
+					MiningState:     miningState,
+					SubmissionState: submissionState,
+				}
+				shards = append(shards, &s)
+			}
+			state.Shards = shards
+
+			data, err := json.Marshal(state)
+			if err != nil {
+				log.Info("Fail to Marshal node state", "error", err.Error())
+				continue
+			}
+			_, err = sendMessage(stateUrl, string(data))
+			if err != nil {
+				log.Info("Fail to upload node state", "error", err.Error())
+			}
+		case <-n.resourcesCtx.Done():
+			return
+		}
+	}
 }
 
 func (n *EsNode) OnNewL1Head(ctx context.Context, sig eth.L1BlockRef) {
@@ -423,4 +517,18 @@ func (n *EsNode) initDatabase(cfg *Config) error {
 		n.db = db
 	}
 	return err
+}
+
+func sendMessage(url string, data string) (string, error) {
+	contentType := "application/json"
+	resp, err := http.Post(url, contentType, strings.NewReader(data))
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
 }

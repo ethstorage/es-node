@@ -46,7 +46,7 @@ const (
 )
 
 var (
-	providedBlobsKey = []byte("ProvidedBlobsKey")
+	ProvidedBlobsKey = []byte("ProvidedBlobsKey")
 )
 
 // peerStat maintains rate-limiting data of a peer that requests blocks from us.
@@ -91,7 +91,7 @@ func NewSyncServer(cfg *rollup.EsConfig, storageManager StorageManagerReader, db
 		m = metrics.NoopMetrics
 	}
 	var providedBlobs map[uint64]uint64
-	if status, _ := db.Get(providedBlobsKey); status != nil {
+	if status, _ := db.Get(ProvidedBlobsKey); status != nil {
 		if err := json.Unmarshal(status, &providedBlobs); err != nil {
 			log.Error("Failed to decode provided blobs", "err", err)
 		}
@@ -360,7 +360,7 @@ func (srv *SyncServer) saveProvidedBlobs() {
 		return
 	}
 
-	err = srv.db.Put(providedBlobsKey, states)
+	err = srv.db.Put(ProvidedBlobsKey, states)
 	if err != nil {
 		log.Error("Failed to store provided blobs states", "err", err)
 		return
