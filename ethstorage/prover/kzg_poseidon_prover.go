@@ -123,9 +123,11 @@ func (p *KZGPoseidonProver) GetStorageProof(data [][]byte, encodingKeys []common
 
 func (p *KZGPoseidonProver) getZKProver() (IZKProver, error) {
 	if p.zkProverImpl == 1 {
+		p.lg.Info("Using snarkjs zk prover")
 		return NewZKProver(filepath.Dir(p.libDir), p.zkey, p.wasm, p.lg), nil
 	}
 	if p.zkProverImpl == 2 {
+		p.lg.Info("Using go-rapidsnark zk prover")
 		return NewZKProverGo(p.libDir, p.zkey, p.wasm, p.lg)
 	}
 	return nil, fmt.Errorf("invalid zk prover implementation: %d", p.zkProverImpl)
