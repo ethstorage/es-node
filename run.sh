@@ -26,7 +26,7 @@ if [ ${#ES_NODE_SIGNER_PRIVATE_KEY} -ne 64 ]; then
 fi
 
 # ZK prover mode, 1: one proof per sample, 2: one proof for multiple samples.
-zkp_mode=2 
+zkp_mode=
 i=1
 while [ $i -le $# ]; do
     if [ "${!i}" = "--miner.zk-prover-mode" ]; then
@@ -42,12 +42,14 @@ while [ $i -le $# ]; do
     i=$((i+1))
 done
 
-if [ "$zkp_mode" != 1 ] && [ "$zkp_mode" != 2 ]; then
+if [ -n "$zkp_mode" ] && [ "$zkp_mode" != 1 ] && [ "$zkp_mode" != 2 ]; then
   echo "Error: zk prover mode can only be 1 or 2."
   exit 1  
-fi
+fi 
 
-echo "zk prover mode is $zkp_mode"
+if [ -n "$zkp_mode" ]; then
+  echo "The zk prover mode has been overridden to $zkp_mode"
+fi 
 
 # download zkey if not yet
 zkey_name="blob_poseidon2.zkey"
@@ -74,7 +76,7 @@ fi
 
 
 # ZK prover implementation, 1: snarkjs, 2: go-rapidsnark.
-zkp_impl=1 
+zkp_impl=
 i=1
 while [ $i -le $# ]; do
     if [ "${!i}" = "--miner.zk-prover-impl" ]; then
@@ -90,12 +92,16 @@ while [ $i -le $# ]; do
     i=$((i+1))
 done
 
-if [ "$zkp_impl" != 1 ] && [ "$zkp_impl" != 2 ]; then
-  echo "miner.zk-prover-impl can only be 1 or 2"
-  exit 1  
-fi
 
-echo "zk prover implementation is $zkp_impl"
+if [ -n "$zkp_impl" ] && [ "$zkp_impl" != 1 ] && [ "$zkp_impl" != 2 ]; then
+  echo "miner.zk-prover-impl can only be 1 or 2"
+  exit 1
+fi 
+
+if [ -n "$zkp_impl" ]; then
+  echo "The zk prover implementation has been overridden to $zkp_impl"
+fi 
+
 if [ "$zkp_impl" = 1 ]; then
 
   if ! [ -x "$(command -v node)" ]; then
