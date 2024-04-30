@@ -7,11 +7,13 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 
 	"github.com/crate-crypto/go-proto-danksharding-crypto/eth"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto/kzg4844"
 )
 
 type BeaconClient struct {
@@ -90,6 +92,46 @@ func (c *BeaconClient) DownloadBlobs(slot uint64) (map[common.Hash]Blob, error) 
 	}
 
 	return res, nil
+}
+
+func (c *BeaconClient) DownloadL2Blobs(hashes []common.Hash) (map[common.Hash]Blob, error) {
+	res := map[common.Hash]Blob{}
+	for _, hash := range hashes {
+		blob, err := c.DownloadL2Blob(hash)
+		if err != nil {
+			return nil, err
+		}
+		res[hash] = blob
+	}
+	return res, nil
+}
+
+func (c *BeaconClient) DownloadL2Blob(versionedHash common.Hash) (Blob, error) {
+	// da server
+	beaconUrl, err := url.JoinPath(c.beaconURL, fmt.Sprintf("get/0x%x", versionedHash))
+	if err != nil {
+		return Blob{}, err
+	}
+	resp, err := http.Get(beaconUrl)
+	if err != nil {
+		return Blob{}, err
+	}
+	defer resp.Body.Close()
+
+	blob, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return Blob{}, err
+	}
+	var fixedBlob kzg4844.Blob
+	copy(fixedBlob[:], blob)
+	commit, err := kzg4844.BlobToCommitment(fixedBlob)
+	if err != nil {
+		return Blob{}, fmt.Errorf("BlobToCommitment failed:%w", err)
+	}
+	if common.Hash(eth.KZGToVersionedHash(commit)) != versionedHash {
+		return Blob{}, fmt.Errorf("invalid blob for %s", versionedHash)
+	}
+	return Blob{VersionedHash: versionedHash, Data: blob}, nil
 }
 
 func kzgToVersionedHash(commit string) (common.Hash, error) {

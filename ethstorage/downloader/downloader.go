@@ -301,7 +301,7 @@ func (s *Downloader) downloadRange(start int64, end int64, toCache bool) ([]blob
 		end = start
 	}
 
-	events, err := s.l1Source.FilterLogsByBlockRange(big.NewInt(int64(start)), big.NewInt(int64(end)), eth.PutBlobEvent)
+	events, err := s.l1Source.FilterLogsByBlockRange(big.NewInt(start), big.NewInt(end), eth.PutBlobEvent)
 	if err != nil {
 		return nil, err
 	}
@@ -309,7 +309,7 @@ func (s *Downloader) downloadRange(start int64, end int64, toCache bool) ([]blob
 	if err != nil {
 		return nil, err
 	}
-	blobs := []blob{}
+	var blobs []blob
 	for _, elBlock := range elBlocks {
 		// attempt to read the blobs from the cache first
 		res := s.Cache.Blobs(elBlock.hash)
@@ -327,7 +327,12 @@ func (s *Downloader) downloadRange(start int64, end int64, toCache bool) ([]blob
 			)
 		}
 
-		clBlobs, err := s.l1Beacon.DownloadBlobs(s.l1Beacon.Timestamp2Slot(elBlock.timestamp))
+		// get blob by blobHash
+		var hashes []common.Hash
+		for _, blob := range elBlock.blobs {
+			hashes = append(hashes, blob.hash)
+		}
+		clBlobs, err := s.l1Beacon.DownloadL2Blobs(hashes)
 		if err != nil {
 			s.log.Error("L1 beacon download blob error", "err", err)
 			return nil, err
