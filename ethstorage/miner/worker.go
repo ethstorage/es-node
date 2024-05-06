@@ -5,6 +5,8 @@ package miner
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"math/big"
 	"sync"
@@ -13,6 +15,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 	es "github.com/ethstorage/go-ethstorage/ethstorage"
@@ -20,18 +23,33 @@ import (
 )
 
 const (
-	chainHeadChanSize = 1
-	taskQueueSize     = 1
-	resultQueueSize   = 10
-	sampleSizeBits    = 5 // 32 bytes
-	// always use new block hash to mine for each slot
-	mineTimeOut              = 12 // seconds
-	miningTransactionTimeout = 25 // seconds
+	chainHeadChanSize        = 1
+	taskQueueSize            = 1
+	resultQueueSize          = 10
+	sampleSizeBits           = 5  // 32 bytes
+	slot                     = 12 // seconds
+	miningTransactionTimeout = 50 // seconds
 )
 
 var (
-	minedEventSig = crypto.Keccak256Hash([]byte("MinedBlock(uint256,uint256,uint256,uint256,address,uint256)"))
+	minedEventSig       = crypto.Keccak256Hash([]byte("MinedBlock(uint256,uint256,uint256,uint256,address,uint256)"))
+	errCh               = make(chan miningError, 10)
+	errDropped          = errors.New("dropped: not enough profit")
+	SubmissionStatusKey = []byte("SubmissionStatusKey")
+	MiningStatusKey     = []byte("MiningStatusKey")
 )
+
+type MiningState struct {
+	MiningPower  uint64 `json:"mining_power"`
+	SamplingTime uint64 `json:"sampling_time"`
+}
+
+type SubmissionState struct {
+	Succeeded         int   `json:"succeeded_submission"`
+	Failed            int   `json:"failed_submission"`
+	Dropped           int   `json:"dropped_submission"`
+	LastSucceededTime int64 `json:"last_succeeded_time"`
+}
 
 type task struct {
 	miner    common.Address
@@ -54,6 +72,16 @@ func (t *taskItem) String() string {
 	return fmt.Sprintf("shard: %d, thread: %d, block: %v", t.shardIdx, t.thread, t.blockNumber)
 }
 
+type miningError struct {
+	shardIdx uint64
+	block    *big.Int
+	err      error
+}
+
+func (e miningError) String() string {
+	return fmt.Sprintf("shard %d: block %v: %s", e.shardIdx, e.block, e.err.Error())
+}
+
 type result struct {
 	blockNumber     *big.Int
 	startShardId    uint64
@@ -71,6 +99,7 @@ type worker struct {
 	config     Config
 	l1API      L1API
 	prover     MiningProver
+	db         ethdb.Database
 	storageMgr *es.StorageManager
 
 	chainHeadCh chan eth.L1BlockRef
@@ -83,6 +112,9 @@ type worker struct {
 	resultLock sync.Mutex
 	resultMap  map[uint64]*result // protected by resultLock
 
+	miningStates     map[uint64]*MiningState
+	submissionStates map[uint64]*SubmissionState
+
 	running int32
 	wg      sync.WaitGroup
 	lg      log.Logger
@@ -90,25 +122,45 @@ type worker struct {
 
 func newWorker(
 	config Config,
+	db ethdb.Database,
 	storageMgr *es.StorageManager,
 	api L1API,
 	chainHeadCh chan eth.L1BlockRef,
 	prover MiningProver,
 	lg log.Logger,
 ) *worker {
+	var submissionStates map[uint64]SubmissionState
+	if status, _ := db.Get(SubmissionStatusKey); status != nil {
+		if err := json.Unmarshal(status, &submissionStates); err != nil {
+			log.Error("Failed to decode submission states", "err", err)
+		}
+	}
 	worker := &worker{
-		config:       config,
-		l1API:        api,
-		prover:       prover,
-		chainHeadCh:  chainHeadCh,
-		shardTaskMap: make(map[uint64]task),
-		exitCh:       make(chan struct{}),
-		startCh:      make(chan uint64, 1),
-		resultCh:     make(chan struct{}, 1),
-		resultLock:   sync.Mutex{},
-		resultMap:    make(map[uint64]*result),
-		storageMgr:   storageMgr,
-		lg:           lg,
+		config:           config,
+		l1API:            api,
+		prover:           prover,
+		chainHeadCh:      chainHeadCh,
+		shardTaskMap:     make(map[uint64]task),
+		exitCh:           make(chan struct{}),
+		startCh:          make(chan uint64, 1),
+		resultCh:         make(chan struct{}, 1),
+		miningStates:     make(map[uint64]*MiningState),
+		submissionStates: make(map[uint64]*SubmissionState),
+		resultLock:       sync.Mutex{},
+		resultMap:        make(map[uint64]*result),
+		storageMgr:       storageMgr,
+		db:               db,
+		lg:               lg,
+	}
+	for _, shardId := range storageMgr.Shards() {
+		worker.miningStates[shardId] = &MiningState{MiningPower: 0, SamplingTime: 0}
+		if submissionStates != nil {
+			if state, ok := submissionStates[shardId]; ok {
+				worker.submissionStates[shardId] = &state
+				continue
+			}
+		}
+		worker.submissionStates[shardId] = &SubmissionState{Succeeded: 0, Failed: 0, Dropped: 0, LastSucceededTime: 0}
 	}
 	worker.wg.Add(2)
 	go worker.newWorkLoop()
@@ -139,6 +191,31 @@ func (w *worker) close() {
 		for _, ch := range task.taskChs {
 			close(ch)
 		}
+	}
+	w.saveStates()
+}
+
+func (w *worker) saveStates() {
+	states, err := json.Marshal(w.submissionStates)
+	if err != nil {
+		log.Error("Failed to marshal submission states", "err", err)
+		return
+	}
+	err = w.db.Put(SubmissionStatusKey, states)
+	if err != nil {
+		log.Error("Failed to store submission states", "err", err)
+		return
+	}
+
+	states, err = json.Marshal(w.miningStates)
+	if err != nil {
+		log.Error("Failed to marshal mining states", "err", err)
+		return
+	}
+	err = w.db.Put(MiningStatusKey, states)
+	if err != nil {
+		log.Error("Failed to store mining states", "err", err)
+		return
 	}
 }
 
@@ -171,7 +248,7 @@ func (w *worker) newWorkLoop() {
 			if !w.isRunning() {
 				break
 			}
-			w.lg.Info("Updating tasks with L1 new head", "blockNumber", block.Number, "blockTime", block.Time, "now", uint64(time.Now().Unix()))
+			w.lg.Info("Updating tasks with L1 new head", "blockNumber", block.Number, "blockTime", block.Time, "blockHash", block.Hash, "now", uint64(time.Now().Unix()))
 			// TODO suspend mining if:
 			// 1) a mining tx is already submitted; or
 			// 2) if the last mining time is too close (the reward is not enough).
@@ -229,7 +306,7 @@ func (w *worker) assignTasks(task task, block eth.L1BlockRef, reqDiff *big.Int) 
 			w.lg.Debug("Mining task queued", "shard", ti.shardIdx, "thread", ti.thread, "block", ti.blockNumber, "blockTime", block.Time, "now", uint64(time.Now().Unix()))
 		}
 	}
-	w.lg.Info("Mining tasks assigned", "shard", task.shardIdx, "threads", w.config.ThreadsPerShard, "block", block.Number, "nonces", w.config.NonceLimit)
+	w.lg.Info("Mining tasks assigned", "miner", task.miner, "shard", task.shardIdx, "threads", w.config.ThreadsPerShard, "block", block.Number, "nonces", w.config.NonceLimit)
 }
 
 func (w *worker) updateDifficulty(shardIdx, blockTime uint64) (*big.Int, error) {
@@ -262,6 +339,11 @@ func (w *worker) taskLoop(taskCh chan *taskItem) {
 		case ti := <-taskCh:
 			success, err := w.mineTask(ti)
 			if err != nil {
+				select {
+				case errCh <- miningError{ti.shardIdx, ti.blockNumber, err}:
+				default:
+					w.lg.Warn("Sent miningError to errCh failed", "lenOfCh", len(errCh))
+				}
 				w.lg.Warn("Mine task fail", "shard", ti.shardIdx, "thread", ti.thread, "block", ti.blockNumber, "err", err.Error())
 			}
 			if success {
@@ -298,6 +380,12 @@ func (w *worker) notifyResultLoop() {
 // resultLoop is a standalone goroutine to submit mining result to L1 contract.
 func (w *worker) resultLoop() {
 	defer w.wg.Done()
+	var startTime = time.Now().Format("2006-01-02 15:04:05")
+	errorCache := make([]miningError, 0)
+	ticker := time.NewTicker(1 * time.Minute)
+	defer ticker.Stop()
+	saveStatesTicker := time.NewTicker(5 * time.Minute)
+	defer saveStatesTicker.Stop()
 	for {
 		select {
 		case <-w.resultCh:
@@ -306,14 +394,38 @@ func (w *worker) resultLoop() {
 				continue
 			}
 			w.lg.Info("Mining result loop get result", "shard", result.startShardId, "block", result.blockNumber, "nonce", result.nonce)
+			// check block number to avoid `blockNumber == block.number` in the contract, loop for 5 times in case of empty slots
+			for i := 0; i < 5; i++ {
+				latest, err := w.l1API.BlockNumber(context.Background())
+				if err != nil {
+					w.lg.Warn("Failed to get L1 block number", "error", err.Error())
+					continue
+				}
+				if latest > result.blockNumber.Uint64() {
+					break
+				}
+				w.lg.Info("Will wait a slot for the block number to increase")
+				time.Sleep(slot * time.Second)
+			}
 			txHash, err := w.l1API.SubmitMinedResult(
 				context.Background(),
 				w.storageMgr.ContractAddress(),
 				*result,
 				w.config,
 			)
-			if err != nil {
-				w.lg.Error("Failed to submit mined result", "shard", result.startShardId, "block", result.blockNumber, "error", err.Error())
+			if s, ok := w.submissionStates[result.startShardId]; ok {
+				if err != nil {
+					if err == errDropped {
+						s.Dropped++
+					} else {
+						s.Failed++
+						errorCache = append(errorCache, miningError{result.startShardId, result.blockNumber, err})
+						w.lg.Error("Failed to submit mined result", "shard", result.startShardId, "block", result.blockNumber, "error", err.Error())
+					}
+				} else {
+					s.Succeeded++
+					s.LastSucceededTime = time.Now().UnixMilli()
+				}
 			}
 			if txHash != (common.Hash{}) {
 				// waiting for tx confirmation or timeout
@@ -324,18 +436,36 @@ func (w *worker) resultLoop() {
 						log.Warn("Waiting for mining transaction confirm timed out", "txHash", txHash)
 						break
 					}
+
+					checked++
 					_, isPending, err := w.l1API.TransactionByHash(context.Background(), txHash)
-					if err == nil && !isPending {
+					if err != nil {
+						log.Error("Querying transaction by hash failed", "error", err, "txHash", txHash)
+						continue
+					} else if !isPending {
 						log.Info("Mining transaction confirmed", "txHash", txHash)
 						w.checkTxStatus(txHash, result.miner)
 						break
 					}
-					checked++
 				}
 				ticker.Stop()
 			}
 			// optimistically check next result if exists
 			w.notifyResultLoop()
+		case <-ticker.C:
+			for shardId, s := range w.submissionStates {
+				log.Info(fmt.Sprintf("Mining stats since %s", startTime), "shard", shardId, "succeeded", s.Succeeded, "failed", s.Failed, "dropped", s.Dropped)
+			}
+			if len(errorCache) > 0 {
+				log.Error(fmt.Sprintf("Mining stats since %s", startTime), "lastError", errorCache[len(errorCache)-1])
+			}
+		case <-saveStatesTicker.C:
+			w.saveStates()
+		case err := <-errCh:
+			if s, ok := w.submissionStates[err.shardIdx]; ok {
+				s.Failed++
+			}
+			errorCache = append(errorCache, err)
 		case <-w.exitCh:
 			w.lg.Warn("Worker is exiting from result loop...")
 			return
@@ -387,30 +517,37 @@ func weiToEther(wei *big.Int) *big.Float {
 	return f.Quo(fWei.SetInt(wei), big.NewFloat(params.Ether))
 }
 
-// mineTask acturally executes a mining task
+// mineTask actually executes a mining task
 func (w *worker) mineTask(t *taskItem) (bool, error) {
 	startTime := time.Now()
 	nonce := t.nonceStart
 	w.lg.Debug("Mining task started", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonces", fmt.Sprintf("%d~%d", t.nonceStart, t.nonceEnd))
 	for w.isRunning() {
-		if time.Since(startTime).Seconds() > mineTimeOut {
+		// always use new randao to mine for each slot
+		if time.Since(startTime).Seconds() > slot {
 			if t.thread == 0 {
 				nonceTriedTotal := (nonce - t.nonceStart) * w.config.ThreadsPerShard
 				w.lg.Warn("Mining tasks timed out", "shard", t.shardIdx, "block", t.blockNumber,
 					"noncesTried", fmt.Sprintf("%d(%.1f%%)", nonceTriedTotal, float64(nonceTriedTotal*100)/float64(w.config.NonceLimit)),
 				)
+				miningState := w.miningStates[t.shardIdx]
+				miningState.SamplingTime = uint64(time.Since(startTime).Milliseconds())
+				miningState.MiningPower = nonceTriedTotal * 10000 / w.config.NonceLimit
 			}
 			w.lg.Debug("Mining task timed out", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "noncesTried", nonce-t.nonceStart)
 			break
 		}
 		if nonce >= t.nonceEnd {
+			samplingTime := fmt.Sprintf("%.1fs", time.Since(startTime).Seconds())
 			if t.thread == 0 {
-				w.lg.Info("The nonces are exhausted in this slot, waiting for the next block",
-					"samplingTime", fmt.Sprintf("%.1fs", time.Since(startTime).Seconds()), "shard", t.shardIdx, "block", t.blockNumber)
+				w.lg.Info("Sampling done with all nonces",
+					"samplingTime", samplingTime, "shard", t.shardIdx, "block", t.blockNumber)
+				miningState := w.miningStates[t.shardIdx]
+				miningState.SamplingTime = uint64(time.Since(startTime).Milliseconds())
+				miningState.MiningPower = 10000
 			}
-			w.lg.Debug("The nonces are exhausted in this slot, waiting for the next block",
-				"samplingTime", fmt.Sprintf("%.1fs", time.Since(startTime).Seconds()),
-				"shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonceEnd", nonce)
+			w.lg.Debug("Sampling done with all nonces",
+				"samplingTime", samplingTime, "shard", t.shardIdx, "block", t.blockNumber, "thread", t.thread, "nonceEnd", nonce)
 			break
 		}
 		hash0 := initHash(t.miner, t.mixHash, nonce)

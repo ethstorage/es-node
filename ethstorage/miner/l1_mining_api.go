@@ -170,7 +170,7 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 			"profitEstimated", weiToEther(profit),
 			"minimumProfit", weiToEther(cfg.MinimumProfit),
 		)
-		return common.Hash{}, fmt.Errorf("dropped: not enough profit")
+		return common.Hash{}, errDropped
 	}
 
 	chainID, err := m.NetworkID(ctx)
@@ -203,7 +203,7 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 	}
 	err = m.SendTransaction(ctx, signedTx)
 	if err != nil {
-		m.lg.Error("Send tx failed", "error", err)
+		m.lg.Error("Send tx failed", "txNonce", nonce, "gasPrice", gasPrice, "error", err)
 		return common.Hash{}, err
 	}
 	m.lg.Info("Submit mined result done", "shard", rst.startShardId, "block", rst.blockNumber,
@@ -226,7 +226,7 @@ func (m *l1MiningAPI) estimateReward(ctx context.Context, cfg Config, contract c
 	}
 	lastMineTime := info.LastMineTime
 
-	plmt, err := m.ReadContractField("prepaidLastMineTime")
+	plmt, err := m.ReadContractField("prepaidLastMineTime", nil)
 	if err != nil {
 		m.lg.Error("Failed to read prepaidLastMineTime", "error", err.Error())
 		return nil, err

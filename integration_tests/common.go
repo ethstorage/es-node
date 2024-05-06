@@ -20,6 +20,7 @@ var (
 	l1Contract = common.HexToAddress(os.Getenv("ES_NODE_STORAGE_L1CONTRACT"))
 	privateKey = os.Getenv("ES_NODE_SIGNER_PRIVATE_KEY")
 	minerAddr  = common.HexToAddress(os.Getenv("ES_NODE_STORAGE_MINER"))
+	prPath     = "../ethstorage/prover"
 	lg         = esLog.NewLogger(esLog.CLIConfig{
 		Level:  "info",
 		Format: "text",

@@ -135,8 +135,21 @@ type EthStorageSyncDone struct {
 }
 
 type SyncerParams struct {
+	MaxPeers              int
 	MaxRequestSize        uint64
 	SyncConcurrency       uint64
 	FillEmptyConcurrency  int
 	MetaDownloadBatchSize uint64
+}
+
+type SyncState struct {
+	PeerCount         int    `json:"peer_count"`
+	BlobsSynced       uint64 `json:"blobs_synced"`
+	BlobsToSync       uint64 `json:"blobs_to_sync"`
+	SyncProgress      uint64 `json:"sync_progress"`
+	SyncedSeconds     uint64 `json:"sync_seconds"`
+	EmptyFilled       uint64 `json:"empty_filled"`
+	EmptyToFill       uint64 `json:"empty_to_fill"`
+	FillEmptyProgress uint64 `json:"fill_empty_progress"`
+	FillEmptySeconds  uint64 `json:"fill_empty_seconds"`
 }

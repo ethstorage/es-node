@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ethstorage/go-ethstorage/ethstorage/archiver"
 	eslog "github.com/ethstorage/go-ethstorage/ethstorage/log"
 	"github.com/ethstorage/go-ethstorage/ethstorage/miner"
 	"github.com/ethstorage/go-ethstorage/ethstorage/signer"
@@ -195,6 +196,11 @@ var (
 		EnvVar: prefixEnvVar("RPC_ESCALL_URL"),
 		Value:  "http://127.0.0.1:8545",
 	}
+	StateUploadURL = cli.StringFlag{
+		Name:   "state.upload.url",
+		Usage:  "API that update es-node state to, the node will upload state to API for statistic if it has been set correctly.",
+		EnvVar: prefixEnvVar("STATE_UPLOAD_URL"),
+	}
 )
 
 // Not use 'Required' field in order to avoid unnecessary check when use 'init' subcommand
@@ -233,6 +239,7 @@ var optionalFlags = []cli.Flag{
 	RPCListenAddr,
 	RPCListenPort,
 	RPCESCallURL,
+	StateUploadURL,
 }
 
 // Flags contains the list of configuration options available to the binary.
@@ -243,6 +250,7 @@ func init() {
 	optionalFlags = append(optionalFlags, eslog.CLIFlags(envVarPrefix)...)
 	optionalFlags = append(optionalFlags, signer.CLIFlags(envVarPrefix)...)
 	optionalFlags = append(optionalFlags, miner.CLIFlags(envVarPrefix)...)
+	optionalFlags = append(optionalFlags, archiver.CLIFlags(envVarPrefix)...)
 	Flags = append(requiredFlags, optionalFlags...)
 }
 

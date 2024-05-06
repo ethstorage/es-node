@@ -47,58 +47,63 @@ func TestZKProver_GenerateZKProof(t *testing.T) {
 		"12199007973319674300030596965685270475268514105269206407619072166392043015767",
 	}
 	libDir := filepath.Join(proverPath, prover.SnarkLib)
-	p, err := prover.NewZKProver(libDir, zkey2Name, prover.Wasm2Name, lg)
+	pjs := prover.NewZKProver(proverPath, zkey2Name, prover.Wasm2Name, lg)
+	pgo, err := prover.NewZKProverGo(libDir, zkey2Name, prover.Wasm2Name, lg)
 	if err != nil {
-		t.Errorf("NewZKProver() error = %v", err)
+		t.Errorf("NewZKProverGo() error = %v", err)
 		return
 	}
-	t.Run("zk test", func(t *testing.T) {
-		inputsBytes, err := p.GenerateInputs(encodingKeys, sampleIdxs)
-		if err != nil {
-			t.Errorf("ZKProver.GenerateInputs() error = %v", err)
-			return
-		}
-		var inputs map[string]interface{}
-		err = json.Unmarshal(inputsBytes, &inputs)
-		if err != nil {
-			t.Errorf("ZKProver.GenerateInputs() error = %v", err)
-			return
-		}
-		vxIn, ok := inputs["xIn"].([]interface{})
-		if !ok {
-			t.Errorf("ZKProver.GenerateInputs() type: %v, want []interface{}", reflect.TypeOf(inputs["xIn"]))
-			return
-		}
-		for i, xIn := range xIns {
-			if vxIn[i] != xIn {
-				t.Errorf("ZKProver.GenerateInputs() xIn = %v, want %v", inputs["xIn"], xIns)
-				return
-			}
-		}
-		proof, publics, err := p.GenerateZKProofRaw(encodingKeys, sampleIdxs)
-		if err != nil {
-			t.Errorf("ZKProver.GenerateZKProof() error = %v ", err)
-			return
-		}
-		masks := publics[4:]
-		for i, encodingKey := range encodingKeys {
-			maskGo, err := GenerateMask(encodingKey, sampleIdxs[i])
+	prvs := []prover.IZKProver{pjs, pgo}
+
+	for i, p := range prvs {
+		t.Run(fmt.Sprintf("zk test %d", i), func(t *testing.T) {
+			inputsBytes, err := prover.GenerateInputs(encodingKeys, sampleIdxs)
 			if err != nil {
-				t.Errorf("GenerateMask() error = %v", err)
+				t.Errorf("ZKProver.GenerateInputs() error = %v", err)
 				return
 			}
-			if maskGo.Cmp(masks[i]) != 0 {
-				t.Errorf("ZKProver.GenerateZKProof() mask = %v, GeneratedMask %v", masks[i], maskGo)
+			var inputs map[string]interface{}
+			err = json.Unmarshal(inputsBytes, &inputs)
+			if err != nil {
+				t.Errorf("ZKProver.GenerateInputs() error = %v", err)
 				return
 			}
-		}
-		err = verifyProof(t, publics, proof)
-		if err != nil {
-			t.Errorf("ZKProver.GenerateZKProof() verifyProof err: %v", err)
-			return
-		}
-		t.Log("verifyProof success!")
-	})
+			vxIn, ok := inputs["xIn"].([]interface{})
+			if !ok {
+				t.Errorf("ZKProver.GenerateInputs() type: %v, want []interface{}", reflect.TypeOf(inputs["xIn"]))
+				return
+			}
+			for i, xIn := range xIns {
+				if vxIn[i] != xIn {
+					t.Errorf("ZKProver.GenerateInputs() xIn = %v, want %v", inputs["xIn"], xIns)
+					return
+				}
+			}
+			proof, publics, err := p.GenerateZKProofRaw(encodingKeys, sampleIdxs)
+			if err != nil {
+				t.Errorf("ZKProver.GenerateZKProof() error = %v ", err)
+				return
+			}
+			masks := publics[4:]
+			for i, encodingKey := range encodingKeys {
+				maskGo, err := GenerateMask(encodingKey, sampleIdxs[i])
+				if err != nil {
+					t.Errorf("GenerateMask() error = %v", err)
+					return
+				}
+				if maskGo.Cmp(masks[i]) != 0 {
+					t.Errorf("ZKProver.GenerateZKProof() mask = %v, GeneratedMask %v", masks[i], maskGo)
+					return
+				}
+			}
+			err = verifyProof(t, publics, proof)
+			if err != nil {
+				t.Errorf("ZKProver.GenerateZKProof() verifyProof err: %v", err)
+				return
+			}
+			t.Log("verifyProof success!")
+		})
+	}
 }
 
 // call Decoder2.sol

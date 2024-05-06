@@ -15,6 +15,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/event"
 	es "github.com/ethstorage/go-ethstorage/ethstorage"
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
@@ -61,13 +62,15 @@ func newMiner(t *testing.T, storageMgr *es.StorageManager, client *eth.PollingCl
 		PriorityGasPrice: new(big.Int).SetUint64(10),
 		ThreadsPerShard:  1,
 		ZKProverMode:     2,
+		ZKProverImpl:     1,
 		ZKeyFileName:     "blob_poseidon2.zkey",
 	}
 	l1api := NewL1MiningAPI(client, lg)
 	zkWorkingDir, _ := filepath.Abs("../prover")
-	pvr := prover.NewKZGPoseidonProver(zkWorkingDir, defaultConfig.ZKeyFileName, defaultConfig.ZKProverMode, lg)
+	pvr := prover.NewKZGPoseidonProver(zkWorkingDir, defaultConfig.ZKeyFileName, defaultConfig.ZKProverMode, defaultConfig.ZKProverImpl, lg)
 	fd := new(event.Feed)
-	miner := New(defaultConfig, storageMgr, l1api, &pvr, fd, lg)
+	db := rawdb.NewMemoryDatabase()
+	miner := New(defaultConfig, db, storageMgr, l1api, &pvr, fd, lg)
 	return miner
 }
 

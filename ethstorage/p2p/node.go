@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -31,6 +32,7 @@ type NodeP2P struct {
 	host    host.Host           // p2p host (optional, may be nil)
 	gater   ConnectionGater     // p2p gater, to ban/unban peers with, may be nil even with p2p enabled
 	connMgr connmgr.ConnManager // p2p conn manager, to keep a reliable number of peers, may be nil even with p2p enabled
+	isIPSet bool
 	// the below components are all optional, and may be nil. They require the host to not be nil.
 	dv5Local       *enode.LocalNode // p2p discovery identity
 	dv5Udp         *discover.UDPv5  // p2p discovery service
@@ -105,7 +107,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 					// n.RequestShardList to fetch the shard list of the new node.
 					remoteShardList, e := n.RequestShardList(remotePeerId)
 					if e != nil {
-						log.Info("Get remote shard list fail", "peer", remotePeerId, "err", e.Error())
+						log.Debug("Get remote shard list fail", "peer", remotePeerId, "err", e.Error())
 						conn.Close()
 						return
 					}
@@ -117,7 +119,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 				}
 				added := n.syncCl.AddPeer(remotePeerId, shards, conn.Stat().Direction)
 				if !added {
-					log.Info("Close connection as AddPeer fail", "peer", remotePeerId)
+					log.Debug("Close connection as AddPeer fail", "peer", remotePeerId)
 					conn.Close()
 				}
 			},
@@ -129,7 +131,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 				n.syncCl.RemovePeer(conn.RemotePeer())
 			},
 		})
-		n.syncCl.UpdateMaxPeers(int(setup.(*Config).PeersHi))
+
 		// the host may already be connected to peers, add them all to the sync client
 		for _, conn := range n.host.Network().Conns() {
 			shards := make(map[common.Address][]uint64)
@@ -146,7 +148,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 			}
 		}
 		go n.syncCl.ReportPeerSummary()
-		n.syncSrv = protocol.NewSyncServer(rollupCfg, storageManager, m)
+		n.syncSrv = protocol.NewSyncServer(rollupCfg, storageManager, db, m)
 
 		blobByRangeHandler := protocol.MakeStreamHandler(resourcesCtx, log.New("serve", "blobs_by_range"), n.syncSrv.HandleGetBlobsByRangeRequest)
 		n.host.SetStreamHandler(protocol.GetProtocolID(protocol.RequestBlobsByRangeProtocolID, rollupCfg.L2ChainID), blobByRangeHandler)
@@ -172,7 +174,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 		}
 
 		// All nil if disabled.
-		n.dv5Local, n.dv5Udp, err = setup.Discovery(log.New("p2p", "discv5"), l1ChainID, tcpPort, n.host.Addrs())
+		n.dv5Local, n.dv5Udp, n.isIPSet, err = setup.Discovery(log.New("p2p", "discv5"), l1ChainID, tcpPort, getLocalPublicIPv4())
 		if err != nil {
 			return fmt.Errorf("failed to start discv5: %w", err)
 		}
@@ -185,13 +187,16 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 }
 
 func (n *NodeP2P) RequestL2Range(ctx context.Context, start, end uint64) (uint64, error) {
-	return n.syncCl.RequestL2Range(ctx, start, end)
+	return n.syncCl.RequestL2Range(start, end)
 }
 
 // RequestShardList fetches shard list from remote peer
 func (n *NodeP2P) RequestShardList(remotePeer peer.ID) ([]*protocol.ContractShards, error) {
 	remoteShardList := make([]*protocol.ContractShards, 0)
-	s, err := n.Host().NewStream(context.Background(), remotePeer, protocol.RequestShardList)
+	ctx, cancel := context.WithTimeout(context.Background(), protocol.NewStreamTimeout)
+	defer cancel()
+
+	s, err := n.Host().NewStream(ctx, remotePeer, protocol.RequestShardList)
 	if err != nil {
 		return remoteShardList, err
 	}
@@ -254,6 +259,9 @@ func (n *NodeP2P) Close() error {
 				result = multierror.Append(result, fmt.Errorf("failed to close p2p sync client cleanly: %w", err))
 			}
 		}
+		if n.syncSrv != nil {
+			n.syncSrv.Close()
+		}
 	}
 	return result.ErrorOrNil()
 }
@@ -273,4 +281,23 @@ func FindActiveTCPPort(h host.Host) (uint16, error) {
 		break
 	}
 	return tcpPort, nil
+}
+
+func getLocalPublicIPv4() net.IP {
+	addresses, err := net.InterfaceAddrs()
+	if err != nil {
+		log.Debug("getLocalPublicIPv4 fail", "err", err.Error())
+		return nil
+	}
+
+	for _, addr := range addresses {
+		ipnet, ok := addr.(*net.IPNet)
+		if !ok || ipnet.IP.To4() == nil {
+			continue
+		}
+		if ipnet.IP.IsGlobalUnicast() && !ipnet.IP.IsPrivate() {
+			return ipnet.IP.To4()
+		}
+	}
+	return nil
 }

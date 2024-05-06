@@ -14,6 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethstorage/go-ethstorage/ethstorage/archiver"
 	"github.com/ethstorage/go-ethstorage/ethstorage/db"
 	"github.com/ethstorage/go-ethstorage/ethstorage/downloader"
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
@@ -56,6 +57,8 @@ func NewConfig(ctx *cli.Context, log log.Logger) (*node.Config, error) {
 	if err != nil {
 		return nil, err
 	}
+	log.Info("Read L1 config", flags.L1NodeAddr.Name, l1Endpoint.L1NodeAddr)
+	log.Info("Read L1 config", flags.L1BeaconAddr.Name, l1Endpoint.L1BeaconURL)
 	defer client.Close()
 
 	storageConfig, err := NewStorageConfig(ctx, client)
@@ -68,7 +71,7 @@ func NewConfig(ctx *cli.Context, log log.Logger) (*node.Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to load miner config: %w", err)
 	}
-
+	archiverConfig := archiver.NewConfig(ctx)
 	// l2Endpoint, err := NewL2EndpointConfig(ctx, log)
 	// if err != nil {
 	// 	return nil, fmt.Errorf("failed to load l2 endpoints info: %w", err)
@@ -82,8 +85,9 @@ func NewConfig(ctx *cli.Context, log log.Logger) (*node.Config, error) {
 		Rollup:     *rollupConfig,
 		Downloader: *dlConfig,
 
-		DataDir:  datadir,
-		DBConfig: db.DefaultDBConfig(),
+		DataDir:        datadir,
+		StateUploadURL: ctx.GlobalString(flags.StateUploadURL.Name),
+		DBConfig:       db.DefaultDBConfig(),
 		// 	Driver: *driverConfig,
 		RPC: node.RPCConfig{
 			ListenAddr: ctx.GlobalString(flags.RPCListenAddr.Name),
@@ -108,8 +112,9 @@ func NewConfig(ctx *cli.Context, log log.Logger) (*node.Config, error) {
 		// 		Moniker: ctx.GlobalString(flags.HeartbeatMonikerFlag.Name),
 		// 		URL:     ctx.GlobalString(flags.HeartbeatURLFlag.Name),
 		// 	},
-		Storage: *storageConfig,
-		Mining:  minerConfig,
+		Storage:  *storageConfig,
+		Mining:   minerConfig,
+		Archiver: archiverConfig,
 	}
 	if err := cfg.Check(); err != nil {
 		return nil, err
@@ -122,6 +127,7 @@ func NewMinerConfig(ctx *cli.Context, client *ethclient.Client, l1Contract commo
 	if !cliConfig.Enabled {
 		return nil, nil
 	}
+	log.Debug("Read mining config from cli", "config", fmt.Sprintf("%+v", cliConfig))
 	err := cliConfig.Check()
 	if err != nil {
 		return nil, fmt.Errorf("invalid miner flags: %w", err)

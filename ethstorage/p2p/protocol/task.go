@@ -22,7 +22,7 @@ type task struct {
 
 	// TODO: consider whether we need to retry those stateless peers or disconnect the peer
 	statelessPeers map[peer.ID]struct{} // Peers that failed to deliver kv Data
-	peers          map[peer.ID]struct{}
+	state          *SyncState
 
 	done bool // Flag whether the task has done
 }
@@ -125,10 +125,11 @@ func (h *healTask) getBlobIndexesForRequest(batch uint64) []uint64 {
 type SyncProgress struct {
 	Tasks []*task // The suspended kv tasks
 
+	// TODO keep it to make it compatible
 	// Status report during syncing phase
 	BlobsSynced      uint64             // Number of kvs downloaded
 	SyncedBytes      common.StorageSize // Number of kv bytes downloaded
 	EmptyBlobsToFill uint64
 	EmptyBlobsFilled uint64
-	TotalTimeUsed    time.Duration
+	TotalSecondsUsed uint64
 }

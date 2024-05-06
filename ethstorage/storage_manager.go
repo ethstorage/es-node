@@ -93,7 +93,7 @@ func (s *StorageManager) DownloadFinished(newL1 int64, kvIndices []uint64, blobs
 			var err error = nil
 			for _, idx := range insertIdx {
 				c := prepareCommit(commits[idx])
-				// if return false, just ignore because we are not intersted in it
+				// if return false, just ignore because we are not interested in it
 				_, err = s.shardManager.TryWrite(kvIndices[idx], blobs[idx], c)
 				if err != nil {
 					break
@@ -190,7 +190,7 @@ func (s *StorageManager) CommitBlobs(kvIndices []uint64, blobs [][]byte, commits
 		}
 		err := s.commitEncodedBlob(kvIndices[i], encodedBlobs[i], commits[i], contractMeta)
 		if err != nil {
-			log.Info("Commit blobs fail", "kvIndex", kvIndices[i], "err", err.Error())
+			log.Warn("Commit blobs fail", "kvIndex", kvIndices[i], "err", err.Error())
 			continue
 		}
 		inserted = append(inserted, kvIndices[i])
@@ -562,6 +562,7 @@ func (s *StorageManager) MaxKvSize() uint64 {
 func (s *StorageManager) MaxKvSizeBits() uint64 {
 	return s.shardManager.kvSizeBits
 }
+
 func (s *StorageManager) ChunksPerKvBits() uint64 {
 	return s.shardManager.chunksPerKvBits
 }

@@ -18,15 +18,15 @@ if [ -z "$ES_NODE_STORAGE_MINER" ]; then
 fi
 # A contract that will be update with new blob uploaded for the KZG test
 if [ -z "$ES_NODE_STORAGE_L1CONTRACT_KZG" ]; then
-  export ES_NODE_STORAGE_L1CONTRACT_KZG=0x1Cf97d51d305e1e84132Ee504F6B20F5162355fD
+  export ES_NODE_STORAGE_L1CONTRACT_KZG=0xB6e01Ca0c33B2bAbd2eccf008F0759131FC284dB
 fi
 # A contract address that clef server checks against before signing the miner transaction
 if [ -z "$ES_NODE_STORAGE_L1CONTRACT_CLEF" ]; then
-  export ES_NODE_STORAGE_L1CONTRACT_CLEF=0x1Cf97d51d305e1e84132Ee504F6B20F5162355fD
+  export ES_NODE_STORAGE_L1CONTRACT_CLEF=0xB6e01Ca0c33B2bAbd2eccf008F0759131FC284dB
 fi
 # A newly deployed contract is required for each run for miner test, with zkp verifier of mode 2
 if [ -z "$ES_NODE_STORAGE_L1CONTRACT" ]; then
-  export ES_NODE_STORAGE_L1CONTRACT=0x1Cf97d51d305e1e84132Ee504F6B20F5162355fD
+  export ES_NODE_STORAGE_L1CONTRACT=0x458FF419F57050a6ec2d3Eb049a28f4F6937c11E
 fi
 # A contract with zkp verifier of mode 1 (one proof per sample)
 if [ -z "$ES_NODE_STORAGE_L1CONTRACT_ZKP1" ]; then
@@ -34,7 +34,7 @@ if [ -z "$ES_NODE_STORAGE_L1CONTRACT_ZKP1" ]; then
 fi
 # The commonly used l1 eth rpc endpoint
 if [ -z "$ES_NODE_L1_ETH_RPC" ]; then
-  export ES_NODE_L1_ETH_RPC=http://65.109.115.36:8545
+  export ES_NODE_L1_ETH_RPC=http://88.99.30.186:8545
 fi
 # The clef endpoint that the miner will use to sign the transaction
 if [ -z "$ES_NODE_CLEF_RPC" ]; then
@@ -55,8 +55,9 @@ fi
 zkey_file="./ethstorage/prover/snark_lib/blob_poseidon2.zkey"
 if [ ! -e  ${zkey_file} ]; then
   echo "${zkey_file} not found, start downloading..."
-  zkey_url="https://drive.usercontent.google.com/download?id=1olfJvXPJ25Rbcjj9udFlIVr08cUCgE4l&export=download&confirm=t&uuid=724a4ed0-c344-4cc1-9078-f50751028725"
+  zkey_url="https://es-node-zkey.s3.us-west-1.amazonaws.com/blob_poseidon2_testnet1.zkey"
   curl $zkey_url -o ${zkey_file} 
 fi
 
 go test -tags rapidsnark_asm -timeout 0 github.com/ethstorage/go-ethstorage/integration_tests -v
+ 

@@ -42,7 +42,7 @@ const (
 var (
 	contract = common.HexToAddress("0x0000000000000000000000000000000003330001")
 	empty    = make([]byte, 0)
-	params   = SyncerParams{MaxRequestSize: uint64(4 * 1024 * 1024), SyncConcurrency: 16, FillEmptyConcurrency: 16, MetaDownloadBatchSize: 16}
+	params   = SyncerParams{MaxPeers: 30, MaxRequestSize: uint64(4 * 1024 * 1024), SyncConcurrency: 16, FillEmptyConcurrency: 16, MetaDownloadBatchSize: 16}
 	testLog  = log.New("TestSync")
 	prover   = prv.NewKZGProver(testLog)
 )
@@ -88,7 +88,7 @@ func NewMockL1Source(lastBlobIndex uint64, metafile string) *mockL1Source {
 
 	file, err := os.OpenFile(metafile, os.O_RDONLY, 0600)
 	if err != nil {
-		panic(fmt.Sprintf("open metafile faiil with err %s", err.Error()))
+		panic(fmt.Sprintf("open metafile fail with err %s", err.Error()))
 	}
 	return &mockL1Source{lastBlobIndex: lastBlobIndex, metaFile: file}
 }
@@ -371,10 +371,10 @@ func createLocalHostAndSyncClient(t *testing.T, testLog log.Logger, rollupCfg *r
 }
 
 func createRemoteHost(t *testing.T, ctx context.Context, rollupCfg *rollup.EsConfig,
-	storageManager *mockStorageManagerReader, metrics SyncServerMetrics, testLog log.Logger) host.Host {
+	storageManager *mockStorageManagerReader, db ethdb.Database, metrics SyncServerMetrics, testLog log.Logger) host.Host {
 
 	remoteHost := getNetHost(t)
-	syncSrv := NewSyncServer(rollupCfg, storageManager, metrics)
+	syncSrv := NewSyncServer(rollupCfg, storageManager, db, metrics)
 	blobByRangeHandler := MakeStreamHandler(ctx, testLog, syncSrv.HandleGetBlobsByRangeRequest)
 	remoteHost.SetStreamHandler(GetProtocolID(RequestBlobsByRangeProtocolID, rollupCfg.L2ChainID), blobByRangeHandler)
 	blobByListHandler := MakeStreamHandler(ctx, testLog, syncSrv.HandleGetBlobsByListRequest)
@@ -563,12 +563,12 @@ func TestSync_RequestL2Range(t *testing.T) {
 		t.Fatal("Download blob metadata failed", "error", err)
 		return
 	}
-	remoteHost := createRemoteHost(t, ctx, rollupCfg, smr, m, testLog)
+	remoteHost := createRemoteHost(t, ctx, rollupCfg, smr, db, m, testLog)
 	connect(t, localHost, remoteHost, shards, shards)
 
 	time.Sleep(2 * time.Second)
 	// send request
-	_, err = syncCl.RequestL2Range(ctx, 0, 16)
+	_, err = syncCl.RequestL2Range(0, 16)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -635,7 +635,7 @@ func TestSync_RequestL2List(t *testing.T) {
 		t.Fatal("Download blob metadata failed", "error", err)
 		return
 	}
-	remoteHost := createRemoteHost(t, ctx, rollupCfg, smr, m, testLog)
+	remoteHost := createRemoteHost(t, ctx, rollupCfg, smr, db, m, testLog)
 	connect(t, localHost, remoteHost, shards, shards)
 
 	indexes := make([]uint64, 0)
@@ -654,14 +654,14 @@ func TestSync_RequestL2List(t *testing.T) {
 // TestSaveAndLoadSyncStatus test save sync state to DB for tasks and load sync state from DB for tasks.
 func TestSaveAndLoadSyncStatus(t *testing.T) {
 	var (
-		entries          = uint64(1) << 10
-		kvSize           = defaultChunkSize
-		lastKvIndex      = entries*3 - 20
-		db               = rawdb.NewMemoryDatabase()
-		mux              = new(event.Feed)
-		m                = metrics.NewMetrics("sync_test")
-		expectedTimeUsed = time.Second * 10
-		rollupCfg        = &rollup.EsConfig{
+		entries             = uint64(1) << 10
+		kvSize              = defaultChunkSize
+		lastKvIndex         = entries*3 - 20
+		db                  = rawdb.NewMemoryDatabase()
+		mux                 = new(event.Feed)
+		m                   = metrics.NewMetrics("sync_test")
+		expectedSecondsUsed = uint64(10)
+		rollupCfg           = &rollup.EsConfig{
 			L2ChainID: new(big.Int).SetUint64(3333),
 		}
 	)
@@ -686,18 +686,20 @@ func TestSaveAndLoadSyncStatus(t *testing.T) {
 	syncCl.tasks[0].healTask.insert(indexes)
 	syncCl.tasks[0].SubTasks[0].First = 1
 	syncCl.tasks[0].SubTasks[0].next = 33
+	syncCl.tasks[0].state.BlobsSynced = 30
+	syncCl.tasks[0].state.SyncedSeconds = expectedSecondsUsed
 	syncCl.tasks[1].SubTasks = make([]*subTask, 0)
+	syncCl.tasks[1].state.BlobsSynced = entries
+	syncCl.tasks[1].state.SyncedSeconds = expectedSecondsUsed
 
 	tasks := syncCl.tasks
 	syncCl.cleanTasks()
 	if !syncCl.tasks[1].done {
 		t.Fatalf("task 1 should be done.")
 	}
-	syncCl.totalTimeUsed = expectedTimeUsed
-	syncCl.saveSyncStatus(true)
+	syncCl.saveSyncStatus()
 
 	syncCl.tasks = make([]*task, 0)
-	syncCl.totalTimeUsed = 0
 	syncCl.loadSyncStatus()
 	tasks[0].healTask.Indexes = make(map[uint64]int64)
 	tasks[0].SubTasks[0].First = 5
@@ -706,8 +708,17 @@ func TestSaveAndLoadSyncStatus(t *testing.T) {
 	if err := compareTasks(tasks, syncCl.tasks); err != nil {
 		t.Fatalf("compare kv task fail. err: %s", err.Error())
 	}
-	if syncCl.totalTimeUsed != expectedTimeUsed {
-		t.Fatalf("compare totalTimeUsed fail, expect")
+	if syncCl.tasks[0].state.BlobsSynced != 30 {
+		t.Fatalf("compare BlobsSynced fail, expect %d, real %d", 30, syncCl.tasks[0].state.BlobsSynced)
+	}
+	if syncCl.tasks[0].state.SyncedSeconds != expectedSecondsUsed {
+		t.Fatalf("compare totalSecondsUsed fail, expect %d, real %d", expectedSecondsUsed, syncCl.tasks[0].state.SyncedSeconds)
+	}
+	if syncCl.tasks[1].state.BlobsSynced != entries {
+		t.Fatalf("compare BlobsSynced fail, expect %d, real %d", entries, syncCl.tasks[1].state.BlobsSynced)
+	}
+	if syncCl.tasks[1].state.SyncedSeconds != expectedSecondsUsed {
+		t.Fatalf("compare totalSecondsUsed fail, expect %d, real %d", expectedSecondsUsed, syncCl.tasks[1].state.SyncedSeconds)
 	}
 }
 
@@ -812,7 +823,7 @@ func testSync(t *testing.T, chunkSize, kvSize, kvEntries uint64, localShards []u
 		}
 		rShardMap := make(map[common.Address][]uint64)
 		rShardMap[contract] = rPeer.shards
-		remoteHost := createRemoteHost(t, ctx, rollupCfg, smr, m, testLog)
+		remoteHost := createRemoteHost(t, ctx, rollupCfg, smr, db, m, testLog)
 		connect(t, localHost, remoteHost, localShardMap, rShardMap)
 	}
 
@@ -837,7 +848,7 @@ func TestSimpleSync(t *testing.T) {
 		excludedList: make(map[uint64]struct{}),
 	}}
 
-	testSync(t, defaultChunkSize, kvSize, kvEntries, []uint64{0}, lastKvIndex, defaultEncodeType, 3, remotePeers, true)
+	testSync(t, defaultChunkSize, kvSize, kvEntries, []uint64{0}, lastKvIndex, defaultEncodeType, 4, remotePeers, true)
 }
 
 // TestMultiSubTasksSync test sync process with local node support a single big (its task contains multi subTask) shard
@@ -1033,7 +1044,7 @@ func TestAddPeerDuringSyncing(t *testing.T) {
 		shardMiner:      common.Address{},
 		blobPayloads:    pData,
 	}
-	remoteHost0 := createRemoteHost(t, ctx, rollupCfg, smr0, m, testLog)
+	remoteHost0 := createRemoteHost(t, ctx, rollupCfg, smr0, db, m, testLog)
 	connect(t, localHost, remoteHost0, shardMap, shardMap)
 	time.Sleep(2 * time.Second)
 
@@ -1051,7 +1062,7 @@ func TestAddPeerDuringSyncing(t *testing.T) {
 		shardMiner:      common.Address{},
 		blobPayloads:    data[contract],
 	}
-	remoteHost1 := createRemoteHost(t, ctx, rollupCfg, smr1, m, testLog)
+	remoteHost1 := createRemoteHost(t, ctx, rollupCfg, smr1, db, m, testLog)
 	connect(t, localHost, remoteHost1, shardMap, shardMap)
 	checkStall(t, 3, mux, cancel)
 
@@ -1104,9 +1115,9 @@ func TestCloseSyncWhileFillEmpty(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 	syncCl.Close()
 
-	t.Log("Fill empty status", "filled", syncCl.emptyBlobsFilled, "toFill", syncCl.emptyBlobsToFill)
+	t.Log("Fill empty status", "filled", syncCl.tasks[0].state.EmptyFilled, "toFill", syncCl.tasks[0].state.EmptyToFill)
 	if syncCl.syncDone {
-		t.Fatalf("fill empty shoud be cancel")
+		t.Fatalf("fill empty should be cancel")
 	}
 }
 
@@ -1169,7 +1180,7 @@ func TestAddPeerAfterSyncDone(t *testing.T) {
 		shardMiner:      common.Address{},
 		blobPayloads:    data[contract],
 	}
-	remoteHost0 := createRemoteHost(t, ctx, rollupCfg, smr0, m, testLog)
+	remoteHost0 := createRemoteHost(t, ctx, rollupCfg, smr0, db, m, testLog)
 	connect(t, localHost, remoteHost0, shardMap, shardMap)
 	checkStall(t, 3, mux, cancel)
 
@@ -1187,7 +1198,7 @@ func TestAddPeerAfterSyncDone(t *testing.T) {
 		shardMiner:      common.Address{},
 		blobPayloads:    data[contract],
 	}
-	remoteHost1 := createRemoteHost(t, ctx, rollupCfg, smr1, m, testLog)
+	remoteHost1 := createRemoteHost(t, ctx, rollupCfg, smr1, db, m, testLog)
 	connect(t, localHost, remoteHost1, shardMap, shardMap)
 
 	time.Sleep(10 * time.Millisecond)
@@ -1199,7 +1210,7 @@ func TestAddPeerAfterSyncDone(t *testing.T) {
 func TestFillEmpty(t *testing.T) {
 	var (
 		kvSize      = defaultChunkSize
-		kvEntries   = uint64(512)
+		kvEntries   = uint64(256)
 		lastKvIndex = uint64(12)
 		db          = rawdb.NewMemoryDatabase()
 		mux         = new(event.Feed)
@@ -1245,10 +1256,10 @@ func TestFillEmpty(t *testing.T) {
 	if len(syncCl.tasks[0].SubEmptyTasks) > 0 {
 		t.Fatalf("fill empty should be done")
 	}
-	if syncCl.emptyBlobsToFill != 0 {
-		t.Fatalf("emptyBlobsToFill should be 0, value %d", syncCl.emptyBlobsToFill)
+	if syncCl.tasks[0].state.EmptyToFill != 0 {
+		t.Fatalf("emptyBlobsToFill should be 0, value %d", syncCl.tasks[0].state.EmptyToFill)
 	}
-	if syncCl.emptyBlobsFilled != (kvEntries - lastKvIndex) {
-		t.Fatalf("emptyBlobsFilled is wrong, expect %d, value %d", kvEntries-lastKvIndex, syncCl.emptyBlobsFilled)
+	if syncCl.tasks[0].state.EmptyFilled != (kvEntries - lastKvIndex) {
+		t.Fatalf("emptyBlobsFilled is wrong, expect %d, value %d", kvEntries-lastKvIndex, syncCl.tasks[0].state.EmptyFilled)
 	}
 }
