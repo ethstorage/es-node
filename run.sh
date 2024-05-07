@@ -105,7 +105,7 @@ storage_file_0="$data_dir/shard-0.dat"
 
 common_flags=" --datadir $data_dir \
   --l1.rpc http://65.109.20.29:8545 \
-  --storage.l1contract 0xc91C039Cc1b02314b6ae71C63C6cC11452c408c9 \
+  --storage.l1contract 0x979840Bf4e8f4e8BcF1b894D57A3cdf6F13ad799 \
   --storage.miner $ES_NODE_STORAGE_MINER \
   "
 
@@ -126,7 +126,7 @@ es_node_start=" --network devnet \
   --p2p.listen.udp 30305 \
   --p2p.max.request.size 4194304 \
   --p2p.sync.concurrency 32 \
-  --download.start 647488 \
+  --download.start 956210 \
   --rpc.addr 0.0.0.0 \
   --rpc.port 9545 \
 $@"
