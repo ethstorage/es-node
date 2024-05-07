@@ -235,13 +235,13 @@ func EsNodeInit(ctx *cli.Context) error {
 		for i := 0; i < len(shardIndexes); i++ {
 			shard := uint64(shardIndexes[i])
 			if shard > 0 {
-				diff, err := getDifficulty(cctx, client, l1Contract, shard)
+				timeStamp, err := getLastMineTime(cctx, client, l1Contract, shard)
 				if err != nil {
 					log.Error("Failed to get shard info from contract", "error", err)
 					return err
 				}
-				if diff != nil && diff.Cmp(big.NewInt(0)) == 0 {
-					return fmt.Errorf("Shard not exist: %d", shard)
+				if timeStamp != nil && timeStamp.Cmp(big.NewInt(0)) == 0 {
+					return fmt.Errorf("shard not exist: %d", shard)
 				}
 			}
 			shardIdxList = append(shardIdxList, shard)
@@ -254,7 +254,7 @@ func EsNodeInit(ctx *cli.Context) error {
 			return err
 		}
 		if len(shardList) == 0 {
-			return fmt.Errorf("No shard indexes found")
+			return fmt.Errorf("no shard indexes found")
 		}
 		shardIdxList = shardList
 	}

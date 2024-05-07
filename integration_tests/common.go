@@ -22,7 +22,7 @@ var (
 	minerAddr  = common.HexToAddress(os.Getenv("ES_NODE_STORAGE_MINER"))
 	prPath     = "../ethstorage/prover"
 	lg         = esLog.NewLogger(esLog.CLIConfig{
-		Level:  "info",
+		Level:  "debug",
 		Format: "text",
 		Color:  term.IsTerminal(int(os.Stdout.Fd())),
 	})
