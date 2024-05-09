@@ -108,7 +108,7 @@ func (c *BeaconClient) DownloadL2Blobs(hashes []common.Hash) (map[common.Hash]Bl
 
 func (c *BeaconClient) DownloadL2Blob(versionedHash common.Hash) (Blob, error) {
 	// da server
-	beaconUrl, err := url.JoinPath(c.beaconURL, fmt.Sprintf("get/0x%x", versionedHash))
+	beaconUrl, err := url.JoinPath(c.beaconURL, fmt.Sprintf("get/%s", versionedHash.Hex()))
 	if err != nil {
 		return Blob{}, err
 	}
