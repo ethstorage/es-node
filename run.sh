@@ -25,31 +25,105 @@ if [ ${#ES_NODE_SIGNER_PRIVATE_KEY} -ne 64 ]; then
   exit 1
 fi
 
-# ZK prover mode, 1: one proof per sample, 2: one proof for multiple samples.
-zkp_mode=
-i=1
-while [ $i -le $# ]; do
-    if [ "${!i}" = "--miner.zk-prover-mode" ]; then
-        j=$((i+1))
-        zkp_mode="${!j}"
-        break
-    else
-        if echo "${!i}" | grep -qE -- "--miner\.zk-prover-mode=([0-9]+)"; then
-            zkp_mode=$(echo "${!i}" | sed -E 's/.*=([0-9]+)/\1/')
+# function to extract a value from command-line arguments
+extract_value() {
+    local arg_name="$1"
+    local arg_value=""
+    local i=1
+    local skip=0
+
+    while [ $i -le $# ]; do
+        if [ "${!i}" = "$arg_name" ]; then
+          if [ $skip = 0 ]; then
+            skip=1
+          else
+            j=$((i+1))
+            arg_value="${!j}"
             break
+          fi
+        elif echo "${!i}" | grep -qE -- "$arg_name=(.*)"; then
+          arg_value=$(echo ${!i} | cut -d'=' -f2)
+          break
         fi
-    fi
-    i=$((i+1))
-done
+        i=$((i+1))
+    done
+
+    echo "$arg_value"
+}
+
+# function to remove a specified flag from command-line arguments
+remove_flag() {
+    local flag="$1"
+    local args=("$@")
+    local new_args=()
+
+    for arg in "${args[@]}"; do
+        if [[ "$arg" == "$flag" ]]; then
+            i=$((i+1))
+            continue
+        elif [[ "$arg" == "$flag"=* ]]; then
+            continue
+        else
+            new_args+=("$arg")
+        fi
+    done
+
+    echo "${new_args[@]}"
+}
+
+# ZK prover implementation, 1: snarkjs, 2: go-rapidsnark.
+zkp_impl=$(extract_value "--miner.zk-prover-impl" "$@")
+
+if [ -n "$zkp_impl" ] && [ "$zkp_impl" != 1 ] && [ "$zkp_impl" != 2 ]; then
+    echo "Error: zk prover implementation can only be 1 or 2."
+    exit 1
+fi
+
+if [ -n "$zkp_impl" ]; then
+    echo "The zk prover implementation has been overridden to $zkp_impl"
+  else
+    zkp_impl=1
+fi
+
+if [ "$zkp_impl" = 1 ]; then
+  if ! [ -x "$(command -v node)" ]; then
+    echo 'Error: Node.js is not installed.'
+    exit 1
+  fi
+  # check node js version
+  node_version=$(node -v)
+  major_version=$(echo $node_version | cut -d'v' -f2 | cut -d'.' -f1)
+  if [ "$major_version" -lt 16 ]; then
+      echo "Error: Node.js version is too old."
+      exit 1
+  fi
+  # install snarkjs if not
+  if ! [ "$(command -v snarkjs)" ]; then
+      echo "snarkjs not found, start installing..."
+      snarkjs_install=$(npm install -g snarkjs 2>&1)
+      if [ $? -eq 0 ]; then
+        echo "snarkjs installed successfully."
+      else
+        echo "Error: snarkjs install failed with the following error:"
+        echo "$snarkjs_install"
+        exit 1
+      fi
+  fi
+fi
+
+# ZK prover mode, 1: one proof per sample, 2: one proof for multiple samples.
+zkp_mode=$(extract_value "--miner.zk-prover-mode" "$@")
 
 if [ -n "$zkp_mode" ] && [ "$zkp_mode" != 1 ] && [ "$zkp_mode" != 2 ]; then
-  echo "Error: zk prover mode can only be 1 or 2."
-  exit 1  
-fi 
+    echo "Error: zk prover mode can only be 1 or 2."
+    exit 1
+fi
 
 if [ -n "$zkp_mode" ]; then
-  echo "The zk prover mode has been overridden to $zkp_mode"
-fi 
+    echo "The zk prover mode has been overridden to $zkp_mode"
+  else
+    zkp_mode=2
+fi
 
 # download zkey if not yet
 zkey_name="blob_poseidon2.zkey"
@@ -74,68 +148,28 @@ if [ ! -e  ${zkey_file} ] || [ $(wc -c <  ${zkey_file}) -ne ${zkey_size} ]; then
   fi
 fi
 
+data_dir="./es-data"
+init_flags="init"
+shard_array=(0)
+files_to_init=()
+storage_files_flag=()
+additional_args=$@
+shards=$(extract_value "--shards" "$@")
 
-# ZK prover implementation, 1: snarkjs, 2: go-rapidsnark.
-zkp_impl=
-i=1
-while [ $i -le $# ]; do
-    if [ "${!i}" = "--miner.zk-prover-impl" ]; then
-        j=$((i+1))
-        zkp_impl="${!j}"
-        break
-    else
-        if echo "${!i}" | grep -qE -- "--miner\.zk-prover-impl=([0-9]+)"; then
-            zkp_impl=$(echo "${!i}" | sed -E 's/.*=([0-9]+)/\1/')
-            break
-        fi
-    fi
-    i=$((i+1))
-done
-
-
-if [ -n "$zkp_impl" ] && [ "$zkp_impl" != 1 ] && [ "$zkp_impl" != 2 ]; then
-  echo "miner.zk-prover-impl can only be 1 or 2"
-  exit 1
-fi 
-
-if [ -n "$zkp_impl" ]; then
-  echo "The zk prover implementation has been overridden to $zkp_impl"
-fi 
-
-if [ "$zkp_impl" = 1 ]; then
-
-  if ! [ -x "$(command -v node)" ]; then
-    echo 'Error: Node.js is not installed.'
-    exit 1
-  fi
-
-  # check node js version
-  node_version=$(node -v)
-  major_version=$(echo $node_version | cut -d'v' -f2 | cut -d'.' -f1)
-
-  if [ "$major_version" -lt 16 ]; then
-      echo "Error: Node.js version is too old."
-      exit 1
-  fi
-
-  # install snarkjs if not
-  if ! [ "$(command -v snarkjs)" ]; then
-      echo "snarkjs not found, start installing..."
-      snarkjs_install=$(npm install -g snarkjs 2>&1)
-      if [ $? -eq 0 ]; then
-        echo "snarkjs installed successfully."
-      else
-        echo "Error: snarkjs install failed with the following error:"
-        echo "$snarkjs_install"
-        exit 1
-      fi
-  fi
-
+if [ -n "$shards" ]; then
+  IFS=',' read -ra shard_array <<< "$shards"
+  additional_args=$(remove_flag "--shards" "$@")
 fi
 
-executable="./build/bin/es-node"
-data_dir="./es-data"
-storage_file_0="$data_dir/shard-0.dat"
+for shard in "${shard_array[@]}"; do
+  storage_file="$data_dir/shard-$shard.dat"
+  if [ ! -e $storage_file ]; then
+    files_to_init+=("$storage_file")
+    init_flags+=" --shard_index $shard"
+  fi
+  storage_files_flag+=("--storage.files $storage_file")
+done
+
 
 common_flags=" --datadir $data_dir \
   --l1.rpc http://88.99.30.186:8545 \
@@ -143,15 +177,23 @@ common_flags=" --datadir $data_dir \
   --storage.miner $ES_NODE_STORAGE_MINER \
   "
 
-# init shard 0
-es_node_init="init --shard_index 0"
+executable="./build/bin/es-node"
 
-# start node 
+# create data files (init)
+if [ ${#files_to_init[@]} -gt 0 ]; then
+  if $executable $init_flags $common_flags ; then
+    echo "Initialized ${files_to_init[@]} successfully"
+  else
+    echo "Error: failed to initialize storage files: ${files_to_init[@]}"
+    exit 1
+  fi
+fi
+
 # TODO remove --network
-es_node_start=" --network devnet \
+start_flags=" --network devnet \
   --miner.enabled \
   --miner.zkey $zkey_name \
-  --storage.files $storage_file_0 \
+  ${storage_files_flag[@]} \
   --signer.private-key $ES_NODE_SIGNER_PRIVATE_KEY \
   --l1.beacon http://88.99.30.186:3500 \
   --l1.beacon-based-time 1706684472 \
@@ -162,17 +204,7 @@ es_node_start=" --network devnet \
   --p2p.max.request.size 4194304 \
   --p2p.sync.concurrency 32 \
   --p2p.bootnodes enr:-Li4QF3vBkkDQYNLHlVjW5NcEpXAsfNtE1lUVb_LgUQ_Ot2afS8jbDfnYQBDABJud_5Hd1hX_1cNeGVU6Tem06WDlfaGAY1e3vNvimV0aHN0b3JhZ2XbAYDY15SATFINPAhMgF43o16QBXrDKDH5b8GAgmlkgnY0gmlwhEFtP5qJc2VjcDI1NmsxoQK8XODtSv0IsrhBxZmTZBZEoLssb7bTX0YOVl6S0yLxuYN0Y3CCJAaDdWRwgnZh \
-$@"
-  
-# create data file for shard 0 if not yet
-if [ ! -e $storage_file_0 ]; then
-  if $executable $es_node_init $common_flags ; then
-    echo "Initialized ${storage_file_0} successfully"
-  else
-    echo "Error: failed to initialize ${storage_file_0}"
-    exit 1
-  fi
-fi
+$additional_args"
 
 # start es-node
-exec $executable $common_flags $es_node_start
+exec $executable $common_flags $start_flags
