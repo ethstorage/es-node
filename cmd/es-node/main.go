@@ -241,7 +241,7 @@ func EsNodeInit(ctx *cli.Context) error {
 					return err
 				}
 				if diff != nil && diff.Cmp(big.NewInt(0)) == 0 {
-					return fmt.Errorf("Shard not exist: %d", shard)
+					return fmt.Errorf("shard not exist: %d", shard)
 				}
 			}
 			shardIdxList = append(shardIdxList, shard)
@@ -254,7 +254,7 @@ func EsNodeInit(ctx *cli.Context) error {
 			return err
 		}
 		if len(shardList) == 0 {
-			return fmt.Errorf("No shard indexes found")
+			return fmt.Errorf("no shard indexes found")
 		}
 		shardIdxList = shardList
 	}
