@@ -272,6 +272,7 @@ func (s *SyncClient) loadSyncStatus() {
 			if t.Contract == s.storageManager.ContractAddress() && t.ShardId == sid {
 				if states != nil {
 					if state, ok := states[t.ShardId]; ok {
+						state.PeerCount = 0
 						t.state = state
 					}
 				}
