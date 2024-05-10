@@ -44,13 +44,12 @@ func TestMining(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to connect to the Ethereum client: %v", err)
 	}
-
+	// verify it is an empty contract
 	lastKv, err := pClient.GetStorageLastBlobIdx(rpc.LatestBlockNumber.Int64())
 	if err != nil {
-		lg.Error("Failed to get lastKvIdx", "error", err)
-	} else {
-		lg.Info("lastKv", "lastKv", lastKv)
+		t.Fatalf("Failed to get lastKvIdx: %v", err)
 	}
+	lg.Info("lastKv", "lastKv", lastKv)
 	if lastKv != 0 {
 		t.Fatalf("A newly deployed storage contract is required")
 	}
@@ -123,7 +122,7 @@ func TestMining(t *testing.T) {
 			fillEmpty(t, storageManager, kvs)
 			for j := 0; j < 3; j++ {
 				time.Sleep(3 * time.Minute)
-				prepareData(t, pClient, storageManager, miningConfig.StorageCost.String(), kvs/3)
+				prepareData(t, pClient, storageManager, miningConfig.StorageCost.String())
 			}
 		}()
 		feed.Send(protocol.EthStorageSyncDone{
@@ -156,33 +155,6 @@ func TestMining(t *testing.T) {
 	l1HeadsSub.Unsubscribe()
 	mnr.Close()
 	close()
-}
-
-func cleanFiles(proverDir string) {
-	for _, shardId := range shardIds {
-		fileName := fmt.Sprintf(dataFileName, shardId)
-		if _, err := os.Stat(fileName); !os.IsNotExist(err) {
-			err = os.Remove(fileName)
-			if err != nil {
-				fmt.Println(err)
-			}
-		}
-	}
-
-	folderPath := filepath.Join(proverDir, "snarkbuild")
-	files, err := os.ReadDir(folderPath)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	for _, file := range files {
-		if !strings.HasPrefix(file.Name(), ".") {
-			err = os.RemoveAll(filepath.Join(folderPath, file.Name()))
-			if err != nil {
-				fmt.Println(err)
-			}
-		}
-	}
 }
 
 func waitForMined(l1api miner.L1API, contract common.Address, chainHeadCh chan eth.L1BlockRef, shardIdx, lastMined uint64, exitCh chan uint64) {
@@ -277,11 +249,11 @@ func prepareData(t *testing.T, l1Client *eth.PollingClient, storageMgr *ethstora
 		t.Fatalf("Get chain id failed %v", err)
 	}
 	for i := 0; i < txs; i++ {
-		max := maxBlobsPerTx
+		blobsPerTx := maxBlobsPerTx
 		if i == txs-1 {
-			max = last
+			blobsPerTx = last
 		}
-		blobGroup := blobs[i*maxBlobsPerTx : i*maxBlobsPerTx+max]
+		blobGroup := blobs[i*maxBlobsPerTx : i*maxBlobsPerTx+blobsPerTx]
 		var blobData []byte
 		for _, bd := range blobGroup {
 			blobData = append(blobData, bd[:]...)
@@ -424,8 +396,35 @@ func initMiningConfig(t *testing.T, l1Contract common.Address, client *eth.Polli
 	proverPath, _ := filepath.Abs(prPath)
 	miningConfig.ZKWorkingDir = proverPath
 	miningConfig.ZKProverMode = 2
-	miningConfig.ZKProverImpl = 1
+	miningConfig.ZKProverImpl = 2
 	miningConfig.ThreadsPerShard = 2
 	miningConfig.MinimumProfit = new(big.Int).SetInt64(-1e18)
 	return miningConfig
+}
+
+func cleanFiles(proverDir string) {
+	for _, shardId := range shardIds {
+		fileName := fmt.Sprintf(dataFileName, shardId)
+		if _, err := os.Stat(fileName); !os.IsNotExist(err) {
+			err = os.Remove(fileName)
+			if err != nil {
+				fmt.Println(err)
+			}
+		}
+	}
+
+	folderPath := filepath.Join(proverDir, "snarkbuild")
+	files, err := os.ReadDir(folderPath)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	for _, file := range files {
+		if !strings.HasPrefix(file.Name(), ".") {
+			err = os.RemoveAll(filepath.Join(folderPath, file.Name()))
+			if err != nil {
+				fmt.Println(err)
+			}
+		}
+	}
 }
