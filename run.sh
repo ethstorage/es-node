@@ -105,7 +105,7 @@ storage_file_0="$data_dir/shard-0.dat"
 
 common_flags=" --datadir $data_dir \
   --l1.rpc http://65.109.20.29:8545 \
-  --storage.l1contract 0x6651274158Cb1678CEE104BfA6D2608f39Af1901 \
+  --storage.l1contract 0x979840Bf4e8f4e8BcF1b894D57A3cdf6F13ad799 \
   --storage.miner $ES_NODE_STORAGE_MINER \
   "
 
@@ -122,13 +122,14 @@ es_node_start=" --network devnet \
   --l1.beacon http://65.109.20.29:8888 \
   --l1.beacon-based-time 1706684472 \
   --l1.beacon-based-slot 4245906 \
+  --miner.threads-per-shard 2 \
   --download.thread 32 \
-  --p2p.listen.udp 30305 \
+  --p2p.listen.udp 30300 \
   --p2p.max.request.size 4194304 \
   --p2p.sync.concurrency 32 \
-  --download.start 1031052 \
+  --download.start 1116951 \
   --rpc.addr 0.0.0.0 \
-  --rpc.port 9545 \
+  --rpc.port 9540 \
 $@"
 
 # create data file for shard 0 if not yet
