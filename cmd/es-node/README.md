@@ -2,7 +2,7 @@
 
  Before running an EthStorage node, you will need to create data files for the shards to be mined. 
  
- The data file will be created in the directory specifiled by `--datadir`.
+ The data file will be created in the directory specified by `--datadir`.
  
  You can specify the number of shards to be mined by `shard_len`, with each data file being created per shard named `shard-{shard_index}.dat`, where the shard indexes come from the storage contract which manages the shards being mined. If there are more shards in the storage contract than `shard_len`, the `shard_len` shards with the lowest difficulties are selected to create the corresponding files. E.g.,
 ```sh

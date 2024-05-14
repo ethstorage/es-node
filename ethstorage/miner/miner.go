@@ -11,6 +11,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethstorage/go-ethstorage/ethstorage"
@@ -57,7 +58,7 @@ type Miner struct {
 	lg          log.Logger
 }
 
-func New(config *Config, storageMgr *ethstorage.StorageManager, api L1API, prover MiningProver, feed *event.Feed, lg log.Logger) *Miner {
+func New(config *Config, db ethdb.Database, storageMgr *ethstorage.StorageManager, api L1API, prover MiningProver, feed *event.Feed, lg log.Logger) *Miner {
 	chainHeadCh := make(chan eth.L1BlockRef, chainHeadChanSize)
 	miner := &Miner{
 		feed:        feed,
@@ -66,7 +67,7 @@ func New(config *Config, storageMgr *ethstorage.StorageManager, api L1API, prove
 		startCh:     make(chan struct{}),
 		stopCh:      make(chan struct{}),
 		lg:          lg,
-		worker:      newWorker(*config, storageMgr, api, chainHeadCh, prover, lg),
+		worker:      newWorker(*config, db, storageMgr, api, chainHeadCh, prover, lg),
 	}
 	miner.wg.Add(1)
 	go miner.update()
