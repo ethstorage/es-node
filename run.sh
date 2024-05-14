@@ -122,14 +122,13 @@ es_node_start=" --network devnet \
   --l1.beacon http://65.109.20.29:8888 \
   --l1.beacon-based-time 1706684472 \
   --l1.beacon-based-slot 4245906 \
-  --miner.threads-per-shard 2 \
   --download.thread 32 \
-  --p2p.listen.udp 30300 \
+  --p2p.listen.udp 30305 \
   --p2p.max.request.size 4194304 \
   --p2p.sync.concurrency 32 \
-  --download.start 1116951 \
+  --download.start 1201145 \
   --rpc.addr 0.0.0.0 \
-  --rpc.port 9540 \
+  --rpc.port 9545 \
 $@"
 
 # create data file for shard 0 if not yet
