@@ -240,6 +240,7 @@ func EsNodeInit(ctx *cli.Context) error {
 					log.Error("Failed to get shard info from contract", "error", err)
 					return err
 				}
+				// lastMineTime will be set to non-zero when opening a new shard
 				if timeStamp != nil && timeStamp.Cmp(big.NewInt(0)) == 0 {
 					return fmt.Errorf("shard not exist: %d", shard)
 				}
