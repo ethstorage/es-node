@@ -59,7 +59,7 @@ func TestMining(t *testing.T) {
 		t.Fatalf("Create data files error: %v", err)
 	}
 	storConfig.Filenames = files
-	miningConfig := initMiningConfig(t, contract, pClient)
+	miningConfig := initMiningConfig(t, pClient)
 	lg.Info("Initialzed mining config", "miningConfig", fmt.Sprintf("%+v", miningConfig))
 	shardManager, err := initShardManager(*storConfig)
 	if err != nil {
@@ -279,20 +279,11 @@ func prepareData(t *testing.T, l1Client *eth.PollingClient, storageMgr *ethstora
 	if err != nil {
 		t.Fatalf("Download all metas failed %v", err)
 	}
-	totalKvs := len(shardIds) * int(storageMgr.KvEntries())
-	limit := totalKvs
-	if limit > len(ids) {
-		limit = len(ids)
-	}
-	for i := 0; i < limit; i++ {
+	for i := 0; i < len(ids); i++ {
 		err := storageMgr.CommitBlob(ids[i], blobs[i][:], hashs[i])
 		if err != nil {
 			t.Fatalf("Failed to commit blob: i=%d, id=%d, error: %v", i, ids[i], err)
 		}
-	}
-	_, _, err = storageMgr.CommitEmptyBlobs(uint64(limit), uint64(totalKvs)-1)
-	if err != nil {
-		t.Fatalf("Commit empty blobs failed %v", err)
 	}
 }
 
@@ -325,7 +316,7 @@ func createDataFiles(cfg *storage.StorageConfig) ([]string, error) {
 	return files, nil
 }
 
-func initMiningConfig(t *testing.T, l1Contract common.Address, client *eth.PollingClient) *miner.Config {
+func initMiningConfig(t *testing.T, client *eth.PollingClient) *miner.Config {
 	miningConfig := &miner.Config{}
 	factory, addrFrom, err := signer.SignerFactoryFromConfig(signer.CLIConfig{
 		PrivateKey: privateKey,
