@@ -127,11 +127,14 @@ func SendBlobTx(
 		}
 	}
 
-	maxFeePerDataGas256, err := DecodeUint256String(maxFeePerDataGas)
-	if err != nil {
-		log.Crit("Invalid max_fee_per_data_gas", "error", err)
-	}
-	if maxFeePerDataGas256 == nil {
+	var blobPrice *uint256.Int
+	if maxFeePerDataGas != "" {
+		maxFeePerDataGas256, err := DecodeUint256String(maxFeePerDataGas)
+		if err != nil {
+			log.Crit("Invalid max_fee_per_data_gas", "error", err)
+		}
+		blobPrice = maxFeePerDataGas256
+	} else {
 		blobBaseFee, err := queryBlobBaseFee(client)
 		if err != nil {
 			log.Crit("Error getting blob base fee", "error", err)
@@ -140,7 +143,7 @@ func SendBlobTx(
 		if !ok {
 			log.Crit("Error converting blob base fee to uint256")
 		}
-		maxFeePerDataGas256 = blobBaseFee256
+		blobPrice = blobBaseFee256
 	}
 	var blobs []kzg4844.Blob
 	if needEncoding {
@@ -171,7 +174,7 @@ func SendBlobTx(
 		To:         to,
 		Value:      value256,
 		Data:       calldataBytes,
-		BlobFeeCap: maxFeePerDataGas256,
+		BlobFeeCap: blobPrice,
 		BlobHashes: versionedHashes,
 		Sidecar:    sideCar,
 	}
