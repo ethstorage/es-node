@@ -121,7 +121,7 @@ func TestMining(t *testing.T) {
 		go func() {
 			fillEmpty(t, storageManager, kvs)
 			for j := 0; j < 3; j++ {
-				time.Sleep(3 * time.Minute)
+				time.Sleep(1 * time.Minute)
 				prepareData(t, pClient, storageManager, miningConfig.StorageCost.String())
 			}
 		}()
