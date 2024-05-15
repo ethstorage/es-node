@@ -139,9 +139,10 @@ func SendBlobTx(
 		if err != nil {
 			log.Crit("Error getting blob base fee", "error", err)
 		}
+		log.Info("Query blob base fee done", "blobBaseFee", blobBaseFee)
 		blobBaseFee256, ok := uint256.FromBig(blobBaseFee)
 		if !ok {
-			log.Crit("Error converting blob base fee to uint256")
+			log.Crit("Error converting blob base fee to uint256", "blobBaseFee", blobBaseFee)
 		}
 		blobPrice = blobBaseFee256
 	}
