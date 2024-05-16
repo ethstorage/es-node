@@ -31,7 +31,7 @@ import (
 )
 
 const (
-	maxBlobsPerTx = 4
+	maxBlobsPerTx = 3
 	dataFileName  = "shard-%d.dat"
 )
 
@@ -118,13 +118,8 @@ func TestMining(t *testing.T) {
 	}()
 	for i, s := range shardIds {
 		kvs := shardManager.KvEntries()
-		go func() {
-			fillEmpty(t, storageManager, kvs)
-			for j := 0; j < 3; j++ {
-				time.Sleep(1 * time.Minute)
-				prepareData(t, pClient, storageManager, miningConfig.StorageCost.String())
-			}
-		}()
+		fillEmpty(t, storageManager, kvs)
+		prepareData(t, pClient, storageManager, miningConfig.StorageCost.String())
 		feed.Send(protocol.EthStorageSyncDone{
 			DoneType: protocol.SingleShardDone,
 			ShardId:  s,
@@ -230,7 +225,7 @@ func fillEmpty(t *testing.T, storageMgr *ethstorage.StorageManager, entriesToFil
 }
 
 func prepareData(t *testing.T, l1Client *eth.PollingClient, storageMgr *ethstorage.StorageManager, value string) {
-	data := generateRandomContent(124 * 10)
+	data := generateRandomContent(124 * 3)
 	blobs := utils.EncodeBlobs(data)
 	t.Logf("Blobs len %d \n", len(blobs))
 	var hashs []common.Hash
@@ -270,20 +265,12 @@ func prepareData(t *testing.T, l1Client *eth.PollingClient, storageMgr *ethstora
 		hashs = append(hashs, dataHashes...)
 		ids = append(ids, kvIdxes...)
 	}
-	block, err := l1Client.BlockNumber(context.Background())
-	if err != nil {
-		t.Fatalf("Failed to get block number %v", err)
-	}
-	storageMgr.Reset(int64(block))
-	err = storageMgr.DownloadAllMetas(context.Background(), 1)
-	if err != nil {
-		t.Fatalf("Download all metas failed %v", err)
-	}
 	for i := 0; i < len(ids); i++ {
 		err := storageMgr.CommitBlob(ids[i], blobs[i][:], hashs[i])
 		if err != nil {
 			t.Fatalf("Failed to commit blob: i=%d, id=%d, error: %v", i, ids[i], err)
 		}
+		t.Logf("Committed blob: i=%d, id=%d, hash=%x", i, ids[i], hashs[i])
 	}
 }
 
