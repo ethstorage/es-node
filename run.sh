@@ -125,7 +125,7 @@ es_node_start=" --network devnet \
   --download.thread 32 \
   --state.upload.url http://metrics.ethstorage.io:8080 \
   --p2p.listen.udp 30305 \
-  --p2p.max.request.size 4194304 \
+  --p2p.request.size 4194304 \
   --p2p.sync.concurrency 32 \
   --p2p.bootnodes enr:-Li4QF3vBkkDQYNLHlVjW5NcEpXAsfNtE1lUVb_LgUQ_Ot2afS8jbDfnYQBDABJud_5Hd1hX_1cNeGVU6Tem06WDlfaGAY1e3vNvimV0aHN0b3JhZ2XbAYDY15SATFINPAhMgF43o16QBXrDKDH5b8GAgmlkgnY0gmlwhEFtP5qJc2VjcDI1NmsxoQK8XODtSv0IsrhBxZmTZBZEoLssb7bTX0YOVl6S0yLxuYN0Y3CCJAaDdWRwgnZh \
 $@"

@@ -1,12 +1,9 @@
 package protocol
 
 import (
-	"errors"
 	"math"
 	"sync"
 	"time"
-
-	"github.com/ethereum/go-ethereum/log"
 )
 
 // measurementImpact is the impact a single measurement has on a peer's final
@@ -19,8 +16,6 @@ const measurementImpact = 0.1
 // a peer's capacity to avoid locking into a lower value due to never attempting
 // to fetch more than some local stable value.
 const capacityOverestimation = 1.01
-
-const expectRequestTimeFactor = 0.8
 
 // Tracker estimates the throughput capacity of a peer with regard to each data
 // type it can deliver. The goal is to dynamically adjust request sizes to max
@@ -101,71 +96,4 @@ func (t *Tracker) Update(elapsed time.Duration, items int) {
 	measured := float64(items) / (float64(elapsed) / float64(time.Second))
 
 	t.capacity = (1-measurementImpact)*(t.capacity) + measurementImpact*measured
-}
-
-// Trackers is a set of message rate trackers across a number of peers with the
-// goal of aggregating certain measurements across the entire set for outlier
-// filtering and newly joining initialization.
-type Trackers struct {
-	trackers map[string]*Tracker
-
-	log  log.Logger
-	lock sync.RWMutex
-}
-
-// NewTrackers creates an empty set of trackers to be filled with peers.
-func NewTrackers(log log.Logger) *Trackers {
-	return &Trackers{
-		trackers: make(map[string]*Tracker),
-		log:      log,
-	}
-}
-
-// Track inserts a new tracker into the set.
-func (t *Trackers) Track(id string, tracker *Tracker) error {
-	t.lock.Lock()
-	defer t.lock.Unlock()
-
-	if _, ok := t.trackers[id]; ok {
-		return errors.New("already tracking")
-	}
-	t.trackers[id] = tracker
-
-	return nil
-}
-
-// Untrack stops tracking a previously added peer.
-func (t *Trackers) Untrack(id string) error {
-	t.lock.Lock()
-	defer t.lock.Unlock()
-
-	if _, ok := t.trackers[id]; !ok {
-		return errors.New("not tracking")
-	}
-	delete(t.trackers, id)
-	return nil
-}
-
-// Capacity is a helper function to access a specific tracker without having to
-// track it explicitly outside.
-func (t *Trackers) Capacity(id string, targetRTT time.Duration) int {
-	t.lock.RLock()
-	defer t.lock.RUnlock()
-
-	tracker := t.trackers[id]
-	if tracker == nil {
-		return 1 // Unregister race, don't return 0, it's a dangerous number
-	}
-	return tracker.Capacity(targetRTT)
-}
-
-// Update is a helper function to access a specific tracker without having to
-// track it explicitly outside.
-func (t *Trackers) Update(id string, elapsed time.Duration, items int) {
-	t.lock.RLock()
-	defer t.lock.RUnlock()
-
-	if tracker := t.trackers[id]; tracker != nil {
-		tracker.Update(elapsed, items)
-	}
 }

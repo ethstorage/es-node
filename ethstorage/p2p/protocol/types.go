@@ -74,7 +74,7 @@ type GetBlobsByRangePacket struct {
 	ShardId  uint64         // ShardId
 	Origin   uint64         // Index of the first Blob to retrieve
 	Limit    uint64         // Index of the last Blob to retrieve
-	Bytes    uint64         // Soft limit at which to stop returning data
+	Size     uint64         // Soft limit at which to stop returning data
 }
 
 // BlobsByRangePacket represents a Blobs query response.
@@ -91,7 +91,7 @@ type GetBlobsByListPacket struct {
 	Contract common.Address // Contract of the sharded storage
 	ShardId  uint64         // ShardId
 	BlobList []uint64       // BlobList index list to retrieve
-	Bytes    uint64         // Soft limit at which to stop returning data
+	Size     uint64         // Soft limit at which to stop returning data
 }
 
 // BlobsByListPacket represents a Blobs query response.

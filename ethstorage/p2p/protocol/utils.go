@@ -15,7 +15,15 @@ import (
 	"github.com/libp2p/go-libp2p/core/network"
 )
 
-const clientError = 255
+const (
+	clientError = 255
+
+	// timeout for reading / writing the request / response through P2P.
+	p2pReadWriteTimeout = time.Second * 10
+
+	// expect request time
+	expectRequestTime = time.Second * 8
+)
 
 func WriteMsg(stream network.Stream, msg *Msg) error {
 	_ = stream.SetWriteDeadline(time.Now().Add(p2pReadWriteTimeout))
