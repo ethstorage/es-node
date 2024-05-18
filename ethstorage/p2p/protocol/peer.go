@@ -38,7 +38,7 @@ func NewPeer(version uint, chainId *big.Int, peerId peer.ID, newStream newStream
 		direction:   direction,
 		version:     version,
 		shards:      shards,
-		tracker:     NewTracker(initRequestSize / expectRequestTime.Seconds()),
+		tracker:     NewTracker(peerId.String(), initRequestSize/expectRequestTime.Seconds()),
 		resCtx:      ctx,
 		resCancel:   cancel,
 		logger:      log.New("peer", peerId[:8]),
@@ -78,7 +78,7 @@ func (p *Peer) Log() log.Logger {
 }
 
 func (p *Peer) getReqestSize() uint64 {
-	return uint64(p.tracker.capacity * expectRequestTime.Seconds())
+	return uint64(p.tracker.Capacity(expectRequestTime))
 }
 
 // RequestBlobsByRange fetches a batch of kvs using a list of kv index
@@ -101,6 +101,7 @@ func (p *Peer) RequestBlobsByRange(id uint64, contract common.Address, shardId u
 	}()
 
 	requestSize := p.getReqestSize()
+	p.logger.Warn("get request size fro RequestBlobsByRange", "request size", requestSize)
 	return SendRPC(stream, &GetBlobsByRangePacket{
 		ID:       id,
 		Contract: contract,
@@ -131,6 +132,7 @@ func (p *Peer) RequestBlobsByList(id uint64, contract common.Address, shardId ui
 	}()
 
 	requestSize := p.getReqestSize()
+	p.logger.Warn("get request size fro RequestBlobsByList", "request size", requestSize)
 	return SendRPC(stream, &GetBlobsByListPacket{
 		ID:       id,
 		Contract: contract,

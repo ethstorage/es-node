@@ -41,8 +41,8 @@ const (
 	// Allow a peer to burst 10 requests, so it does not have to wait
 	peerServerBlocksBurst = 10
 
-	// maxMessageSize is the target maximum size of replies to data retrievals.
-	maxMessageSize = 8 * 1024 * 1024
+	// maxRequestSize is the target maximum size of replies to data retrievals.
+	maxRequestSize = 32
 )
 
 var (
@@ -191,7 +191,7 @@ func (srv *SyncServer) handleGetBlobsByRangeRequest(ctx context.Context, stream 
 		ShardId:  req.ShardId,
 		Blobs:    make([]*BlobPayload, 0),
 	}
-	read, sucRead, readBytes := uint64(0), uint64(0), uint64(0)
+	read, sucRead, l := uint64(0), uint64(0), uint64(0)
 	start := time.Now()
 	for id := req.Origin; id <= req.Limit; id++ {
 		payload, err := srv.BlobByIndex(id)
@@ -202,8 +202,8 @@ func (srv *SyncServer) handleGetBlobsByRangeRequest(ctx context.Context, stream 
 		}
 		sucRead++
 		res.Blobs = append(res.Blobs, payload)
-		readBytes += uint64(len(payload.EncodedBlob))
-		if uint64(len(res.Blobs)) >= req.Size || readBytes >= maxMessageSize {
+		l++
+		if l >= req.Size || l >= maxRequestSize {
 			break
 		}
 	}
@@ -246,7 +246,7 @@ func (srv *SyncServer) handleGetBlobsByListRequest(ctx context.Context, stream n
 		ShardId:  req.ShardId,
 		Blobs:    make([]*BlobPayload, 0),
 	}
-	read, sucRead, readBytes := uint64(0), uint64(0), uint64(0)
+	read, sucRead, l := uint64(0), uint64(0), uint64(0)
 	start := time.Now()
 	for _, idx := range req.BlobList {
 		payload, err := srv.BlobByIndex(idx)
@@ -257,8 +257,8 @@ func (srv *SyncServer) handleGetBlobsByListRequest(ctx context.Context, stream n
 		}
 		sucRead++
 		res.Blobs = append(res.Blobs, payload)
-		readBytes += uint64(len(payload.EncodedBlob))
-		if uint64(len(res.Blobs)) >= req.Size || readBytes >= maxMessageSize {
+		l++
+		if l >= req.Size || l >= maxRequestSize {
 			break
 		}
 	}

@@ -1,6 +1,7 @@
 package protocol
 
 import (
+	"github.com/ethereum/go-ethereum/log"
 	"math"
 	"sync"
 	"time"
@@ -44,14 +45,16 @@ type Tracker struct {
 	// as the unit, since serving nodes also spend a lot of time loading data
 	// from disk, which is linear in the number of items, but mostly constant
 	// in their sizes.
+	peerID   string
 	capacity float64
 
 	lock sync.RWMutex
 }
 
 // NewTracker creates a new message rate tracker for a specific peer.
-func NewTracker(cap float64) *Tracker {
+func NewTracker(peerID string, cap float64) *Tracker {
 	return &Tracker{
+		peerID:   peerID,
 		capacity: cap,
 	}
 }
@@ -78,7 +81,7 @@ func (t *Tracker) Capacity(targetRTT time.Duration) int {
 // roundCapacity gives the integer value of a capacity.
 // The result fits int32, and is guaranteed to be positive.
 func roundCapacity(cap float64) int {
-	return int(math.Min(maxMessageSize, math.Max(1, math.Ceil(cap)))) // TODO
+	return int(math.Min(maxRequestSize, math.Max(1, math.Ceil(cap))))
 }
 
 // Update modifies the peer's capacity values for a specific data type with a new
@@ -95,5 +98,7 @@ func (t *Tracker) Update(elapsed time.Duration, items int) {
 	}
 	measured := float64(items) / (float64(elapsed) / float64(time.Second))
 
+	oldcap := t.capacity
 	t.capacity = (1-measurementImpact)*(t.capacity) + measurementImpact*measured
+	log.Warn("Update tracker", "peer id", t.peerID, "elapsed", elapsed, "items", items, "old capacity", oldcap, "capacity", t.capacity)
 }
