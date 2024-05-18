@@ -42,7 +42,7 @@ const (
 	peerServerBlocksBurst = 10
 
 	// maxRequestSize is the target maximum size of replies to data retrievals.
-	maxRequestSize = 32
+	maxRequestSize = 64
 )
 
 var (
