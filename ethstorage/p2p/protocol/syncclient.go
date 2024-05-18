@@ -200,7 +200,7 @@ func NewSyncClient(log log.Logger, cfg *rollup.EsConfig, newStream newStreamFn, 
 	} else if runtime.NumCPU() > 2 {
 		maxFillEmptyTaskTreads = runtime.NumCPU() - 2
 	}
-	maxKvCountPerReq = params.MaxRequestSize / storageManager.MaxKvSize()
+	maxKvCountPerReq = params.InitRequestSize / storageManager.MaxKvSize()
 	shardCount := len(storageManager.Shards())
 	if m == nil {
 		m = metrics.NoopMetrics
@@ -538,7 +538,8 @@ func (s *SyncClient) AddPeer(id peer.ID, shards map[common.Address][]uint64, dir
 		return false
 	}
 	// add new peer routine
-	pr := NewPeer(0, s.cfg.L2ChainID, id, s.newStreamFn, direction, float64(s.syncerParams.MaxPeers)/float64(s.storageManager.MaxKvSize()), shards)
+	pr := NewPeer(0, s.cfg.L2ChainID, id, s.newStreamFn, direction,
+		float64(s.syncerParams.InitRequestSize)/float64(s.storageManager.MaxKvSize()), shards)
 	s.peers[id] = pr
 
 	s.idlerPeers[id] = struct{}{}
@@ -687,7 +688,7 @@ func (s *SyncClient) assignBlobRangeTasks() {
 
 	// Iterate over all the tasks and try to find a pending one
 	for _, t := range s.tasks {
-		maxRange := s.syncerParams.MaxRequestSize / ethstorage.ContractToShardManager[t.Contract].MaxKvSize() * 2
+		maxRange := s.syncerParams.InitRequestSize / ethstorage.ContractToShardManager[t.Contract].MaxKvSize() * 2
 		subTaskCount := len(t.SubTasks)
 		for idx := 0; idx < subTaskCount; idx++ {
 			pr := s.getIdlePeerForTask(t)
@@ -783,7 +784,7 @@ func (s *SyncClient) assignBlobHealTasks() {
 	// Iterate over all the tasks and try to find a pending one
 	for _, t := range s.tasks {
 		// All the kvs are downloading, wait for request time or success
-		batch := s.syncerParams.MaxRequestSize / ethstorage.ContractToShardManager[t.Contract].MaxKvSize() * 2
+		batch := s.syncerParams.InitRequestSize / ethstorage.ContractToShardManager[t.Contract].MaxKvSize() * 2
 
 		// kvHealTask pending retrieval, try to find an idle peer. If no such peer
 		// exists, we probably assigned tasks for all (or they are stateless).
@@ -929,7 +930,7 @@ func (s *SyncClient) getIdlePeerForTask(t *task) *Peer {
 		return nil
 	}
 	sort.Sort(sort.Reverse(idlers))
-	log.Warn("list capacity after sort", "list", fmt.Sprintf("%v", idlers.caps))
+
 	return s.peers[idlers.ids[0]]
 }
 

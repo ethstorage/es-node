@@ -100,5 +100,5 @@ func (t *Tracker) Update(elapsed time.Duration, items int) {
 
 	oldcap := t.capacity
 	t.capacity = (1-measurementImpact)*(t.capacity) + measurementImpact*measured
-	log.Warn("Update tracker", "peer id", t.peerID, "elapsed", elapsed, "items", items, "old capacity", oldcap, "capacity", t.capacity)
+	log.Debug("Update tracker", "peer id", t.peerID, "elapsed", elapsed, "items", items, "old capacity", oldcap, "capacity", t.capacity)
 }

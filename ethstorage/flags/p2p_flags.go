@@ -152,7 +152,7 @@ var (
 		Value:    "noise",
 		EnvVar:   p2pEnv("SECURITY"),
 	}
-	MaxRequestSize = cli.Uint64Flag{
+	InitRequestSize = cli.Uint64Flag{
 		Name: "p2p.request.size",
 		Usage: "p2p request size is the initial number of bytes to request from a remote peer. The default value is 1 * 1024 * 1024. " +
 			"It is value should not larger than 8 * 1024 * 1024. The request size will be changed according to network condition between the remote peer" +
@@ -345,7 +345,7 @@ var p2pFlags = []cli.Flag{
 	StaticPeers,
 	HostMux,
 	HostSecurity,
-	MaxRequestSize,
+	InitRequestSize,
 	SyncConcurrency,
 	FillEmptyConcurrency,
 	MetaDownloadBatchSize,
