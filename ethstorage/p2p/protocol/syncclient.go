@@ -929,7 +929,7 @@ func (s *SyncClient) getIdlePeerForTask(t *task) *Peer {
 		return nil
 	}
 	sort.Sort(sort.Reverse(idlers))
-
+	log.Warn("list capacity after sort", "list", fmt.Sprintf("%v", idlers.caps))
 	return s.peers[idlers.ids[0]]
 }
 

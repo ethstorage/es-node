@@ -101,7 +101,6 @@ func (p *Peer) RequestBlobsByRange(id uint64, contract common.Address, shardId u
 	}()
 
 	requestSize := p.getReqestSize()
-	p.logger.Warn("get request size fro RequestBlobsByRange", "request size", requestSize)
 	return SendRPC(stream, &GetBlobsByRangePacket{
 		ID:       id,
 		Contract: contract,
@@ -132,7 +131,6 @@ func (p *Peer) RequestBlobsByList(id uint64, contract common.Address, shardId ui
 	}()
 
 	requestSize := p.getReqestSize()
-	p.logger.Warn("get request size fro RequestBlobsByList", "request size", requestSize)
 	return SendRPC(stream, &GetBlobsByListPacket{
 		ID:       id,
 		Contract: contract,
