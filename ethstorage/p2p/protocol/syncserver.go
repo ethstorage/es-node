@@ -191,7 +191,7 @@ func (srv *SyncServer) handleGetBlobsByRangeRequest(ctx context.Context, stream 
 		ShardId:  req.ShardId,
 		Blobs:    make([]*BlobPayload, 0),
 	}
-	read, sucRead, l := uint64(0), uint64(0), uint64(0)
+	read, sucRead, l, size := uint64(0), uint64(0), uint64(0), req.Bytes/srv.storageManager.MaxKvSize()
 	start := time.Now()
 	for id := req.Origin; id <= req.Limit; id++ {
 		payload, err := srv.BlobByIndex(id)
@@ -203,7 +203,7 @@ func (srv *SyncServer) handleGetBlobsByRangeRequest(ctx context.Context, stream 
 		sucRead++
 		res.Blobs = append(res.Blobs, payload)
 		l++
-		if l >= req.Size || l >= maxRequestSize {
+		if l >= size || l >= maxRequestSize {
 			break
 		}
 	}
@@ -246,7 +246,7 @@ func (srv *SyncServer) handleGetBlobsByListRequest(ctx context.Context, stream n
 		ShardId:  req.ShardId,
 		Blobs:    make([]*BlobPayload, 0),
 	}
-	read, sucRead, l := uint64(0), uint64(0), uint64(0)
+	read, sucRead, l, size := uint64(0), uint64(0), uint64(0), req.Bytes/srv.storageManager.MaxKvSize()
 	start := time.Now()
 	for _, idx := range req.BlobList {
 		payload, err := srv.BlobByIndex(idx)
@@ -258,7 +258,7 @@ func (srv *SyncServer) handleGetBlobsByListRequest(ctx context.Context, stream n
 		sucRead++
 		res.Blobs = append(res.Blobs, payload)
 		l++
-		if l >= req.Size || l >= maxRequestSize {
+		if l >= size || l >= maxRequestSize {
 			break
 		}
 	}

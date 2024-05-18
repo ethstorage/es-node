@@ -23,6 +23,9 @@ const (
 
 	// expect request time
 	expectRequestTime = time.Second * 8
+
+	// TODO backward compatible, can be remove before next testnet
+	blobSize = 128 * 1024
 )
 
 func WriteMsg(stream network.Stream, msg *Msg) error {
