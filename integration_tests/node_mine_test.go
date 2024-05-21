@@ -11,7 +11,6 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -378,31 +377,4 @@ func initMiningConfig(t *testing.T, client *eth.PollingClient) *miner.Config {
 	miningConfig.ThreadsPerShard = 2
 	miningConfig.MinimumProfit = new(big.Int).SetInt64(-1e18)
 	return miningConfig
-}
-
-func cleanFiles(proverDir string) {
-	for _, shardId := range shardIds {
-		fileName := fmt.Sprintf(dataFileName, shardId)
-		if _, err := os.Stat(fileName); !os.IsNotExist(err) {
-			err = os.Remove(fileName)
-			if err != nil {
-				fmt.Println(err)
-			}
-		}
-	}
-
-	folderPath := filepath.Join(proverDir, "snarkbuild")
-	files, err := os.ReadDir(folderPath)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	for _, file := range files {
-		if !strings.HasPrefix(file.Name(), ".") {
-			err = os.RemoveAll(filepath.Join(folderPath, file.Name()))
-			if err != nil {
-				fmt.Println(err)
-			}
-		}
-	}
 }
