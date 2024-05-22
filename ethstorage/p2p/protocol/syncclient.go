@@ -731,7 +731,9 @@ func (s *SyncClient) assignBlobRangeTasks() {
 
 				if err != nil {
 					if e, ok := err.(*yamux.Error); ok && e.Timeout() {
-						log.Debug("Failed to request blobs", "peer", pr.id.String(), "err", err)
+						log.Debug("Request blobs timeout", "peer", pr.id.String(), "err", err)
+					} else if returnCode == streamError {
+						log.Debug("Failed to request blobs as newStream failed", "peer", pr.id.String(), "err", err)
 					} else {
 						log.Info("Failed to request blobs", "peer", pr.id.String(), "err", err)
 					}
@@ -818,7 +820,9 @@ func (s *SyncClient) assignBlobHealTasks() {
 
 			if err != nil {
 				if e, ok := err.(*yamux.Error); ok && e.Timeout() {
-					log.Debug("Failed to request blobs", "peer", pr.id.String(), "err", err)
+					log.Debug("Request blobs timeout", "peer", pr.id.String(), "err", err)
+				} else if returnCode == streamError {
+					log.Debug("Failed to request blobs as newStream failed", "peer", pr.id.String(), "err", err)
 				} else {
 					log.Info("Failed to request blobs", "peer", pr.id.String(), "err", err)
 				}
