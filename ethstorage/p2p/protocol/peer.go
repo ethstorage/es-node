@@ -78,7 +78,7 @@ func (p *Peer) Log() log.Logger {
 }
 
 func (p *Peer) getReqestSize() uint64 {
-	return uint64(p.tracker.Capacity(expectRequestTime)) * blobSize
+	return uint64(p.tracker.Capacity(expectRequestTime))
 }
 
 // RequestBlobsByRange fetches a batch of kvs using a list of kv index

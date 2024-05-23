@@ -155,8 +155,8 @@ var (
 	InitRequestSize = cli.Uint64Flag{
 		Name: "p2p.request.size",
 		Usage: "p2p request size is the initial number of bytes to request from a remote peer. The default value is 1 * 1024 * 1024. " +
-			"It is value should not larger than 8 * 1024 * 1024. The request size will be changed according to network condition between the remote peer" +
-			"and the localnode, you can increase the max request size to improve the sync performance.",
+			"It is value should not larger than 8 * 1024 * 1024. The request size will be changed according to network condition " +
+			"between the remote peer and the local node.",
 		Required: false,
 		Value:    1 * 1024 * 1024,
 		EnvVar:   p2pEnv("MAX_REQUEST_SIZE"),

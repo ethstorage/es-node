@@ -539,7 +539,7 @@ func (s *SyncClient) AddPeer(id peer.ID, shards map[common.Address][]uint64, dir
 	}
 	// add new peer routine
 	pr := NewPeer(0, s.cfg.L2ChainID, id, s.newStreamFn, direction,
-		float64(s.syncerParams.InitRequestSize)/float64(s.storageManager.MaxKvSize()), shards)
+		float64(s.syncerParams.InitRequestSize), shards)
 	s.peers[id] = pr
 
 	s.idlerPeers[id] = struct{}{}
@@ -765,7 +765,7 @@ func (s *SyncClient) assignBlobRangeTasks() {
 					Blobs: packet.Blobs,
 					time:  time.Now(),
 				}
-				pr.tracker.Update(time.Since(req.time), len(packet.Blobs))
+				pr.tracker.Update(time.Since(req.time), len(packet.Blobs)*int(s.storageManager.MaxKvSize()))
 				s.OnBlobsByRange(res)
 			}(pr.id)
 		}
@@ -853,7 +853,7 @@ func (s *SyncClient) assignBlobHealTasks() {
 				Blobs: packet.Blobs,
 				time:  time.Now(),
 			}
-			pr.tracker.Update(time.Since(req.time), len(packet.Blobs))
+			pr.tracker.Update(time.Since(req.time), len(packet.Blobs)*int(s.storageManager.MaxKvSize()))
 			s.OnBlobsByList(res)
 		}(pr.ID())
 	}
