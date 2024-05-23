@@ -46,7 +46,7 @@ type Tracker struct {
 	// from disk, which is linear in the number of items, but mostly constant
 	// in their sizes.
 	peerID   string
-	capacity float64
+	capacity float64 // TODO backward compatible, change to blob count in the next testnet
 
 	lock sync.RWMutex
 }
