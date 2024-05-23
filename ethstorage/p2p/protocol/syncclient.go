@@ -538,8 +538,7 @@ func (s *SyncClient) AddPeer(id peer.ID, shards map[common.Address][]uint64, dir
 		return false
 	}
 	// add new peer routine
-	pr := NewPeer(0, s.cfg.L2ChainID, id, s.newStreamFn, direction,
-		float64(s.syncerParams.InitRequestSize), shards)
+	pr := NewPeer(0, s.cfg.L2ChainID, id, s.newStreamFn, direction, float64(s.syncerParams.InitRequestSize), shards)
 	s.peers[id] = pr
 
 	s.idlerPeers[id] = struct{}{}
@@ -688,7 +687,7 @@ func (s *SyncClient) assignBlobRangeTasks() {
 
 	// Iterate over all the tasks and try to find a pending one
 	for _, t := range s.tasks {
-		maxRange := s.syncerParams.InitRequestSize / ethstorage.ContractToShardManager[t.Contract].MaxKvSize() * 2
+		maxRange := maxRequestSize / ethstorage.ContractToShardManager[t.Contract].MaxKvSize() * 2
 		subTaskCount := len(t.SubTasks)
 		for idx := 0; idx < subTaskCount; idx++ {
 			pr := s.getIdlePeerForTask(t)
@@ -784,7 +783,7 @@ func (s *SyncClient) assignBlobHealTasks() {
 	// Iterate over all the tasks and try to find a pending one
 	for _, t := range s.tasks {
 		// All the kvs are downloading, wait for request time or success
-		batch := s.syncerParams.InitRequestSize / ethstorage.ContractToShardManager[t.Contract].MaxKvSize() * 2
+		batch := maxRequestSize / ethstorage.ContractToShardManager[t.Contract].MaxKvSize() * 2
 
 		// kvHealTask pending retrieval, try to find an idle peer. If no such peer
 		// exists, we probably assigned tasks for all (or they are stateless).

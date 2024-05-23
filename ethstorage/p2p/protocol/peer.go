@@ -77,7 +77,7 @@ func (p *Peer) Log() log.Logger {
 	return p.logger
 }
 
-func (p *Peer) getReqestSize() uint64 {
+func (p *Peer) getRequestSize() uint64 {
 	return uint64(p.tracker.Capacity(expectRequestTime))
 }
 
@@ -100,7 +100,7 @@ func (p *Peer) RequestBlobsByRange(id uint64, contract common.Address, shardId u
 		}
 	}()
 
-	requestSize := p.getReqestSize()
+	requestSize := p.getRequestSize()
 	return SendRPC(stream, &GetBlobsByRangePacket{
 		ID:       id,
 		Contract: contract,
@@ -130,7 +130,7 @@ func (p *Peer) RequestBlobsByList(id uint64, contract common.Address, shardId ui
 		}
 	}()
 
-	requestSize := p.getReqestSize()
+	requestSize := p.getRequestSize()
 	return SendRPC(stream, &GetBlobsByListPacket{
 		ID:       id,
 		Contract: contract,

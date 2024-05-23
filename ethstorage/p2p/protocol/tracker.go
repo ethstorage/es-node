@@ -81,7 +81,7 @@ func (t *Tracker) Capacity(targetRTT time.Duration) int {
 // roundCapacity gives the integer value of a capacity.
 // The result fits int32, and is guaranteed to be positive.
 func roundCapacity(cap float64) int {
-	return int(math.Min(maxRequestSize, math.Max(1, math.Ceil(cap))))
+	return int(math.Min(maxRequestSize, math.Max(128*1024, math.Ceil(cap))))
 }
 
 // Update modifies the peer's capacity values for a specific data type with a new
