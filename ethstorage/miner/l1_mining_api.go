@@ -21,8 +21,7 @@ import (
 )
 
 const (
-	gasBufferRatio    = 1.2
-	rewardDenominator = 10000
+	gasBufferRatio = 1.2
 )
 
 var (
