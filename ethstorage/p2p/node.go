@@ -182,6 +182,8 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 		if m != nil {
 			go m.RecordBandwidth(resourcesCtx, bwc)
 		}
+
+		go n.syncCl.PurgeBadPeers(n.host.Network().ClosePeer)
 	}
 	return nil
 }

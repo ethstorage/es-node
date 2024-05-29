@@ -21,6 +21,7 @@ type Peer struct {
 	direction   network.Direction
 	version     uint                        // Protocol version negotiated
 	shards      map[common.Address][]uint64 // shards of this node support
+	isBad       bool
 	resCtx      context.Context
 	resCancel   context.CancelFunc
 	logger      log.Logger // Contextual logger with the peer id injected
@@ -36,6 +37,7 @@ func NewPeer(version uint, chainId *big.Int, peerId peer.ID, newStream newStream
 		direction:   direction,
 		version:     version,
 		shards:      shards,
+		isBad:       false,
 		resCtx:      ctx,
 		resCancel:   cancel,
 		logger:      log.New("peer", peerId[:8]),
