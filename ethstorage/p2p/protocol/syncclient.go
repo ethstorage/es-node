@@ -1279,6 +1279,7 @@ func (s *SyncClient) PurgeBadPeers(closePeerFunc func(peer.ID) error) {
 				if err != nil {
 					log.Info("Purge bad peer failed", "peer", p.String(), "error", err.Error())
 				}
+				log.Debug("Purge bad peer", "peer", p.String())
 			}
 		case <-s.resCtx.Done():
 			log.Info("P2P PurgeBadPeers stop")
