@@ -21,8 +21,8 @@ const (
 	// timeout for reading / writing the request / response through P2P.
 	p2pReadWriteTimeout = time.Second * 10
 
-	// expect request time
-	expectRequestTime = time.Second * 8
+	// rttEstimateFactor is a multiplier used to estimate the maximum round-trip time to a target request using p2pReadWriteTimeout.
+	rttEstimateFactor = 0.8
 )
 
 func WriteMsg(stream network.Stream, msg *Msg) error {

@@ -66,12 +66,12 @@ func NewTracker(peerID string, cap float64) *Tracker {
 // the load proportionally to the requested items, so fetching a bit more might
 // still take the same RTT. By forcefully overshooting by a small amount, we can
 // avoid locking into a lower-that-real capacity.
-func (t *Tracker) Capacity(targetRTT time.Duration) int {
+func (t *Tracker) Capacity(targetRTT float64) int {
 	t.lock.RLock()
 	defer t.lock.RUnlock()
 
 	// Calculate the actual measured throughput
-	throughput := t.capacity * float64(targetRTT) / float64(time.Second)
+	throughput := t.capacity * targetRTT
 
 	// Return an overestimation to force the peer out of a stuck minima, adding
 	// +1 in case the item count is too low for the overestimator to dent
