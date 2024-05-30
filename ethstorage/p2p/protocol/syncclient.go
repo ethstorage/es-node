@@ -538,7 +538,7 @@ func (s *SyncClient) AddPeer(id peer.ID, shards map[common.Address][]uint64, dir
 		return false
 	}
 	// add new peer routine
-	pr := NewPeer(0, s.cfg.L2ChainID, id, s.newStreamFn, direction, float64(s.syncerParams.InitRequestSize), shards)
+	pr := NewPeer(0, s.cfg.L2ChainID, id, s.newStreamFn, direction, s.syncerParams.InitRequestSize, s.storageManager.MaxKvSize(), shards)
 	s.peers[id] = pr
 
 	s.idlerPeers[id] = struct{}{}

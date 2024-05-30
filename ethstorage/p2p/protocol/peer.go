@@ -29,7 +29,7 @@ type Peer struct {
 
 // NewPeer create a wrapper for a network connection and negotiated  protocol version.
 func NewPeer(version uint, chainId *big.Int, peerId peer.ID, newStream newStreamFn, direction network.Direction,
-	initRequestSize float64, shards map[common.Address][]uint64) *Peer {
+	initRequestSize, minRequestSize uint64, shards map[common.Address][]uint64) *Peer {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Peer{
 		id:          peerId,
@@ -38,7 +38,7 @@ func NewPeer(version uint, chainId *big.Int, peerId peer.ID, newStream newStream
 		direction:   direction,
 		version:     version,
 		shards:      shards,
-		tracker:     NewTracker(peerId.String(), initRequestSize/(p2pReadWriteTimeout.Seconds()*rttEstimateFactor)),
+		tracker:     NewTracker(peerId.String(), float64(initRequestSize)/(p2pReadWriteTimeout.Seconds()*rttEstimateFactor), float64(minRequestSize)),
 		resCtx:      ctx,
 		resCancel:   cancel,
 		logger:      log.New("peer", peerId[:8]),

@@ -46,16 +46,18 @@ type Tracker struct {
 	// from disk, which is linear in the number of items, but mostly constant
 	// in their sizes.
 	peerID   string
-	capacity float64 // TODO backward compatible, change to blob count in the next testnet
+	capacity float64
+	minValue float64
 
 	lock sync.RWMutex
 }
 
 // NewTracker creates a new message rate tracker for a specific peer.
-func NewTracker(peerID string, cap float64) *Tracker {
+func NewTracker(peerID string, cap, minValue float64) *Tracker {
 	return &Tracker{
 		peerID:   peerID,
 		capacity: cap,
+		minValue: minValue,
 	}
 }
 
@@ -75,13 +77,13 @@ func (t *Tracker) Capacity(targetRTT float64) int {
 
 	// Return an overestimation to force the peer out of a stuck minima, adding
 	// +1 in case the item count is too low for the overestimator to dent
-	return roundCapacity(1 + capacityOverestimation*throughput)
+	return roundCapacity(math.Max(t.minValue, math.Ceil(1+capacityOverestimation*throughput)))
 }
 
 // roundCapacity gives the integer value of a capacity.
 // The result fits int32, and is guaranteed to be positive.
 func roundCapacity(cap float64) int {
-	return int(math.Min(maxRequestSize, math.Max(128*1024, math.Ceil(cap))))
+	return int(math.Min(maxRequestSize, cap))
 }
 
 // Update modifies the peer's capacity values for a specific data type with a new
@@ -100,5 +102,5 @@ func (t *Tracker) Update(elapsed time.Duration, items int) {
 
 	oldcap := t.capacity
 	t.capacity = (1-measurementImpact)*(t.capacity) + measurementImpact*measured
-	log.Debug("Update tracker", "peer id", t.peerID, "elapsed", elapsed, "items", items, "old capacity", oldcap, "capacity", t.capacity)
+	log.Warn("Update tracker", "peer id", t.peerID, "elapsed", elapsed, "items", items, "old capacity", oldcap, "capacity", t.capacity)
 }
