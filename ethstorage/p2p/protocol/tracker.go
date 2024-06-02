@@ -47,17 +47,15 @@ type Tracker struct {
 	// in their sizes.
 	peerID   string
 	capacity float64
-	minValue float64
 
 	lock sync.RWMutex
 }
 
 // NewTracker creates a new message rate tracker for a specific peer.
-func NewTracker(peerID string, cap, minValue float64) *Tracker {
+func NewTracker(peerID string, cap float64) *Tracker {
 	return &Tracker{
 		peerID:   peerID,
 		capacity: cap,
-		minValue: minValue,
 	}
 }
 
@@ -68,7 +66,7 @@ func NewTracker(peerID string, cap, minValue float64) *Tracker {
 // the load proportionally to the requested items, so fetching a bit more might
 // still take the same RTT. By forcefully overshooting by a small amount, we can
 // avoid locking into a lower-that-real capacity.
-func (t *Tracker) Capacity(targetRTT float64) int {
+func (t *Tracker) Capacity(targetRTT float64) float64 {
 	t.lock.RLock()
 	defer t.lock.RUnlock()
 
@@ -77,13 +75,13 @@ func (t *Tracker) Capacity(targetRTT float64) int {
 
 	// Return an overestimation to force the peer out of a stuck minima, adding
 	// +1 in case the item count is too low for the overestimator to dent
-	return roundCapacity(math.Max(t.minValue, math.Ceil(1+capacityOverestimation*throughput)))
+	return roundCapacity(1 + capacityOverestimation*throughput)
 }
 
 // roundCapacity gives the integer value of a capacity.
 // The result fits int32, and is guaranteed to be positive.
-func roundCapacity(cap float64) int {
-	return int(math.Min(maxRequestSize, cap))
+func roundCapacity(cap float64) float64 {
+	return math.Min(maxRequestSize, math.Ceil(cap))
 }
 
 // Update modifies the peer's capacity values for a specific data type with a new
@@ -102,5 +100,5 @@ func (t *Tracker) Update(elapsed time.Duration, items int) {
 
 	oldcap := t.capacity
 	t.capacity = (1-measurementImpact)*(t.capacity) + measurementImpact*measured
-	log.Warn("Update tracker", "peer id", t.peerID, "elapsed", elapsed, "items", items, "old capacity", oldcap, "capacity", t.capacity)
+	log.Debug("Update tracker", "peer id", t.peerID, "elapsed", elapsed, "items", items, "old capacity", oldcap, "capacity", t.capacity)
 }

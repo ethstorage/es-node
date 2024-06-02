@@ -5,6 +5,7 @@ package protocol
 
 import (
 	"context"
+	"math"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -15,16 +16,17 @@ import (
 
 // Peer is a collection of relevant information we have about a `storage` peer.
 type Peer struct {
-	id          peer.ID // Unique ID for the peer, cached
-	newStreamFn newStreamFn
-	chainId     *big.Int
-	direction   network.Direction
-	version     uint                        // Protocol version negotiated
-	shards      map[common.Address][]uint64 // shards of this node support
-	tracker     *Tracker
-	resCtx      context.Context
-	resCancel   context.CancelFunc
-	logger      log.Logger // Contextual logger with the peer id injected
+	id             peer.ID // Unique ID for the peer, cached
+	newStreamFn    newStreamFn
+	chainId        *big.Int
+	direction      network.Direction
+	version        uint                        // Protocol version negotiated
+	shards         map[common.Address][]uint64 // shards of this node support
+	minRequestSize float64
+	tracker        *Tracker
+	resCtx         context.Context
+	resCancel      context.CancelFunc
+	logger         log.Logger // Contextual logger with the peer id injected
 }
 
 // NewPeer create a wrapper for a network connection and negotiated  protocol version.
@@ -32,16 +34,17 @@ func NewPeer(version uint, chainId *big.Int, peerId peer.ID, newStream newStream
 	initRequestSize, minRequestSize uint64, shards map[common.Address][]uint64) *Peer {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Peer{
-		id:          peerId,
-		newStreamFn: newStream,
-		chainId:     chainId,
-		direction:   direction,
-		version:     version,
-		shards:      shards,
-		tracker:     NewTracker(peerId.String(), float64(initRequestSize)/(p2pReadWriteTimeout.Seconds()*rttEstimateFactor), float64(minRequestSize)),
-		resCtx:      ctx,
-		resCancel:   cancel,
-		logger:      log.New("peer", peerId[:8]),
+		id:             peerId,
+		newStreamFn:    newStream,
+		chainId:        chainId,
+		direction:      direction,
+		version:        version,
+		shards:         shards,
+		minRequestSize: float64(minRequestSize),
+		tracker:        NewTracker(peerId.String(), float64(initRequestSize)/(p2pReadWriteTimeout.Seconds()*rttEstimateFactor)),
+		resCtx:         ctx,
+		resCancel:      cancel,
+		logger:         log.New("peer", peerId[:8]),
 	}
 }
 
@@ -78,7 +81,7 @@ func (p *Peer) Log() log.Logger {
 }
 
 func (p *Peer) getRequestSize() uint64 {
-	return uint64(p.tracker.Capacity(p2pReadWriteTimeout.Seconds() * rttEstimateFactor))
+	return uint64(math.Max(p.tracker.Capacity(p2pReadWriteTimeout.Seconds()*rttEstimateFactor), p.minRequestSize))
 }
 
 // RequestBlobsByRange fetches a batch of kvs using a list of kv index
