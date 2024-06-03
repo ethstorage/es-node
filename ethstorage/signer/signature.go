@@ -9,6 +9,7 @@ import (
 	"math/big"
 	"strings"
 
+	opcrypto "github.com/ethereum-optimism/optimism/op-service/crypto"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -33,18 +34,11 @@ func PrivateKeySignerFn(key *ecdsa.PrivateKey, chainID *big.Int) bind.SignerFn {
 	}
 }
 
-// SignerFn is a generic transaction signing function. It may be a remote signer so it takes a context.
-// It also takes the address that should be used to sign the transaction with.
-type SignerFn func(context.Context, common.Address, *types.Transaction) (*types.Transaction, error)
-
-// SignerFactory creates a SignerFn that is bound to a specific ChainID
-type SignerFactory func(chainID *big.Int) SignerFn
-
 // SignerFactoryFromConfig considers three ways that signers are created & then creates single factory from those config options.
 // It can either take a remote signer (via CLIConfig) or it can be provided either a mnemonic + derivation path or a private key.
 // It prefers the remote signer, then the mnemonic or private key (only one of which can be provided).
-func SignerFactoryFromConfig(signerConfig CLIConfig) (SignerFactory, common.Address, error) {
-	var signer SignerFactory
+func SignerFactoryFromConfig(signerConfig CLIConfig) (opcrypto.SignerFactory, common.Address, error) {
+	var signer opcrypto.SignerFactory
 	var fromAddress common.Address
 	if signerConfig.RemoteEnabled() {
 		signerClient, err := NewSignerClient(signerConfig.Endpoint)
@@ -52,7 +46,7 @@ func SignerFactoryFromConfig(signerConfig CLIConfig) (SignerFactory, common.Addr
 			return nil, common.Address{}, fmt.Errorf("failed to create the signer client: %w", err)
 		}
 		fromAddress = common.HexToAddress(signerConfig.Address)
-		signer = func(chainID *big.Int) SignerFn {
+		signer = func(chainID *big.Int) opcrypto.SignerFn {
 			return func(ctx context.Context, address common.Address, tx *types.Transaction) (*types.Transaction, error) {
 				if !bytes.Equal(address[:], fromAddress[:]) {
 					return nil, fmt.Errorf("attempting to sign for %s, expected %s: ", address, signerConfig.Address)
@@ -89,7 +83,7 @@ func SignerFactoryFromConfig(signerConfig CLIConfig) (SignerFactory, common.Addr
 			}
 		}
 		fromAddress = crypto.PubkeyToAddress(privKey.PublicKey)
-		signer = func(chainID *big.Int) SignerFn {
+		signer = func(chainID *big.Int) opcrypto.SignerFn {
 			s := PrivateKeySignerFn(privKey, chainID)
 			return func(_ context.Context, addr common.Address, tx *types.Transaction) (*types.Transaction, error) {
 				return s(addr, tx)

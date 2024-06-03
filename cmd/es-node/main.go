@@ -15,6 +15,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/ethereum-optimism/optimism/op-service/httputil"
 	oppprof "github.com/ethereum-optimism/optimism/op-service/pprof"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -140,14 +141,17 @@ func EsNodeMain(ctx *cli.Context) error {
 	m.RecordUp()
 	// TODO: heartbeat
 	if cfg.Pprof.Enabled {
-		pprofCtx, pprofCancel := context.WithCancel(context.Background())
+		var httpServer *httputil.HTTPServer
 		go func() {
-			log.Info("pprof server started", "addr", net.JoinHostPort(cfg.Pprof.ListenAddr, strconv.Itoa(cfg.Pprof.ListenPort)))
-			if err := oppprof.ListenAndServe(pprofCtx, cfg.Pprof.ListenAddr, cfg.Pprof.ListenPort); err != nil {
+			httpSer, err := oppprof.StartServer(cfg.Pprof.ListenAddr, cfg.Pprof.ListenPort)
+			if err != nil {
 				log.Error("error starting pprof", "err", err)
 			}
+			httpServer = httpSer
+			log.Info("pprof server started", "addr", net.JoinHostPort(cfg.Pprof.ListenAddr, strconv.Itoa(cfg.Pprof.ListenPort)))
+
 		}()
-		defer pprofCancel()
+		defer httpServer.Close()
 	}
 
 	log.Info("Storage node started")

@@ -9,6 +9,7 @@ import (
 	"math/big"
 	"sync"
 
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethdb"
@@ -23,9 +24,13 @@ type L1API interface {
 	TransactionByHash(ctx context.Context, txHash common.Hash) (*types.Transaction, bool, error)
 	TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error)
 	GetMiningInfo(ctx context.Context, contract common.Address, shardIdx uint64) (*miningInfo, error)
-	SubmitMinedResult(ctx context.Context, contract common.Address, rst result, config Config) (common.Hash, error)
 	GetDataHashes(ctx context.Context, contract common.Address, kvIdxes []uint64) ([]common.Hash, error)
+	GetMiningReward(shard uint64, blockNumber int64) (*big.Int, error)
+	ComposeCalldata(ctx context.Context, rst result) ([]byte, error)
+	SuggestGasPrices(ctx context.Context, cfg Config) (*big.Int, *big.Int, *big.Int, error)
 	BlockNumber(ctx context.Context) (uint64, error)
+	HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error)
+	EstimateGas(ctx context.Context, msg ethereum.CallMsg) (uint64, error)
 }
 
 type MiningProver interface {

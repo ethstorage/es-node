@@ -10,6 +10,7 @@ import (
 	"math/big"
 	"os"
 
+	opcrypto "github.com/ethereum-optimism/optimism/op-service/crypto"
 	oppprof "github.com/ethereum-optimism/optimism/op-service/pprof"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -202,7 +203,7 @@ func NewMinerConfig(ctx *cli.Context, client *ethclient.Client, l1Contract commo
 	return &minerConfig, nil
 }
 
-func NewSignerConfig(ctx *cli.Context) (signer.SignerFactory, common.Address, error) {
+func NewSignerConfig(ctx *cli.Context) (opcrypto.SignerFactory, common.Address, error) {
 	signerConfig := signer.ReadCLIConfig(ctx)
 	if err := signerConfig.Check(); err != nil {
 		return nil, common.Address{}, fmt.Errorf("invalid siger flags: %w", err)
