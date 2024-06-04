@@ -22,6 +22,10 @@ func newTxMgrConfig(l1Addr string, signerFactory opcrypto.SignerFactory) (txmgr.
 		NumConfirmations: uint64(3),
 		// Number of ErrNonceTooLow observations required to give up on a tx at a particular nonce without receiving confirmation
 		SafeAbortNonceTooLowCount: uint64(3),
+		// The multiplier applied to fee suggestions to put a hard limit on fee increases
+		FeeLimitMultiplier: uint64(5),
+		// Minimum threshold (in Wei) at which the FeeLimitMultiplier takes effect.
+		FeeLimitThresholdGwei: 100.0,
 		// Duration we will wait before resubmitting a transaction to L1
 		ResubmissionTimeout: 48 * time.Second,
 		// NetworkTimeout is the allowed duration for a single network request.
@@ -45,9 +49,17 @@ func newTxMgrConfig(l1Addr string, signerFactory opcrypto.SignerFactory) (txmgr.
 		return txmgr.Config{}, fmt.Errorf("could not dial fetch L1 chain ID: %w", err)
 	}
 
+	// convert float GWei value into integer Wei value
+	feeLimitThreshold, _ := new(big.Float).Mul(
+		big.NewFloat(cfg.FeeLimitThresholdGwei),
+		big.NewFloat(params.GWei)).
+		Int(nil)
+
 	return txmgr.Config{
 		Backend:                   l1,
 		ResubmissionTimeout:       cfg.ResubmissionTimeout,
+		FeeLimitMultiplier:        cfg.FeeLimitMultiplier,
+		FeeLimitThreshold:         feeLimitThreshold,
 		ChainID:                   chainID,
 		TxSendTimeout:             cfg.TxSendTimeout,
 		TxNotInMempoolTimeout:     cfg.TxNotInMempoolTimeout,
