@@ -1,6 +1,3 @@
-// Copyright 2022-2023, EthStorage.
-// For license information, see https://github.com/ethstorage/es-node/blob/main/LICENSE
-
 package miner
 
 import (
@@ -15,7 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 )
 
-func newTxMgrConfig(l1Addr string, signerFactory opcrypto.SignerFactory) (txmgr.Config, error) {
+func defaultTxMgrConfig(chainID *big.Int, l1Addr string, signerFactory opcrypto.SignerFactory) (txmgr.Config, error) {
 	cfg := txmgr.CLIConfig{
 		L1RPCURL: l1Addr,
 		// Number of confirmations which we will wait after sending a transaction
@@ -41,14 +38,6 @@ func newTxMgrConfig(l1Addr string, signerFactory opcrypto.SignerFactory) (txmgr.
 	if err != nil {
 		return txmgr.Config{}, fmt.Errorf("could not dial eth client: %w", err)
 	}
-
-	ctx, cancel = context.WithTimeout(context.Background(), cfg.NetworkTimeout)
-	defer cancel()
-	chainID, err := l1.ChainID(ctx)
-	if err != nil {
-		return txmgr.Config{}, fmt.Errorf("could not dial fetch L1 chain ID: %w", err)
-	}
-
 	// convert float GWei value into integer Wei value
 	feeLimitThreshold, _ := new(big.Float).Mul(
 		big.NewFloat(cfg.FeeLimitThresholdGwei),

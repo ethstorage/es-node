@@ -165,7 +165,8 @@ func newWorker(
 		}
 		worker.submissionStates[shardId] = &SubmissionState{Succeeded: 0, Failed: 0, Dropped: 0, LastSucceededTime: 0}
 	}
-	txMgrConfig, err := newTxMgrConfig(api.L1RPCURL(), config.SignerFnFactory)
+	chainID, l1URL := api.L1Info()
+	txMgrConfig, err := defaultTxMgrConfig(chainID, l1URL, config.SignerFnFactory)
 	if err != nil {
 		lg.Crit("Init transaction manager config failed", "error", err)
 	}

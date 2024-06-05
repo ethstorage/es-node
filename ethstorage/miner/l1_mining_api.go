@@ -152,6 +152,6 @@ func (m *l1MiningAPI) SuggestGasPrices(ctx context.Context, cfg Config) (*big.In
 	return tip, gasFeeCap, predictedGasPrice, nil
 }
 
-func (m *l1MiningAPI) L1RPCURL() string {
-	return m.l1URL
+func (m *l1MiningAPI) L1Info() (*big.Int, string) {
+	return m.NetworkID, m.l1URL
 }
