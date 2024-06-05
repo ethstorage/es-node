@@ -5,6 +5,7 @@ package protocol
 
 import (
 	"context"
+	"math"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -15,30 +16,35 @@ import (
 
 // Peer is a collection of relevant information we have about a `storage` peer.
 type Peer struct {
-	id          peer.ID // Unique ID for the peer, cached
-	newStreamFn newStreamFn
-	chainId     *big.Int
-	direction   network.Direction
-	version     uint                        // Protocol version negotiated
-	shards      map[common.Address][]uint64 // shards of this node support
-	resCtx      context.Context
-	resCancel   context.CancelFunc
-	logger      log.Logger // Contextual logger with the peer id injected
+	id             peer.ID // Unique ID for the peer, cached
+	newStreamFn    newStreamFn
+	chainId        *big.Int
+	direction      network.Direction
+	version        uint                        // Protocol version negotiated
+	shards         map[common.Address][]uint64 // shards of this node support
+	minRequestSize float64
+	tracker        *Tracker
+	resCtx         context.Context
+	resCancel      context.CancelFunc
+	logger         log.Logger // Contextual logger with the peer id injected
 }
 
 // NewPeer create a wrapper for a network connection and negotiated  protocol version.
-func NewPeer(version uint, chainId *big.Int, peerId peer.ID, newStream newStreamFn, direction network.Direction, shards map[common.Address][]uint64) *Peer {
+func NewPeer(version uint, chainId *big.Int, peerId peer.ID, newStream newStreamFn, direction network.Direction,
+	initRequestSize, minRequestSize uint64, shards map[common.Address][]uint64) *Peer {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Peer{
-		id:          peerId,
-		newStreamFn: newStream,
-		chainId:     chainId,
-		direction:   direction,
-		version:     version,
-		shards:      shards,
-		resCtx:      ctx,
-		resCancel:   cancel,
-		logger:      log.New("peer", peerId[:8]),
+		id:             peerId,
+		newStreamFn:    newStream,
+		chainId:        chainId,
+		direction:      direction,
+		version:        version,
+		shards:         shards,
+		minRequestSize: float64(minRequestSize),
+		tracker:        NewTracker(peerId.String(), float64(initRequestSize)/(p2pReadWriteTimeout.Seconds()*rttEstimateFactor)),
+		resCtx:         ctx,
+		resCancel:      cancel,
+		logger:         log.New("peer", peerId[:8]),
 	}
 }
 
@@ -74,8 +80,12 @@ func (p *Peer) Log() log.Logger {
 	return p.logger
 }
 
+func (p *Peer) getRequestSize() uint64 {
+	return uint64(math.Max(p.tracker.Capacity(p2pReadWriteTimeout.Seconds()*rttEstimateFactor), p.minRequestSize))
+}
+
 // RequestBlobsByRange fetches a batch of kvs using a list of kv index
-func (p *Peer) RequestBlobsByRange(id uint64, contract common.Address, shardId uint64, origin uint64, limit uint64, maxReqestSize uint64,
+func (p *Peer) RequestBlobsByRange(id uint64, contract common.Address, shardId uint64, origin uint64, limit uint64,
 	blobs *BlobsByRangePacket) (byte, error) {
 	p.logger.Trace("Fetching KVs", "reqId", id, "contract", contract,
 		"shardId", shardId, "origin", origin, "limit", limit)
@@ -93,18 +103,19 @@ func (p *Peer) RequestBlobsByRange(id uint64, contract common.Address, shardId u
 		}
 	}()
 
+	requestSize := p.getRequestSize()
 	return SendRPC(stream, &GetBlobsByRangePacket{
 		ID:       id,
 		Contract: contract,
 		ShardId:  shardId,
 		Origin:   origin,
 		Limit:    limit,
-		Bytes:    maxReqestSize,
+		Bytes:    requestSize,
 	}, blobs)
 }
 
 // RequestBlobsByList fetches a batch of kvs using a list of kv index
-func (p *Peer) RequestBlobsByList(id uint64, contract common.Address, shardId uint64, kvList []uint64, maxReqestSize uint64,
+func (p *Peer) RequestBlobsByList(id uint64, contract common.Address, shardId uint64, kvList []uint64,
 	blobs *BlobsByListPacket) (byte, error) {
 	p.logger.Trace("Fetching KVs", "reqId", id, "contract", contract,
 		"shardId", shardId, "count", len(kvList))
@@ -122,11 +133,12 @@ func (p *Peer) RequestBlobsByList(id uint64, contract common.Address, shardId ui
 		}
 	}()
 
+	requestSize := p.getRequestSize()
 	return SendRPC(stream, &GetBlobsByListPacket{
 		ID:       id,
 		Contract: contract,
 		ShardId:  shardId,
 		BlobList: kvList,
-		Bytes:    maxReqestSize,
+		Bytes:    requestSize,
 	}, blobs)
 }
