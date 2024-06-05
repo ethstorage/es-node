@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"strconv"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethdb"
@@ -40,6 +41,7 @@ type NodeP2P struct {
 	syncCl         *protocol.SyncClient
 	syncSrv        *protocol.SyncServer
 	storageManager *ethstorage.StorageManager
+	resCtx         context.Context
 }
 
 // NewNodeP2P creates a new p2p node, and returns a reference to it. If the p2p is disabled, it returns nil.
@@ -67,6 +69,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 	storageManager *ethstorage.StorageManager, db ethdb.Database, m metrics.Metricer, feed *event.Feed) error {
 	bwc := p2pmetrics.NewBandwidthCounter()
 	n.storageManager = storageManager
+	n.resCtx = resourcesCtx
 
 	var err error
 	// nil if disabled.
@@ -183,9 +186,33 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 			go m.RecordBandwidth(resourcesCtx, bwc)
 		}
 
-		go n.syncCl.PurgeBadPeers(n.host.Network().ClosePeer)
+		go n.PurgeBadPeers()
 	}
 	return nil
+}
+
+func (n *NodeP2P) PurgeBadPeers() {
+	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			peers := n.Host().Network().Peers()
+			for _, p := range peers {
+				addrs := n.host.Peerstore().Addrs(p)
+				if len(addrs) > 0 {
+					continue
+				}
+				err := n.host.Network().ClosePeer(p)
+				if err != nil {
+					log.Info("Purge bad peer failed", "peer", p.String(), "error", err.Error())
+				}
+			}
+		case <-n.resCtx.Done():
+			log.Info("P2P PurgeBadPeers stop")
+			return
+		}
+	}
 }
 
 func (n *NodeP2P) RequestL2Range(ctx context.Context, start, end uint64) (uint64, error) {

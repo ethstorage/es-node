@@ -734,7 +734,6 @@ func (s *SyncClient) assignBlobRangeTasks() {
 					if e, ok := err.(*yamux.Error); ok && e.Timeout() {
 						log.Debug("Request blobs timeout", "peer", pr.id.String(), "err", err)
 					} else if returnCode == streamError && strings.Contains(err.Error(), "no addresses") {
-						pr.isBad = true
 						log.Debug("Failed to request blobs as newStream failed", "peer", pr.id.String(), "err", err)
 					} else {
 						log.Info("Failed to request blobs", "peer", pr.id.String(), "err", err)
@@ -824,7 +823,6 @@ func (s *SyncClient) assignBlobHealTasks() {
 				if e, ok := err.(*yamux.Error); ok && e.Timeout() {
 					log.Debug("Request blobs timeout", "peer", pr.id.String(), "err", err)
 				} else if returnCode == streamError && strings.Contains(err.Error(), "no addresses") {
-					pr.isBad = true
 					log.Debug("Failed to request blobs as newStream failed", "peer", pr.id.String(), "err", err)
 				} else {
 					log.Info("Failed to request blobs", "peer", pr.id.String(), "err", err)
@@ -1265,40 +1263,6 @@ func (s *SyncClient) ReportPeerSummary() {
 			return
 		}
 	}
-}
-
-func (s *SyncClient) PurgeBadPeers(closePeerFunc func(peer.ID) error) {
-	ticker := time.NewTicker(time.Minute)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ticker.C:
-			peers := s.getBadPeers()
-			for _, p := range peers {
-				err := closePeerFunc(p)
-				if err != nil {
-					log.Info("Purge bad peer failed", "peer", p.String(), "error", err.Error())
-				}
-				log.Debug("Purge bad peer", "peer", p.String())
-			}
-		case <-s.resCtx.Done():
-			log.Info("P2P PurgeBadPeers stop")
-			return
-		}
-	}
-}
-
-// TODO we can add more rules for bad peers
-func (s *SyncClient) getBadPeers() []peer.ID {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-	peers := make([]peer.ID, 0)
-	for id, pr := range s.peers {
-		if pr.isBad {
-			peers = append(peers, id)
-		}
-	}
-	return peers
 }
 
 func (s *SyncClient) needThisPeer(contractShards map[common.Address][]uint64) bool {
