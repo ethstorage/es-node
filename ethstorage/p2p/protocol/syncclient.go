@@ -1084,6 +1084,18 @@ func (s *SyncClient) FillFileWithEmptyBlob(start, limit uint64) (uint64, error) 
 	return next, err
 }
 
+func (s *SyncClient) Peers() []peer.ID {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	peers := make([]peer.ID, 0, len(s.peers))
+	for pr := range s.peers {
+		peers = append(peers, pr)
+	}
+
+	return peers
+}
+
 // onResult is exclusively called by the main loop, and has thus direct access to the request bookkeeping state.
 // This function verifies if the result is canonical, and either promotes the result or moves the result into quarantine.
 func (s *SyncClient) onResult(blobs []*BlobPayload) (uint64, uint64, []uint64, error) {

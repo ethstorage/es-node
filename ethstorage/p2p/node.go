@@ -197,7 +197,7 @@ func (n *NodeP2P) PurgeBadPeers() {
 	for {
 		select {
 		case <-ticker.C:
-			peers := n.Host().Network().Peers()
+			peers := n.syncCl.Peers()
 			for _, p := range peers {
 				addrs := n.host.Peerstore().Addrs(p)
 				if len(addrs) > 0 {
