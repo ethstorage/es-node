@@ -31,6 +31,7 @@ type L1API interface {
 	BlockNumber(ctx context.Context) (uint64, error)
 	HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error)
 	EstimateGas(ctx context.Context, msg ethereum.CallMsg) (uint64, error)
+	L1RPCURL() string
 }
 
 type MiningProver interface {

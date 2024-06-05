@@ -26,13 +26,14 @@ var (
 	mineSig = crypto.Keccak256Hash([]byte(`mine(uint256,uint256,address,uint256,bytes32[],uint256[],bytes,bytes[],bytes[])`))
 )
 
-func NewL1MiningAPI(l1 *eth.PollingClient, lg log.Logger) *l1MiningAPI {
-	return &l1MiningAPI{l1, lg}
+func NewL1MiningAPI(l1 *eth.PollingClient, l1URL string, lg log.Logger) *l1MiningAPI {
+	return &l1MiningAPI{l1, l1URL, lg}
 }
 
 type l1MiningAPI struct {
 	*eth.PollingClient
-	lg log.Logger
+	l1URL string
+	lg    log.Logger
 }
 
 func (m *l1MiningAPI) GetMiningInfo(ctx context.Context, contract common.Address, shardIdx uint64) (*miningInfo, error) {
@@ -149,4 +150,8 @@ func (m *l1MiningAPI) SuggestGasPrices(ctx context.Context, cfg Config) (*big.In
 		m.lg.Info("Compute gas fee cap done", "gasFeeCap", gasFeeCap, "predictedGasPrice", predictedGasPrice)
 	}
 	return tip, gasFeeCap, predictedGasPrice, nil
+}
+
+func (m *l1MiningAPI) L1RPCURL() string {
+	return m.l1URL
 }

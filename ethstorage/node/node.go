@@ -113,7 +113,7 @@ func (n *EsNode) init(ctx context.Context, cfg *Config) error {
 	if err := n.initL2(ctx, cfg); err != nil {
 		return err
 	}
-	if err := n.initMiner(ctx, cfg); err != nil {
+	if err := n.initMiner(cfg); err != nil {
 		return err
 	}
 
@@ -252,12 +252,12 @@ func (n *EsNode) initMetricsServer(ctx context.Context, cfg *Config) error {
 	return nil
 }
 
-func (n *EsNode) initMiner(ctx context.Context, cfg *Config) error {
+func (n *EsNode) initMiner(cfg *Config) error {
 	if cfg.Mining == nil {
 		// not enabled
 		return nil
 	}
-	l1api := miner.NewL1MiningAPI(n.l1Source, n.log)
+	l1api := miner.NewL1MiningAPI(n.l1Source, cfg.L1.L1NodeAddr, n.log)
 	pvr := prover.NewKZGPoseidonProver(
 		cfg.Mining.ZKWorkingDir,
 		cfg.Mining.ZKeyFileName,

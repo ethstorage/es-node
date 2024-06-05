@@ -19,7 +19,7 @@ func newTxMgrConfig(l1Addr string, signerFactory opcrypto.SignerFactory) (txmgr.
 	cfg := txmgr.CLIConfig{
 		L1RPCURL: l1Addr,
 		// Number of confirmations which we will wait after sending a transaction
-		NumConfirmations: uint64(3),
+		NumConfirmations: uint64(2),
 		// Number of ErrNonceTooLow observations required to give up on a tx at a particular nonce without receiving confirmation
 		SafeAbortNonceTooLowCount: uint64(3),
 		// The multiplier applied to fee suggestions to put a hard limit on fee increases
@@ -27,7 +27,7 @@ func newTxMgrConfig(l1Addr string, signerFactory opcrypto.SignerFactory) (txmgr.
 		// Minimum threshold (in Wei) at which the FeeLimitMultiplier takes effect.
 		FeeLimitThresholdGwei: 100.0,
 		// Duration we will wait before resubmitting a transaction to L1
-		ResubmissionTimeout: 48 * time.Second,
+		ResubmissionTimeout: 24 * time.Second,
 		// NetworkTimeout is the allowed duration for a single network request.
 		NetworkTimeout: 10 * time.Second,
 		// Timeout for aborting a tx send if the tx does not make it to the mempool.
