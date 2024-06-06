@@ -151,7 +151,7 @@ func EsNodeMain(ctx *cli.Context) error {
 			log.Info("pprof server started", "addr", net.JoinHostPort(cfg.Pprof.ListenAddr, strconv.Itoa(cfg.Pprof.ListenPort)))
 
 		}()
-		defer httpServer.Close()
+		defer httpServer.Stop(context.Background())
 	}
 
 	log.Info("Storage node started")
