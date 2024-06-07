@@ -37,10 +37,7 @@ type StreamCtxFn func() context.Context
 // Rate-limits always apply, and are making sure the request/response throughput is not too fast, instead of too slow.
 const (
 	maxGossipSize = 10 * (1 << 20)
-	// timeout for writing the request as client. Can be as long as serverReadRequestTimeout
-	clientWriteRequestTimeout = time.Second * 10
-	// timeout for reading a response of a serving peer as client. Can be as long as serverWriteChunkTimeout
-	clientReadResponseTimeout = time.Second * 10
+
 	// after the rate-limit reservation hits the max throttle delay, give up on serving a request and just close the stream
 	maxThrottleDelay = time.Second * 20
 
@@ -85,6 +82,24 @@ func MakeStreamHandler(resourcesCtx context.Context, log log.Logger, fn requestH
 }
 
 type newStreamFn func(ctx context.Context, peerId peer.ID, protocolId ...protocol.ID) (network.Stream, error)
+
+type capacitySort struct {
+	ids  []peer.ID
+	caps []float64
+}
+
+func (s *capacitySort) Len() int {
+	return len(s.ids)
+}
+
+func (s *capacitySort) Less(i, j int) bool {
+	return s.caps[i] < s.caps[j]
+}
+
+func (s *capacitySort) Swap(i, j int) {
+	s.ids[i], s.ids[j] = s.ids[j], s.ids[i]
+	s.caps[i], s.caps[j] = s.caps[j], s.caps[i]
+}
 
 type SyncClientMetrics interface {
 	ClientGetBlobsByRangeEvent(peerID string, resultCode byte, duration time.Duration)
@@ -160,9 +175,8 @@ type SyncClient struct {
 	peers                      map[peer.ID]*Peer
 	idlerPeers                 map[peer.ID]struct{} // Peers that aren't serving requests
 	runningFillEmptyTaskTreads int                  // Number of working threads for processing empty task
-
-	peerJoin chan peer.ID
-	update   chan struct{} // Notification channel for possible sync progression
+	peerJoin                   chan peer.ID
+	update                     chan struct{} // Notification channel for possible sync progression
 
 	// resource context: all peers and mainLoop tasks inherit this, and origin shutting down once resCancel() is called.
 	resCtx    context.Context
@@ -187,7 +201,7 @@ func NewSyncClient(log log.Logger, cfg *rollup.EsConfig, newStream newStreamFn, 
 	} else if runtime.NumCPU() > 2 {
 		maxFillEmptyTaskTreads = runtime.NumCPU() - 2
 	}
-	maxKvCountPerReq = params.MaxRequestSize / storageManager.MaxKvSize()
+	maxKvCountPerReq = params.InitRequestSize / storageManager.MaxKvSize()
 	shardCount := len(storageManager.Shards())
 	if m == nil {
 		m = metrics.NoopMetrics
@@ -525,7 +539,7 @@ func (s *SyncClient) AddPeer(id peer.ID, shards map[common.Address][]uint64, dir
 		return false
 	}
 	// add new peer routine
-	pr := NewPeer(0, s.cfg.L2ChainID, id, s.newStreamFn, direction, shards)
+	pr := NewPeer(0, s.cfg.L2ChainID, id, s.newStreamFn, direction, s.syncerParams.InitRequestSize, s.storageManager.MaxKvSize(), shards)
 	s.peers[id] = pr
 
 	s.idlerPeers[id] = struct{}{}
@@ -573,7 +587,7 @@ func (s *SyncClient) RequestL2Range(start, end uint64) (uint64, error) {
 	for _, pr := range s.peers {
 		id := rand.Uint64()
 		var packet BlobsByRangePacket
-		_, err := pr.RequestBlobsByRange(id, s.storageManager.ContractAddress(), start/s.storageManager.KvEntries(), start, end, s.syncerParams.MaxRequestSize, &packet)
+		_, err := pr.RequestBlobsByRange(id, s.storageManager.ContractAddress(), start/s.storageManager.KvEntries(), start, end, &packet)
 		if err != nil {
 			return 0, err
 		}
@@ -593,7 +607,7 @@ func (s *SyncClient) RequestL2List(indexes []uint64) (uint64, error) {
 	for _, pr := range s.peers {
 		id := rand.Uint64()
 		var packet BlobsByListPacket
-		_, err := pr.RequestBlobsByList(id, s.storageManager.ContractAddress(), indexes[0]/s.storageManager.KvEntries(), indexes, s.syncerParams.MaxRequestSize, &packet)
+		_, err := pr.RequestBlobsByList(id, s.storageManager.ContractAddress(), indexes[0]/s.storageManager.KvEntries(), indexes, &packet)
 		if err != nil {
 			return 0, err
 		}
@@ -674,7 +688,7 @@ func (s *SyncClient) assignBlobRangeTasks() {
 
 	// Iterate over all the tasks and try to find a pending one
 	for _, t := range s.tasks {
-		maxRange := s.syncerParams.MaxRequestSize / ethstorage.ContractToShardManager[t.Contract].MaxKvSize() * 2
+		maxRange := maxRequestSize / ethstorage.ContractToShardManager[t.Contract].MaxKvSize() * 2
 		subTaskCount := len(t.SubTasks)
 		for idx := 0; idx < subTaskCount; idx++ {
 			pr := s.getIdlePeerForTask(t)
@@ -720,7 +734,7 @@ func (s *SyncClient) assignBlobRangeTasks() {
 				start := time.Now()
 				var packet BlobsByRangePacket
 				// Attempt to send the remote request and revert if it fails
-				returnCode, err := pr.RequestBlobsByRange(req.id, req.contract, req.shardId, req.origin, req.limit, s.syncerParams.MaxRequestSize, &packet)
+				returnCode, err := pr.RequestBlobsByRange(req.id, req.contract, req.shardId, req.origin, req.limit, &packet)
 				s.metrics.ClientGetBlobsByRangeEvent(req.peer.String(), returnCode, time.Since(start))
 
 				s.lock.Lock()
@@ -733,6 +747,7 @@ func (s *SyncClient) assignBlobRangeTasks() {
 				if err != nil {
 					if e, ok := err.(*yamux.Error); ok && e.Timeout() {
 						log.Debug("Request blobs timeout", "peer", pr.id.String(), "err", err)
+						pr.tracker.Update(0, 0)
 					} else if returnCode == streamError && strings.Contains(err.Error(), "no addresses") {
 						log.Debug("Failed to request blobs as newStream failed", "peer", pr.id.String(), "err", err)
 					} else {
@@ -752,6 +767,7 @@ func (s *SyncClient) assignBlobRangeTasks() {
 					Blobs: packet.Blobs,
 					time:  time.Now(),
 				}
+				pr.tracker.Update(time.Since(req.time), len(packet.Blobs)*int(s.storageManager.MaxKvSize()))
 				s.OnBlobsByRange(res)
 			}(pr.id)
 		}
@@ -770,7 +786,7 @@ func (s *SyncClient) assignBlobHealTasks() {
 	// Iterate over all the tasks and try to find a pending one
 	for _, t := range s.tasks {
 		// All the kvs are downloading, wait for request time or success
-		batch := s.syncerParams.MaxRequestSize / ethstorage.ContractToShardManager[t.Contract].MaxKvSize() * 2
+		batch := maxRequestSize / ethstorage.ContractToShardManager[t.Contract].MaxKvSize() * 2
 
 		// kvHealTask pending retrieval, try to find an idle peer. If no such peer
 		// exists, we probably assigned tasks for all (or they are stateless).
@@ -809,7 +825,7 @@ func (s *SyncClient) assignBlobHealTasks() {
 			start := time.Now()
 			var packet BlobsByListPacket
 			// Attempt to send the remote request and revert if it fails
-			returnCode, err := pr.RequestBlobsByList(req.id, req.contract, req.shardId, req.indexes, s.syncerParams.MaxRequestSize, &packet)
+			returnCode, err := pr.RequestBlobsByList(req.id, req.contract, req.shardId, req.indexes, &packet)
 			s.metrics.ClientGetBlobsByListEvent(req.peer.String(), returnCode, time.Since(start))
 
 			s.lock.Lock()
@@ -822,6 +838,7 @@ func (s *SyncClient) assignBlobHealTasks() {
 			if err != nil {
 				if e, ok := err.(*yamux.Error); ok && e.Timeout() {
 					log.Debug("Request blobs timeout", "peer", pr.id.String(), "err", err)
+					pr.tracker.Update(0, 0)
 				} else if returnCode == streamError && strings.Contains(err.Error(), "no addresses") {
 					log.Debug("Failed to request blobs as newStream failed", "peer", pr.id.String(), "err", err)
 				} else {
@@ -840,6 +857,7 @@ func (s *SyncClient) assignBlobHealTasks() {
 				Blobs: packet.Blobs,
 				time:  time.Now(),
 			}
+			pr.tracker.Update(time.Since(req.time), len(packet.Blobs)*int(s.storageManager.MaxKvSize()))
 			s.OnBlobsByList(res)
 		}(pr.ID())
 	}
@@ -898,16 +916,26 @@ func (s *SyncClient) assignFillEmptyBlobTasks() {
 }
 
 func (s *SyncClient) getIdlePeerForTask(t *task) *Peer {
+	idlers := &capacitySort{
+		ids:  make([]peer.ID, 0, len(s.idlerPeers)),
+		caps: make([]float64, 0, len(s.idlerPeers)),
+	}
 	for id := range s.idlerPeers {
 		if _, ok := t.statelessPeers[id]; ok {
 			continue
 		}
 		p, ok := s.peers[id]
 		if ok && p.IsShardExist(t.Contract, t.ShardId) {
-			return p
+			idlers.ids = append(idlers.ids, id)
+			idlers.caps = append(idlers.caps, p.tracker.capacity)
 		}
 	}
-	return nil
+	if len(idlers.ids) == 0 {
+		return nil
+	}
+	sort.Sort(sort.Reverse(idlers))
+
+	return s.peers[idlers.ids[0]]
 }
 
 // OnBlobsByRange is a callback method to invoke when a batch of Contract

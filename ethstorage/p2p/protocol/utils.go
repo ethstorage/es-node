@@ -18,10 +18,16 @@ import (
 const (
 	streamError = 254
 	clientError = 255
+
+	// timeout for reading / writing the request / response through P2P.
+	p2pReadWriteTimeout = time.Second * 10
+
+	// rttEstimateFactor is a multiplier used to estimate the maximum round-trip time to a target request using p2pReadWriteTimeout.
+	rttEstimateFactor = 0.8
 )
 
 func WriteMsg(stream network.Stream, msg *Msg) error {
-	_ = stream.SetWriteDeadline(time.Now().Add(clientWriteRequestTimeout))
+	_ = stream.SetWriteDeadline(time.Now().Add(p2pReadWriteTimeout))
 	// write return code
 	n, err := stream.Write([]byte{msg.ReturnCode})
 	if err != nil {
@@ -52,7 +58,7 @@ func WriteMsg(stream network.Stream, msg *Msg) error {
 }
 
 func ReadMsg(stream network.Stream) ([]byte, byte, error) {
-	_ = stream.SetReadDeadline(time.Now().Add(clientReadResponseTimeout))
+	_ = stream.SetReadDeadline(time.Now().Add(p2pReadWriteTimeout))
 	var returnCode [1]byte
 	if _, err := io.ReadFull(stream, returnCode[:]); err != nil {
 		return nil, clientError, fmt.Errorf("failed to read result part of response: %w", err)

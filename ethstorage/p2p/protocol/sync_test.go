@@ -42,7 +42,7 @@ const (
 var (
 	contract = common.HexToAddress("0x0000000000000000000000000000000003330001")
 	empty    = make([]byte, 0)
-	params   = SyncerParams{MaxPeers: 30, MaxRequestSize: uint64(4 * 1024 * 1024), SyncConcurrency: 16, FillEmptyConcurrency: 16, MetaDownloadBatchSize: 16}
+	params   = SyncerParams{MaxPeers: 30, InitRequestSize: uint64(4 * 1024 * 1024), SyncConcurrency: 16, FillEmptyConcurrency: 16, MetaDownloadBatchSize: 16}
 	testLog  = log.New("TestSync")
 	prover   = prv.NewKZGProver(testLog)
 )
@@ -1046,7 +1046,7 @@ func TestAddPeerDuringSyncing(t *testing.T) {
 	}
 	remoteHost0 := createRemoteHost(t, ctx, rollupCfg, smr0, db, m, testLog)
 	connect(t, localHost, remoteHost0, shardMap, shardMap)
-	time.Sleep(2 * time.Second)
+	time.Sleep(3 * time.Second)
 
 	if syncCl.syncDone {
 		t.Fatalf("sync state %v is not match with expected state %v, peer count %d", syncCl.syncDone, false, len(syncCl.peers))
@@ -1064,7 +1064,7 @@ func TestAddPeerDuringSyncing(t *testing.T) {
 	}
 	remoteHost1 := createRemoteHost(t, ctx, rollupCfg, smr1, db, m, testLog)
 	connect(t, localHost, remoteHost1, shardMap, shardMap)
-	checkStall(t, 3, mux, cancel)
+	checkStall(t, 4, mux, cancel)
 
 	if !syncCl.syncDone {
 		t.Fatalf("sync state %v is not match with expected state %v, peer count %d", syncCl.syncDone, true, len(syncCl.peers))
@@ -1182,7 +1182,7 @@ func TestAddPeerAfterSyncDone(t *testing.T) {
 	}
 	remoteHost0 := createRemoteHost(t, ctx, rollupCfg, smr0, db, m, testLog)
 	connect(t, localHost, remoteHost0, shardMap, shardMap)
-	checkStall(t, 3, mux, cancel)
+	checkStall(t, 4, mux, cancel)
 
 	if !syncCl.syncDone {
 		t.Fatalf("sync state %v is not match with expected state %v, peer count %d", syncCl.syncDone, true, len(syncCl.peers))
