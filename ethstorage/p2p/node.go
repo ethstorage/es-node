@@ -191,6 +191,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 	return nil
 }
 
+// PurgeBadPeers will close peers that have no addresses in the host.peerstore due to expired ttl.
 func (n *NodeP2P) PurgeBadPeers() {
 	ticker := time.NewTicker(time.Minute)
 	defer ticker.Stop()
