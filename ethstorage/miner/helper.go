@@ -28,7 +28,7 @@ func defaultTxMgrConfig(chainID *big.Int, l1Addr string, signerFactory opcrypto.
 		// NetworkTimeout is the allowed duration for a single network request.
 		NetworkTimeout: 10 * time.Second,
 		// Timeout for aborting a tx send if the tx does not make it to the mempool.
-		TxNotInMempoolTimeout: 2 * time.Minute,
+		TxNotInMempoolTimeout: blockTooOldTimeout,
 		// Frequency to poll for receipts
 		ReceiptQueryInterval: 12 * time.Second,
 	}

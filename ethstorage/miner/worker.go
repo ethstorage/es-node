@@ -31,6 +31,7 @@ const (
 	sampleSizeBits           = 5  // 32 bytes
 	slot                     = 12 // seconds
 	miningTransactionTimeout = 50 // seconds
+	blockTooOldTimeout       = 64 * slot
 )
 
 var (
@@ -463,87 +464,6 @@ func (w *worker) resultLoop() {
 	}
 }
 
-func (w *worker) submitMinedResult(rst result) error {
-	w.lg.Debug("Submit mined result", "shard", rst.startShardId, "block", rst.blockNumber, "nonce", rst.nonce)
-	calldata, err := w.l1API.ComposeCalldata(context.Background(), rst)
-	if err != nil {
-		w.lg.Error("Failed to compose calldata", "error", err)
-		return err
-	}
-	toAddr := w.storageMgr.ContractAddress()
-	tip, gasFeeCap, predictedGasPrice, err := w.l1API.SuggestGasPrices(context.Background(), w.config)
-	if err != nil {
-		w.lg.Error("Failed to suggest gas prices", "error", err)
-		return err
-	}
-	w.lg.Info("Suggested gas prices", "tip", tip, "gasFeeCap", gasFeeCap, "predictedGasPrice", predictedGasPrice)
-	estimatedGas, err := w.l1API.EstimateGas(context.Background(), ethereum.CallMsg{
-		From:      w.config.SignerAddr,
-		To:        &toAddr,
-		GasTipCap: tip,
-		GasFeeCap: gasFeeCap,
-		Value:     common.Big0,
-		Data:      calldata,
-	})
-	if err != nil {
-		w.lg.Error("Estimate gas failed", "error", err.Error())
-		return fmt.Errorf("failed to estimate gas: %w", err)
-	}
-	w.lg.Info("Estimated gas done", "gas", estimatedGas)
-	cost := new(big.Int).Mul(new(big.Int).SetUint64(estimatedGas), predictedGasPrice)
-	reward, err := w.l1API.GetMiningReward(rst.startShardId, rst.blockNumber.Int64())
-	if err != nil {
-		w.lg.Error("Query mining reward failed", "error", err.Error())
-		return err
-	}
-	profit := new(big.Int).Sub(reward, cost)
-	w.lg.Info("Estimated reward and cost (in ether)", "reward", weiToEther(reward), "cost", weiToEther(cost), "profit", weiToEther(profit))
-	if profit.Cmp(w.config.MinimumProfit) == -1 {
-		w.lg.Warn("Will drop the tx: the profit will not meet expectation",
-			"profitEstimated", weiToEther(profit),
-			"minimumProfit", weiToEther(w.config.MinimumProfit),
-		)
-		return errDropped
-	}
-	gas := uint64(float64(estimatedGas) * gasBufferRatio)
-	receipt, err := w.txMgr.Send(context.Background(), txmgr.TxCandidate{
-		TxData:   calldata,
-		To:       &toAddr,
-		GasLimit: gas,
-	})
-	if err != nil {
-		w.lg.Error("Send tx failed", "error", err)
-		return err
-	}
-
-	log.Info("Mining transaction confirmed", "shard", rst.startShardId, "block", rst.blockNumber, "txSigner", w.config.SignerAddr.Hex(), "txHash", receipt.TxHash)
-	if receipt.Status == 0 {
-		log.Warn("Mining transaction failed!      ×", "txHash", receipt.TxHash)
-		return fmt.Errorf("failed to mine: %x", receipt.TxHash)
-	}
-	if receipt.Status == 1 {
-		log.Info("Mining transaction success!      √", "miner", rst.miner)
-		log.Info("Mining transaction details", "txHash", receipt.TxHash, "gasUsed", receipt.GasUsed, "effectiveGasPrice", receipt.EffectiveGasPrice)
-		cost := new(big.Int).Mul(new(big.Int).SetUint64(receipt.GasUsed), receipt.EffectiveGasPrice)
-		var reward *big.Int
-		for _, rLog := range receipt.Logs {
-			if rLog.Topics[0] == minedEventSig {
-				// the last param of total unindexed 3
-				reward = new(big.Int).SetBytes(rLog.Data[64:])
-				break
-			}
-		}
-		if reward != nil {
-			log.Info("Mining transaction accounting (in ether)",
-				"reward", weiToEther(reward),
-				"cost", weiToEther(cost),
-				"profit", weiToEther(new(big.Int).Sub(reward, cost)),
-			)
-		}
-	}
-	return nil
-}
-
 // mineTask actually executes a mining task
 func (w *worker) mineTask(t *taskItem) (bool, error) {
 	startTime := time.Now()
@@ -670,4 +590,118 @@ func (w *worker) getMiningData(t *task, sampleIdx []uint64) ([][]byte, []uint64,
 		}
 	}
 	return dataSet, kvIdxs, sampleIdxsInKv, encodingKeys, encodedSamples, nil
+}
+
+func (w *worker) submitMinedResult(rst result) error {
+	w.lg.Debug("Submit mined result", "shard", rst.startShardId, "block", rst.blockNumber, "nonce", rst.nonce)
+	ctx, cancel := context.WithTimeout(context.Background(), blockTooOldTimeout*time.Second)
+	defer cancel()
+
+	calldata, err := w.l1API.ComposeCalldata(ctx, rst)
+	if err != nil {
+		w.lg.Error("Failed to compose calldata", "error", err)
+		return err
+	}
+	reward, err := w.l1API.GetMiningReward(rst.startShardId, rst.blockNumber.Int64())
+	if err != nil {
+		w.lg.Error("Query mining reward failed", "error", err.Error())
+		return err
+	}
+	toAddr := w.storageMgr.ContractAddress()
+	estimatedGas, err := w.estimateGasAndProfit(calldata, &toAddr, reward, false)
+	if err != nil {
+		return err
+	}
+	go func() {
+		ticker := time.NewTicker(slot * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				_, err := w.estimateGasAndProfit(calldata, &toAddr, reward, true)
+				if err == errDropped {
+					cancel()
+					w.lg.Error("Mining transaction dropped due to low profit", "shard", rst.startShardId, "block", rst.blockNumber)
+					return
+				}
+				if err != nil {
+					w.lg.Error("Failed to estimate gas and profit", "error", err)
+					continue
+				}
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+	receipt, err := w.txMgr.Send(ctx, txmgr.TxCandidate{
+		TxData:   calldata,
+		To:       &toAddr,
+		GasLimit: uint64(float64(estimatedGas) * gasBufferRatio),
+	})
+	if err != nil {
+		w.lg.Error("Send tx failed", "error", err)
+		return err
+	}
+
+	log.Info("Mining transaction confirmed", "shard", rst.startShardId, "block", rst.blockNumber, "txSigner", w.config.SignerAddr.Hex(), "txHash", receipt.TxHash)
+	if receipt.Status == 0 {
+		log.Warn("Mining transaction failed!      ×", "txHash", receipt.TxHash)
+		return fmt.Errorf("failed to mine: %x", receipt.TxHash)
+	}
+	if receipt.Status == 1 {
+		log.Info("Mining transaction success!      √", "miner", rst.miner)
+		log.Info("Mining transaction details", "txHash", receipt.TxHash, "gasUsed", receipt.GasUsed, "effectiveGasPrice", receipt.EffectiveGasPrice)
+		cost := new(big.Int).Mul(new(big.Int).SetUint64(receipt.GasUsed), receipt.EffectiveGasPrice)
+		var reward *big.Int
+		for _, rLog := range receipt.Logs {
+			if rLog.Topics[0] == minedEventSig {
+				// the last param of total unindexed 3
+				reward = new(big.Int).SetBytes(rLog.Data[64:])
+				break
+			}
+		}
+		if reward != nil {
+			log.Info("Mining transaction accounting (in ether)",
+				"reward", weiToEther(reward),
+				"cost", weiToEther(cost),
+				"profit", weiToEther(new(big.Int).Sub(reward, cost)),
+			)
+		}
+	}
+	return nil
+}
+
+func (w *worker) estimateGasAndProfit(calldata []byte, to *common.Address, reward *big.Int, promptPrices bool) (uint64, error) {
+	// TODO prompt gas prices if promptPrices
+
+	tip, gasFeeCap, predictedGasPrice, err := w.l1API.SuggestGasPrices(context.Background(), w.config)
+	if err != nil {
+		w.lg.Error("Failed to suggest gas prices", "error", err)
+		return 0, err
+	}
+	w.lg.Info("Suggested gas prices", "tip", tip, "gasFeeCap", gasFeeCap, "predictedGasPrice", predictedGasPrice)
+	estimatedGas, err := w.l1API.EstimateGas(context.Background(), ethereum.CallMsg{
+		From:      w.config.SignerAddr,
+		To:        to,
+		GasTipCap: tip,
+		GasFeeCap: gasFeeCap,
+		Value:     common.Big0,
+		Data:      calldata,
+	})
+	if err != nil {
+		w.lg.Error("Estimate gas failed", "error", err.Error())
+		return 0, fmt.Errorf("failed to estimate gas: %w", err)
+	}
+	w.lg.Info("Estimated gas done", "gas", estimatedGas)
+	cost := new(big.Int).Mul(new(big.Int).SetUint64(estimatedGas), predictedGasPrice)
+	profit := new(big.Int).Sub(reward, cost)
+	w.lg.Info("Estimated reward and cost (in ether)", "reward", weiToEther(reward), "cost", weiToEther(cost), "profit", weiToEther(profit))
+	if profit.Cmp(w.config.MinimumProfit) == -1 {
+		w.lg.Warn("Will drop the tx: the profit will not meet expectation",
+			"profitEstimated", weiToEther(profit),
+			"minimumProfit", weiToEther(w.config.MinimumProfit),
+		)
+		return 0, errDropped
+	}
+	return estimatedGas, nil
 }
