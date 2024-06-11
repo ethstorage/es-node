@@ -52,6 +52,11 @@ var (
 		Usage:  "Address of L1 beacon chain endpoint to use",
 		EnvVar: prefixEnvVar("L1_BEACON_URL"),
 	}
+	DAURL = cli.StringFlag{
+		Name:   "da.url",
+		Usage:  "URL of the custom data availability service",
+		EnvVar: prefixEnvVar("DA_URL"),
+	}
 	// TODO: @Qiang everytime devnet changed, we may need to change it
 	L1BeaconBasedTime = cli.Uint64Flag{
 		Name:   "l1.beacon-based-time",
@@ -209,9 +214,6 @@ var requiredFlags = []cli.Flag{
 	DataDir,
 	StorageFiles,
 	L1NodeAddr,
-	L1BeaconAddr,
-	L1BeaconBasedTime,
-	L1BeaconBasedSlot,
 	StorageL1Contract,
 }
 
@@ -221,6 +223,10 @@ var optionalFlags = []cli.Flag{
 	RollupConfig,
 	L1ChainId,
 	L1BeaconSlotTime,
+	L1BeaconAddr,
+	L1BeaconBasedTime,
+	L1BeaconBasedSlot,
+	DAURL,
 	L1MinDurationForBlobsRequest,
 	L2ChainId,
 	MetricsEnabledFlag,

@@ -41,6 +41,7 @@ type EsNode struct {
 
 	l1Source   *eth.PollingClient     // L1 Client to fetch data from
 	l1Beacon   *eth.BeaconClient      // L1 Beacon Chain to fetch blobs from
+	daClient   *eth.DAClient          // L1 Data Availability Client
 	downloader *downloader.Downloader // L2 Engine to Sync
 	// l2Source  *sources.EngineClient // L2 Execution Engine RPC bindings
 	// rpcSync   *sources.SyncClient   // Alt-sync RPC client, optional (may be nil)
@@ -134,6 +135,7 @@ func (n *EsNode) initL2(ctx context.Context, cfg *Config) error {
 	n.downloader = downloader.NewDownloader(
 		n.l1Source,
 		n.l1Beacon,
+		n.daClient,
 		n.db,
 		n.storageManager,
 		cfg.Downloader.DownloadStart,
@@ -152,7 +154,13 @@ func (n *EsNode) initL1(ctx context.Context, cfg *Config) error {
 	}
 	n.l1Source = client
 
-	n.l1Beacon = eth.NewBeaconClient(cfg.L1.L1BeaconURL, cfg.L1.L1BeaconBasedTime, cfg.L1.L1BeaconBasedSlot, cfg.L1.L1BeaconSlotTime)
+	if cfg.L1.L1BeaconURL != "" {
+		n.l1Beacon = eth.NewBeaconClient(cfg.L1.L1BeaconURL, cfg.L1.L1BeaconBasedTime, cfg.L1.L1BeaconBasedSlot, cfg.L1.L1BeaconSlotTime)
+	} else if cfg.L1.DAURL != "" {
+		n.daClient = eth.NewDAClient(cfg.L1.DAURL)
+	} else {
+		return fmt.Errorf("no L1 beacon or DA URL provided")
+	}
 	return nil
 }
 
