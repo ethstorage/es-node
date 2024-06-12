@@ -150,7 +150,7 @@ func (n *EsNode) initL2(ctx context.Context, cfg *Config) error {
 }
 
 func (n *EsNode) initL1(ctx context.Context, cfg *Config) error {
-	client, err := eth.Dial(cfg.L1.L1NodeAddr, cfg.Storage.L1Contract, n.log)
+	client, err := eth.Dial(cfg.L1.L1NodeAddr, cfg.Storage.L1Contract, cfg.L1.L1BeaconBasedTime, n.log)
 	if err != nil {
 		return fmt.Errorf("failed to create L1 source: %w", err)
 	}

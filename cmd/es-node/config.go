@@ -261,6 +261,7 @@ func NewL1EndpointConfig(ctx *cli.Context) (*eth.L1EndpointConfig, *ethclient.Cl
 	return &eth.L1EndpointConfig{
 		L1ChainID:                    ctx.GlobalUint64(flags.L1ChainId.Name),
 		L1NodeAddr:                   l1NodeAddr,
+		L1BlockTime:                  ctx.GlobalUint64(flags.L1BlockTime.Name),
 		L1BeaconURL:                  ctx.GlobalString(flags.L1BeaconAddr.Name),
 		L1BeaconBasedTime:            ctx.GlobalUint64(flags.L1BeaconBasedTime.Name),
 		L1BeaconBasedSlot:            ctx.GlobalUint64(flags.L1BeaconBasedSlot.Name),
