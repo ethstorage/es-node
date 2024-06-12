@@ -88,6 +88,8 @@ func NewConfig(ctx *cli.Context, log log.Logger) (*node.Config, error) {
 		DataDir:        datadir,
 		StateUploadURL: ctx.GlobalString(flags.StateUploadURL.Name),
 		DBConfig:       db.DefaultDBConfig(),
+		// rpc url to get randao from
+		RandaoSourceURL: ctx.GlobalString(flags.RandaoURL.Name),
 		// 	Driver: *driverConfig,
 		RPC: node.RPCConfig{
 			ListenAddr: ctx.GlobalString(flags.RPCListenAddr.Name),

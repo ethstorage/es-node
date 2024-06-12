@@ -38,11 +38,13 @@ type EsNode struct {
 	l1HeadsSub     ethereum.Subscription // Subscription to get L1 heads (automatically re-subscribes on error)
 	l1SafeSub      ethereum.Subscription // Subscription to get L1 safe blocks, a.k.a. justified data (polling)
 	l1FinalizedSub ethereum.Subscription // Subscription to get L1 Finalized blocks, a.k.a. justified data (polling)
+	randaoHeadsSub ethereum.Subscription // Subscription to get randao heads (automatically re-subscribes on error)
 
-	l1Source   *eth.PollingClient     // L1 Client to fetch data from
-	l1Beacon   *eth.BeaconClient      // L1 Beacon Chain to fetch blobs from
-	daClient   *eth.DAClient          // L1 Data Availability Client
-	downloader *downloader.Downloader // L2 Engine to Sync
+	randaoSource *eth.RandaoClient      // RPC client to fetch randao from
+	l1Source     *eth.PollingClient     // L1 Client to fetch data from
+	l1Beacon     *eth.BeaconClient      // L1 Beacon Chain to fetch blobs from
+	daClient     *eth.DAClient          // L1 Data Availability Client
+	downloader   *downloader.Downloader // L2 Engine to Sync
 	// l2Source  *sources.EngineClient // L2 Execution Engine RPC bindings
 	// rpcSync   *sources.SyncClient   // Alt-sync RPC client, optional (may be nil)
 	server  *rpcServer   // RPC server hosting the rollup-node API
@@ -161,6 +163,13 @@ func (n *EsNode) initL1(ctx context.Context, cfg *Config) error {
 	} else {
 		return fmt.Errorf("no L1 beacon or DA URL provided")
 	}
+	if cfg.RandaoSourceURL != "" {
+		rc, err := eth.DialRandaoSource(cfg.RandaoSourceURL, client.Client, n.log)
+		if err != nil {
+			return fmt.Errorf("failed to create randao source: %w", err)
+		}
+		n.randaoSource = rc
+	}
 	return nil
 }
 
@@ -178,6 +187,24 @@ func (n *EsNode) startL1(cfg *Config) {
 			return
 		}
 		n.log.Error("L1 heads subscription error", "err", err)
+	}()
+
+	// Keep subscribed to the randao heads, which helps miner to get proper random seeds
+	n.randaoHeadsSub = event.ResubscribeErr(time.Second*10, func(ctx context.Context, err error) (event.Subscription, error) {
+		if err != nil {
+			n.log.Warn("Resubscribing after failed randao head subscription", "err", err)
+		}
+		if n.randaoSource != nil {
+			return eth.WatchHeadChanges(n.resourcesCtx, n.randaoSource, n.OnNewRandaoSourceHead)
+		}
+		return eth.WatchHeadChanges(n.resourcesCtx, n.l1Source, n.OnNewRandaoSourceHead)
+	})
+	go func() {
+		err, ok := <-n.randaoHeadsSub.Err()
+		if !ok {
+			return
+		}
+		n.log.Error("Randao heads subscription error", "err", err)
 	}()
 
 	// Poll for the safe L1 block and finalized block,
@@ -265,7 +292,7 @@ func (n *EsNode) initMiner(ctx context.Context, cfg *Config) error {
 		// not enabled
 		return nil
 	}
-	l1api := miner.NewL1MiningAPI(n.l1Source, n.log)
+	l1api := miner.NewL1MiningAPI(n.l1Source, n.randaoSource, n.log)
 	pvr := prover.NewKZGPoseidonProver(
 		cfg.Mining.ZKWorkingDir,
 		cfg.Mining.ZKeyFileName,
@@ -408,6 +435,10 @@ func (n *EsNode) OnNewL1Head(ctx context.Context, sig eth.L1BlockRef) {
 	if n.downloader != nil {
 		n.downloader.OnNewL1Head(sig)
 	}
+}
+
+func (n *EsNode) OnNewRandaoSourceHead(ctx context.Context, sig eth.L1BlockRef) {
+	log.Debug("OnNewRandaoSourceHead", "blockNumber", sig.Number)
 	if n.miner != nil {
 		select {
 		case n.miner.ChainHeadCh <- sig:
@@ -467,7 +498,9 @@ func (n *EsNode) Close() error {
 	if n.l1HeadsSub != nil {
 		n.l1HeadsSub.Unsubscribe()
 	}
-
+	if n.randaoHeadsSub != nil {
+		n.randaoHeadsSub.Unsubscribe()
+	}
 	if n.miner != nil {
 		n.miner.Close()
 	}
@@ -497,6 +530,9 @@ func (n *EsNode) Close() error {
 	// close L1 data source
 	if n.l1Source != nil {
 		n.l1Source.Close()
+	}
+	if n.randaoSource != nil {
+		n.randaoSource.Close()
 	}
 	if n.storageManager != nil {
 		n.storageManager.Close()
