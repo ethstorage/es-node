@@ -79,6 +79,7 @@ func uploadBlob(t *testing.T, data []byte) common.Hash {
 	}
 	sig := crypto.Keccak256Hash([]byte("storageCost()"))
 	bs, err := client.CallContract(context.Background(), ethereum.CallMsg{
+		From: common.Address{},
 		To:   &kzgContract,
 		Data: sig[0:4],
 	}, nil)

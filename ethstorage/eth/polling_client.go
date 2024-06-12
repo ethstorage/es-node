@@ -209,6 +209,7 @@ func (w *PollingClient) GetStorageLastBlobIdx(blockNumber int64) (uint64, error)
 	h := crypto.Keccak256Hash([]byte(`lastKvIdx()`))
 
 	callMsg := ethereum.CallMsg{
+		From: common.Address{},
 		To:   &w.esContract,
 		Data: h[:],
 	}
@@ -250,6 +251,7 @@ func (w *PollingClient) GetKvMetas(kvIndices []uint64, blockNumber int64) ([][32
 
 	calldata := append(h[0:4], dataField...)
 	callMsg := ethereum.CallMsg{
+		From: common.Address{},
 		To:   &w.esContract,
 		Data: calldata,
 	}
@@ -279,6 +281,7 @@ func (w *PollingClient) GetKvMetas(kvIndices []uint64, blockNumber int64) ([][32
 func (w *PollingClient) ReadContractField(fieldName string, blockNumber *big.Int) ([]byte, error) {
 	h := crypto.Keccak256Hash([]byte(fieldName + "()"))
 	msg := ethereum.CallMsg{
+		From: common.Address{},
 		To:   &w.esContract,
 		Data: h[0:4],
 	}

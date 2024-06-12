@@ -57,6 +57,7 @@ func SendBlobTx(
 
 	h := crypto.Keccak256Hash([]byte(`upfrontPayment()`))
 	callMsg := ethereum.CallMsg{
+		From: common.Address{},
 		To:   &to,
 		Data: h[:],
 	}

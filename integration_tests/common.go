@@ -37,6 +37,7 @@ func callVerify(calldata []byte, contract common.Address) error {
 	}
 	defer client.Close()
 	msg := ethereum.CallMsg{
+		From: common.Address{},
 		To:   &contract,
 		Data: calldata,
 	}

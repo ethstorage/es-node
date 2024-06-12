@@ -51,6 +51,7 @@ func initStorageConfig(ctx context.Context, client *ethclient.Client, l1Contract
 func readSlotFromContract(ctx context.Context, client *ethclient.Client, l1Contract common.Address, fieldName string) ([]byte, error) {
 	h := crypto.Keccak256Hash([]byte(fieldName + "()"))
 	msg := ethereum.CallMsg{
+		From: common.Address{},
 		To:   &l1Contract,
 		Data: h[0:4],
 	}
@@ -122,6 +123,7 @@ func getDifficulty(ctx context.Context, client *ethclient.Client, contract commo
 	h := crypto.Keccak256Hash([]byte(`infos(uint256)`))
 	calldata := append(h[0:4], dataField...)
 	msg := ethereum.CallMsg{
+		From: common.Address{},
 		To:   &contract,
 		Data: calldata,
 	}
