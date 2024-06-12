@@ -26,12 +26,12 @@ type BlockInfo interface {
 	// HeaderRLP() ([]byte, error)
 }
 
-func InfoToL1BlockRef(info BlockInfo) L1BlockRef {
+func InfoToL1BlockRef(head *types.Header) L1BlockRef {
 	return L1BlockRef{
-		Hash:       info.Hash(),
-		Number:     info.NumberU64(),
-		ParentHash: info.ParentHash(),
-		Time:       info.Time(),
+		Hash:       head.Hash(),
+		Number:     head.Number.Uint64(),
+		ParentHash: head.ParentHash,
+		Time:       head.Time,
 	}
 }
 
