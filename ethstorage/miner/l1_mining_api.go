@@ -44,7 +44,6 @@ func (m *l1MiningAPI) GetMiningInfo(ctx context.Context, contract common.Address
 	h := crypto.Keccak256Hash([]byte(`infos(uint256)`))
 	calldata := append(h[0:4], dataField...)
 	msg := ethereum.CallMsg{
-		From: common.HexToAddress("0x0000000000000000000000000000000000000001"),
 		To:   &contract,
 		Data: calldata,
 	}
