@@ -51,26 +51,26 @@ type PollingClient struct {
 }
 
 // Dial connects a client to the given URL.
-func Dial(rawurl string, esContract common.Address, lgr log.Logger) (*PollingClient, error) {
-	return DialContext(context.Background(), rawurl, esContract, lgr)
+func Dial(rawurl string, esContract common.Address, pollRate uint64, lgr log.Logger) (*PollingClient, error) {
+	return DialContext(context.Background(), rawurl, esContract, pollRate, lgr)
 }
 
-func DialContext(ctx context.Context, rawurl string, esContract common.Address, lgr log.Logger) (*PollingClient, error) {
+func DialContext(ctx context.Context, rawurl string, esContract common.Address, pollRate uint64, lgr log.Logger) (*PollingClient, error) {
 	c, err := ethclient.DialContext(ctx, rawurl)
 	if err != nil {
 		return nil, err
 	}
-	return NewClient(ctx, c, httpRegex.MatchString(rawurl), esContract, lgr), nil
+	return NewClient(ctx, c, httpRegex.MatchString(rawurl), esContract, pollRate, lgr), nil
 }
 
 // NewClient creates a client that uses the given RPC client.
-func NewClient(ctx context.Context, c *ethclient.Client, isHTTP bool, esContract common.Address, lgr log.Logger) *PollingClient {
+func NewClient(ctx context.Context, c *ethclient.Client, isHTTP bool, esContract common.Address, pollRate uint64, lgr log.Logger) *PollingClient {
 	ctx, cancel := context.WithCancel(ctx)
 	res := &PollingClient{
 		Client:     c,
 		isHTTP:     isHTTP,
 		lgr:        lgr,
-		pollRate:   12 * time.Second, // TODO: @Qiang everytime devnet changed, we may need to change it
+		pollRate:   time.Duration(pollRate) * time.Second,
 		ctx:        ctx,
 		cancel:     cancel,
 		esContract: esContract,

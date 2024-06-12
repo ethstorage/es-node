@@ -52,6 +52,12 @@ var (
 		Usage:  "Address of L1 beacon chain endpoint to use",
 		EnvVar: prefixEnvVar("L1_BEACON_URL"),
 	}
+	L1BlockTime = cli.Uint64Flag{
+		Name:   "l1.block_time",
+		Usage:  "Block time of L1 chain",
+		Value:  12,
+		EnvVar: prefixEnvVar("L1_BLOCK_TIME"),
+	}
 	DAURL = cli.StringFlag{
 		Name:   "da.url",
 		Usage:  "URL of the custom data availability service",
@@ -222,6 +228,7 @@ var optionalFlags = []cli.Flag{
 	Network,
 	RollupConfig,
 	L1ChainId,
+	L1BlockTime,
 	L1BeaconSlotTime,
 	L1BeaconAddr,
 	L1BeaconBasedTime,
