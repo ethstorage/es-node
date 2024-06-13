@@ -320,7 +320,7 @@ func (s *SyncClient) loadSyncStatus() {
 	}
 
 	sort.Slice(s.tasks, func(i, j int) bool {
-		return s.tasks[i].ShardId > s.tasks[j].ShardId
+		return s.tasks[i].ShardId < s.tasks[j].ShardId
 	})
 }
 
