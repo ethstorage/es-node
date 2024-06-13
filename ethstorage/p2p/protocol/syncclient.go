@@ -319,6 +319,10 @@ func (s *SyncClient) loadSyncStatus() {
 		t := s.createTask(sid, lastKvIndex)
 		s.tasks = append(s.tasks, t)
 	}
+
+	sort.Slice(s.tasks, func(i, j int) bool {
+		return s.tasks[i].ShardId < s.tasks[j].ShardId
+	})
 }
 
 func (s *SyncClient) createTask(sid uint64, lastKvIndex uint64) *task {
