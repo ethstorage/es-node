@@ -104,8 +104,8 @@ data_dir="./es-data"
 storage_file_0="$data_dir/shard-0.dat"
 
 common_flags=" --datadir $data_dir \
-  --l1.rpc http://88.99.30.186:8545 \
-  --storage.l1contract 0x804C520d3c084C805E37A35E90057Ac32831F96f \
+  --l1.rpc http://142.132.154.16:8545 \
+  --storage.l1contract 0x90a708C0dca081ca48a9851a8A326775155f87Fd \
   --storage.miner $ES_NODE_STORAGE_MINER \
   "
 
@@ -119,14 +119,9 @@ es_node_start=" --network devnet \
   --miner.zkey $zkey_name \
   --storage.files $storage_file_0 \
   --signer.private-key $ES_NODE_SIGNER_PRIVATE_KEY \
-  --l1.beacon http://88.99.30.186:3500 \
-  --l1.beacon-based-time 1706684472 \
-  --l1.beacon-based-slot 4245906 \
-  --download.thread 32 \
-  --state.upload.url http://metrics.ethstorage.io:8080 \
-  --p2p.listen.udp 30305 \
-  --p2p.sync.concurrency 32 \
-  --p2p.bootnodes enr:-Li4QF3vBkkDQYNLHlVjW5NcEpXAsfNtE1lUVb_LgUQ_Ot2afS8jbDfnYQBDABJud_5Hd1hX_1cNeGVU6Tem06WDlfaGAY1e3vNvimV0aHN0b3JhZ2XbAYDY15SATFINPAhMgF43o16QBXrDKDH5b8GAgmlkgnY0gmlwhEFtP5qJc2VjcDI1NmsxoQK8XODtSv0IsrhBxZmTZBZEoLssb7bTX0YOVl6S0yLxuYN0Y3CCJAaDdWRwgnZh \
+  --da.url http://142.132.154.16:8888 \
+  --randao.url http://88.99.30.186:8545 \
+  --l1.block_time 2 \
 $@"
   
 # create data file for shard 0 if not yet
