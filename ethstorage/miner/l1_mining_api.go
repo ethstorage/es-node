@@ -85,12 +85,13 @@ func (m *l1MiningAPI) GetDataHashes(ctx context.Context, contract common.Address
 }
 
 func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Address, rst result, cfg Config) (common.Hash, error) {
-	m.lg.Debug("Submit mined result", "shard", rst.startShardId, "block", rst.blockNumber, "nonce", rst.nonce)
+	m.lg.Debug("Submit mined result", "shard", rst.startShardId, "block", rst.blockNumber, "result", rst)
 	headerRlp, err := m.getRandaoProof(ctx, rst.blockNumber)
 	if err != nil {
 		m.lg.Error("Failed to get randao proof", "error", err)
 		return common.Hash{}, err
 	}
+	m.lg.Debug("Submit mined result", "headerRlp", common.Bytes2Hex(headerRlp))
 	uint256Type, _ := abi.NewType("uint256", "", nil)
 	uint256Array, _ := abi.NewType("uint256[]", "", nil)
 	addrType, _ := abi.NewType("address", "", nil)
@@ -119,7 +120,7 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 		rst.decodeProof,
 	)
 	calldata := append(mineSig[0:4], dataField...)
-
+	m.lg.Debug("Submit mined result", "calldata", common.Bytes2Hex(calldata))
 	gasPrice := cfg.GasPrice
 	if gasPrice == nil || gasPrice.Cmp(common.Big0) == 0 {
 		suggested, err := m.SuggestGasPrice(ctx)
