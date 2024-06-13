@@ -181,6 +181,11 @@ func (w *RandaoClient) getLatestNumber() (*big.Int, error) {
 }
 
 func (w *RandaoClient) HeaderByNumber(ctx context.Context, blockNumber *big.Int) (*types.Header, error) {
+	header, err := w.c1.HeaderByNumber(ctx, blockNumber)
+	if err != nil {
+		return nil, err
+	}
+	w.lgr.Debug("fetching header by number", "number", blockNumber, "header", header)
 	return w.c1.HeaderByNumber(ctx, blockNumber)
 }
 
