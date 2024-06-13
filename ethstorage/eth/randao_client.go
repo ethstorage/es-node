@@ -175,7 +175,9 @@ func (w *RandaoClient) getLatestNumber() (*big.Int, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to call number() %v", err)
 	}
-	return new(big.Int).SetBytes(ret), nil
+	// L1Block contract cannot get latest blockhash
+	curBlock := new(big.Int).Sub(new(big.Int).SetBytes(ret), common.Big1)
+	return curBlock, nil
 }
 
 func (w *RandaoClient) HeaderByNumber(ctx context.Context, blockNumber *big.Int) (*types.Header, error) {

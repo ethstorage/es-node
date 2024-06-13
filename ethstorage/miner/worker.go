@@ -96,7 +96,7 @@ type result struct {
 
 func (r *result) String() string {
 	return fmt.Sprintf("block: %v, startShardId: %d, miner: %x, nonce: %d, encodedData: %x, masks: %v, inclusiveProofs: %x, decodeProof: %x",
-		r.blockNumber, r.startShardId, r.miner.Hex(), r.nonce, r.encodedData, r.masks, r.inclusiveProofs, r.decodeProof)
+		r.blockNumber, r.startShardId, r.miner, r.nonce, r.encodedData, r.masks, r.inclusiveProofs, r.decodeProof)
 }
 
 // worker is the main object which takes care of storage mining
