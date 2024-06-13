@@ -218,7 +218,7 @@ func (m *l1MiningAPI) getRandaoProof(ctx context.Context, blockNumber *big.Int) 
 	if m.rc != nil {
 		caller = m.rc
 	} else {
-		caller = m
+		caller = m.Client
 	}
 	blockHeader, err = caller.HeaderByNumber(ctx, blockNumber)
 	if err != nil {
