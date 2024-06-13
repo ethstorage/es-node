@@ -16,6 +16,7 @@ import (
 )
 
 const (
+	streamError = 254
 	clientError = 255
 
 	// timeout for reading / writing the request / response through P2P.
