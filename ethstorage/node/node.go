@@ -164,7 +164,7 @@ func (n *EsNode) initL1(ctx context.Context, cfg *Config) error {
 		return fmt.Errorf("no L1 beacon or DA URL provided")
 	}
 	if cfg.RandaoSourceURL != "" {
-		rc, err := eth.DialRandaoSource(cfg.RandaoSourceURL, client.Client, n.log)
+		rc, err := eth.DialRandaoSource(cfg.RandaoSourceURL, client)
 		if err != nil {
 			return fmt.Errorf("failed to create randao source: %w", err)
 		}
