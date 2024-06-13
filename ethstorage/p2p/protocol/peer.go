@@ -95,7 +95,7 @@ func (p *Peer) RequestBlobsByRange(id uint64, contract common.Address, shardId u
 
 	stream, err := p.newStreamFn(ctx, p.id, GetProtocolID(RequestBlobsByRangeProtocolID, p.chainId))
 	if err != nil {
-		return clientError, err
+		return streamError, err
 	}
 	defer func() {
 		if stream != nil {
@@ -125,7 +125,7 @@ func (p *Peer) RequestBlobsByList(id uint64, contract common.Address, shardId ui
 
 	stream, err := p.newStreamFn(ctx, p.id, GetProtocolID(RequestBlobsByListProtocolID, p.chainId))
 	if err != nil {
-		return clientError, err
+		return streamError, err
 	}
 	defer func() {
 		if stream != nil {

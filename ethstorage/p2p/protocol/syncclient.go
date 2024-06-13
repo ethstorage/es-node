@@ -12,6 +12,7 @@ import (
 	"math/rand"
 	"runtime"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -749,8 +750,10 @@ func (s *SyncClient) assignBlobRangeTasks() {
 
 				if err != nil {
 					if e, ok := err.(*yamux.Error); ok && e.Timeout() {
-						log.Debug("Failed to request blobs", "peer", pr.id.String(), "err", err)
+						log.Debug("Request blobs timeout", "peer", pr.id.String(), "err", err)
 						pr.tracker.Update(0, 0)
+					} else if returnCode == streamError && strings.Contains(err.Error(), "no addresses") {
+						log.Debug("Failed to request blobs as newStream failed", "peer", pr.id.String(), "err", err)
 					} else {
 						log.Info("Failed to request blobs", "peer", pr.id.String(), "err", err)
 					}
@@ -838,8 +841,10 @@ func (s *SyncClient) assignBlobHealTasks() {
 
 			if err != nil {
 				if e, ok := err.(*yamux.Error); ok && e.Timeout() {
-					log.Debug("Failed to request blobs", "peer", pr.id.String(), "err", err)
+					log.Debug("Request blobs timeout", "peer", pr.id.String(), "err", err)
 					pr.tracker.Update(0, 0)
+				} else if returnCode == streamError && strings.Contains(err.Error(), "no addresses") {
+					log.Debug("Failed to request blobs as newStream failed", "peer", pr.id.String(), "err", err)
 				} else {
 					log.Info("Failed to request blobs", "peer", pr.id.String(), "err", err)
 				}
@@ -1109,6 +1114,18 @@ func (s *SyncClient) FillFileWithEmptyBlob(start, limit uint64) (uint64, error) 
 	}
 
 	return next, err
+}
+
+func (s *SyncClient) Peers() []peer.ID {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	peers := make([]peer.ID, 0, len(s.peers))
+	for pr := range s.peers {
+		peers = append(peers, pr)
+	}
+
+	return peers
 }
 
 // onResult is exclusively called by the main loop, and has thus direct access to the request bookkeeping state.
