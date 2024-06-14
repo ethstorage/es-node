@@ -686,6 +686,8 @@ func TestSaveAndLoadSyncStatus(t *testing.T) {
 	syncCl.tasks[0].healTask.insert(indexes)
 	syncCl.tasks[0].SubTasks[0].First = 1
 	syncCl.tasks[0].SubTasks[0].next = 33
+	syncCl.tasks[0].state.PeerCount = 60
+	syncCl.tasks[0].state.FillEmptySeconds = expectedSecondsUsed
 	syncCl.tasks[0].state.BlobsSynced = 30
 	syncCl.tasks[0].state.SyncedSeconds = expectedSecondsUsed
 	syncCl.tasks[1].SubTasks = make([]*subTask, 0)
@@ -705,8 +707,12 @@ func TestSaveAndLoadSyncStatus(t *testing.T) {
 	tasks[0].SubTasks[0].First = 5
 	tasks[0].SubTasks[0].next = 5
 	tasks[1].done = false
+
 	if err := compareTasks(tasks, syncCl.tasks); err != nil {
 		t.Fatalf("compare kv task fail. err: %s", err.Error())
+	}
+	if syncCl.tasks[0].state.PeerCount != 0 {
+		t.Fatalf("compare PeerCount fail, expect %d, real %d, the peer count should be clean when reload.", 0, &syncCl.tasks[0].state.PeerCount)
 	}
 	if syncCl.tasks[0].state.BlobsSynced != 30 {
 		t.Fatalf("compare BlobsSynced fail, expect %d, real %d", 30, syncCl.tasks[0].state.BlobsSynced)
