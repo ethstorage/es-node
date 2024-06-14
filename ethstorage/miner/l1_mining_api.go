@@ -85,13 +85,12 @@ func (m *l1MiningAPI) GetDataHashes(ctx context.Context, contract common.Address
 }
 
 func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Address, rst result, cfg Config) (common.Hash, error) {
-	m.lg.Debug("Submit mined result", "shard", rst.startShardId, "block", rst.blockNumber, "result", rst)
+	m.lg.Debug("Submit mined result", "shard", rst.startShardId, "block", rst.blockNumber, "nonce", rst.nonce)
 	headerRlp, err := m.getRandaoProof(ctx, rst.blockNumber)
 	if err != nil {
 		m.lg.Error("Failed to get randao proof", "error", err)
 		return common.Hash{}, err
 	}
-	m.lg.Debug("Submit mined result", "headerRlp", common.Bytes2Hex(headerRlp))
 	uint256Type, _ := abi.NewType("uint256", "", nil)
 	uint256Array, _ := abi.NewType("uint256[]", "", nil)
 	addrType, _ := abi.NewType("address", "", nil)
