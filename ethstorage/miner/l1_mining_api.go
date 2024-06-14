@@ -208,26 +208,22 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 }
 
 func (m *l1MiningAPI) getRandaoProof(ctx context.Context, blockNumber *big.Int) ([]byte, error) {
-	var (
-		caller interface {
-			HeaderByNumber(context.Context, *big.Int) (*types.Header, error)
-		}
-		blockHeader *types.Header
-		err         error
-	)
+	var caller interface {
+		HeaderByNumber(context.Context, *big.Int) (*types.Header, error)
+	}
 	if m.rc != nil {
 		caller = m.rc
 	} else {
 		caller = m.Client
 	}
-	blockHeader, err = caller.HeaderByNumber(ctx, blockNumber)
+	blockHeader, err := caller.HeaderByNumber(ctx, blockNumber)
 	if err != nil {
 		m.lg.Error("Failed to get block header", "number", blockNumber, "error", err)
 		return nil, err
 	}
 	headerRlp, err := rlp.EncodeToBytes(blockHeader)
 	if err != nil {
-		m.lg.Error("Failed to encode block header", "error", err)
+		m.lg.Error("Failed to encode block header in RLP", "error", err)
 		return nil, err
 	}
 	return headerRlp, nil
