@@ -27,8 +27,14 @@ const (
 var httpRegex = regexp.MustCompile("^http(s)?://")
 var ErrSubscriberClosed = errors.New("subscriber closed")
 
+type BlockQuerier interface {
+	GetLatestNumber() (*big.Int, error)
+	HeaderByNumber(ctx context.Context, blockNumber *big.Int) (*types.Header, error)
+}
+
 type PollingClient struct {
 	*ethclient.Client
+	bq           BlockQuerier
 	isHTTP       bool
 	lgr          log.Logger
 	pollRate     time.Duration
@@ -59,11 +65,11 @@ func DialContext(ctx context.Context, rawurl string, esContract common.Address, 
 	if err != nil {
 		return nil, err
 	}
-	return NewClient(ctx, c, httpRegex.MatchString(rawurl), esContract, pollRate, lgr), nil
+	return NewClient(ctx, c, httpRegex.MatchString(rawurl), esContract, pollRate, nil, lgr), nil
 }
 
 // NewClient creates a client that uses the given RPC client.
-func NewClient(ctx context.Context, c *ethclient.Client, isHTTP bool, esContract common.Address, pollRate uint64, lgr log.Logger) *PollingClient {
+func NewClient(ctx context.Context, c *ethclient.Client, isHTTP bool, esContract common.Address, pollRate uint64, bq BlockQuerier, lgr log.Logger) *PollingClient {
 	ctx, cancel := context.WithCancel(ctx)
 	res := &PollingClient{
 		Client:     c,
@@ -76,6 +82,11 @@ func NewClient(ctx context.Context, c *ethclient.Client, isHTTP bool, esContract
 		pollReqCh:  make(chan struct{}, 1),
 		subs:       make(map[int]chan *types.Header),
 		closedCh:   make(chan struct{}),
+	}
+	if bq == nil {
+		res.bq = res
+	} else {
+		res.bq = bq
 	}
 	if isHTTP {
 		go res.pollHeads()
@@ -144,27 +155,27 @@ func (w *PollingClient) pollHeads() {
 		case <-w.pollReqCh:
 			// We don't need backoff here because we'll just try again
 			// after the pollRate elapses.
-			num, err := w.GetLatestNumber()
+			num, err := w.bq.GetLatestNumber()
 			if err != nil {
-				w.lgr.Info("error getting latest l1 block number", "err", err)
+				w.lgr.Info("Error getting latest l1 block number", "number", num, "err", err)
 				reqPollAfter()
 				continue
 			}
 			if w.currL1Number != nil && w.currL1Number.Cmp(num) == 0 {
-				w.lgr.Trace("no change in l1 number, skipping notifications")
+				w.lgr.Trace("No change in l1 number, skipping notifications")
 				reqPollAfter()
 				continue
 			}
 
-			head, err := w.HeaderByNumber(w.ctx, num)
+			head, err := w.bq.HeaderByNumber(w.ctx, num)
 			if err != nil {
-				w.lgr.Error("failed to get header by number", "err", err)
+				w.lgr.Error("Failed to get header by number", "err", err)
 				reqPollAfter()
 				continue
 			}
 			w.currL1Number = num
 
-			w.lgr.Trace("notifying subscribers of new number", "number", num)
+			w.lgr.Trace("Notifying subscribers of new number", "number", num)
 			w.mtx.RLock()
 			for _, sub := range w.subs {
 				sub <- head
@@ -185,7 +196,6 @@ func (w *PollingClient) GetLatestNumber() (*big.Int, error) {
 	if err != nil {
 		return nil, err
 	}
-	w.lgr.Info("DEBUG: GetLatestNumber from BlockNumber()")
 	// The latest blockhash could be empty
 	return new(big.Int).SetUint64(latest - 1), nil
 }

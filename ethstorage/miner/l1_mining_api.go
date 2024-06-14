@@ -223,7 +223,7 @@ func (m *l1MiningAPI) getRandaoProof(ctx context.Context, blockNumber *big.Int) 
 	}
 	blockHeader, err = caller.HeaderByNumber(ctx, blockNumber)
 	if err != nil {
-		m.lg.Error("Failed to get block header", "error", err)
+		m.lg.Error("Failed to get block header", "number", blockNumber, "error", err)
 		return nil, err
 	}
 	headerRlp, err := rlp.EncodeToBytes(blockHeader)
