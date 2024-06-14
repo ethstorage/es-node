@@ -27,22 +27,17 @@ const (
 var httpRegex = regexp.MustCompile("^http(s)?://")
 var ErrSubscriberClosed = errors.New("subscriber closed")
 
-type BlockQuerier interface {
-	GetLatestNumber() (*big.Int, error)
-	HeaderByNumber(ctx context.Context, blockNumber *big.Int) (*types.Header, error)
-}
-
 type PollingClient struct {
 	*ethclient.Client
-	bq           BlockQuerier
-	isHTTP       bool
-	lgr          log.Logger
-	pollRate     time.Duration
-	ctx          context.Context
-	cancel       context.CancelFunc
-	currL1Number *big.Int
-	esContract   common.Address
-	subID        int
+	queryHeader func() (*types.Header, error)
+	isHTTP      bool
+	lgr         log.Logger
+	pollRate    time.Duration
+	ctx         context.Context
+	cancel      context.CancelFunc
+	currHead    *types.Header
+	esContract  common.Address
+	subID       int
 
 	// pollReqCh is used to request new polls of the upstream
 	// RPC client.
@@ -69,7 +64,15 @@ func DialContext(ctx context.Context, rawurl string, esContract common.Address, 
 }
 
 // NewClient creates a client that uses the given RPC client.
-func NewClient(ctx context.Context, c *ethclient.Client, isHTTP bool, esContract common.Address, pollRate uint64, bq BlockQuerier, lgr log.Logger) *PollingClient {
+func NewClient(
+	ctx context.Context,
+	c *ethclient.Client,
+	isHTTP bool,
+	esContract common.Address,
+	pollRate uint64,
+	qh func() (*types.Header, error),
+	lgr log.Logger,
+) *PollingClient {
 	ctx, cancel := context.WithCancel(ctx)
 	res := &PollingClient{
 		Client:     c,
@@ -83,10 +86,10 @@ func NewClient(ctx context.Context, c *ethclient.Client, isHTTP bool, esContract
 		subs:       make(map[int]chan *types.Header),
 		closedCh:   make(chan struct{}),
 	}
-	if bq == nil {
-		res.bq = res
+	if qh == nil {
+		res.queryHeader = res.GetLatestHeader
 	} else {
-		res.bq = bq
+		res.queryHeader = qh
 	}
 	if isHTTP {
 		go res.pollHeads()
@@ -155,27 +158,20 @@ func (w *PollingClient) pollHeads() {
 		case <-w.pollReqCh:
 			// We don't need backoff here because we'll just try again
 			// after the pollRate elapses.
-			num, err := w.bq.GetLatestNumber()
+			head, err := w.queryHeader()
 			if err != nil {
-				w.lgr.Info("Error getting latest l1 block number", "number", num, "err", err)
+				w.lgr.Info("Error getting latest header", "err", err)
 				reqPollAfter()
 				continue
 			}
-			if w.currL1Number != nil && w.currL1Number.Cmp(num) == 0 {
-				w.lgr.Trace("No change in l1 number, skipping notifications")
+			if w.currHead != nil && w.currHead.Hash() == head.Hash() {
+				w.lgr.Trace("No change in head, skipping notifications")
 				reqPollAfter()
 				continue
 			}
 
-			head, err := w.bq.HeaderByNumber(w.ctx, num)
-			if err != nil {
-				w.lgr.Error("Failed to get header by number", "err", err)
-				reqPollAfter()
-				continue
-			}
-			w.currL1Number = num
-
-			w.lgr.Trace("Notifying subscribers of new number", "number", num)
+			w.lgr.Trace("Notifying subscribers of new head", "head", head.Hash())
+			w.currHead = head
 			w.mtx.RLock()
 			for _, sub := range w.subs {
 				sub <- head
@@ -189,15 +185,17 @@ func (w *PollingClient) pollHeads() {
 	}
 }
 
-func (w *PollingClient) GetLatestNumber() (*big.Int, error) {
-	ctx, cancel := context.WithTimeout(w.ctx, 5*time.Second)
+func (w *PollingClient) GetLatestHeader() (*types.Header, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	latest, err := w.BlockNumber(ctx)
 	if err != nil {
+		w.lgr.Error("Failed to get latest block number", "err", err)
 		return nil, err
 	}
 	// The latest blockhash could be empty
-	return new(big.Int).SetUint64(latest - 1), nil
+	number := new(big.Int).SetUint64(latest - 1)
+	return w.HeaderByNumber(ctx, number)
 }
 
 func (w *PollingClient) reqPoll() {

@@ -40,7 +40,7 @@ func DialRandaoSource(ctx context.Context, randaoUrl, rawurl string, pollRate ui
 		return nil, err
 	}
 	bq := &RandaoBlockQuerier{rc, cc, lgr}
-	p := NewClient(ctx, cc, httpRegex.MatchString(rawurl), common.Address{}, pollRate, bq, lgr)
+	p := NewClient(ctx, cc, httpRegex.MatchString(rawurl), common.Address{}, pollRate, bq.GetLatestHeader, lgr)
 	return NewRandaoClient(ctx, p, rc), nil
 }
 
@@ -76,10 +76,7 @@ type RandaoBlockQuerier struct {
 	l  log.Logger
 }
 
-func (q *RandaoBlockQuerier) GetLatestNumber() (*big.Int, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
+func (q *RandaoBlockQuerier) getLatestNumber(ctx context.Context) (*big.Int, error) {
 	h := crypto.Keccak256Hash([]byte("number()"))
 	ret, err := q.cc.CallContract(ctx, ethereum.CallMsg{
 		To:   &l1BlockContract,
@@ -94,7 +91,14 @@ func (q *RandaoBlockQuerier) GetLatestNumber() (*big.Int, error) {
 	return curBlock, nil
 }
 
-func (q *RandaoBlockQuerier) HeaderByNumber(ctx context.Context, blockNumber *big.Int) (*types.Header, error) {
+func (q *RandaoBlockQuerier) GetLatestHeader() (*types.Header, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	blockNumber, err := q.getLatestNumber(ctx)
+	if err != nil {
+		return nil, err
+	}
 	q.l.Debug("Fetching header by number by Randao querier", "number", blockNumber)
 	return q.rc.HeaderByNumber(ctx, blockNumber)
 }
