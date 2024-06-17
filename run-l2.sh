@@ -125,6 +125,7 @@ es_node_start=" --network devnet \
   --download.thread 32 \
   --p2p.listen.udp 30305 \
   --p2p.sync.concurrency 32 \
+  --p2p.bootnodes enr:-Li4QGUAA21O-0pgqnGoBLwvvminrlDjfxhqL6DvXhfOtvNdK871LELAT1Nn-NAa3hUi0Wmb-VIj1qi6fnbyA9yp5RGGAZALHvLnimV0aHN0b3JhZ2XbAYDY15SQpwjA3KCBykiphRqKMmd1FV-H_cGAgmlkgnY0gmlwhEFtMpGJc2VjcDI1NmsxoQJ8_OUONb_H7RMF6kXzZWDut2xriJ5JeKnH2cnb8en0e4N0Y3CCJAaDdWRwgnZh \
 $@"
   
 # create data file for shard 0 if not yet
