@@ -122,6 +122,9 @@ es_node_start=" --network devnet \
   --da.url http://142.132.154.16:8888 \
   --randao.url http://88.99.30.186:8545 \
   --l1.block_time 2 \
+  --download.thread 32 \
+  --p2p.listen.udp 30305 \
+  --p2p.sync.concurrency 32 \
 $@"
   
 # create data file for shard 0 if not yet
