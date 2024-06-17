@@ -196,8 +196,9 @@ func (n *EsNode) startL1(cfg *Config) {
 		}
 		if n.randaoSource != nil {
 			return eth.WatchHeadChanges(n.resourcesCtx, n.randaoSource, n.OnNewRandaoSourceHead)
+		} else {
+			return eth.WatchHeadChanges(n.resourcesCtx, n.l1Source, n.OnNewRandaoSourceHead)
 		}
-		return eth.WatchHeadChanges(n.resourcesCtx, n.l1Source, n.OnNewRandaoSourceHead)
 	})
 	go func() {
 		err, ok := <-n.randaoHeadsSub.Err()

@@ -87,7 +87,7 @@ func NewClient(
 		closedCh:   make(chan struct{}),
 	}
 	if qh == nil {
-		res.queryHeader = res.GetLatestHeader
+		res.queryHeader = res.getLatestHeader
 	} else {
 		res.queryHeader = qh
 	}
@@ -185,7 +185,7 @@ func (w *PollingClient) pollHeads() {
 	}
 }
 
-func (w *PollingClient) GetLatestHeader() (*types.Header, error) {
+func (w *PollingClient) getLatestHeader() (*types.Header, error) {
 	ctx, cancel := context.WithTimeout(w.ctx, 5*time.Second)
 	defer cancel()
 	latest, err := w.BlockNumber(ctx)

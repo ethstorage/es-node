@@ -23,6 +23,7 @@ var l1BlockContract = common.HexToAddress("0x42000000000000000000000000000000000
 // It uses the PollingClient to fetch the latest block number and then fetches the header
 // corresponding to that block number.
 type RandaoClient struct {
+	// inherits PollingClient to reuse SubscribeNewHead
 	*PollingClient
 	// rpc endpoint where randao is fetched from
 	rc *ethclient.Client
