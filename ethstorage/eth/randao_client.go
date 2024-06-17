@@ -25,9 +25,7 @@ var l1BlockContract = common.HexToAddress("0x42000000000000000000000000000000000
 type RandaoClient struct {
 	*PollingClient
 	// rpc endpoint where randao is fetched from
-	rc      *ethclient.Client
-	rCtx    context.Context
-	rCancel context.CancelFunc
+	rc *ethclient.Client
 }
 
 func DialRandaoSource(ctx context.Context, randaoUrl, rawurl string, pollRate uint64, lgr log.Logger) (*RandaoClient, error) {
@@ -46,12 +44,9 @@ func DialRandaoSource(ctx context.Context, randaoUrl, rawurl string, pollRate ui
 
 // NewRandaoClient creates a client that uses the given RPC client.
 func NewRandaoClient(ctx context.Context, p *PollingClient, c *ethclient.Client) *RandaoClient {
-	cCtx, cancel := context.WithCancel(ctx)
 	res := &RandaoClient{
 		PollingClient: p,
 		rc:            c,
-		rCtx:          cCtx,
-		rCancel:       cancel,
 	}
 	return res
 }
@@ -63,7 +58,6 @@ func (w *RandaoClient) HeaderByNumber(ctx context.Context, blockNumber *big.Int)
 
 // Close closes the RandaoClient and the underlying RPC client it talks to.
 func (w *RandaoClient) Close() {
-	w.rCancel()
 	w.rc.Close()
 	w.PollingClient.Close()
 }

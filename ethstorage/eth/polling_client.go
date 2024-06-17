@@ -186,7 +186,7 @@ func (w *PollingClient) pollHeads() {
 }
 
 func (w *PollingClient) GetLatestHeader() (*types.Header, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(w.ctx, 5*time.Second)
 	defer cancel()
 	latest, err := w.BlockNumber(ctx)
 	if err != nil {
