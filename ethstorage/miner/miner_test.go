@@ -64,7 +64,7 @@ func newMiner(t *testing.T, storageMgr *es.StorageManager, client *eth.PollingCl
 		ZKProverMode:     2,
 		ZKeyFileName:     "blob_poseidon2.zkey",
 	}
-	l1api := NewL1MiningAPI(client, lg)
+	l1api := NewL1MiningAPI(client, nil, lg)
 	zkWorkingDir, _ := filepath.Abs("../prover")
 	pvr := prover.NewKZGPoseidonProver(zkWorkingDir, defaultConfig.ZKeyFileName, defaultConfig.ZKProverMode, lg)
 	fd := new(event.Feed)

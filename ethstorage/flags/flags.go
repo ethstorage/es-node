@@ -63,6 +63,11 @@ var (
 		Usage:  "URL of the custom data availability service",
 		EnvVar: prefixEnvVar("DA_URL"),
 	}
+	RandaoURL = cli.StringFlag{
+		Name:   "randao.url",
+		Usage:  "URL of JSON-RPC endpoint to query randao",
+		EnvVar: prefixEnvVar("RANDAO_URL"),
+	}
 	// TODO: @Qiang everytime devnet changed, we may need to change it
 	L1BeaconBasedTime = cli.Uint64Flag{
 		Name:   "l1.beacon-based-time",
@@ -234,6 +239,7 @@ var optionalFlags = []cli.Flag{
 	L1BeaconBasedTime,
 	L1BeaconBasedSlot,
 	DAURL,
+	RandaoURL,
 	L1MinDurationForBlobsRequest,
 	L2ChainId,
 	MetricsEnabledFlag,

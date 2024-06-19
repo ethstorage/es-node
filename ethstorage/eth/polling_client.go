@@ -17,7 +17,6 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/rpc"
 )
 
 const (
@@ -30,14 +29,15 @@ var ErrSubscriberClosed = errors.New("subscriber closed")
 
 type PollingClient struct {
 	*ethclient.Client
-	isHTTP     bool
-	lgr        log.Logger
-	pollRate   time.Duration
-	ctx        context.Context
-	cancel     context.CancelFunc
-	currHead   *types.Header
-	esContract common.Address
-	subID      int
+	queryHeader func() (*types.Header, error)
+	isHTTP      bool
+	lgr         log.Logger
+	pollRate    time.Duration
+	ctx         context.Context
+	cancel      context.CancelFunc
+	currHead    *types.Header
+	esContract  common.Address
+	subID       int
 
 	// pollReqCh is used to request new polls of the upstream
 	// RPC client.
@@ -60,11 +60,19 @@ func DialContext(ctx context.Context, rawurl string, esContract common.Address, 
 	if err != nil {
 		return nil, err
 	}
-	return NewClient(ctx, c, httpRegex.MatchString(rawurl), esContract, pollRate, lgr), nil
+	return NewClient(ctx, c, httpRegex.MatchString(rawurl), esContract, pollRate, nil, lgr), nil
 }
 
 // NewClient creates a client that uses the given RPC client.
-func NewClient(ctx context.Context, c *ethclient.Client, isHTTP bool, esContract common.Address, pollRate uint64, lgr log.Logger) *PollingClient {
+func NewClient(
+	ctx context.Context,
+	c *ethclient.Client,
+	isHTTP bool,
+	esContract common.Address,
+	pollRate uint64,
+	qh func() (*types.Header, error),
+	lgr log.Logger,
+) *PollingClient {
 	ctx, cancel := context.WithCancel(ctx)
 	res := &PollingClient{
 		Client:     c,
@@ -77,6 +85,11 @@ func NewClient(ctx context.Context, c *ethclient.Client, isHTTP bool, esContract
 		pollReqCh:  make(chan struct{}, 1),
 		subs:       make(map[int]chan *types.Header),
 		closedCh:   make(chan struct{}),
+	}
+	if qh == nil {
+		res.queryHeader = res.getLatestHeader
+	} else {
+		res.queryHeader = qh
 	}
 	if isHTTP {
 		go res.pollHeads()
@@ -125,25 +138,6 @@ func (w *PollingClient) SubscribeNewHead(ctx context.Context, ch chan<- *types.H
 	}), nil
 }
 
-func (w *PollingClient) FilterLogsByBlockRange(start *big.Int, end *big.Int, eventSig string) ([]types.Log, error) {
-	topic := crypto.Keccak256Hash([]byte(eventSig))
-
-	// create a new filter query
-	query := ethereum.FilterQuery{
-		Addresses: []common.Address{w.esContract},
-		Topics: [][]common.Hash{
-			{
-				topic,
-			},
-		},
-		FromBlock: start,
-		ToBlock:   end,
-	}
-
-	// retrieve past events that match the filter query
-	return w.FilterLogs(context.Background(), query)
-}
-
 func (w *PollingClient) pollHeads() {
 	// To prevent polls from stacking up in case HTTP requests
 	// are slow, use a similar model to the driver in which
@@ -164,19 +158,19 @@ func (w *PollingClient) pollHeads() {
 		case <-w.pollReqCh:
 			// We don't need backoff here because we'll just try again
 			// after the pollRate elapses.
-			head, err := w.getLatestHeader()
+			head, err := w.queryHeader()
 			if err != nil {
-				w.lgr.Info("error getting latest header", "err", err)
+				w.lgr.Info("Error getting latest header", "err", err)
 				reqPollAfter()
 				continue
 			}
 			if w.currHead != nil && w.currHead.Hash() == head.Hash() {
-				w.lgr.Trace("no change in head, skipping notifications")
+				w.lgr.Trace("No change in head, skipping notifications")
 				reqPollAfter()
 				continue
 			}
 
-			w.lgr.Trace("notifying subscribers of new head", "head", head.Hash())
+			w.lgr.Trace("Notifying subscribers of new head", "head", head.Hash())
 			w.currHead = head
 			w.mtx.RLock()
 			for _, sub := range w.subs {
@@ -194,15 +188,37 @@ func (w *PollingClient) pollHeads() {
 func (w *PollingClient) getLatestHeader() (*types.Header, error) {
 	ctx, cancel := context.WithTimeout(w.ctx, 5*time.Second)
 	defer cancel()
-	head, err := w.HeaderByNumber(ctx, big.NewInt(rpc.LatestBlockNumber.Int64()))
-	if err == nil && head == nil {
-		err = ethereum.NotFound
+	latest, err := w.BlockNumber(ctx)
+	if err != nil {
+		w.lgr.Error("Failed to get latest block number", "err", err)
+		return nil, err
 	}
-	return head, err
+	// The latest blockhash could be empty
+	number := new(big.Int).SetUint64(latest - 1)
+	return w.HeaderByNumber(ctx, number)
 }
 
 func (w *PollingClient) reqPoll() {
 	w.pollReqCh <- struct{}{}
+}
+
+func (w *PollingClient) FilterLogsByBlockRange(start *big.Int, end *big.Int, eventSig string) ([]types.Log, error) {
+	topic := crypto.Keccak256Hash([]byte(eventSig))
+
+	// create a new filter query
+	query := ethereum.FilterQuery{
+		Addresses: []common.Address{w.esContract},
+		Topics: [][]common.Hash{
+			{
+				topic,
+			},
+		},
+		FromBlock: start,
+		ToBlock:   end,
+	}
+
+	// retrieve past events that match the filter query
+	return w.FilterLogs(context.Background(), query)
 }
 
 func (w *PollingClient) GetStorageLastBlobIdx(blockNumber int64) (uint64, error) {
