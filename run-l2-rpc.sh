@@ -19,7 +19,6 @@ es_node_init="init --shard_index 0"
 es_node_start=" --network devnet \
   --storage.files $storage_file_0 \
   --da.url http://142.132.154.16:8888 \
-  --randao.url http://88.99.30.186:8545 \
   --l1.block_time 2 \
   --download.thread 32 \
   --p2p.listen.udp 30305 \
