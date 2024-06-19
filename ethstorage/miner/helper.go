@@ -7,9 +7,9 @@ import (
 	"time"
 
 	opcrypto "github.com/ethereum-optimism/optimism/op-service/crypto"
-	"github.com/ethereum-optimism/optimism/op-service/txmgr"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethstorage/go-ethstorage/ethstorage/miner/txmgr"
 )
 
 func defaultTxMgrConfig(chainID *big.Int, l1Addr string, signerFactory opcrypto.SignerFactory) (txmgr.Config, error) {

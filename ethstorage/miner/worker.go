@@ -13,15 +13,14 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/ethereum-optimism/optimism/op-service/txmgr"
 	"github.com/ethereum-optimism/optimism/op-service/txmgr/metrics"
-	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/log"
 	es "github.com/ethstorage/go-ethstorage/ethstorage"
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
+	"github.com/ethstorage/go-ethstorage/ethstorage/miner/txmgr"
 )
 
 const (
@@ -37,7 +36,7 @@ const (
 var (
 	minedEventSig       = crypto.Keccak256Hash([]byte("MinedBlock(uint256,uint256,uint256,uint256,address,uint256)"))
 	errCh               = make(chan miningError, 10)
-	errDropped          = errors.New("dropped: not enough profit")
+	errNonProfit        = errors.New("not enough profit")
 	SubmissionStatusKey = []byte("SubmissionStatusKey")
 	MiningStatusKey     = []byte("MiningStatusKey")
 )
@@ -429,7 +428,7 @@ func (w *worker) resultLoop() {
 			}
 			if s, ok := w.submissionStates[result.startShardId]; ok {
 				if err != nil {
-					if err == errDropped {
+					if err == errNonProfit {
 						s.Dropped++
 					} else {
 						s.Failed++
@@ -602,41 +601,10 @@ func (w *worker) submitMinedResult(rst result) error {
 		w.lg.Error("Failed to compose calldata", "error", err)
 		return err
 	}
-	reward, err := w.l1API.GetMiningReward(rst.startShardId, rst.blockNumber.Int64())
-	if err != nil {
-		w.lg.Error("Query mining reward failed", "error", err.Error())
-		return err
-	}
 	toAddr := w.storageMgr.ContractAddress()
-	estimatedGas, err := w.estimateGasAndProfit(calldata, &toAddr, reward, false)
-	if err != nil {
-		return err
-	}
-	go func() {
-		ticker := time.NewTicker(slot * time.Second)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-ticker.C:
-				_, err := w.estimateGasAndProfit(calldata, &toAddr, reward, true)
-				if err == errDropped {
-					cancel()
-					w.lg.Error("Mining transaction dropped due to low profit", "shard", rst.startShardId, "block", rst.blockNumber)
-					return
-				}
-				if err != nil {
-					w.lg.Error("Failed to estimate gas and profit", "error", err)
-					continue
-				}
-			case <-ctx.Done():
-				return
-			}
-		}
-	}()
 	receipt, err := w.txMgr.Send(ctx, txmgr.TxCandidate{
-		TxData:   calldata,
-		To:       &toAddr,
-		GasLimit: uint64(float64(estimatedGas) * gasBufferRatio),
+		TxData: calldata,
+		To:     &toAddr,
 	})
 	if err != nil {
 		w.lg.Error("Send tx failed", "error", err)
@@ -671,29 +639,14 @@ func (w *worker) submitMinedResult(rst result) error {
 	return nil
 }
 
-func (w *worker) estimateGasAndProfit(calldata []byte, to *common.Address, reward *big.Int, promptPrices bool) (uint64, error) {
-	// TODO prompt gas prices if promptPrices
-
-	tip, gasFeeCap, predictedGasPrice, err := w.l1API.SuggestGasPrices(context.Background(), w.config)
+func (w *worker) checkProfit(rst result, tip, baseFee *big.Int, gasLimit uint64) error {
+	reward, err := w.l1API.GetMiningReward(rst.startShardId, rst.blockNumber.Int64())
 	if err != nil {
-		w.lg.Error("Failed to suggest gas prices", "error", err)
-		return 0, err
+		w.lg.Warn("Query mining reward failed", "error", err)
+		return err
 	}
-	w.lg.Info("Suggested gas prices", "tip", tip, "gasFeeCap", gasFeeCap, "predictedGasPrice", predictedGasPrice)
-	estimatedGas, err := w.l1API.EstimateGas(context.Background(), ethereum.CallMsg{
-		From:      w.config.SignerAddr,
-		To:        to,
-		GasTipCap: tip,
-		GasFeeCap: gasFeeCap,
-		Value:     common.Big0,
-		Data:      calldata,
-	})
-	if err != nil {
-		w.lg.Error("Estimate gas failed", "error", err.Error())
-		return 0, fmt.Errorf("failed to estimate gas: %w", err)
-	}
-	w.lg.Info("Estimated gas done", "gas", estimatedGas)
-	cost := new(big.Int).Mul(new(big.Int).SetUint64(estimatedGas), predictedGasPrice)
+	//	Suppose `tip + base fee` is the unit gas cost when the tx is confirmed
+	cost := new(big.Int).Mul(new(big.Int).SetUint64(gasLimit), new(big.Int).Add(tip, baseFee))
 	profit := new(big.Int).Sub(reward, cost)
 	w.lg.Info("Estimated reward and cost (in ether)", "reward", weiToEther(reward), "cost", weiToEther(cost), "profit", weiToEther(profit))
 	if profit.Cmp(w.config.MinimumProfit) == -1 {
@@ -701,7 +654,7 @@ func (w *worker) estimateGasAndProfit(calldata []byte, to *common.Address, rewar
 			"profitEstimated", weiToEther(profit),
 			"minimumProfit", weiToEther(w.config.MinimumProfit),
 		)
-		return 0, errDropped
+		return errNonProfit
 	}
-	return estimatedGas, nil
+	return nil
 }

@@ -27,7 +27,6 @@ type L1API interface {
 	GetDataHashes(ctx context.Context, contract common.Address, kvIdxes []uint64) ([]common.Hash, error)
 	GetMiningReward(shard uint64, blockNumber int64) (*big.Int, error)
 	ComposeCalldata(ctx context.Context, rst result) ([]byte, error)
-	SuggestGasPrices(ctx context.Context, cfg Config) (*big.Int, *big.Int, *big.Int, error)
 	BlockNumber(ctx context.Context) (uint64, error)
 	HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error)
 	EstimateGas(ctx context.Context, msg ethereum.CallMsg) (uint64, error)

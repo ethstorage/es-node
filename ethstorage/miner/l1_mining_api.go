@@ -18,10 +18,6 @@ import (
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
 )
 
-const (
-	gasBufferRatio = 1.2
-)
-
 var (
 	mineSig = crypto.Keccak256Hash([]byte(`mine(uint256,uint256,address,uint256,bytes32[],uint256[],bytes,bytes[],bytes[])`))
 )
@@ -121,35 +117,6 @@ func (m *l1MiningAPI) ComposeCalldata(ctx context.Context, rst result) ([]byte, 
 	)
 	calldata := append(mineSig[0:4], dataField...)
 	return calldata, nil
-}
-
-func (m *l1MiningAPI) SuggestGasPrices(ctx context.Context, cfg Config) (*big.Int, *big.Int, *big.Int, error) {
-	tip := cfg.PriorityGasPrice
-	if tip == nil || tip.Cmp(common.Big0) == 0 {
-		suggested, err := m.SuggestGasTipCap(ctx)
-		if err != nil {
-			m.lg.Error("Query gas tip cap failed", "error", err.Error())
-			suggested = common.Big0
-		}
-		tip = suggested
-		m.lg.Info("Query gas tip cap done", "gasTipGap", tip)
-	}
-	gasFeeCap := cfg.GasPrice
-	predictedGasPrice := gasFeeCap
-	if gasFeeCap == nil || gasFeeCap.Cmp(common.Big0) == 0 {
-		blockHeader, err := m.HeaderByNumber(ctx, nil)
-		if err != nil {
-			m.lg.Error("Failed to get block header", "error", err)
-			return nil, nil, nil, err
-		}
-		m.lg.Info("Query base fee done", "baseFee", blockHeader.BaseFee)
-		// Doubling the base fee to ensure the transaction will remain marketable for six consecutive 100% full blocks.
-		gasFeeCap = new(big.Int).Add(tip, new(big.Int).Mul(blockHeader.BaseFee, common.Big2))
-		//	Use `tip + base fee` as predicted gas price that will be used to evaluate the mining profit
-		predictedGasPrice = new(big.Int).Add(tip, blockHeader.BaseFee)
-		m.lg.Info("Compute gas fee cap done", "gasFeeCap", gasFeeCap, "predictedGasPrice", predictedGasPrice)
-	}
-	return tip, gasFeeCap, predictedGasPrice, nil
 }
 
 func (m *l1MiningAPI) L1Info() (*big.Int, string) {
