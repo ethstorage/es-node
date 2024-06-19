@@ -31,7 +31,11 @@ var (
 	priceBumpPercent = big.NewInt(100 + priceBump)
 	oneHundred       = big.NewInt(100)
 	ninetyNine       = big.NewInt(99)
+
+	ErrShouldDrop = errors.New("meet drop criteria")
 )
+
+type ShouldDropFn func(tip, baseFee *big.Int, gasLimit uint64) bool
 
 // TxManager is an interface that allows callers to reliably publish txs,
 // bumping the gas price if needed, and obtain the receipt of the resulting tx.
@@ -52,6 +56,8 @@ type TxManager interface {
 
 	// BlockNumber returns the most recent block number from the underlying network.
 	BlockNumber(ctx context.Context) (uint64, error)
+
+	SetDropCriteria(f ShouldDropFn)
 
 	// Close the underlying connection
 	Close()
@@ -105,6 +111,8 @@ type SimpleTxManager struct {
 	nonceLock sync.RWMutex
 
 	pending atomic.Int64
+
+	checkDropCriteria ShouldDropFn
 }
 
 // NewSimpleTxManager initializes a new SimpleTxManager with the passed Config.
@@ -137,6 +145,10 @@ func (m *SimpleTxManager) From() common.Address {
 
 func (m *SimpleTxManager) BlockNumber(ctx context.Context) (uint64, error) {
 	return m.backend.BlockNumber(ctx)
+}
+
+func (m *SimpleTxManager) SetDropCriteria(f ShouldDropFn) {
+	m.checkDropCriteria = f
 }
 
 func (m *SimpleTxManager) Close() {
@@ -192,6 +204,9 @@ func (m *SimpleTxManager) send(ctx context.Context, candidate TxCandidate) (*typ
 		return tx, err
 	})
 	if err != nil {
+		if err.(*retry.ErrFailedPermanently).LastErr == ErrShouldDrop {
+			return nil, ErrShouldDrop
+		}
 		return nil, fmt.Errorf("failed to create the tx: %w", err)
 	}
 	return m.sendTx(ctx, tx)
@@ -240,6 +255,10 @@ func (m *SimpleTxManager) craftTx(ctx context.Context, candidate TxCandidate) (*
 		rawTx.Gas = gas
 	}
 
+	if m.checkDropCriteria(gasTipCap, basefee, rawTx.Gas) {
+		m.l.Warn("Creating tx failed", "err", "meet drop criteria")
+		return nil, ErrShouldDrop
+	}
 	return m.signWithNextNonce(ctx, rawTx)
 }
 
@@ -358,6 +377,11 @@ func (m *SimpleTxManager) publishTx(ctx context.Context, tx *types.Transaction, 
 		if bumpFeesImmediately {
 			newTx, err := m.increaseGasPrice(ctx, tx)
 			if err != nil {
+				if err == ErrShouldDrop {
+					l.Warn("Transaction dropped", "err", err)
+					m.metr.TxPublished("meet_drop_criteria")
+					return tx, false
+				}
 				l.Error("unable to increase gas", "err", err)
 				m.metr.TxPublished("bump_failed")
 				return tx, false
@@ -514,10 +538,6 @@ func (m *SimpleTxManager) increaseGasPrice(ctx context.Context, tx *types.Transa
 	}
 	bumpedTip, bumpedFee := updateFees(tx.GasTipCap(), tx.GasFeeCap(), tip, basefee, m.l)
 
-	if err := m.checkLimits(tip, basefee, bumpedTip, bumpedFee); err != nil {
-		return nil, err
-	}
-
 	rawTx := &types.DynamicFeeTx{
 		ChainID:    tx.ChainId(),
 		Nonce:      tx.Nonce(),
@@ -551,6 +571,11 @@ func (m *SimpleTxManager) increaseGasPrice(ctx context.Context, tx *types.Transa
 			"gasFeeCap", bumpedFee, "gasTipCap", bumpedTip)
 	}
 	rawTx.Gas = gas
+
+	if m.checkDropCriteria(bumpedTip, bumpedFee, rawTx.Gas) {
+		m.l.Warn("Bumping gas price failed", "err", "meet drop criteria")
+		return nil, ErrShouldDrop
+	}
 
 	ctx, cancel := context.WithTimeout(ctx, m.cfg.NetworkTimeout)
 	defer cancel()

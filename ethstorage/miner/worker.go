@@ -6,7 +6,6 @@ package miner
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"math/big"
 	"sync"
@@ -36,7 +35,6 @@ const (
 var (
 	minedEventSig       = crypto.Keccak256Hash([]byte("MinedBlock(uint256,uint256,uint256,uint256,address,uint256)"))
 	errCh               = make(chan miningError, 10)
-	errNonProfit        = errors.New("not enough profit")
 	SubmissionStatusKey = []byte("SubmissionStatusKey")
 	MiningStatusKey     = []byte("MiningStatusKey")
 )
@@ -428,7 +426,7 @@ func (w *worker) resultLoop() {
 			}
 			if s, ok := w.submissionStates[result.startShardId]; ok {
 				if err != nil {
-					if err == errNonProfit {
+					if err == txmgr.ErrShouldDrop {
 						s.Dropped++
 					} else {
 						s.Failed++
@@ -601,6 +599,27 @@ func (w *worker) submitMinedResult(rst result) error {
 		w.lg.Error("Failed to compose calldata", "error", err)
 		return err
 	}
+	checkProfit := func(tip, baseFee *big.Int, gasLimit uint64) bool {
+		w.lg.Info("Querying mining reward", "shard", rst.startShardId, "block", rst.blockNumber.Int64())
+		reward, err := w.l1API.GetMiningReward(rst.startShardId, rst.blockNumber.Int64())
+		if err != nil {
+			w.lg.Warn("Query mining reward failed", "error", err)
+			return false
+		}
+		//	Suppose `tip + base fee` is the unit gas cost when the tx is confirmed
+		cost := new(big.Int).Mul(new(big.Int).SetUint64(gasLimit), new(big.Int).Add(tip, baseFee))
+		profit := new(big.Int).Sub(reward, cost)
+		w.lg.Info("Estimated reward and cost (in ether)", "reward", weiToEther(reward), "cost", weiToEther(cost), "profit", weiToEther(profit))
+		if profit.Cmp(w.config.MinimumProfit) == -1 {
+			w.lg.Warn("Will drop the tx: the profit will not meet expectation",
+				"profitEstimated", profit,
+				"minimumProfit", w.config.MinimumProfit,
+			)
+			return true
+		}
+		return false
+	}
+	w.txMgr.SetDropCriteria(checkProfit)
 	toAddr := w.storageMgr.ContractAddress()
 	receipt, err := w.txMgr.Send(ctx, txmgr.TxCandidate{
 		TxData: calldata,
@@ -635,26 +654,6 @@ func (w *worker) submitMinedResult(rst result) error {
 				"profit", weiToEther(new(big.Int).Sub(reward, cost)),
 			)
 		}
-	}
-	return nil
-}
-
-func (w *worker) checkProfit(rst result, tip, baseFee *big.Int, gasLimit uint64) error {
-	reward, err := w.l1API.GetMiningReward(rst.startShardId, rst.blockNumber.Int64())
-	if err != nil {
-		w.lg.Warn("Query mining reward failed", "error", err)
-		return err
-	}
-	//	Suppose `tip + base fee` is the unit gas cost when the tx is confirmed
-	cost := new(big.Int).Mul(new(big.Int).SetUint64(gasLimit), new(big.Int).Add(tip, baseFee))
-	profit := new(big.Int).Sub(reward, cost)
-	w.lg.Info("Estimated reward and cost (in ether)", "reward", weiToEther(reward), "cost", weiToEther(cost), "profit", weiToEther(profit))
-	if profit.Cmp(w.config.MinimumProfit) == -1 {
-		w.lg.Warn("Will drop the tx: the profit will not meet expectation",
-			"profitEstimated", weiToEther(profit),
-			"minimumProfit", weiToEther(w.config.MinimumProfit),
-		)
-		return errNonProfit
 	}
 	return nil
 }
