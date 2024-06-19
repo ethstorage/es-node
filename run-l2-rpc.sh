@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # usage:
-# ./run_rpc.sh
+# ./run-l2-rpc.sh
 
 executable="./build/bin/es-node"
 data_dir="./es-data"
