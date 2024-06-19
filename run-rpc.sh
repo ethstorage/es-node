@@ -10,7 +10,7 @@ storage_file_0="$data_dir/shard-0.dat"
 common_flags=" --datadir $data_dir \
   --l1.rpc http://88.99.30.186:8545 \
   --storage.l1contract 0x804C520d3c084C805E37A35E90057Ac32831F96f \
-
+"
 # init shard 0
 es_node_init="init --shard_index 0"
 
