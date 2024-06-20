@@ -45,6 +45,7 @@ type Downloader struct {
 	// others are only accessed by the downloader thread so it is safe to access them in DL thread without locks
 	l1Source                   *eth.PollingClient
 	l1Beacon                   *eth.BeaconClient
+	daClient                   *eth.DAClient
 	db                         ethdb.Database
 	sm                         *ethstorage.StorageManager
 	lastDownloadBlock          int64
@@ -81,6 +82,7 @@ type blockBlobs struct {
 func NewDownloader(
 	l1Source *eth.PollingClient,
 	l1Beacon *eth.BeaconClient,
+	daClient *eth.DAClient,
 	db ethdb.Database,
 	sm *ethstorage.StorageManager,
 	downloadStart int64,
@@ -94,6 +96,7 @@ func NewDownloader(
 		Cache:                      NewBlobCache(),
 		l1Source:                   l1Source,
 		l1Beacon:                   l1Beacon,
+		daClient:                   daClient,
 		db:                         db,
 		sm:                         sm,
 		dumpDir:                    downloadDump,
@@ -327,10 +330,26 @@ func (s *Downloader) downloadRange(start int64, end int64, toCache bool) ([]blob
 			)
 		}
 
-		clBlobs, err := s.l1Beacon.DownloadBlobs(s.l1Beacon.Timestamp2Slot(elBlock.timestamp))
-		if err != nil {
-			s.log.Error("L1 beacon download blob error", "err", err)
-			return nil, err
+		var clBlobs map[common.Hash]eth.Blob
+		if s.l1Beacon != nil {
+			clBlobs, err = s.l1Beacon.DownloadBlobs(s.l1Beacon.Timestamp2Slot(elBlock.timestamp))
+			if err != nil {
+				s.log.Error("L1 beacon download blob error", "err", err)
+				return nil, err
+			}
+		} else if s.daClient != nil {
+			var hashes []common.Hash
+			for _, blob := range elBlock.blobs {
+				hashes = append(hashes, blob.hash)
+			}
+
+			clBlobs, err = s.daClient.DownloadBlobs(hashes)
+			if err != nil {
+				s.log.Error("DA client download blob error", "err", err)
+				return nil, err
+			}
+		} else {
+			return nil, fmt.Errorf("no beacon client or DA client is available")
 		}
 
 		for _, elBlob := range elBlock.blobs {
