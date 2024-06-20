@@ -24,6 +24,8 @@ import (
 type Config struct {
 	L1         eth.L1EndpointConfig
 	Downloader downloader.Config
+	// RPC used to query randao from a layer 1 blockchain when the storage contract is deployed on a layer 2
+	RandaoSourceURL string
 	// L2     L2EndpointSetup
 	// L2Sync L2SyncEndpointSetup
 

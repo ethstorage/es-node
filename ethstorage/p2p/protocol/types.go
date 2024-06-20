@@ -136,7 +136,7 @@ type EthStorageSyncDone struct {
 
 type SyncerParams struct {
 	MaxPeers              int
-	MaxRequestSize        uint64
+	InitRequestSize       uint64
 	SyncConcurrency       uint64
 	FillEmptyConcurrency  int
 	MetaDownloadBatchSize uint64
