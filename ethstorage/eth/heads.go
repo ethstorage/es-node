@@ -91,7 +91,7 @@ func PollBlockChanges(ctx context.Context, log log.Logger, src *PollingClient, f
 // L1BlockRefByLabel returns the [eth.L1BlockRef] for the given block label.
 // Notice, we cannot cache a block reference by label because labels are not guaranteed to be unique.
 func L1BlockRefByLabel(src *PollingClient, ctx context.Context, label rpc.BlockNumber) (L1BlockRef, error) {
-	info, err := src.BlockByNumber(ctx, big.NewInt(label.Int64()))
+	head, err := src.HeaderByNumber(ctx, big.NewInt(label.Int64()))
 	if err != nil {
 		// Both geth and erigon like to serve non-standard errors for the safe and finalized heads, correct that.
 		// This happens when the chain just started and nothing is marked as safe/finalized yet.
@@ -100,6 +100,6 @@ func L1BlockRefByLabel(src *PollingClient, ctx context.Context, label rpc.BlockN
 		}
 		return L1BlockRef{}, fmt.Errorf("failed to fetch head header: %w", err)
 	}
-	ref := InfoToL1BlockRef(info)
+	ref := InfoToL1BlockRef(head)
 	return ref, nil
 }

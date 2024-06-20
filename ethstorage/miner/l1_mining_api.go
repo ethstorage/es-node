@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
@@ -22,12 +23,13 @@ var (
 	mineSig = crypto.Keccak256Hash([]byte(`mine(uint256,uint256,address,uint256,bytes32[],uint256[],bytes,bytes[],bytes[])`))
 )
 
-func NewL1MiningAPI(l1 *eth.PollingClient, l1URL string, lg log.Logger) *l1MiningAPI {
-	return &l1MiningAPI{l1, l1URL, lg}
+func NewL1MiningAPI(l1 *eth.PollingClient, rc *eth.RandaoClient, l1URL string, lg log.Logger) *l1MiningAPI {
+	return &l1MiningAPI{l1, rc, l1URL, lg}
 }
 
 type l1MiningAPI struct {
 	*eth.PollingClient
+	rc    *eth.RandaoClient
 	l1URL string
 	lg    log.Logger
 }
@@ -78,14 +80,9 @@ func (m *l1MiningAPI) GetDataHashes(ctx context.Context, contract common.Address
 }
 
 func (m *l1MiningAPI) ComposeCalldata(ctx context.Context, rst result) ([]byte, error) {
-	blockHeader, err := m.HeaderByNumber(ctx, rst.blockNumber)
+	headerRlp, err := m.getRandaoProof(ctx, rst.blockNumber)
 	if err != nil {
-		m.lg.Error("Failed to get block header", "error", err)
-		return nil, err
-	}
-	headerRlp, err := rlp.EncodeToBytes(blockHeader)
-	if err != nil {
-		m.lg.Error("Failed to encode block header", "error", err)
+		m.lg.Error("Failed to get randao proof", "error", err)
 		return nil, err
 	}
 	uint256Type, _ := abi.NewType("uint256", "", nil)
@@ -117,6 +114,28 @@ func (m *l1MiningAPI) ComposeCalldata(ctx context.Context, rst result) ([]byte, 
 	)
 	calldata := append(mineSig[0:4], dataField...)
 	return calldata, nil
+}
+
+func (m *l1MiningAPI) getRandaoProof(ctx context.Context, blockNumber *big.Int) ([]byte, error) {
+	var caller interface {
+		HeaderByNumber(context.Context, *big.Int) (*types.Header, error)
+	}
+	if m.rc != nil {
+		caller = m.rc
+	} else {
+		caller = m.Client
+	}
+	blockHeader, err := caller.HeaderByNumber(ctx, blockNumber)
+	if err != nil {
+		m.lg.Error("Failed to get block header", "number", blockNumber, "error", err)
+		return nil, err
+	}
+	headerRlp, err := rlp.EncodeToBytes(blockHeader)
+	if err != nil {
+		m.lg.Error("Failed to encode block header in RLP", "error", err)
+		return nil, err
+	}
+	return headerRlp, nil
 }
 
 func (m *l1MiningAPI) L1Info() (*big.Int, string) {

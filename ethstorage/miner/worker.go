@@ -393,7 +393,6 @@ func (w *worker) notifyResultLoop() {
 // resultLoop is a standalone goroutine to submit mining result to L1 contract.
 func (w *worker) resultLoop() {
 	defer w.wg.Done()
-	var startTime = time.Now().Format("2006-01-02 15:04:05")
 	errorCache := make([]miningError, 0)
 	ticker := time.NewTicker(1 * time.Minute)
 	defer ticker.Stop()
@@ -442,10 +441,10 @@ func (w *worker) resultLoop() {
 			w.notifyResultLoop()
 		case <-ticker.C:
 			for shardId, s := range w.submissionStates {
-				log.Info(fmt.Sprintf("Mining stats since %s", startTime), "shard", shardId, "succeeded", s.Succeeded, "failed", s.Failed, "dropped", s.Dropped)
+				log.Info("Mining stats", "shard", shardId, "succeeded", s.Succeeded, "failed", s.Failed, "dropped", s.Dropped)
 			}
 			if len(errorCache) > 0 {
-				log.Error(fmt.Sprintf("Mining stats since %s", startTime), "lastError", errorCache[len(errorCache)-1])
+				log.Error("Mining stats", "lastError", errorCache[len(errorCache)-1])
 			}
 		case <-saveStatesTicker.C:
 			w.saveStates()
