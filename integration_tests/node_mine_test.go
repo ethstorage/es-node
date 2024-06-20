@@ -69,7 +69,7 @@ func TestMining(t *testing.T) {
 	resourcesCtx, close := context.WithCancel(context.Background())
 	feed := new(event.Feed)
 
-	l1api := miner.NewL1MiningAPI(pClient, lg)
+	l1api := miner.NewL1MiningAPI(pClient, nil, lg)
 	pvr := prover.NewKZGPoseidonProver(
 		miningConfig.ZKWorkingDir,
 		miningConfig.ZKeyFileName,
