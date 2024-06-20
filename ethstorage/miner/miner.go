@@ -25,7 +25,7 @@ type L1API interface {
 	TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error)
 	GetMiningInfo(ctx context.Context, contract common.Address, shardIdx uint64) (*miningInfo, error)
 	GetDataHashes(ctx context.Context, contract common.Address, kvIdxes []uint64) ([]common.Hash, error)
-	GetMiningReward(shard uint64, blockNumber int64) (*big.Int, error)
+	GetMiningReward(shard, blockNumber uint64) (*big.Int, error)
 	ComposeCalldata(ctx context.Context, rst result) ([]byte, error)
 	BlockNumber(ctx context.Context) (uint64, error)
 	HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error)
