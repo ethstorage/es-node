@@ -296,6 +296,9 @@ func (m *SimpleTxManager) signWithNextNonce(ctx context.Context, rawTx *types.Dy
 	} else {
 		m.metr.RecordNonce(*m.nonce)
 	}
+	if tx != nil {
+		m.l.Debug("Signed tx", "hash", tx.Hash().Hex(), "nonce", tx.Nonce())
+	}
 	return tx, err
 }
 

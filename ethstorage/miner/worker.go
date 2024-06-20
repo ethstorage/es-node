@@ -611,7 +611,7 @@ func (w *worker) submitMinedResult(rst result) error {
 		profit := new(big.Int).Sub(reward, cost)
 		w.lg.Info("Estimated reward and cost (in ether)", "reward", weiToEther(reward), "cost", weiToEther(cost), "profit", weiToEther(profit))
 		if profit.Cmp(w.config.MinimumProfit) == -1 {
-			w.lg.Warn("Will drop the tx: the profit will not meet expectation",
+			w.lg.Warn("The tx is dropped: the profit will not meet expectation",
 				"profitEstimated", profit,
 				"minimumProfit", w.config.MinimumProfit,
 			)
