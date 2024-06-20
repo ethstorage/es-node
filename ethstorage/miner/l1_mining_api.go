@@ -28,12 +28,13 @@ var (
 	mineSig = crypto.Keccak256Hash([]byte(`mine(uint256,uint256,address,uint256,bytes32[],uint256[],bytes,bytes[],bytes[])`))
 )
 
-func NewL1MiningAPI(l1 *eth.PollingClient, lg log.Logger) *l1MiningAPI {
-	return &l1MiningAPI{l1, lg}
+func NewL1MiningAPI(l1 *eth.PollingClient, rc *eth.RandaoClient, lg log.Logger) *l1MiningAPI {
+	return &l1MiningAPI{l1, rc, lg}
 }
 
 type l1MiningAPI struct {
 	*eth.PollingClient
+	rc *eth.RandaoClient
 	lg log.Logger
 }
 
@@ -84,14 +85,9 @@ func (m *l1MiningAPI) GetDataHashes(ctx context.Context, contract common.Address
 
 func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Address, rst result, cfg Config) (common.Hash, error) {
 	m.lg.Debug("Submit mined result", "shard", rst.startShardId, "block", rst.blockNumber, "nonce", rst.nonce)
-	blockHeader, err := m.HeaderByNumber(ctx, rst.blockNumber)
+	headerRlp, err := m.getRandaoProof(ctx, rst.blockNumber)
 	if err != nil {
-		m.lg.Error("Failed to get block header", "error", err)
-		return common.Hash{}, err
-	}
-	headerRlp, err := rlp.EncodeToBytes(blockHeader)
-	if err != nil {
-		m.lg.Error("Failed to encode block header", "error", err)
+		m.lg.Error("Failed to get randao proof", "error", err)
 		return common.Hash{}, err
 	}
 	uint256Type, _ := abi.NewType("uint256", "", nil)
@@ -122,7 +118,7 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 		rst.decodeProof,
 	)
 	calldata := append(mineSig[0:4], dataField...)
-
+	m.lg.Debug("Submit mined result", "calldata", common.Bytes2Hex(calldata))
 	gasPrice := cfg.GasPrice
 	if gasPrice == nil || gasPrice.Cmp(common.Big0) == 0 {
 		suggested, err := m.SuggestGasPrice(ctx)
@@ -171,7 +167,6 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 		)
 		return common.Hash{}, errDropped
 	}
-
 	sign := cfg.SignerFnFactory(m.NetworkID)
 	nonce, err := m.NonceAt(ctx, cfg.SignerAddr, big.NewInt(rpc.LatestBlockNumber.Int64()))
 	if err != nil {
@@ -203,4 +198,26 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 	m.lg.Info("Submit mined result done", "shard", rst.startShardId, "block", rst.blockNumber,
 		"nonce", rst.nonce, "txSigner", cfg.SignerAddr.Hex(), "hash", signedTx.Hash().Hex())
 	return signedTx.Hash(), nil
+}
+
+func (m *l1MiningAPI) getRandaoProof(ctx context.Context, blockNumber *big.Int) ([]byte, error) {
+	var caller interface {
+		HeaderByNumber(context.Context, *big.Int) (*types.Header, error)
+	}
+	if m.rc != nil {
+		caller = m.rc
+	} else {
+		caller = m.Client
+	}
+	blockHeader, err := caller.HeaderByNumber(ctx, blockNumber)
+	if err != nil {
+		m.lg.Error("Failed to get block header", "number", blockNumber, "error", err)
+		return nil, err
+	}
+	headerRlp, err := rlp.EncodeToBytes(blockHeader)
+	if err != nil {
+		m.lg.Error("Failed to encode block header in RLP", "error", err)
+		return nil, err
+	}
+	return headerRlp, nil
 }
