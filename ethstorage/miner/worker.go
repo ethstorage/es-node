@@ -598,27 +598,29 @@ func (w *worker) submitMinedResult(rst result) error {
 		w.lg.Error("Failed to compose calldata", "error", err)
 		return err
 	}
-	checkProfit := func(tip, baseFee *big.Int, gasLimit uint64) bool {
-		w.lg.Info("Querying mining reward", "shard", rst.startShardId, "block", rst.blockNumber.Int64())
-		reward, err := w.l1API.GetMiningReward(rst.startShardId, rst.blockNumber.Int64())
-		if err != nil {
-			w.lg.Warn("Query mining reward failed", "error", err)
+	checkProfit := func(shard, block uint64) txmgr.ShouldDropFn {
+		return func(tip, baseFee *big.Int, gasLimit uint64) bool {
+			w.lg.Info("Querying mining reward", "shard", shard, "block", block)
+			reward, err := w.l1API.GetMiningReward(shard, block)
+			if err != nil {
+				w.lg.Warn("Query mining reward failed", "error", err)
+				return false
+			}
+			//	Suppose `tip + base fee` is the unit gas cost when the tx is confirmed
+			cost := new(big.Int).Mul(new(big.Int).SetUint64(gasLimit), new(big.Int).Add(tip, baseFee))
+			profit := new(big.Int).Sub(reward, cost)
+			w.lg.Info("Estimated reward and cost (in ether)", "reward", weiToEther(reward), "cost", weiToEther(cost), "profit", weiToEther(profit))
+			if profit.Cmp(w.config.MinimumProfit) == -1 {
+				w.lg.Warn("The tx is dropped: the profit will not meet expectation",
+					"profitEstimated", profit,
+					"minimumProfit", w.config.MinimumProfit,
+				)
+				return true
+			}
 			return false
 		}
-		//	Suppose `tip + base fee` is the unit gas cost when the tx is confirmed
-		cost := new(big.Int).Mul(new(big.Int).SetUint64(gasLimit), new(big.Int).Add(tip, baseFee))
-		profit := new(big.Int).Sub(reward, cost)
-		w.lg.Info("Estimated reward and cost (in ether)", "reward", weiToEther(reward), "cost", weiToEther(cost), "profit", weiToEther(profit))
-		if profit.Cmp(w.config.MinimumProfit) == -1 {
-			w.lg.Warn("The tx is dropped: the profit will not meet expectation",
-				"profitEstimated", profit,
-				"minimumProfit", w.config.MinimumProfit,
-			)
-			return true
-		}
-		return false
 	}
-	w.txMgr.SetDropCriteria(checkProfit)
+	w.txMgr.SetDropCriteria(checkProfit(rst.startShardId, rst.blockNumber.Uint64()))
 	toAddr := w.storageMgr.ContractAddress()
 	receipt, err := w.txMgr.Send(ctx, txmgr.TxCandidate{
 		TxData: calldata,
