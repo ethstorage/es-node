@@ -196,12 +196,20 @@ func (m *SimpleTxManager) send(ctx context.Context, candidate TxCandidate) (*typ
 		ctx, cancel = context.WithTimeout(ctx, m.cfg.TxSendTimeout)
 		defer cancel()
 	}
+	// check drop criteria early
+	if _, err := m.craftTx(ctx, candidate); err != nil && err == ErrShouldDrop {
+		return nil, err
+	}
 	tx, err := retry.Do(ctx, 30, retry.Fixed(2*time.Second), func() (*types.Transaction, error) {
-		tx, err := m.craftTx(ctx, candidate)
+		rawTx, err := m.craftTx(ctx, candidate)
 		if err != nil {
 			m.l.Warn("Failed to create a transaction, will retry", "err", err)
 		}
-		return tx, err
+		tx, err := m.signWithNextNonce(ctx, rawTx)
+		if err != nil {
+			m.l.Warn("Failed to sign the transaction, will retry", "err", err)
+		}
+		return tx, nil
 	})
 	if err != nil {
 		if err.(*retry.ErrFailedPermanently).LastErr == ErrShouldDrop {
@@ -217,7 +225,7 @@ func (m *SimpleTxManager) send(ctx context.Context, candidate TxCandidate) (*typ
 // NOTE: This method SHOULD NOT publish the resulting transaction.
 // NOTE: If the [TxCandidate.GasLimit] is non-zero, it will be used as the transaction's gas.
 // NOTE: Otherwise, the [SimpleTxManager] will query the specified backend for an estimate.
-func (m *SimpleTxManager) craftTx(ctx context.Context, candidate TxCandidate) (*types.Transaction, error) {
+func (m *SimpleTxManager) craftTx(ctx context.Context, candidate TxCandidate) (*types.DynamicFeeTx, error) {
 	gasTipCap, basefee, err := m.suggestGasPriceCaps(ctx)
 	if err != nil {
 		m.metr.RPCError()
@@ -259,7 +267,7 @@ func (m *SimpleTxManager) craftTx(ctx context.Context, candidate TxCandidate) (*
 		m.l.Warn("Creating tx failed", "err", "meet drop criteria")
 		return nil, ErrShouldDrop
 	}
-	return m.signWithNextNonce(ctx, rawTx)
+	return rawTx, nil
 }
 
 // signWithNextNonce returns a signed transaction with the next available nonce.
