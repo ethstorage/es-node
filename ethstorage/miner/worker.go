@@ -598,7 +598,7 @@ func (w *worker) submitMinedResult(rst result) error {
 		w.lg.Error("Failed to compose calldata", "error", err)
 		return err
 	}
-	checkProfit := func(shard, block uint64) txmgr.ShouldDropFn {
+	checkProfit := func(shard, block uint64) txmgr.DropTxCriteria {
 		return func(tip, baseFee *big.Int, gasLimit uint64) bool {
 			w.lg.Info("Querying mining reward", "shard", shard, "block", block)
 			reward, err := w.l1API.GetMiningReward(shard, block)
@@ -620,12 +620,15 @@ func (w *worker) submitMinedResult(rst result) error {
 			return false
 		}
 	}
-	w.txMgr.SetDropCriteria(checkProfit(rst.startShardId, rst.blockNumber.Uint64()))
 	toAddr := w.storageMgr.ContractAddress()
-	receipt, err := w.txMgr.Send(ctx, txmgr.TxCandidate{
-		TxData: calldata,
-		To:     &toAddr,
-	})
+	receipt, err := w.txMgr.Send(
+		ctx,
+		txmgr.TxCandidate{
+			TxData: calldata,
+			To:     &toAddr,
+		},
+		checkProfit(rst.startShardId, rst.blockNumber.Uint64()),
+	)
 	if err != nil {
 		w.lg.Error("Send tx failed", "error", err)
 		return err

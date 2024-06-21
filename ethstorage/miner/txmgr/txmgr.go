@@ -35,7 +35,7 @@ var (
 	ErrShouldDrop = errors.New("meet drop criteria")
 )
 
-type ShouldDropFn func(tip, baseFee *big.Int, gasLimit uint64) bool
+type DropTxCriteria func(tip, baseFee *big.Int, gasLimit uint64) bool
 
 // TxManager is an interface that allows callers to reliably publish txs,
 // bumping the gas price if needed, and obtain the receipt of the resulting tx.
@@ -48,7 +48,7 @@ type TxManager interface {
 	// may be included on L1 even if the context is cancelled.
 	//
 	// NOTE: Send can be called concurrently, the nonce will be managed internally.
-	Send(ctx context.Context, candidate TxCandidate) (*types.Receipt, error)
+	Send(ctx context.Context, candidate TxCandidate, f DropTxCriteria) (*types.Receipt, error)
 
 	// From returns the sending address associated with the instance of the transaction manager.
 	// It is static for a single instance of a TxManager.
@@ -56,8 +56,6 @@ type TxManager interface {
 
 	// BlockNumber returns the most recent block number from the underlying network.
 	BlockNumber(ctx context.Context) (uint64, error)
-
-	SetDropCriteria(f ShouldDropFn)
 
 	// Close the underlying connection
 	Close()
@@ -111,8 +109,6 @@ type SimpleTxManager struct {
 	nonceLock sync.RWMutex
 
 	pending atomic.Int64
-
-	checkDropCriteria ShouldDropFn
 }
 
 // NewSimpleTxManager initializes a new SimpleTxManager with the passed Config.
@@ -147,10 +143,6 @@ func (m *SimpleTxManager) BlockNumber(ctx context.Context) (uint64, error) {
 	return m.backend.BlockNumber(ctx)
 }
 
-func (m *SimpleTxManager) SetDropCriteria(f ShouldDropFn) {
-	m.checkDropCriteria = f
-}
-
 func (m *SimpleTxManager) Close() {
 	m.backend.Close()
 }
@@ -177,12 +169,12 @@ type TxCandidate struct {
 // transaction manager will do a gas estimation.
 //
 // NOTE: Send can be called concurrently, the nonce will be managed internally.
-func (m *SimpleTxManager) Send(ctx context.Context, candidate TxCandidate) (*types.Receipt, error) {
+func (m *SimpleTxManager) Send(ctx context.Context, candidate TxCandidate, f DropTxCriteria) (*types.Receipt, error) {
 	m.metr.RecordPendingTx(m.pending.Add(1))
 	defer func() {
 		m.metr.RecordPendingTx(m.pending.Add(-1))
 	}()
-	receipt, err := m.send(ctx, candidate)
+	receipt, err := m.send(ctx, candidate, f)
 	if err != nil {
 		m.resetNonce()
 	}
@@ -190,14 +182,14 @@ func (m *SimpleTxManager) Send(ctx context.Context, candidate TxCandidate) (*typ
 }
 
 // send performs the actual transaction creation and sending.
-func (m *SimpleTxManager) send(ctx context.Context, candidate TxCandidate) (*types.Receipt, error) {
+func (m *SimpleTxManager) send(ctx context.Context, candidate TxCandidate, f DropTxCriteria) (*types.Receipt, error) {
 	if m.cfg.TxSendTimeout != 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, m.cfg.TxSendTimeout)
 		defer cancel()
 	}
-	tx, err := retry.Do(ctx, 30, retry.Fixed(2*time.Second), func() (*types.Transaction, error) {
-		tx, err := m.craftTx(ctx, candidate)
+	tx, err := retry.Do(ctx, 10, retry.Fixed(2*time.Second), func() (*types.Transaction, error) {
+		tx, err := m.craftTx(ctx, candidate, f)
 		if err != nil {
 			m.l.Warn("Failed to create a transaction, will retry", "err", err)
 		}
@@ -209,7 +201,7 @@ func (m *SimpleTxManager) send(ctx context.Context, candidate TxCandidate) (*typ
 		}
 		return nil, fmt.Errorf("failed to create the tx: %w", err)
 	}
-	return m.sendTx(ctx, tx)
+	return m.sendTx(ctx, tx, f)
 }
 
 // craftTx creates the signed transaction
@@ -217,7 +209,7 @@ func (m *SimpleTxManager) send(ctx context.Context, candidate TxCandidate) (*typ
 // NOTE: This method SHOULD NOT publish the resulting transaction.
 // NOTE: If the [TxCandidate.GasLimit] is non-zero, it will be used as the transaction's gas.
 // NOTE: Otherwise, the [SimpleTxManager] will query the specified backend for an estimate.
-func (m *SimpleTxManager) craftTx(ctx context.Context, candidate TxCandidate) (*types.Transaction, error) {
+func (m *SimpleTxManager) craftTx(ctx context.Context, candidate TxCandidate, checkDropCriteria DropTxCriteria) (*types.Transaction, error) {
 	gasTipCap, basefee, err := m.suggestGasPriceCaps(ctx)
 	if err != nil {
 		m.metr.RPCError()
@@ -255,7 +247,7 @@ func (m *SimpleTxManager) craftTx(ctx context.Context, candidate TxCandidate) (*
 		rawTx.Gas = gas
 	}
 
-	if m.checkDropCriteria(gasTipCap, basefee, rawTx.Gas) {
+	if checkDropCriteria(gasTipCap, basefee, rawTx.Gas) {
 		m.l.Warn("Creating tx failed", "err", "meet drop criteria")
 		return nil, ErrShouldDrop
 	}
@@ -312,7 +304,7 @@ func (m *SimpleTxManager) resetNonce() {
 
 // send submits the same transaction several times with increasing gas prices as necessary.
 // It waits for the transaction to be confirmed on chain.
-func (m *SimpleTxManager) sendTx(ctx context.Context, tx *types.Transaction) (*types.Receipt, error) {
+func (m *SimpleTxManager) sendTx(ctx context.Context, tx *types.Transaction, f DropTxCriteria) (*types.Receipt, error) {
 	var wg sync.WaitGroup
 	defer wg.Wait()
 	ctx, cancel := context.WithCancel(ctx)
@@ -322,7 +314,7 @@ func (m *SimpleTxManager) sendTx(ctx context.Context, tx *types.Transaction) (*t
 	receiptChan := make(chan *types.Receipt, 1)
 	publishAndWait := func(tx *types.Transaction, bumpFees bool) *types.Transaction {
 		wg.Add(1)
-		tx, published := m.publishTx(ctx, tx, sendState, bumpFees)
+		tx, published := m.publishTx(ctx, tx, sendState, bumpFees, f)
 		if published {
 			go func() {
 				defer wg.Done()
@@ -368,17 +360,21 @@ func (m *SimpleTxManager) sendTx(ctx context.Context, tx *types.Transaction) (*t
 // publishTx publishes the transaction to the transaction pool. If it receives any underpriced errors
 // it will bump the fees and retry.
 // Returns the latest fee bumped tx, and a boolean indicating whether the tx was sent or not
-func (m *SimpleTxManager) publishTx(ctx context.Context, tx *types.Transaction, sendState *SendState, bumpFeesImmediately bool) (*types.Transaction, bool) {
+func (m *SimpleTxManager) publishTx(ctx context.Context, tx *types.Transaction, sendState *SendState, bumpFeesImmediately bool, f DropTxCriteria) (*types.Transaction, bool) {
 	updateLogFields := func(tx *types.Transaction) log.Logger {
 		return m.l.New("hash", tx.Hash(), "nonce", tx.Nonce(), "gasTipCap", tx.GasTipCap(), "gasFeeCap", tx.GasFeeCap())
 	}
 	l := updateLogFields(tx)
 
-	l.Info("Publishing transaction")
+	if bumpFeesImmediately {
+		l.Info("Publishing transaction with higher gas price")
+	} else {
+		l.Info("Publishing transaction")
+	}
 
 	for {
 		if bumpFeesImmediately {
-			newTx, err := m.increaseGasPrice(ctx, tx)
+			newTx, err := m.increaseGasPrice(ctx, tx, f)
 			if err != nil {
 				if err == ErrShouldDrop {
 					l.Warn("Transaction dropped", "err", err)
@@ -408,7 +404,7 @@ func (m *SimpleTxManager) publishTx(ctx context.Context, tx *types.Transaction, 
 
 		if err == nil {
 			m.metr.TxPublished("")
-			log.Info("Transaction successfully published")
+			l.Info("Transaction published")
 			return tx, true
 		}
 
@@ -532,7 +528,7 @@ func (m *SimpleTxManager) queryReceipt(ctx context.Context, txHash common.Hash, 
 // rules, and no lower than the values returned by the fee suggestion algorithm to ensure it
 // doesn't linger in the mempool. Finally to avoid runaway price increases, fees are capped at a
 // `feeLimitMultiplier` multiple of the suggested values.
-func (m *SimpleTxManager) increaseGasPrice(ctx context.Context, tx *types.Transaction) (*types.Transaction, error) {
+func (m *SimpleTxManager) increaseGasPrice(ctx context.Context, tx *types.Transaction, checkDropCriteria DropTxCriteria) (*types.Transaction, error) {
 	m.l.Info("bumping gas price for tx", "hash", tx.Hash(), "gasTipCap", tx.GasTipCap(), "gasFeeCap", tx.GasFeeCap(), "gaslimit", tx.Gas())
 	tip, basefee, err := m.suggestGasPriceCaps(ctx)
 	if err != nil {
@@ -575,8 +571,9 @@ func (m *SimpleTxManager) increaseGasPrice(ctx context.Context, tx *types.Transa
 	}
 	rawTx.Gas = gas
 
-	if m.checkDropCriteria(bumpedTip, bumpedFee, rawTx.Gas) {
-		m.l.Warn("Bumping gas price failed", "err", "meet drop criteria")
+	m.l.Info("bumping gas price for tx done", "hash", tx.Hash(), "bumpedTip", bumpedTip, "bumpedFee", bumpedFee)
+	if checkDropCriteria(bumpedTip, bumpedFee, rawTx.Gas) {
+		m.l.Warn("bumping gas price will not work", "bumpedTip", bumpedTip, "bumpedFee", bumpedFee, "err", ErrShouldDrop)
 		return nil, ErrShouldDrop
 	}
 
