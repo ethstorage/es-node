@@ -107,7 +107,7 @@ common_flags=" --datadir $data_dir \
   --l1.rpc http://88.99.30.186:8545 \
   --storage.l1contract 0x804C520d3c084C805E37A35E90057Ac32831F96f \
   --storage.miner $ES_NODE_STORAGE_MINER \
-  "
+  $@"
 
 # init shard 0
 es_node_init="init --shard_index 0"
@@ -127,7 +127,7 @@ es_node_start=" --network devnet \
   --p2p.listen.udp 30305 \
   --p2p.sync.concurrency 32 \
   --p2p.bootnodes enr:-Li4QF3vBkkDQYNLHlVjW5NcEpXAsfNtE1lUVb_LgUQ_Ot2afS8jbDfnYQBDABJud_5Hd1hX_1cNeGVU6Tem06WDlfaGAY1e3vNvimV0aHN0b3JhZ2XbAYDY15SATFINPAhMgF43o16QBXrDKDH5b8GAgmlkgnY0gmlwhEFtP5qJc2VjcDI1NmsxoQK8XODtSv0IsrhBxZmTZBZEoLssb7bTX0YOVl6S0yLxuYN0Y3CCJAaDdWRwgnZh \
-$@"
+"
   
 # create data file for shard 0 if not yet
 if [ ! -e $storage_file_0 ]; then
@@ -140,4 +140,4 @@ if [ ! -e $storage_file_0 ]; then
 fi
 
 # start es-node
-exec $executable $common_flags $es_node_start
+exec $executable $es_node_start $common_flags
