@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/ethereum-optimism/optimism/op-service/txmgr/metrics"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -594,7 +595,7 @@ func (w *worker) submitMinedResult(rst result) error {
 	ctx, cancel := context.WithTimeout(context.Background(), blockTooOldTimeout*time.Second)
 	defer cancel()
 
-	calldata, err := w.l1API.ComposeCalldata(ctx, rst)
+	calldata, err := w.composeCalldata(ctx, rst)
 	if err != nil {
 		w.lg.Error("Failed to compose calldata", "error", err)
 		return err
@@ -614,6 +615,43 @@ func (w *worker) submitMinedResult(rst result) error {
 	}
 	log.Info("Mining transaction confirmed", "shard", rst.startShardId, "block", rst.blockNumber, "txSigner", w.config.SignerAddr.Hex(), "txHash", receipt.TxHash)
 	return w.checkReceipt(receipt)
+}
+
+func (w *worker) composeCalldata(ctx context.Context, rst result) ([]byte, error) {
+	headerRlp, err := w.l1API.GetRandaoProof(ctx, rst.blockNumber)
+	if err != nil {
+		w.lg.Error("Failed to get randao proof", "error", err)
+		return nil, err
+	}
+	uint256Type, _ := abi.NewType("uint256", "", nil)
+	uint256Array, _ := abi.NewType("uint256[]", "", nil)
+	addrType, _ := abi.NewType("address", "", nil)
+	bytes32Array, _ := abi.NewType("bytes32[]", "", nil)
+	bytesArray, _ := abi.NewType("bytes[]", "", nil)
+	bytesType, _ := abi.NewType("bytes", "", nil)
+	dataField, _ := abi.Arguments{
+		{Type: uint256Type},
+		{Type: uint256Type},
+		{Type: addrType},
+		{Type: uint256Type},
+		{Type: bytes32Array},
+		{Type: uint256Array},
+		{Type: bytesType},
+		{Type: bytesArray},
+		{Type: bytesArray},
+	}.Pack(
+		rst.blockNumber,
+		new(big.Int).SetUint64(rst.startShardId),
+		rst.miner,
+		new(big.Int).SetUint64(rst.nonce),
+		rst.encodedData,
+		rst.masks,
+		headerRlp,
+		rst.inclusiveProofs,
+		rst.decodeProof,
+	)
+	calldata := append(mineSig[0:4], dataField...)
+	return calldata, nil
 }
 
 func (w *worker) checkProfit(shard, block uint64) txmgr.DropTxCriteria {

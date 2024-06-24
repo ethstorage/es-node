@@ -26,7 +26,7 @@ type L1API interface {
 	GetMiningInfo(ctx context.Context, contract common.Address, shardIdx uint64) (*miningInfo, error)
 	GetDataHashes(ctx context.Context, contract common.Address, kvIdxes []uint64) ([]common.Hash, error)
 	GetMiningReward(shard, blockNumber uint64) (*big.Int, error)
-	ComposeCalldata(ctx context.Context, rst result) ([]byte, error)
+	GetRandaoProof(ctx context.Context, blockNumber *big.Int) ([]byte, error)
 	BlockNumber(ctx context.Context) (uint64, error)
 	HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error)
 	EstimateGas(ctx context.Context, msg ethereum.CallMsg) (uint64, error)

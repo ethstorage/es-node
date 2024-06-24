@@ -79,44 +79,7 @@ func (m *l1MiningAPI) GetDataHashes(ctx context.Context, contract common.Address
 	return hashes, nil
 }
 
-func (m *l1MiningAPI) ComposeCalldata(ctx context.Context, rst result) ([]byte, error) {
-	headerRlp, err := m.getRandaoProof(ctx, rst.blockNumber)
-	if err != nil {
-		m.lg.Error("Failed to get randao proof", "error", err)
-		return nil, err
-	}
-	uint256Type, _ := abi.NewType("uint256", "", nil)
-	uint256Array, _ := abi.NewType("uint256[]", "", nil)
-	addrType, _ := abi.NewType("address", "", nil)
-	bytes32Array, _ := abi.NewType("bytes32[]", "", nil)
-	bytesArray, _ := abi.NewType("bytes[]", "", nil)
-	bytesType, _ := abi.NewType("bytes", "", nil)
-	dataField, _ := abi.Arguments{
-		{Type: uint256Type},
-		{Type: uint256Type},
-		{Type: addrType},
-		{Type: uint256Type},
-		{Type: bytes32Array},
-		{Type: uint256Array},
-		{Type: bytesType},
-		{Type: bytesArray},
-		{Type: bytesArray},
-	}.Pack(
-		rst.blockNumber,
-		new(big.Int).SetUint64(rst.startShardId),
-		rst.miner,
-		new(big.Int).SetUint64(rst.nonce),
-		rst.encodedData,
-		rst.masks,
-		headerRlp,
-		rst.inclusiveProofs,
-		rst.decodeProof,
-	)
-	calldata := append(mineSig[0:4], dataField...)
-	return calldata, nil
-}
-
-func (m *l1MiningAPI) getRandaoProof(ctx context.Context, blockNumber *big.Int) ([]byte, error) {
+func (m *l1MiningAPI) GetRandaoProof(ctx context.Context, blockNumber *big.Int) ([]byte, error) {
 	var caller interface {
 		HeaderByNumber(context.Context, *big.Int) (*types.Header, error)
 	}
