@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"strconv"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethdb"
@@ -40,6 +41,7 @@ type NodeP2P struct {
 	syncCl         *protocol.SyncClient
 	syncSrv        *protocol.SyncServer
 	storageManager *ethstorage.StorageManager
+	resCtx         context.Context
 }
 
 // NewNodeP2P creates a new p2p node, and returns a reference to it. If the p2p is disabled, it returns nil.
@@ -67,6 +69,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 	storageManager *ethstorage.StorageManager, db ethdb.Database, m metrics.Metricer, feed *event.Feed) error {
 	bwc := p2pmetrics.NewBandwidthCounter()
 	n.storageManager = storageManager
+	n.resCtx = resourcesCtx
 
 	var err error
 	// nil if disabled.
@@ -107,7 +110,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 					// n.RequestShardList to fetch the shard list of the new node.
 					remoteShardList, e := n.RequestShardList(remotePeerId)
 					if e != nil {
-						log.Info("Get remote shard list fail", "peer", remotePeerId, "err", e.Error())
+						log.Debug("Get remote shard list fail", "peer", remotePeerId, "err", e.Error())
 						conn.Close()
 						return
 					}
@@ -119,7 +122,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 				}
 				added := n.syncCl.AddPeer(remotePeerId, shards, conn.Stat().Direction)
 				if !added {
-					log.Info("Close connection as AddPeer fail", "peer", remotePeerId)
+					log.Debug("Close connection as AddPeer fail", "peer", remotePeerId)
 					conn.Close()
 				}
 			},
@@ -148,7 +151,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 			}
 		}
 		go n.syncCl.ReportPeerSummary()
-		n.syncSrv = protocol.NewSyncServer(rollupCfg, storageManager, m)
+		n.syncSrv = protocol.NewSyncServer(rollupCfg, storageManager, db, m)
 
 		blobByRangeHandler := protocol.MakeStreamHandler(resourcesCtx, log.New("serve", "blobs_by_range"), n.syncSrv.HandleGetBlobsByRangeRequest)
 		n.host.SetStreamHandler(protocol.GetProtocolID(protocol.RequestBlobsByRangeProtocolID, rollupCfg.L2ChainID), blobByRangeHandler)
@@ -182,8 +185,35 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 		if m != nil {
 			go m.RecordBandwidth(resourcesCtx, bwc)
 		}
+
+		go n.PurgeBadPeers()
 	}
 	return nil
+}
+
+// PurgeBadPeers will close peers that have no addresses in the host.peerstore due to expired ttl.
+func (n *NodeP2P) PurgeBadPeers() {
+	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			peers := n.syncCl.Peers()
+			for _, p := range peers {
+				addrs := n.host.Peerstore().Addrs(p)
+				if len(addrs) > 0 {
+					continue
+				}
+				err := n.host.Network().ClosePeer(p)
+				if err != nil {
+					log.Info("Purge bad peer failed", "peer", p.String(), "error", err.Error())
+				}
+			}
+		case <-n.resCtx.Done():
+			log.Info("P2P PurgeBadPeers stop")
+			return
+		}
+	}
 }
 
 func (n *NodeP2P) RequestL2Range(ctx context.Context, start, end uint64) (uint64, error) {
@@ -258,6 +288,9 @@ func (n *NodeP2P) Close() error {
 			if err := n.syncCl.Close(); err != nil {
 				result = multierror.Append(result, fmt.Errorf("failed to close p2p sync client cleanly: %w", err))
 			}
+		}
+		if n.syncSrv != nil {
+			n.syncSrv.Close()
 		}
 	}
 	return result.ErrorOrNil()

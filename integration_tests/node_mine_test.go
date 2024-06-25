@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethstorage/go-ethstorage/cmd/es-utils/utils"
@@ -41,7 +42,7 @@ var shardIds = []uint64{0}
 func TestMining(t *testing.T) {
 	contract := l1Contract
 	lg.Info("Test mining", "l1Endpoint", l1Endpoint, "contract", contract)
-	pClient, err := eth.Dial(l1Endpoint, contract, lg)
+	pClient, err := eth.Dial(l1Endpoint, contract, 12, lg)
 	if err != nil {
 		t.Fatalf("Failed to connect to the Ethereum client: %v", err)
 	}
@@ -73,9 +74,10 @@ func TestMining(t *testing.T) {
 	resourcesCtx, close := context.WithCancel(context.Background())
 	feed := new(event.Feed)
 
-	l1api := miner.NewL1MiningAPI(pClient, lg)
+	l1api := miner.NewL1MiningAPI(pClient, nil, lg)
 	pvr := prover.NewKZGPoseidonProver(miningConfig.ZKWorkingDir, miningConfig.ZKeyFileName, 2, lg)
-	mnr := miner.New(miningConfig, storageManager, l1api, &pvr, feed, lg)
+	db := rawdb.NewMemoryDatabase()
+	mnr := miner.New(miningConfig, db, storageManager, l1api, &pvr, feed, lg)
 	lg.Info("Initialized miner")
 
 	l1HeadsSub := event.ResubscribeErr(time.Second*10, func(ctx context.Context, err error) (event.Subscription, error) {

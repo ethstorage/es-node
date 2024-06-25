@@ -303,7 +303,7 @@ func (n *NodeP2P) DiscoveryProcess(ctx context.Context, log log.Logger, l1ChainI
 				if updateLocalNodeIPAndTCP(n.host.Addrs(), n.dv5Local) && !initialized {
 					initialized = true
 					updateLocalNodeTicker.Reset(refreshLocalNodeAddrInterval)
-					log.Info("Update TCP IP address", "ip", n.dv5Local.Node().IP(), "udp", n.dv5Local.Node().UDP(),
+					log.Info("Update local TCP IP address", "ip", n.dv5Local.Node().IP(), "udp", n.dv5Local.Node().UDP(),
 						"tcp", n.dv5Local.Node().TCP(), "seq", n.dv5Local.Seq(), "enr", n.dv5Local.Node().String())
 				}
 			case <-ctx.Done():
@@ -374,7 +374,7 @@ func (n *NodeP2P) DiscoveryProcess(ctx context.Context, log log.Logger, l1ChainI
 			// get the most recent version of the node record in case it change deal to the remote node TCP or UDP port change.
 			node := n.dv5Udp.Resolve(found)
 			if node.Seq() != found.Seq() {
-				log.Info("Remote node ENR changed", "ID", node.ID(), "remote IP", node.IP(), "ENR", node.String())
+				log.Debug("Remote node ENR changed", "ID", node.ID(), "remote IP", node.IP(), "ENR", node.String())
 			}
 			var dat protocol.EthStorageENRData
 			if err := node.Load(&dat); err != nil { // we already filtered on chain ID and Version
@@ -389,7 +389,7 @@ func (n *NodeP2P) DiscoveryProcess(ctx context.Context, log log.Logger, l1ChainI
 			pstore.AddAddrs(info.ID, info.Addrs, discoveredAddrTTL)
 			err = pstore.Put(info.ID, protocol.EthStorageENRKey, dat.Shards)
 			if err != nil {
-				log.Warn("Peerstore put EthStorageENRKey error", "err", err.Error())
+				log.Info("Peerstore put EthStorageENRKey error", "err", err.Error())
 				continue
 			}
 			_ = pstore.AddPubKey(info.ID, pub)

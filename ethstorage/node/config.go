@@ -11,6 +11,7 @@ import (
 	"time"
 
 	oppprof "github.com/ethereum-optimism/optimism/op-service/pprof"
+	"github.com/ethstorage/go-ethstorage/ethstorage/archiver"
 	"github.com/ethstorage/go-ethstorage/ethstorage/db"
 	"github.com/ethstorage/go-ethstorage/ethstorage/downloader"
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
@@ -23,11 +24,14 @@ import (
 type Config struct {
 	L1         eth.L1EndpointConfig
 	Downloader downloader.Config
+	// RPC used to query randao from a layer 1 blockchain when the storage contract is deployed on a layer 2
+	RandaoSourceURL string
 	// L2     L2EndpointSetup
 	// L2Sync L2SyncEndpointSetup
 
-	DataDir  string
-	DBConfig *db.Config
+	DataDir        string
+	StateUploadURL string
+	DBConfig       *db.Config
 
 	// Driver driver.Config
 
@@ -54,6 +58,8 @@ type Config struct {
 	// Tracer    Tracer
 	// Heartbeat HeartbeatConfig
 	Mining *miner.Config
+
+	Archiver *archiver.Config
 }
 
 type MetricsConfig struct {
