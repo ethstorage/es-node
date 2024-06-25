@@ -135,7 +135,7 @@ func newWorker(
 	var submissionStates map[uint64]SubmissionState
 	if status, _ := db.Get(SubmissionStatusKey); status != nil {
 		if err := json.Unmarshal(status, &submissionStates); err != nil {
-			log.Error("Failed to decode submission states", "err", err)
+			lg.Error("Failed to decode submission states", "err", err)
 		}
 	}
 	worker := &worker{
@@ -213,23 +213,23 @@ func (w *worker) close() {
 func (w *worker) saveStates() {
 	states, err := json.Marshal(w.submissionStates)
 	if err != nil {
-		log.Error("Failed to marshal submission states", "err", err)
+		w.lg.Error("Failed to marshal submission states", "err", err)
 		return
 	}
 	err = w.db.Put(SubmissionStatusKey, states)
 	if err != nil {
-		log.Error("Failed to store submission states", "err", err)
+		w.lg.Error("Failed to store submission states", "err", err)
 		return
 	}
 
 	states, err = json.Marshal(w.miningStates)
 	if err != nil {
-		log.Error("Failed to marshal mining states", "err", err)
+		w.lg.Error("Failed to marshal mining states", "err", err)
 		return
 	}
 	err = w.db.Put(MiningStatusKey, states)
 	if err != nil {
-		log.Error("Failed to store mining states", "err", err)
+		w.lg.Error("Failed to store mining states", "err", err)
 		return
 	}
 }
@@ -430,10 +430,10 @@ func (w *worker) resultLoop() {
 			w.notifyResultLoop()
 		case <-ticker.C:
 			for shardId, s := range w.submissionStates {
-				log.Info("Mining stats", "shard", shardId, "succeeded", s.Succeeded, "failed", s.Failed, "dropped", s.Dropped)
+				w.lg.Info("Mining stats", "shard", shardId, "succeeded", s.Succeeded, "failed", s.Failed, "dropped", s.Dropped)
 			}
 			if len(errorCache) > 0 {
-				log.Error("Mining stats", "lastError", errorCache[len(errorCache)-1])
+				w.lg.Error("Mining stats", "lastError", errorCache[len(errorCache)-1])
 			}
 		case <-saveStatesTicker.C:
 			w.saveStates()
@@ -600,7 +600,7 @@ func (w *worker) submitMinedResult(rst result) error {
 		w.lg.Error("Send tx failed", "error", err)
 		return err
 	}
-	log.Info("Mining transaction confirmed", "shard", rst.startShardId, "block", rst.blockNumber, "txSigner", w.config.SignerAddr.Hex(), "txHash", receipt.TxHash)
+	w.lg.Info("Mining transaction confirmed", "shard", rst.startShardId, "block", rst.blockNumber, "txSigner", w.config.SignerAddr.Hex(), "txHash", receipt.TxHash)
 	return w.checkReceipt(receipt)
 }
 
@@ -666,7 +666,7 @@ func (w *worker) checkProfit(shard, block uint64) txmgr.DropTxCriteria {
 
 func (w *worker) checkReceipt(receipt *types.Receipt) error {
 	if receipt.Status == 0 {
-		log.Warn("Mining transaction failed!      ×", "txHash", receipt.TxHash)
+		w.lg.Warn("Mining transaction failed!      ×", "txHash", receipt.TxHash)
 		return fmt.Errorf("failed to mine: %x", receipt.TxHash)
 	}
 	if receipt.Status == 1 {
@@ -682,11 +682,11 @@ func (w *worker) checkReceipt(receipt *types.Receipt) error {
 				break
 			}
 		}
-		log.Info("Mining transaction success!      √", "miner", miner)
-		log.Info("Mining transaction details", "txHash", receipt.TxHash, "gasUsed", receipt.GasUsed, "effectiveGasPrice", receipt.EffectiveGasPrice)
+		w.lg.Info("Mining transaction success!      √", "miner", miner)
+		w.lg.Info("Mining transaction details", "txHash", receipt.TxHash, "gasUsed", receipt.GasUsed, "effectiveGasPrice", receipt.EffectiveGasPrice)
 		cost := new(big.Int).Mul(new(big.Int).SetUint64(receipt.GasUsed), receipt.EffectiveGasPrice)
 		if reward != nil {
-			log.Info("Mining transaction accounting (in ether)",
+			w.lg.Info("Mining transaction accounting (in ether)",
 				"reward", weiToEther(reward),
 				"cost", weiToEther(cost),
 				"profit", weiToEther(new(big.Int).Sub(reward, cost)),
