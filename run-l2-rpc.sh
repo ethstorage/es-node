@@ -21,6 +21,7 @@ es_node_start=" --network devnet \
   --da.url http://142.132.154.16:8888 \
   --l1.block_time 2 \
   --download.thread 32 \
+  --rpc.addr 0.0.0.0 \
   --p2p.listen.udp 30305 \
   --p2p.sync.concurrency 32 \
   --p2p.bootnodes enr:-Li4QGUAA21O-0pgqnGoBLwvvminrlDjfxhqL6DvXhfOtvNdK871LELAT1Nn-NAa3hUi0Wmb-VIj1qi6fnbyA9yp5RGGAZALHvLnimV0aHN0b3JhZ2XbAYDY15SQpwjA3KCBykiphRqKMmd1FV-H_cGAgmlkgnY0gmlwhEFtMpGJc2VjcDI1NmsxoQJ8_OUONb_H7RMF6kXzZWDut2xriJ5JeKnH2cnb8en0e4N0Y3CCJAaDdWRwgnZh \
