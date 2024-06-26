@@ -289,7 +289,7 @@ func (m *SimpleTxManager) signWithNextNonce(ctx context.Context, rawTx *types.Dy
 		m.metr.RecordNonce(*m.nonce)
 	}
 	if tx != nil {
-		m.l.Debug("Signed tx", "hash", tx.Hash().Hex(), "nonce", tx.Nonce())
+		m.l.Debug("Signed tx", "hash", tx.Hash(), "nonce", tx.Nonce())
 	}
 	return tx, err
 }
@@ -347,6 +347,10 @@ func (m *SimpleTxManager) sendTx(ctx context.Context, tx *types.Transaction, f D
 			tx = publishAndWait(tx, true)
 
 		case <-ctx.Done():
+			if sendState.successFullPublishCount > 0 {
+				// TODO send a tx to cancel currently pending tx
+				m.l.Warn("The unmined tx should be cancelled!", "tx", tx.Hash())
+			}
 			return nil, ctx.Err()
 
 		case receipt := <-receiptChan:
