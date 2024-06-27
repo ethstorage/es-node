@@ -35,6 +35,15 @@ var (
 	ErrShouldDrop = errors.New("meet drop criteria")
 )
 
+type TxTimedoutError struct {
+	error
+	Tx *types.Transaction
+}
+
+func (e TxTimedoutError) String() string {
+	return fmt.Sprintf("tx timedout: %x", e.Tx.Hash())
+}
+
 type DropTxCriteria func(tip, baseFee *big.Int, gasLimit uint64) bool
 
 // TxManager is an interface that allows callers to reliably publish txs,
@@ -56,6 +65,9 @@ type TxManager interface {
 
 	// BlockNumber returns the most recent block number from the underlying network.
 	BlockNumber(ctx context.Context) (uint64, error)
+
+	// Cancel is used to cancel a transaction that has been published.
+	Cancel(ctx context.Context, tx *types.Transaction) error
 
 	// Close the underlying connection
 	Close()
@@ -348,8 +360,8 @@ func (m *SimpleTxManager) sendTx(ctx context.Context, tx *types.Transaction, f D
 
 		case <-ctx.Done():
 			if sendState.successFullPublishCount > 0 {
-				// TODO send a tx to cancel currently pending tx
-				m.l.Warn("The unmined tx should be cancelled!", "tx", tx.Hash())
+				m.l.Warn("The unmined tx is timed out", "tx", tx.Hash())
+				return nil, &TxTimedoutError{Tx: tx}
 			}
 			return nil, ctx.Err()
 
@@ -631,6 +643,82 @@ func (m *SimpleTxManager) checkLimits(tip, basefee, bumpedTip, bumpedFee *big.In
 		return fmt.Errorf("bumped fee cap %v is over %dx multiple of the suggested value", bumpedFee, m.cfg.FeeLimitMultiplier)
 	}
 	return nil
+}
+
+func (m *SimpleTxManager) Cancel(ctx context.Context, tx *types.Transaction) error {
+	tip, basefee, err := m.suggestGasPriceCaps(ctx)
+	if err != nil {
+		m.l.Warn("Failed to get suggested gas tip and basefee", "err", err)
+		tip = tx.GasTipCap()
+		basefee = tx.GasFeeCap()
+	}
+	bumpedTip, bumpedFee := updateFees(tx.GasTipCap(), tx.GasFeeCap(), tip, basefee, m.l)
+	rawTx := &types.DynamicFeeTx{
+		ChainID:   tx.ChainId(),
+		Nonce:     tx.Nonce(),
+		GasTipCap: bumpedTip,
+		GasFeeCap: bumpedFee,
+		To:        &(m.cfg.From),
+		Value:     big.NewInt(0),
+		Gas:       21000,
+	}
+	cCtx, cancel := context.WithTimeout(ctx, m.cfg.NetworkTimeout)
+	defer cancel()
+	cancelTx, err := m.cfg.Signer(cCtx, m.cfg.From, types.NewTx(rawTx))
+	if err != nil {
+		m.l.Warn("Failed to sign cancel transaction", "err", err)
+		return err
+	}
+	cCtx, cancel = context.WithTimeout(ctx, m.cfg.NetworkTimeout)
+	defer cancel()
+	err = m.backend.SendTransaction(cCtx, cancelTx)
+	if err != nil {
+		m.l.Warn("Failed to send cancel transaction", "err", err)
+		return err
+	}
+
+	receiptChan := make(chan *types.Receipt, 1)
+	txHash := cancelTx.Hash()
+
+	go func() error {
+		queryTicker := time.NewTicker(m.cfg.ReceiptQueryInterval)
+		defer queryTicker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-queryTicker.C:
+				ctx, cancel := context.WithTimeout(ctx, m.cfg.NetworkTimeout)
+				defer cancel()
+				receipt, err := m.backend.TransactionReceipt(ctx, txHash)
+				if errors.Is(err, ethereum.NotFound) {
+					m.l.Trace("Transaction not yet mined", "hash", txHash)
+					continue
+				} else if err != nil {
+					m.l.Info("Receipt retrieval failed", "hash", txHash, "err", err)
+					continue
+				} else if receipt == nil {
+					m.l.Warn("Receipt and error are both nil", "hash", txHash)
+					continue
+				} else {
+					receiptChan <- receipt
+				}
+				return nil
+			}
+		}
+	}()
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case receipt := <-receiptChan:
+			if receipt.Status == types.ReceiptStatusSuccessful {
+				m.l.Info("Transaction successfully canceled", "hash", txHash)
+				return nil
+			}
+			return errors.New("Cancel tx failed")
+		}
+	}
 }
 
 // calcThresholdValue returns ceil(x * priceBumpPercent / 100)

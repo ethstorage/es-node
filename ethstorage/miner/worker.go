@@ -597,6 +597,13 @@ func (w *worker) submitMinedResult(rst result) error {
 		w.checkProfit(rst.startShardId, rst.blockNumber.Uint64()),
 	)
 	if err != nil {
+		if tte, ok := err.(*txmgr.TxTimedoutError); ok {
+			if err = w.tryCancelTx(tte.Tx); err != nil {
+				w.lg.Warn("Failed to cancel tx", "error", err)
+				return nil
+			}
+			return tte
+		}
 		w.lg.Error("Send tx failed", "error", err)
 		return err
 	}
@@ -693,5 +700,19 @@ func (w *worker) checkReceipt(receipt *types.Receipt) error {
 			)
 		}
 	}
+	return nil
+}
+
+func (w *worker) tryCancelTx(tx *types.Transaction) error {
+	// TODO: compare the costs to cancel a tx vs. not canceling it?
+	w.lg.Warn("Try to cancel the tx", "txHash", tx.Hash())
+	ctx, cancel := context.WithTimeout(context.Background(), 24*time.Second)
+	defer cancel()
+	err := w.txMgr.Cancel(ctx, tx)
+	if err != nil {
+		w.lg.Error("Failed to cancel tx", "txHash", tx.Hash(), "error", err)
+		return err
+	}
+	w.lg.Info("Tx canceled", "txHash", tx.Hash())
 	return nil
 }
