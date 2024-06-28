@@ -21,8 +21,7 @@ import (
 )
 
 const (
-	gasBufferRatio    = 1.2
-	rewardDenominator = 10000
+	gasBufferRatio = 1.2
 )
 
 var (
@@ -154,9 +153,9 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 	}
 	m.lg.Info("Estimated gas done", "gas", estimatedGas)
 	cost := new(big.Int).Mul(new(big.Int).SetUint64(estimatedGas), gasPrice)
-	reward, err := m.estimateReward(ctx, cfg, contract, rst.startShardId, rst.blockNumber)
+	reward, err := m.GetMiningReward(rst.startShardId, rst.blockNumber.Int64())
 	if err != nil {
-		m.lg.Error("Calculate reward failed", "error", err.Error())
+		m.lg.Error("Query mining reward failed", "error", err.Error())
 		return common.Hash{}, err
 	}
 	profit := new(big.Int).Sub(reward, cost)
@@ -168,13 +167,7 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 		)
 		return common.Hash{}, errDropped
 	}
-
-	chainID, err := m.NetworkID(ctx)
-	if err != nil {
-		m.lg.Error("Get chainID failed", "error", err.Error())
-		return common.Hash{}, err
-	}
-	sign := cfg.SignerFnFactory(chainID)
+	sign := cfg.SignerFnFactory(m.NetworkID)
 	nonce, err := m.NonceAt(ctx, cfg.SignerAddr, big.NewInt(rpc.LatestBlockNumber.Int64()))
 	if err != nil {
 		m.lg.Error("Query nonce failed", "error", err.Error())
@@ -183,7 +176,7 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 	m.lg.Debug("Query nonce done", "nonce", nonce)
 	gas := uint64(float64(estimatedGas) * gasBufferRatio)
 	rawTx := &types.DynamicFeeTx{
-		ChainID:   chainID,
+		ChainID:   m.NetworkID,
 		Nonce:     nonce,
 		GasTipCap: tip,
 		GasFeeCap: gasPrice,
@@ -227,81 +220,4 @@ func (m *l1MiningAPI) getRandaoProof(ctx context.Context, blockNumber *big.Int) 
 		return nil, err
 	}
 	return headerRlp, nil
-}
-
-// TODO: implement `miningReward()` in the contract to replace this impl
-func (m *l1MiningAPI) estimateReward(ctx context.Context, cfg Config, contract common.Address, shard uint64, block *big.Int) (*big.Int, error) {
-
-	lastKv, err := m.PollingClient.GetStorageLastBlobIdx(rpc.LatestBlockNumber.Int64())
-	if err != nil {
-		m.lg.Error("Failed to get lastKvIdx", "error", err)
-		return nil, err
-	}
-	info, err := m.GetMiningInfo(ctx, contract, shard)
-	if err != nil {
-		m.lg.Error("Failed to get es mining info", "error", err.Error())
-		return nil, err
-	}
-	lastMineTime := info.LastMineTime
-
-	plmt, err := m.ReadContractField("prepaidLastMineTime", nil)
-	if err != nil {
-		m.lg.Error("Failed to read prepaidLastMineTime", "error", err.Error())
-		return nil, err
-	}
-	prepaidLastMineTime := new(big.Int).SetBytes(plmt).Uint64()
-
-	var lastShard uint64
-	if lastKv > 0 {
-		lastShard = (lastKv - 1) / cfg.ShardEntry
-	}
-	curBlock, err := m.HeaderByNumber(ctx, big.NewInt(rpc.LatestBlockNumber.Int64()))
-	if err != nil {
-		m.lg.Error("Failed to get latest block", "error", err.Error())
-		return nil, err
-	}
-
-	minedTs := curBlock.Time - (new(big.Int).Sub(curBlock.Number, block).Uint64())*12
-	reward := big.NewInt(0)
-	if shard < lastShard {
-		basePayment := new(big.Int).Mul(cfg.StorageCost, new(big.Int).SetUint64(cfg.ShardEntry))
-		reward = paymentIn(basePayment, cfg.DcfFactor, lastMineTime, minedTs, cfg.StartTime)
-	} else if shard == lastShard {
-		basePayment := new(big.Int).Mul(cfg.StorageCost, new(big.Int).SetUint64(lastKv%cfg.ShardEntry))
-		reward = paymentIn(basePayment, cfg.DcfFactor, lastMineTime, minedTs, cfg.StartTime)
-		// Additional prepaid for the last shard
-		if prepaidLastMineTime < minedTs {
-			additionalReward := paymentIn(cfg.PrepaidAmount, cfg.DcfFactor, prepaidLastMineTime, minedTs, cfg.StartTime)
-			reward = new(big.Int).Add(reward, additionalReward)
-		}
-	}
-	minerReward := new(big.Int).Div(
-		new(big.Int).Mul(new(big.Int).SetUint64(rewardDenominator-cfg.TreasuryShare), reward),
-		new(big.Int).SetUint64(rewardDenominator),
-	)
-	return minerReward, nil
-}
-
-func paymentIn(x, dcfFactor *big.Int, fromTs, toTs, startTime uint64) *big.Int {
-	return new(big.Int).Rsh(
-		new(big.Int).Mul(
-			x,
-			new(big.Int).Sub(
-				pow(dcfFactor, fromTs-startTime),
-				pow(dcfFactor, toTs-startTime),
-			)),
-		128,
-	)
-}
-
-func pow(fp *big.Int, n uint64) *big.Int {
-	v := new(big.Int).Lsh(big.NewInt(1), 128)
-	for n != 0 {
-		if (n & 1) == 1 {
-			v = new(big.Int).Rsh(new(big.Int).Mul(v, fp), 128)
-		}
-		fp = new(big.Int).Rsh(new(big.Int).Mul(fp, fp), 128)
-		n = n / 2
-	}
-	return v
 }
