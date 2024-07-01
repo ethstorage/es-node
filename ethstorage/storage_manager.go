@@ -333,8 +333,19 @@ func (s *StorageManager) DownloadAllMetas(ctx context.Context, batchSize uint64)
 		// batch request metas until the lastKvIdx
 		end := limit
 		if end > lastKvIdx {
-			end = lastKvIdx
+			// end = min(lastKvIdx, first) in case there are more than one shard, and lastKvIdx is even less than the first of the current shard
+			if lastKvIdx < first {
+				continue
+			} else {
+				end = lastKvIdx
+			}
 		}
+
+		// Additional check to ensure end is not less than first
+		if end < first {
+			continue
+		}
+
 		log.Info("Begin to download metas", "shard", sid, "first", first, "end", end, "limit", limit, "lastKvIdx", lastKvIdx)
 		ts := time.Now()
 
