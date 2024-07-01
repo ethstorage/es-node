@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"runtime"
 
+	opcrypto "github.com/ethereum-optimism/optimism/op-service/crypto"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethstorage/go-ethstorage/ethstorage/signer"
 )
 
 type Config struct {
@@ -34,7 +34,7 @@ type Config struct {
 	ZKProverMode     uint64
 	ZKProverImpl     uint64
 	ThreadsPerShard  uint64
-	SignerFnFactory  signer.SignerFactory
+	SignerFnFactory  opcrypto.SignerFactory
 	SignerAddr       common.Address
 	MinimumProfit    *big.Int
 }

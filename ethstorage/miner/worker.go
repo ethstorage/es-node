@@ -6,20 +6,22 @@ package miner
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"math/big"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/ethereum-optimism/optimism/op-service/txmgr/metrics"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/params"
 	es "github.com/ethstorage/go-ethstorage/ethstorage"
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
+	"github.com/ethstorage/go-ethstorage/ethstorage/miner/txmgr"
 )
 
 const (
@@ -29,12 +31,12 @@ const (
 	sampleSizeBits           = 5  // 32 bytes
 	slot                     = 12 // seconds
 	miningTransactionTimeout = 50 // seconds
+	blockTooOldTimeout       = 64 * slot
 )
 
 var (
 	minedEventSig       = crypto.Keccak256Hash([]byte("MinedBlock(uint256,uint256,uint256,uint256,address,uint256)"))
 	errCh               = make(chan miningError, 10)
-	errDropped          = errors.New("dropped: not enough profit")
 	SubmissionStatusKey = []byte("SubmissionStatusKey")
 	MiningStatusKey     = []byte("MiningStatusKey")
 )
@@ -101,6 +103,7 @@ type worker struct {
 	prover     MiningProver
 	db         ethdb.Database
 	storageMgr *es.StorageManager
+	txMgr      txmgr.TxManager
 
 	chainHeadCh chan eth.L1BlockRef
 	startCh     chan uint64
@@ -132,7 +135,7 @@ func newWorker(
 	var submissionStates map[uint64]SubmissionState
 	if status, _ := db.Get(SubmissionStatusKey); status != nil {
 		if err := json.Unmarshal(status, &submissionStates); err != nil {
-			log.Error("Failed to decode submission states", "err", err)
+			lg.Error("Failed to decode submission states", "err", err)
 		}
 	}
 	worker := &worker{
@@ -162,6 +165,18 @@ func newWorker(
 		}
 		worker.submissionStates[shardId] = &SubmissionState{Succeeded: 0, Failed: 0, Dropped: 0, LastSucceededTime: 0}
 	}
+	chainID, l1URL := api.L1Info()
+	txMgrConfig, err := defaultTxMgrConfig(chainID, l1URL, config.SignerFnFactory)
+	if err != nil {
+		lg.Crit("Init transaction manager config failed", "error", err)
+	}
+	txMgrConfig.From = config.SignerAddr
+	txManager, err := txmgr.NewSimpleTxManagerFromConfig("miner", lg, &metrics.NoopTxMetrics{}, txMgrConfig)
+	if err != nil {
+		lg.Crit("Init transaction manager failed", "error", err)
+	}
+	worker.txMgr = txManager
+
 	worker.wg.Add(2)
 	go worker.newWorkLoop()
 	go worker.resultLoop()
@@ -198,23 +213,23 @@ func (w *worker) close() {
 func (w *worker) saveStates() {
 	states, err := json.Marshal(w.submissionStates)
 	if err != nil {
-		log.Error("Failed to marshal submission states", "err", err)
+		w.lg.Error("Failed to marshal submission states", "err", err)
 		return
 	}
 	err = w.db.Put(SubmissionStatusKey, states)
 	if err != nil {
-		log.Error("Failed to store submission states", "err", err)
+		w.lg.Error("Failed to store submission states", "err", err)
 		return
 	}
 
 	states, err = json.Marshal(w.miningStates)
 	if err != nil {
-		log.Error("Failed to marshal mining states", "err", err)
+		w.lg.Error("Failed to marshal mining states", "err", err)
 		return
 	}
 	err = w.db.Put(MiningStatusKey, states)
 	if err != nil {
-		log.Error("Failed to store mining states", "err", err)
+		w.lg.Error("Failed to store mining states", "err", err)
 		return
 	}
 }
@@ -393,15 +408,13 @@ func (w *worker) resultLoop() {
 				continue
 			}
 			w.lg.Info("Mining result loop get result", "shard", result.startShardId, "block", result.blockNumber, "nonce", result.nonce)
-			txHash, err := w.l1API.SubmitMinedResult(
-				context.Background(),
-				w.storageMgr.ContractAddress(),
-				*result,
-				w.config,
-			)
+			err := w.submitMinedResult(*result)
+			if err != nil {
+				w.lg.Error("Failed to submit mined result", "shard", result.startShardId, "block", result.blockNumber, "error", err.Error())
+			}
 			if s, ok := w.submissionStates[result.startShardId]; ok {
 				if err != nil {
-					if err == errDropped {
+					if err == txmgr.ErrShouldDrop {
 						s.Dropped++
 					} else {
 						s.Failed++
@@ -413,37 +426,14 @@ func (w *worker) resultLoop() {
 					s.LastSucceededTime = time.Now().UnixMilli()
 				}
 			}
-			if txHash != (common.Hash{}) {
-				// waiting for tx confirmation or timeout
-				ticker := time.NewTicker(1 * time.Second)
-				checked := 0
-				for range ticker.C {
-					if checked > miningTransactionTimeout {
-						log.Warn("Waiting for mining transaction confirm timed out", "txHash", txHash)
-						break
-					}
-
-					checked++
-					_, isPending, err := w.l1API.TransactionByHash(context.Background(), txHash)
-					if err != nil {
-						log.Error("Querying transaction by hash failed", "error", err, "txHash", txHash)
-						continue
-					} else if !isPending {
-						log.Info("Mining transaction confirmed", "txHash", txHash)
-						w.checkTxStatus(txHash, result.miner)
-						break
-					}
-				}
-				ticker.Stop()
-			}
 			// optimistically check next result if exists
 			w.notifyResultLoop()
 		case <-ticker.C:
 			for shardId, s := range w.submissionStates {
-				log.Info("Mining stats", "shard", shardId, "succeeded", s.Succeeded, "failed", s.Failed, "dropped", s.Dropped)
+				w.lg.Info("Mining stats", "shard", shardId, "succeeded", s.Succeeded, "failed", s.Failed, "dropped", s.Dropped)
 			}
 			if len(errorCache) > 0 {
-				log.Error("Mining stats", "lastError", errorCache[len(errorCache)-1])
+				w.lg.Error("Mining stats", "lastError", errorCache[len(errorCache)-1])
 			}
 		case <-saveStatesTicker.C:
 			w.saveStates()
@@ -457,50 +447,6 @@ func (w *worker) resultLoop() {
 			return
 		}
 	}
-}
-
-func (w *worker) checkTxStatus(txHash common.Hash, miner common.Address) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	receipt, err := w.l1API.TransactionReceipt(ctx, txHash)
-	if err != nil || receipt == nil {
-		log.Warn("Mining transaction not found!", "err", err, "txHash", txHash)
-	} else if receipt.Status == 1 {
-		log.Info("Mining transaction success!      √", "miner", miner)
-		log.Info("Mining transaction details", "txHash", txHash, "gasUsed", receipt.GasUsed, "effectiveGasPrice", receipt.EffectiveGasPrice)
-		cost := new(big.Int).Mul(new(big.Int).SetUint64(receipt.GasUsed), receipt.EffectiveGasPrice)
-		var reward *big.Int
-		for _, rLog := range receipt.Logs {
-			if rLog.Topics[0] == minedEventSig {
-				// the last param of total unindexed 3
-				reward = new(big.Int).SetBytes(rLog.Data[64:])
-				break
-			}
-		}
-		if reward != nil {
-			log.Info("Mining transaction accounting (in ether)",
-				"reward", weiToEther(reward),
-				"cost", weiToEther(cost),
-				"profit", weiToEther(new(big.Int).Sub(reward, cost)),
-			)
-		}
-	} else if receipt.Status == 0 {
-		log.Warn("Mining transaction failed!      ×", "txHash", txHash)
-	}
-}
-
-// https://github.com/ethereum/go-ethereum/issues/21221#issuecomment-805852059
-func weiToEther(wei *big.Int) *big.Float {
-	f := new(big.Float)
-	f.SetPrec(236) //  IEEE 754 octuple-precision binary floating-point format: binary256
-	f.SetMode(big.ToNearestEven)
-	if wei == nil {
-		return f.SetInt64(0)
-	}
-	fWei := new(big.Float)
-	fWei.SetPrec(236) //  IEEE 754 octuple-precision binary floating-point format: binary256
-	fWei.SetMode(big.ToNearestEven)
-	return f.Quo(fWei.SetInt(wei), big.NewFloat(params.Ether))
 }
 
 // mineTask actually executes a mining task
@@ -629,4 +575,144 @@ func (w *worker) getMiningData(t *task, sampleIdx []uint64) ([][]byte, []uint64,
 		}
 	}
 	return dataSet, kvIdxs, sampleIdxsInKv, encodingKeys, encodedSamples, nil
+}
+
+func (w *worker) submitMinedResult(rst result) error {
+	w.lg.Debug("Submit mined result", "shard", rst.startShardId, "block", rst.blockNumber, "nonce", rst.nonce)
+	ctx, cancel := context.WithTimeout(context.Background(), blockTooOldTimeout*time.Second)
+	defer cancel()
+
+	calldata, err := w.composeCalldata(ctx, rst)
+	if err != nil {
+		w.lg.Error("Failed to compose calldata", "error", err)
+		return err
+	}
+	toAddr := w.storageMgr.ContractAddress()
+	receipt, err := w.txMgr.Send(
+		ctx,
+		txmgr.TxCandidate{
+			TxData: calldata,
+			To:     &toAddr,
+		},
+		w.checkProfit(rst.startShardId, rst.blockNumber.Uint64()),
+	)
+	if err != nil {
+		if tte, ok := err.(*txmgr.TxTimedoutError); ok {
+			if err = w.tryCancelTx(tte.Tx); err != nil {
+				w.lg.Warn("Failed to cancel tx", "error", err)
+				return nil
+			}
+			return tte
+		}
+		w.lg.Error("Send tx failed", "error", err)
+		return err
+	}
+	w.lg.Info("Mining transaction confirmed", "shard", rst.startShardId, "block", rst.blockNumber, "txSigner", w.config.SignerAddr.Hex(), "txHash", receipt.TxHash)
+	return w.checkReceipt(receipt)
+}
+
+func (w *worker) composeCalldata(ctx context.Context, rst result) ([]byte, error) {
+	headerRlp, err := w.l1API.GetRandaoProof(ctx, rst.blockNumber)
+	if err != nil {
+		w.lg.Error("Failed to get randao proof", "error", err)
+		return nil, err
+	}
+	uint256Type, _ := abi.NewType("uint256", "", nil)
+	uint256Array, _ := abi.NewType("uint256[]", "", nil)
+	addrType, _ := abi.NewType("address", "", nil)
+	bytes32Array, _ := abi.NewType("bytes32[]", "", nil)
+	bytesArray, _ := abi.NewType("bytes[]", "", nil)
+	bytesType, _ := abi.NewType("bytes", "", nil)
+	dataField, _ := abi.Arguments{
+		{Type: uint256Type},
+		{Type: uint256Type},
+		{Type: addrType},
+		{Type: uint256Type},
+		{Type: bytes32Array},
+		{Type: uint256Array},
+		{Type: bytesType},
+		{Type: bytesArray},
+		{Type: bytesArray},
+	}.Pack(
+		rst.blockNumber,
+		new(big.Int).SetUint64(rst.startShardId),
+		rst.miner,
+		new(big.Int).SetUint64(rst.nonce),
+		rst.encodedData,
+		rst.masks,
+		headerRlp,
+		rst.inclusiveProofs,
+		rst.decodeProof,
+	)
+	calldata := append(mineSig[0:4], dataField...)
+	return calldata, nil
+}
+
+func (w *worker) checkProfit(shard, block uint64) txmgr.DropTxCriteria {
+	return func(tip, baseFee *big.Int, gasLimit uint64) bool {
+		w.lg.Info("Querying mining reward", "shard", shard, "block", block)
+		reward, err := w.l1API.GetMiningReward(shard, block)
+		if err != nil {
+			w.lg.Warn("Query mining reward failed", "error", err)
+			return false
+		}
+		//	Suppose `tip + base fee` is the unit gas cost when the tx is confirmed
+		cost := new(big.Int).Mul(new(big.Int).SetUint64(gasLimit), new(big.Int).Add(tip, baseFee))
+		profit := new(big.Int).Sub(reward, cost)
+		w.lg.Info("Estimated reward and cost (in ether)", "reward", weiToEther(reward), "cost", weiToEther(cost), "profit", weiToEther(profit))
+		if profit.Cmp(w.config.MinimumProfit) == -1 {
+			w.lg.Warn("The tx is dropped: the profit will not meet expectation",
+				"profitEstimated", profit,
+				"minimumProfit", w.config.MinimumProfit,
+			)
+			return true
+		}
+		return false
+	}
+}
+
+func (w *worker) checkReceipt(receipt *types.Receipt) error {
+	if receipt.Status == 0 {
+		w.lg.Warn("Mining transaction failed!      ×", "txHash", receipt.TxHash)
+		return fmt.Errorf("failed to mine: %x", receipt.TxHash)
+	}
+	if receipt.Status == 1 {
+		var (
+			reward *big.Int
+			miner  common.Address
+		)
+		for _, rLog := range receipt.Logs {
+			if rLog.Topics[0] == minedEventSig {
+				// the last 2 params of the 3 unindexed
+				miner = common.BytesToAddress(rLog.Data[32:64])
+				reward = new(big.Int).SetBytes(rLog.Data[64:])
+				break
+			}
+		}
+		w.lg.Info("Mining transaction success!      √", "miner", miner)
+		w.lg.Info("Mining transaction details", "txHash", receipt.TxHash, "gasUsed", receipt.GasUsed, "effectiveGasPrice", receipt.EffectiveGasPrice)
+		cost := new(big.Int).Mul(new(big.Int).SetUint64(receipt.GasUsed), receipt.EffectiveGasPrice)
+		if reward != nil {
+			w.lg.Info("Mining transaction accounting (in ether)",
+				"reward", weiToEther(reward),
+				"cost", weiToEther(cost),
+				"profit", weiToEther(new(big.Int).Sub(reward, cost)),
+			)
+		}
+	}
+	return nil
+}
+
+func (w *worker) tryCancelTx(tx *types.Transaction) error {
+	// TODO: compare the costs to cancel a tx vs. not canceling it?
+	w.lg.Warn("Try to cancel the tx", "txHash", tx.Hash())
+	ctx, cancel := context.WithTimeout(context.Background(), 24*time.Second)
+	defer cancel()
+	err := w.txMgr.Cancel(ctx, tx)
+	if err != nil {
+		w.lg.Error("Failed to cancel tx", "txHash", tx.Hash(), "error", err)
+		return err
+	}
+	w.lg.Info("Tx canceled", "txHash", tx.Hash())
+	return nil
 }
