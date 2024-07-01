@@ -99,6 +99,7 @@ type result struct {
 type worker struct {
 	config     Config
 	l1API      L1API
+	getBlob    GetBlobFn
 	prover     MiningProver
 	db         ethdb.Database
 	storageMgr *es.StorageManager
@@ -126,6 +127,7 @@ func newWorker(
 	db ethdb.Database,
 	storageMgr *es.StorageManager,
 	api L1API,
+	getBlob GetBlobFn,
 	chainHeadCh chan eth.L1BlockRef,
 	prover MiningProver,
 	lg log.Logger,
@@ -139,6 +141,7 @@ func newWorker(
 	worker := &worker{
 		config:           config,
 		l1API:            api,
+		getBlob:          getBlob,
 		prover:           prover,
 		chainHeadCh:      chainHeadCh,
 		shardTaskMap:     make(map[uint64]task),
@@ -610,23 +613,19 @@ func (w *worker) getMiningData(t *task, sampleIdx []uint64) ([][]byte, []uint64,
 		return nil, nil, nil, nil, nil, err
 	}
 	for i := uint64(0); i < checksLen; i++ {
-		kvData, exist, err := w.storageMgr.TryRead(kvIdxs[i], int(w.storageMgr.MaxKvSize()), kvHashes[i])
-		if exist && err == nil {
-			dataSet[i] = kvData
-			sampleIdxsInKv[i] = sampleIdx[i] % (1 << sampleLenBits)
-			encodingKeys[i] = es.CalcEncodeKey(kvHashes[i], kvIdxs[i], t.miner)
-			encodedSample, err := w.storageMgr.ReadSampleUnlocked(t.shardIdx, sampleIdx[i])
-			if err != nil {
-				return nil, nil, nil, nil, nil, err
-			}
-			encodedSamples[i] = encodedSample
-		} else {
-			if !exist {
-				err = fmt.Errorf("kv not found: index=%d", kvIdxs[i])
-			}
+		kvData, err := w.getBlob(kvIdxs[i], kvHashes[i])
+		if err != nil {
 			w.lg.Error("Get data error", "index", kvIdxs[i], "error", err.Error())
 			return nil, nil, nil, nil, nil, err
 		}
+		dataSet[i] = kvData
+		sampleIdxsInKv[i] = sampleIdx[i] % (1 << sampleLenBits)
+		encodingKeys[i] = es.CalcEncodeKey(kvHashes[i], kvIdxs[i], t.miner)
+		encodedSample, err := w.storageMgr.ReadSampleUnlocked(t.shardIdx, sampleIdx[i])
+		if err != nil {
+			return nil, nil, nil, nil, nil, err
+		}
+		encodedSamples[i] = encodedSample
 	}
 	return dataSet, kvIdxs, sampleIdxsInKv, encodingKeys, encodedSamples, nil
 }

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
@@ -300,7 +301,21 @@ func (n *EsNode) initMiner(ctx context.Context, cfg *Config) error {
 		cfg.Mining.ZKProverMode,
 		n.log,
 	)
-	n.miner = miner.New(cfg.Mining, n.db, n.storageManager, l1api, &pvr, n.feed, n.log)
+	getBlobFn := func(kvIdx uint64, kvHash common.Hash) ([]byte, error) {
+		blob := n.downloader.Cache.GetKeyValueByIndex(kvIdx, kvHash)
+		if blob != nil {
+			return blob, nil
+		}
+		kvData, exist, err := n.storageManager.TryRead(kvIdx, int(n.storageManager.MaxKvSize()), kvHash)
+		if err != nil {
+			return nil, err
+		}
+		if !exist {
+			return nil, fmt.Errorf("kv not found: index=%d", kvIdx)
+		}
+		return kvData, nil
+	}
+	n.miner = miner.New(cfg.Mining, n.db, n.storageManager, l1api, getBlobFn, &pvr, n.feed, n.log)
 	log.Info("Initialized miner")
 	return nil
 }

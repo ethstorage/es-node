@@ -31,6 +31,8 @@ type MiningProver interface {
 	GetStorageProof(encodedKVs [][]byte, encodingKey []common.Hash, sampleIdxInKv []uint64) ([]*big.Int, [][]byte, [][]byte, error)
 }
 
+type GetBlobFn func(kvIdx uint64, blobHash common.Hash) ([]byte, error)
+
 type miningInfo struct {
 	LastMineTime uint64
 	Difficulty   *big.Int
@@ -58,7 +60,16 @@ type Miner struct {
 	lg          log.Logger
 }
 
-func New(config *Config, db ethdb.Database, storageMgr *ethstorage.StorageManager, api L1API, prover MiningProver, feed *event.Feed, lg log.Logger) *Miner {
+func New(
+	config *Config,
+	db ethdb.Database,
+	storageMgr *ethstorage.StorageManager,
+	api L1API,
+	getBlob GetBlobFn,
+	prover MiningProver,
+	feed *event.Feed,
+	lg log.Logger,
+) *Miner {
 	chainHeadCh := make(chan eth.L1BlockRef, chainHeadChanSize)
 	miner := &Miner{
 		feed:        feed,
@@ -67,7 +78,7 @@ func New(config *Config, db ethdb.Database, storageMgr *ethstorage.StorageManage
 		startCh:     make(chan struct{}),
 		stopCh:      make(chan struct{}),
 		lg:          lg,
-		worker:      newWorker(*config, db, storageMgr, api, chainHeadCh, prover, lg),
+		worker:      newWorker(*config, db, storageMgr, api, getBlob, chainHeadCh, prover, lg),
 	}
 	miner.wg.Add(1)
 	go miner.update()
