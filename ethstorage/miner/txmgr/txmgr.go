@@ -208,8 +208,10 @@ func (m *SimpleTxManager) send(ctx context.Context, candidate TxCandidate, f Dro
 		return tx, err
 	})
 	if err != nil {
-		if err.(*retry.ErrFailedPermanently).LastErr == ErrShouldDrop {
-			return nil, ErrShouldDrop
+		if efp, ok := err.(*retry.ErrFailedPermanently); ok {
+			if efp.LastErr == ErrShouldDrop {
+				return nil, ErrShouldDrop
+			}
 		}
 		return nil, fmt.Errorf("failed to create the tx: %w", err)
 	}
