@@ -6,6 +6,7 @@
 package miner
 
 import (
+	"fmt"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -69,7 +70,16 @@ func newMiner(t *testing.T, storageMgr *es.StorageManager, client *eth.PollingCl
 	pvr := prover.NewKZGPoseidonProver(zkWorkingDir, defaultConfig.ZKeyFileName, defaultConfig.ZKProverMode, lg)
 	fd := new(event.Feed)
 	db := rawdb.NewMemoryDatabase()
-	miner := New(defaultConfig, db, storageMgr, l1api, &pvr, fd, lg)
+	miner := New(defaultConfig, db, storageMgr, l1api, func(kvIdx uint64, kvHash common.Hash) ([]byte, error) {
+		kvData, exist, err := storageMgr.TryRead(kvIdx, int(storageMgr.MaxKvSize()), kvHash)
+		if err != nil {
+			return nil, err
+		}
+		if !exist {
+			return nil, fmt.Errorf("kv not found: index=%d", kvIdx)
+		}
+		return kvData, nil
+	}, &pvr, fd, lg)
 	return miner
 }
 
