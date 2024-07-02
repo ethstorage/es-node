@@ -77,7 +77,16 @@ func TestMining(t *testing.T) {
 	l1api := miner.NewL1MiningAPI(pClient, nil, lg)
 	pvr := prover.NewKZGPoseidonProver(miningConfig.ZKWorkingDir, miningConfig.ZKeyFileName, 2, lg)
 	db := rawdb.NewMemoryDatabase()
-	mnr := miner.New(miningConfig, db, storageManager, l1api, &pvr, feed, lg)
+	mnr := miner.New(miningConfig, db, storageManager, l1api, func(kvIdx uint64, kvHash common.Hash) ([]byte, error) {
+		kvData, exist, err := storageManager.TryRead(kvIdx, int(storageManager.MaxKvSize()), kvHash)
+		if err != nil {
+			return nil, err
+		}
+		if !exist {
+			return nil, fmt.Errorf("kv not found: index=%d", kvIdx)
+		}
+		return kvData, nil
+	}, &pvr, feed, lg)
 	lg.Info("Initialized miner")
 
 	l1HeadsSub := event.ResubscribeErr(time.Second*10, func(ctx context.Context, err error) (event.Subscription, error) {
