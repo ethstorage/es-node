@@ -304,19 +304,21 @@ func (n *EsNode) initMiner(ctx context.Context, cfg *Config) error {
 	getBlobFn := func(kvIdx uint64, kvHash common.Hash) ([]byte, error) {
 		blob := n.downloader.Cache.GetKeyValueByIndex(kvIdx, kvHash)
 		if blob != nil {
+			n.log.Info("Loaded blob from downloader cache", "kvIdx", kvIdx)
 			return blob, nil
 		}
-		kvData, exist, err := n.storageManager.TryRead(kvIdx, int(n.storageManager.MaxKvSize()), kvHash)
+		blob, exist, err := n.storageManager.TryRead(kvIdx, int(n.storageManager.MaxKvSize()), kvHash)
 		if err != nil {
 			return nil, err
 		}
 		if !exist {
 			return nil, fmt.Errorf("kv not found: index=%d", kvIdx)
 		}
-		return kvData, nil
+		n.log.Info("Loaded blob from storage manager", "kvIdx", kvIdx)
+		return blob, nil
 	}
 	n.miner = miner.New(cfg.Mining, n.db, n.storageManager, l1api, getBlobFn, &pvr, n.feed, n.log)
-	log.Info("Initialized miner")
+	n.log.Info("Initialized miner")
 	return nil
 }
 
