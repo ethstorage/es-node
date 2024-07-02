@@ -31,10 +31,14 @@ type ZKProver struct {
 	lg                      log.Logger
 }
 
-func NewZKProver(workingDir, zkeyName, wasmName string, lg log.Logger) *ZKProver {
+func NewZKProver(workingDir, zkeyFile, wasmName string, lg log.Logger) *ZKProver {
+	return newZKProver(workingDir, zkeyFile, wasmName, lg)
+}
+
+func newZKProver(workingDir, zkeyFile, wasmName string, lg log.Logger) *ZKProver {
 	return &ZKProver{
 		dir:      workingDir,
-		zkeyName: zkeyName,
+		zkeyName: zkeyFile,
 		wasmName: wasmName,
 		lg:       lg,
 	}

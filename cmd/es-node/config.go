@@ -129,7 +129,6 @@ func NewMinerConfig(ctx *cli.Context, client *ethclient.Client, l1Contract commo
 	if !cliConfig.Enabled {
 		return nil, nil
 	}
-	log.Debug("Read mining config from cli", "config", fmt.Sprintf("%+v", cliConfig))
 	err := cliConfig.Check()
 	if err != nil {
 		return nil, fmt.Errorf("invalid miner flags: %w", err)

@@ -34,7 +34,6 @@ type KZGPoseidonProver struct {
 	zkProverImpl uint64
 	libDir       string
 	zkey         string
-	wasm         string
 	lg           log.Logger
 }
 
@@ -72,7 +71,6 @@ func NewKZGPoseidonProver(workingDir, zkeyFileName string, zkProverMode, zkProve
 		zkProverImpl: zkProverImpl,
 		libDir:       libDir,
 		zkey:         zkeyFileName,
-		wasm:         wasmName,
 		lg:           lg,
 	}
 }
@@ -123,12 +121,10 @@ func (p *KZGPoseidonProver) GetStorageProof(data [][]byte, encodingKeys []common
 
 func (p *KZGPoseidonProver) getZKProver() (IZKProver, error) {
 	if p.zkProverImpl == 1 {
-		p.lg.Info("Using snarkjs zk prover")
-		return NewZKProver(filepath.Dir(p.libDir), p.zkey, p.wasm, p.lg), nil
+		return NewZKProver(filepath.Dir(p.libDir), p.zkey, WasmName, p.lg), nil
 	}
 	if p.zkProverImpl == 2 {
-		p.lg.Info("Using go-rapidsnark zk prover")
-		return NewZKProverGo(p.libDir, p.zkey, p.wasm, p.lg)
+		return NewZKProverGo(p.libDir, p.zkey, Wasm2Name, p.lg)
 	}
 	return nil, fmt.Errorf("invalid zk prover implementation: %d", p.zkProverImpl)
 }
