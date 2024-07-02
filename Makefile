@@ -9,11 +9,11 @@ LDFLAGSSTRING +=-X 'main.BuildTime=$(BUILDDATE)'
 LDFLAGS := -ldflags "$(LDFLAGSSTRING)"
 
 es-node: build
-	cp -r ethstorage/prover/snarkjs build/bin
+	cp -r ethstorage/prover/snark_lib build/bin
 	mkdir -p build/bin/snarkbuild
 
 build:
-	env GO111MODULE=on CGO_ENABLED=0 GOOS=$(TARGETOS) GOARCH=$(TARGETARCH) go build -v $(LDFLAGS) -o build/bin/es-node ./cmd/es-node/
+	env GO111MODULE=on CGO_ENABLED=0 GOOS=$(TARGETOS) GOARCH=$(TARGETARCH) go build -v $(LDFLAGS) -o build/bin/es-node -tags rapidsnark_asm ./cmd/es-node/
 
 clean:
 	rm -r build
