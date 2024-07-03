@@ -613,7 +613,7 @@ func (w *worker) getMiningData(t *task, sampleIdx []uint64) ([][]byte, []uint64,
 		return nil, nil, nil, nil, nil, err
 	}
 	for i := uint64(0); i < checksLen; i++ {
-		kvData, err := w.getBlob(kvIdxs[i], kvHashes[i])
+		kvData, fromCache, err := w.getBlob(kvIdxs[i], kvHashes[i])
 		if err != nil {
 			w.lg.Error("Get data error", "index", kvIdxs[i], "error", err.Error())
 			return nil, nil, nil, nil, nil, err
@@ -621,9 +621,19 @@ func (w *worker) getMiningData(t *task, sampleIdx []uint64) ([][]byte, []uint64,
 		dataSet[i] = kvData
 		sampleIdxsInKv[i] = sampleIdx[i] % (1 << sampleLenBits)
 		encodingKeys[i] = es.CalcEncodeKey(kvHashes[i], kvIdxs[i], t.miner)
-		encodedSample, err := w.storageMgr.ReadSampleUnlocked(t.shardIdx, sampleIdx[i])
-		if err != nil {
-			return nil, nil, nil, nil, nil, err
+		var encodedSample common.Hash
+		if fromCache {
+			encodeType, _ := w.storageMgr.GetShardEncodeType(t.shardIdx)
+			sampleSize := uint64(1 << sampleSizeBits)
+			sampleIdxByte := sampleIdxsInKv[i] * sampleSize
+			sample := kvData[sampleIdxByte : sampleIdxByte+sampleSize]
+			encodedBytes := es.EncodeChunk(sampleSize, sample, encodeType, encodingKeys[i])
+			encodedSample = common.BytesToHash(encodedBytes)
+		} else {
+			encodedSample, err = w.storageMgr.ReadSampleUnlocked(t.shardIdx, sampleIdx[i])
+			if err != nil {
+				return nil, nil, nil, nil, nil, err
+			}
 		}
 		encodedSamples[i] = encodedSample
 	}

@@ -302,21 +302,21 @@ func (n *EsNode) initMiner(ctx context.Context, cfg *Config) error {
 		cfg.Mining.ZKProverImpl,
 		n.log,
 	)
-	getBlobFn := func(kvIdx uint64, kvHash common.Hash) ([]byte, error) {
+	getBlobFn := func(kvIdx uint64, kvHash common.Hash) ([]byte, bool, error) {
 		blob := n.downloader.Cache.GetKeyValueByIndex(kvIdx, kvHash)
 		if blob != nil {
 			n.log.Info("Loaded blob from downloader cache", "kvIdx", kvIdx)
-			return blob, nil
+			return blob, true, nil
 		}
 		blob, exist, err := n.storageManager.TryRead(kvIdx, int(n.storageManager.MaxKvSize()), kvHash)
 		if err != nil {
-			return nil, err
+			return nil, false, err
 		}
 		if !exist {
-			return nil, fmt.Errorf("kv not found: index=%d", kvIdx)
+			return nil, false, fmt.Errorf("kv not found: index=%d", kvIdx)
 		}
 		n.log.Info("Loaded blob from storage manager", "kvIdx", kvIdx)
-		return blob, nil
+		return blob, false, nil
 	}
 	n.miner = miner.New(cfg.Mining, n.db, n.storageManager, l1api, getBlobFn, &pvr, n.feed, n.log)
 	n.log.Info("Initialized miner")

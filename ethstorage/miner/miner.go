@@ -32,7 +32,7 @@ type MiningProver interface {
 	GetStorageProof(encodedKVs [][]byte, encodingKey []common.Hash, sampleIdxInKv []uint64) ([]*big.Int, [][]byte, [][]byte, error)
 }
 
-type GetBlobFn func(kvIdx uint64, blobHash common.Hash) ([]byte, error)
+type GetBlobFn func(kvIdx uint64, blobHash common.Hash) ([]byte, bool, error)
 
 type miningInfo struct {
 	LastMineTime uint64
