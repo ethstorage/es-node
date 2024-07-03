@@ -82,15 +82,15 @@ func TestMining(t *testing.T) {
 		lg,
 	)
 	db := rawdb.NewMemoryDatabase()
-	mnr := miner.New(miningConfig, db, storageManager, l1api, func(kvIdx uint64, kvHash common.Hash) ([]byte, error) {
+	mnr := miner.New(miningConfig, db, storageManager, l1api, func(kvIdx uint64, kvHash common.Hash) ([]byte, bool, error) {
 		kvData, exist, err := storageManager.TryRead(kvIdx, int(storageManager.MaxKvSize()), kvHash)
 		if err != nil {
-			return nil, err
+			return nil, false, err
 		}
 		if !exist {
-			return nil, fmt.Errorf("kv not found: index=%d", kvIdx)
+			return nil, false, fmt.Errorf("kv not found: index=%d", kvIdx)
 		}
-		return kvData, nil
+		return kvData, false, nil
 	}, &pvr, feed, lg)
 	lg.Info("Initialized miner")
 

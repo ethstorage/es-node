@@ -20,6 +20,7 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 	es "github.com/ethstorage/go-ethstorage/ethstorage"
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
+	"github.com/ethstorage/go-ethstorage/ethstorage/prover"
 )
 
 const (
@@ -623,15 +624,21 @@ func (w *worker) getMiningData(t *task, sampleIdx []uint64) ([][]byte, []uint64,
 		encodingKeys[i] = es.CalcEncodeKey(kvHashes[i], kvIdxs[i], t.miner)
 		var encodedSample common.Hash
 		if fromCache {
-			encodeType, _ := w.storageMgr.GetShardEncodeType(t.shardIdx)
 			sampleSize := uint64(1 << sampleSizeBits)
 			sampleIdxByte := sampleIdxsInKv[i] * sampleSize
 			sample := kvData[sampleIdxByte : sampleIdxByte+sampleSize]
-			encodedBytes := es.EncodeChunk(sampleSize, sample, encodeType, encodingKeys[i])
+			mask, err := prover.GenerateMask(encodingKeys[i], sampleIdxsInKv[i])
+			if err != nil {
+				w.lg.Error("Generate mask error", "encodingKey", encodingKeys[i], "sampleIdx", sampleIdxsInKv[i],
+					"error", err.Error())
+				return nil, nil, nil, nil, nil, err
+			}
+			encodedBytes := es.MaskDataInPlace(mask, sample)
 			encodedSample = common.BytesToHash(encodedBytes)
 		} else {
 			encodedSample, err = w.storageMgr.ReadSampleUnlocked(t.shardIdx, sampleIdx[i])
 			if err != nil {
+				w.lg.Error("Read sample error", "kvIdx", kvIdxs[i], "sampleIdx", sampleIdx[i], "error", err.Error())
 				return nil, nil, nil, nil, nil, err
 			}
 		}
