@@ -199,7 +199,7 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 	}
 	err = m.SendTransaction(ctx, signedTx)
 	if err != nil {
-		m.lg.Error("Send tx failed", "error", err)
+		m.lg.Error("Send tx failed", "txNonce", nonce, "gasPrice", gasPrice, "error", err)
 		return common.Hash{}, err
 	}
 	m.lg.Info("Submit mined result done", "shard", rst.startShardId, "block", rst.blockNumber,

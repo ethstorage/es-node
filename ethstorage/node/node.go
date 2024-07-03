@@ -299,6 +299,7 @@ func (n *EsNode) initMiner(ctx context.Context, cfg *Config) error {
 		cfg.Mining.ZKWorkingDir,
 		cfg.Mining.ZKeyFileName,
 		cfg.Mining.ZKProverMode,
+		cfg.Mining.ZKProverImpl,
 		n.log,
 	)
 	getBlobFn := func(kvIdx uint64, kvHash common.Hash) ([]byte, error) {

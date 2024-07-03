@@ -8,7 +8,6 @@ package integration
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -75,7 +74,13 @@ func TestMining(t *testing.T) {
 	feed := new(event.Feed)
 
 	l1api := miner.NewL1MiningAPI(pClient, nil, lg)
-	pvr := prover.NewKZGPoseidonProver(miningConfig.ZKWorkingDir, miningConfig.ZKeyFileName, 2, lg)
+	pvr := prover.NewKZGPoseidonProver(
+		miningConfig.ZKWorkingDir,
+		miningConfig.ZKeyFileName,
+		miningConfig.ZKProverMode,
+		miningConfig.ZKProverImpl,
+		lg,
+	)
 	db := rawdb.NewMemoryDatabase()
 	mnr := miner.New(miningConfig, db, storageManager, l1api, func(kvIdx uint64, kvHash common.Hash) ([]byte, error) {
 		kvData, exist, err := storageManager.TryRead(kvIdx, int(storageManager.MaxKvSize()), kvHash)
@@ -163,7 +168,7 @@ func cleanFiles(proverDir string) {
 	}
 
 	folderPath := filepath.Join(proverDir, "snarkbuild")
-	files, err := ioutil.ReadDir(folderPath)
+	files, err := os.ReadDir(folderPath)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -254,7 +259,7 @@ func fillEmpty(t *testing.T, l1Client *eth.PollingClient, storageMgr *ethstorage
 }
 
 func prepareData(t *testing.T, l1Client *eth.PollingClient, storageMgr *ethstorage.StorageManager, value string) {
-	data := generateRandomContent(128 * 10)
+	data := generateRandomContent(124 * 10)
 	blobs := utils.EncodeBlobs(data)
 	t.Logf("Blobs len %d \n", len(blobs))
 	var hashs []common.Hash
@@ -416,14 +421,11 @@ func initMiningConfig(t *testing.T, l1Contract common.Address, client *eth.Polli
 	}
 	miningConfig.PrepaidAmount = new(big.Int).SetBytes(result)
 
-	miningConfig.ZKeyFileName = zkeyFile2
+	miningConfig.ZKeyFileName = zkey2Name
 	proverPath, _ := filepath.Abs(prPath)
-	zkeyFull := filepath.Join(proverPath, snarkLibDir, miningConfig.ZKeyFileName)
-	if _, err := os.Stat(zkeyFull); os.IsNotExist(err) {
-		t.Fatalf("%s not found", zkeyFull)
-	}
 	miningConfig.ZKWorkingDir = proverPath
 	miningConfig.ZKProverMode = 2
+	miningConfig.ZKProverImpl = 1
 	miningConfig.ThreadsPerShard = 2
 	miningConfig.MinimumProfit = new(big.Int).SetInt64(-1e18)
 	return miningConfig
