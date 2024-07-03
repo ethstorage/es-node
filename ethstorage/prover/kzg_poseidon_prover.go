@@ -4,28 +4,75 @@
 package prover
 
 import (
+	"errors"
 	"fmt"
 	"math/big"
+	"os"
+	"path/filepath"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
 )
 
+type IZKProver interface {
+	// Generate a zk proof for the given encoding keys and samples and return proof and masks (mode 2)
+	GenerateZKProof(encodingKeys []common.Hash, sampleIdxs []uint64) ([]byte, []*big.Int, error)
+	// Generate a zk proof for a given sample (mode 1)
+	GenerateZKProofPerSample(encodingKey common.Hash, sampleIdx uint64) ([]byte, *big.Int, error)
+	// Generate ZK Proof for the given encoding keys and samples and return proof and all publics (mode 2)
+	GenerateZKProofRaw(encodingKeys []common.Hash, sampleIdxs []uint64) ([]byte, []*big.Int, error)
+}
+
+const (
+	SnarkLib  = "snark_lib"
+	WasmName  = "blob_poseidon.wasm"
+	Wasm2Name = "blob_poseidon2.wasm"
+)
+
 type KZGPoseidonProver struct {
-	dir, zkey    string
 	zkProverMode uint64
+	zkProverImpl uint64
+	libDir       string
+	zkey         string
+	wasm         string
 	lg           log.Logger
 }
 
 // Prover that can be used directly by miner to prove both KZG and Poseidon hash
 // workingDir specifies the working directory of the command relative to the caller.
-// zkeyFileName specifies the zkey file name used by snarkjs to generate snark proof
+// zkeyFileName specifies the zkey file name to generate snark proof
+// zkProverMode specifies the mode of the zk prover, 1 for per sample, 2 for samples
+// zkProverImpl specifies the implementation of the snark prover, 1 for snarkjs, 2 for go-rapidsnark
+// lg specifies the logger to log the info
 // returns a prover that can generate a combined KZG + zk proof
-func NewKZGPoseidonProver(workingDir, zkeyFileName string, mode uint64, lg log.Logger) KZGPoseidonProver {
+func NewKZGPoseidonProver(workingDir, zkeyFileName string, zkProverMode, zkProverImpl uint64, lg log.Logger) KZGPoseidonProver {
+	// check dependencies when es-node starts
+	libDir := filepath.Join(workingDir, SnarkLib)
+	if _, err := os.Stat(libDir); errors.Is(err, os.ErrNotExist) {
+		lg.Crit("Init ZK prover failed", "error", "snark lib does not exist", "dir", libDir)
+	}
+	zkeyFile := filepath.Join(libDir, zkeyFileName)
+	if _, err := os.Stat(zkeyFile); errors.Is(err, os.ErrNotExist) {
+		lg.Crit("Init ZK prover failed", "error", "zkey does not exist", "dir", zkeyFile)
+	}
+	var wasmName string
+	if zkProverMode == 2 {
+		wasmName = Wasm2Name
+	} else if zkProverMode == 1 {
+		wasmName = WasmName
+	} else {
+		lg.Crit("Init ZK prover failed", "error", "invalid zkProverMode", "mode", zkProverMode)
+	}
+	wasmFile := filepath.Join(libDir, wasmName)
+	if _, err := os.Stat(wasmFile); errors.Is(err, os.ErrNotExist) {
+		lg.Crit("Init ZK prover failed", "error", "wasm does not exist", "dir", wasmFile)
+	}
 	return KZGPoseidonProver{
-		dir:          workingDir,
-		zkProverMode: mode,
+		zkProverMode: zkProverMode,
+		zkProverImpl: zkProverImpl,
+		libDir:       libDir,
 		zkey:         zkeyFileName,
+		wasm:         wasmName,
 		lg:           lg,
 	}
 }
@@ -46,11 +93,15 @@ func (p *KZGPoseidonProver) GetStorageProof(data [][]byte, encodingKeys []common
 		}
 		peInputs = append(peInputs, peInput)
 	}
+	prvr, err := p.getZKProver()
+	if err != nil {
+		return nil, nil, nil, err
+	}
 	var zkProofs [][]byte
 	var masks []*big.Int
 	if p.zkProverMode == 1 {
 		for i, encodingKey := range encodingKeys {
-			zkProof, mask, err := NewZKProver(p.dir, p.zkey, p.lg).GenerateZKProofPerSample(encodingKey, sampleIdxInKv[i])
+			zkProof, mask, err := prvr.GenerateZKProofPerSample(encodingKey, sampleIdxInKv[i])
 			if err != nil {
 				return nil, nil, nil, err
 			}
@@ -58,7 +109,7 @@ func (p *KZGPoseidonProver) GetStorageProof(data [][]byte, encodingKeys []common
 			masks = append(masks, mask)
 		}
 	} else if p.zkProverMode == 2 {
-		zkProof, msks, err := NewZKProver(p.dir, p.zkey, p.lg).GenerateZKProof(encodingKeys, sampleIdxInKv)
+		zkProof, msks, err := prvr.GenerateZKProof(encodingKeys, sampleIdxInKv)
 		if err != nil {
 			return nil, nil, nil, err
 		}
@@ -68,4 +119,16 @@ func (p *KZGPoseidonProver) GetStorageProof(data [][]byte, encodingKeys []common
 		return nil, nil, nil, fmt.Errorf("invalid zk proof mode")
 	}
 	return masks, zkProofs, peInputs, nil
+}
+
+func (p *KZGPoseidonProver) getZKProver() (IZKProver, error) {
+	if p.zkProverImpl == 1 {
+		p.lg.Info("Using snarkjs zk prover")
+		return NewZKProver(filepath.Dir(p.libDir), p.zkey, p.wasm, p.lg), nil
+	}
+	if p.zkProverImpl == 2 {
+		p.lg.Info("Using go-rapidsnark zk prover")
+		return NewZKProverGo(p.libDir, p.zkey, p.wasm, p.lg)
+	}
+	return nil, fmt.Errorf("invalid zk prover implementation: %d", p.zkProverImpl)
 }
