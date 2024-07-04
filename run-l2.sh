@@ -25,35 +25,8 @@ if [ ${#ES_NODE_SIGNER_PRIVATE_KEY} -ne 64 ]; then
   exit 1
 fi
 
-if ! [ -x "$(command -v node)" ]; then
-  echo 'Error: Node.js is not installed.'
-  exit 1
-fi
-
-# check node js version
-node_version=$(node -v)
-major_version=$(echo $node_version | cut -d'v' -f2 | cut -d'.' -f1)
-
-if [ "$major_version" -lt 16 ]; then
-    echo "Error: Node.js version is too old."
-    exit 1
-fi
-
-# install snarkjs if not
-if ! [ "$(command -v snarkjs)" ]; then
-    echo "snarkjs not found, start installing..."
-    snarkjs_install=$(npm install -g snarkjs 2>&1)
-    if [ $? -eq 0 ]; then
-      echo "snarkjs installed successfully."
-    else
-      echo "Error: snarkjs install failed with the following error:"
-      echo "$snarkjs_install"
-      exit 1
-    fi
-fi
-
 # ZK prover mode, 1: one proof per sample, 2: one proof for multiple samples.
-zkp_mode=2 
+zkp_mode=
 i=1
 while [ $i -le $# ]; do
     if [ "${!i}" = "--miner.zk-prover-mode" ]; then
@@ -69,12 +42,14 @@ while [ $i -le $# ]; do
     i=$((i+1))
 done
 
-if [ "$zkp_mode" != 1 ] && [ "$zkp_mode" != 2 ]; then
+if [ -n "$zkp_mode" ] && [ "$zkp_mode" != 1 ] && [ "$zkp_mode" != 2 ]; then
   echo "Error: zk prover mode can only be 1 or 2."
   exit 1  
-fi
+fi 
 
-echo "zk prover mode is $zkp_mode"
+if [ -n "$zkp_mode" ]; then
+  echo "The zk prover mode has been overridden to $zkp_mode"
+fi 
 
 # download zkey if not yet
 zkey_name="blob_poseidon2.zkey"
@@ -85,7 +60,7 @@ if [ "$zkp_mode" = 1 ]; then
   zkey_size=280151245
   zkey_url="https://drive.usercontent.google.com/download?id=1ZLfhYeCXMnbk6wUiBADRAn1mZ8MI_zg-&export=download&confirm=t&uuid=16ddcd58-2498-4d65-8931-934df3d0065c"
 fi
-zkey_file="./build/bin/snarkjs/$zkey_name"
+zkey_file="./build/bin/snark_lib/$zkey_name"
 if [ ! -e  ${zkey_file} ] || [ $(wc -c <  ${zkey_file}) -ne ${zkey_size} ]; then
   echo "Start downloading ${zkey_file}..." 
   curl $zkey_url -o ${zkey_file}
@@ -97,6 +72,65 @@ if [ ! -e  ${zkey_file} ] || [ $(wc -c <  ${zkey_file}) -ne ${zkey_size} ]; then
     echo "Error: The zkey file was not downloaded correctly. You can check the file content for more information."
     exit 1
   fi
+fi
+
+
+# ZK prover implementation, 1: snarkjs, 2: go-rapidsnark.
+zkp_impl=
+i=1
+while [ $i -le $# ]; do
+    if [ "${!i}" = "--miner.zk-prover-impl" ]; then
+        j=$((i+1))
+        zkp_impl="${!j}"
+        break
+    else
+        if echo "${!i}" | grep -qE -- "--miner\.zk-prover-impl=([0-9]+)"; then
+            zkp_impl=$(echo "${!i}" | sed -E 's/.*=([0-9]+)/\1/')
+            break
+        fi
+    fi
+    i=$((i+1))
+done
+
+
+if [ -n "$zkp_impl" ] && [ "$zkp_impl" != 1 ] && [ "$zkp_impl" != 2 ]; then
+  echo "miner.zk-prover-impl can only be 1 or 2"
+  exit 1
+fi 
+
+if [ -n "$zkp_impl" ]; then
+  echo "The zk prover implementation has been overridden to $zkp_impl"
+fi 
+
+if [ "$zkp_impl" = 1 ]; then
+
+  if ! [ -x "$(command -v node)" ]; then
+    echo 'Error: Node.js is not installed.'
+    exit 1
+  fi
+
+  # check node js version
+  node_version=$(node -v)
+  major_version=$(echo $node_version | cut -d'v' -f2 | cut -d'.' -f1)
+
+  if [ "$major_version" -lt 16 ]; then
+      echo "Error: Node.js version is too old."
+      exit 1
+  fi
+
+  # install snarkjs if not
+  if ! [ "$(command -v snarkjs)" ]; then
+      echo "snarkjs not found, start installing..."
+      snarkjs_install=$(npm install -g snarkjs 2>&1)
+      if [ $? -eq 0 ]; then
+        echo "snarkjs installed successfully."
+      else
+        echo "Error: snarkjs install failed with the following error:"
+        echo "$snarkjs_install"
+        exit 1
+      fi
+  fi
+
 fi
 
 executable="./build/bin/es-node"
