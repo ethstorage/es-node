@@ -78,7 +78,7 @@ func (m *l1MiningAPI) GetDataHashes(ctx context.Context, contract common.Address
 	for i := 0; i < len(metas); i++ {
 		var dhash common.Hash
 		copy(dhash[:], metas[i][32-ethstorage.HashSizeInContract:32])
-		m.lg.Debug("Get data hash", "kvIndex", kvIdxes[i], "hash", dhash.Hex())
+		m.lg.Info("Get data hash", "kvIndex", kvIdxes[i], "hash", dhash.Hex())
 		hashes = append(hashes, dhash)
 	}
 	return hashes, nil

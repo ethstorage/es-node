@@ -65,18 +65,23 @@ type Downloader struct {
 	mu   sync.Mutex
 }
 
-type blob struct {
+type Blob struct {
 	kvIndex *big.Int
 	kvSize  *big.Int
 	hash    common.Hash
 	data    []byte
 }
 
+func (b *Blob) KvIdx() uint64     { return b.kvIndex.Uint64() }
+func (b *Blob) Size() uint64      { return b.kvSize.Uint64() }
+func (b *Blob) Data() []byte      { return b.data }
+func (b *Blob) Hash() common.Hash { return b.hash }
+
 type blockBlobs struct {
 	timestamp uint64
 	number    uint64
 	hash      common.Hash
-	blobs     []*blob
+	blobs     []*Blob
 }
 
 func NewDownloader(
@@ -270,7 +275,9 @@ func (s *Downloader) download() {
 				s.log.Error("Save blobs error", "err", err)
 				return
 			}
-			log.Info("DownloadFinished", "duration(ms)", time.Since(ts).Milliseconds(), "blobs", len(blobs))
+			if len(blobs) > 0 {
+				log.Info("DownloadFinished", "duration(ms)", time.Since(ts).Milliseconds(), "blobs", len(blobs))
+			}
 
 			// save lastDownloadedBlock into database
 			bs := make([]byte, 8)
@@ -281,7 +288,7 @@ func (s *Downloader) download() {
 				s.log.Error("Save lastDownloadedBlock into db error", "err", err)
 				return
 			}
-			s.log.Info("LastDownloadedBlock saved into db", "lastDownloadedBlock", end)
+			s.log.Debug("LastDownloadedBlock saved into db", "lastDownloadedBlock", end)
 
 			s.dumpBlobsIfNeeded(blobs)
 
@@ -297,7 +304,7 @@ func (s *Downloader) download() {
 // 1. Downloading the blobs into the cache when they are not finalized, with the option toCache set to true.
 // 2. Writing the blobs into the shard file when they are finalized, with the option toCache set to false.
 // we will attempt to read the blobs from the cache initially. If they don't exist in the cache, we will download them instead.
-func (s *Downloader) downloadRange(start int64, end int64, toCache bool) ([]blob, error) {
+func (s *Downloader) downloadRange(start int64, end int64, toCache bool) ([]Blob, error) {
 	ts := time.Now()
 
 	if end < start {
@@ -312,7 +319,7 @@ func (s *Downloader) downloadRange(start int64, end int64, toCache bool) ([]blob
 	if err != nil {
 		return nil, err
 	}
-	blobs := []blob{}
+	blobs := []Blob{}
 	for _, elBlock := range elBlocks {
 		// attempt to read the blobs from the cache first
 		res := s.Cache.Blobs(elBlock.hash)
@@ -360,18 +367,20 @@ func (s *Downloader) downloadRange(start int64, end int64, toCache bool) ([]blob
 			}
 			elBlob.data = clBlob.Data
 			blobs = append(blobs, *elBlob)
+			s.log.Info("Download range", "cache", toCache, "kvIdx", elBlob.kvIndex)
 		}
 		if toCache {
 			s.Cache.SetBlockBlobs(elBlock)
 		}
 	}
-
-	s.log.Info("Download range", "cache", toCache, "start", start, "end", end, "blobNumber", len(blobs), "duration(ms)", time.Since(ts).Milliseconds())
+	if len(blobs) > 0 {
+		s.log.Info("Download range", "cache", toCache, "start", start, "end", end, "blobNumber", len(blobs), "duration(ms)", time.Since(ts).Milliseconds())
+	}
 
 	return blobs, nil
 }
 
-func (s *Downloader) dumpBlobsIfNeeded(blobs []blob) {
+func (s *Downloader) dumpBlobsIfNeeded(blobs []Blob) {
 	if s.dumpDir != "" {
 		for _, blob := range blobs {
 			fileName := filepath.Join(s.dumpDir, fmt.Sprintf("%s.dat", hex.EncodeToString(blob.data[:5])))
@@ -404,7 +413,7 @@ func (s *Downloader) eventsToBlocks(events []types.Log) ([]*blockBlobs, error) {
 				timestamp: res.Time,
 				number:    event.BlockNumber,
 				hash:      event.BlockHash,
-				blobs:     []*blob{},
+				blobs:     []*Blob{},
 			})
 		}
 
@@ -412,7 +421,7 @@ func (s *Downloader) eventsToBlocks(events []types.Log) ([]*blockBlobs, error) {
 		hash := common.Hash{}
 		copy(hash[:], event.Topics[3][:])
 
-		blob := blob{
+		blob := Blob{
 			kvIndex: big.NewInt(0).SetBytes(event.Topics[1][:]),
 			kvSize:  big.NewInt(0).SetBytes(event.Topics[2][:]),
 			hash:    hash,

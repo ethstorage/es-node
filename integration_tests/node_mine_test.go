@@ -22,10 +22,10 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethstorage/go-ethstorage/cmd/es-utils/utils"
 	"github.com/ethstorage/go-ethstorage/ethstorage"
+	"github.com/ethstorage/go-ethstorage/ethstorage/blobs"
 	"github.com/ethstorage/go-ethstorage/ethstorage/downloader"
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
 	"github.com/ethstorage/go-ethstorage/ethstorage/miner"
-	"github.com/ethstorage/go-ethstorage/ethstorage/node"
 	"github.com/ethstorage/go-ethstorage/ethstorage/p2p/protocol"
 	"github.com/ethstorage/go-ethstorage/ethstorage/prover"
 	"github.com/ethstorage/go-ethstorage/ethstorage/signer"
@@ -84,7 +84,7 @@ func TestMining(t *testing.T) {
 		lg,
 	)
 	db := rawdb.NewMemoryDatabase()
-	bq := node.NewBlobQuerier(&downloader.Downloader{
+	bq := blobs.NewBlobQuerier(&downloader.Downloader{
 		Cache: downloader.NewBlobCache(),
 	}, storageManager, pClient, lg)
 	mnr := miner.New(miningConfig, db, storageManager, l1api, bq, &pvr, feed, lg)

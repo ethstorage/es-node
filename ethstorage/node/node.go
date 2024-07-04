@@ -20,6 +20,7 @@ import (
 	ethRPC "github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethstorage/go-ethstorage/ethstorage"
 	"github.com/ethstorage/go-ethstorage/ethstorage/archiver"
+	"github.com/ethstorage/go-ethstorage/ethstorage/blobs"
 	"github.com/ethstorage/go-ethstorage/ethstorage/downloader"
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
 	"github.com/ethstorage/go-ethstorage/ethstorage/metrics"
@@ -301,7 +302,7 @@ func (n *EsNode) initMiner(ctx context.Context, cfg *Config) error {
 		cfg.Mining.ZKProverImpl,
 		n.log,
 	)
-	dq := NewBlobQuerier(n.downloader, n.storageManager, n.l1Source, n.log)
+	dq := blobs.NewBlobQuerier(n.downloader, n.storageManager, n.l1Source, n.log)
 	n.miner = miner.New(cfg.Mining, n.db, n.storageManager, l1api, dq, &pvr, n.feed, n.log)
 	n.log.Info("Initialized miner")
 	return nil

@@ -12,6 +12,22 @@ import (
 	"github.com/ethstorage/go-ethstorage/ethstorage"
 )
 
+var dataSubscribers = make(map[string]chan common.Hash)
+
+func SubscribeNewBlobs(key string, ch chan common.Hash) {
+	dataSubscribers[key] = ch
+}
+
+func Unsubscribe(key string) {
+	delete(dataSubscribers, key)
+}
+
+func notifySubscribers(data common.Hash) {
+	for _, ch := range dataSubscribers {
+		ch <- data
+	}
+}
+
 type BlobCache struct {
 	blocks map[common.Hash]*blockBlobs
 	mu     sync.RWMutex
@@ -27,9 +43,11 @@ func (c *BlobCache) SetBlockBlobs(block *blockBlobs) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.blocks[block.hash] = block
+
+	notifySubscribers(block.hash)
 }
 
-func (c *BlobCache) Blobs(hash common.Hash) []blob {
+func (c *BlobCache) Blobs(hash common.Hash) []Blob {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
@@ -37,7 +55,7 @@ func (c *BlobCache) Blobs(hash common.Hash) []blob {
 		return nil
 	}
 
-	res := []blob{}
+	res := []Blob{}
 	for _, blob := range c.blocks[hash].blobs {
 		res = append(res, *blob)
 	}
