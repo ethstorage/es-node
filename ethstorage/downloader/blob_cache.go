@@ -58,6 +58,20 @@ func (c *BlobCache) GetKeyValueByIndex(idx uint64, hash common.Hash) []byte {
 	return nil
 }
 
+func (c *BlobCache) GetKeyValueByIndexUnsafe(idx uint64) ([]byte, common.Hash) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	for _, block := range c.blocks {
+		for _, blob := range block.blobs {
+			if blob.kvIndex.Uint64() == idx {
+				return blob.data, blob.hash
+			}
+		}
+	}
+	return nil, common.Hash{}
+}
+
 // TODO: @Qiang An edge case that may need to be handled when Ethereum block is NOT finalized for a long time
 // We may need to add a counter in SetBlockBlobs(), if the counter is greater than a threshold which means
 // there has been a long time after last Cleanup, so we need to Cleanup anyway in SetBlockBlobs.

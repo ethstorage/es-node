@@ -22,8 +22,10 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethstorage/go-ethstorage/cmd/es-utils/utils"
 	"github.com/ethstorage/go-ethstorage/ethstorage"
+	"github.com/ethstorage/go-ethstorage/ethstorage/downloader"
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
 	"github.com/ethstorage/go-ethstorage/ethstorage/miner"
+	"github.com/ethstorage/go-ethstorage/ethstorage/node"
 	"github.com/ethstorage/go-ethstorage/ethstorage/p2p/protocol"
 	"github.com/ethstorage/go-ethstorage/ethstorage/prover"
 	"github.com/ethstorage/go-ethstorage/ethstorage/signer"
@@ -82,16 +84,10 @@ func TestMining(t *testing.T) {
 		lg,
 	)
 	db := rawdb.NewMemoryDatabase()
-	mnr := miner.New(miningConfig, db, storageManager, l1api, func(kvIdx uint64, kvHash common.Hash) ([]byte, bool, error) {
-		kvData, exist, err := storageManager.TryRead(kvIdx, int(storageManager.MaxKvSize()), kvHash)
-		if err != nil {
-			return nil, false, err
-		}
-		if !exist {
-			return nil, false, fmt.Errorf("kv not found: index=%d", kvIdx)
-		}
-		return kvData, false, nil
-	}, &pvr, feed, lg)
+	bq := node.NewBlobQuerier(&downloader.Downloader{
+		Cache: downloader.NewBlobCache(),
+	}, storageManager, pClient, lg)
+	mnr := miner.New(miningConfig, db, storageManager, l1api, bq, &pvr, feed, lg)
 	lg.Info("Initialized miner")
 
 	l1HeadsSub := event.ResubscribeErr(time.Second*10, func(ctx context.Context, err error) (event.Subscription, error) {

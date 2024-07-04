@@ -20,7 +20,6 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 	es "github.com/ethstorage/go-ethstorage/ethstorage"
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
-	"github.com/ethstorage/go-ethstorage/ethstorage/prover"
 )
 
 const (
@@ -97,12 +96,12 @@ type result struct {
 // worker is the main object which takes care of storage mining
 // and submit the mining result tx to the L1 chain.
 type worker struct {
-	config     Config
-	l1API      L1API
-	getBlob    GetBlobFn
-	prover     MiningProver
-	db         ethdb.Database
-	storageMgr *es.StorageManager
+	config      Config
+	l1API       L1API
+	dataQuerier DataQuerier
+	prover      MiningProver
+	db          ethdb.Database
+	storageMgr  *es.StorageManager
 
 	chainHeadCh chan eth.L1BlockRef
 	startCh     chan uint64
@@ -127,7 +126,7 @@ func newWorker(
 	db ethdb.Database,
 	storageMgr *es.StorageManager,
 	api L1API,
-	getBlob GetBlobFn,
+	dataQuerier DataQuerier,
 	chainHeadCh chan eth.L1BlockRef,
 	prover MiningProver,
 	lg log.Logger,
@@ -141,7 +140,7 @@ func newWorker(
 	worker := &worker{
 		config:           config,
 		l1API:            api,
-		getBlob:          getBlob,
+		dataQuerier:      dataQuerier,
 		prover:           prover,
 		chainHeadCh:      chainHeadCh,
 		shardTaskMap:     make(map[uint64]task),
@@ -252,7 +251,7 @@ func (w *worker) newWorkLoop() {
 			if !w.isRunning() {
 				break
 			}
-			w.lg.Info("Updating tasks with L1 new head", "blockNumber", block.Number, "blockTime", block.Time, "blockHash", block.Hash, "now", uint64(time.Now().Unix()))
+			w.lg.Debug("Updating tasks with L1 new head", "blockNumber", block.Number, "blockTime", block.Time, "blockHash", block.Hash, "now", uint64(time.Now().Unix()))
 			// TODO suspend mining if:
 			// 1) a mining tx is already submitted; or
 			// 2) if the last mining time is too close (the reward is not enough).
@@ -310,7 +309,7 @@ func (w *worker) assignTasks(task task, block eth.L1BlockRef, reqDiff *big.Int) 
 			w.lg.Debug("Mining task queued", "shard", ti.shardIdx, "thread", ti.thread, "block", ti.blockNumber, "blockTime", block.Time, "now", uint64(time.Now().Unix()))
 		}
 	}
-	w.lg.Info("Mining tasks assigned", "miner", task.miner, "shard", task.shardIdx, "threads", w.config.ThreadsPerShard, "block", block.Number, "nonces", w.config.NonceLimit)
+	w.lg.Debug("Mining tasks assigned", "miner", task.miner, "shard", task.shardIdx, "threads", w.config.ThreadsPerShard, "block", block.Number, "nonces", w.config.NonceLimit)
 }
 
 func (w *worker) updateDifficulty(shardIdx, blockTime uint64) (*big.Int, error) {
@@ -593,7 +592,7 @@ func (w *worker) computeHash(shardIdx uint64, hash0 common.Hash) (common.Hash, [
 		w.storageMgr.MaxKvSizeBits(), sampleSizeBits,
 		shardIdx,
 		w.config.RandomChecks,
-		w.storageMgr.ReadSampleUnlocked,
+		w.dataQuerier.ReadSample,
 		hash0,
 	)
 }
@@ -614,7 +613,7 @@ func (w *worker) getMiningData(t *task, sampleIdx []uint64) ([][]byte, []uint64,
 		return nil, nil, nil, nil, nil, err
 	}
 	for i := uint64(0); i < checksLen; i++ {
-		kvData, fromCache, err := w.getBlob(kvIdxs[i], kvHashes[i])
+		kvData, err := w.dataQuerier.GetBlob(kvIdxs[i], kvHashes[i])
 		if err != nil {
 			w.lg.Error("Get data error", "index", kvIdxs[i], "error", err.Error())
 			return nil, nil, nil, nil, nil, err
@@ -622,25 +621,10 @@ func (w *worker) getMiningData(t *task, sampleIdx []uint64) ([][]byte, []uint64,
 		dataSet[i] = kvData
 		sampleIdxsInKv[i] = sampleIdx[i] % (1 << sampleLenBits)
 		encodingKeys[i] = es.CalcEncodeKey(kvHashes[i], kvIdxs[i], t.miner)
-		var encodedSample common.Hash
-		if fromCache {
-			sampleSize := uint64(1 << sampleSizeBits)
-			sampleIdxByte := sampleIdxsInKv[i] * sampleSize
-			sample := kvData[sampleIdxByte : sampleIdxByte+sampleSize]
-			mask, err := prover.GenerateMask(encodingKeys[i], sampleIdxsInKv[i])
-			if err != nil {
-				w.lg.Error("Generate mask error", "encodingKey", encodingKeys[i], "sampleIdx", sampleIdxsInKv[i],
-					"error", err.Error())
-				return nil, nil, nil, nil, nil, err
-			}
-			encodedBytes := es.MaskDataInPlace(mask, sample)
-			encodedSample = common.BytesToHash(encodedBytes)
-		} else {
-			encodedSample, err = w.storageMgr.ReadSampleUnlocked(t.shardIdx, sampleIdx[i])
-			if err != nil {
-				w.lg.Error("Read sample error", "kvIdx", kvIdxs[i], "sampleIdx", sampleIdx[i], "error", err.Error())
-				return nil, nil, nil, nil, nil, err
-			}
+		encodedSample, err := w.dataQuerier.ReadSample(t.shardIdx, sampleIdx[i])
+		if err != nil {
+			w.lg.Error("Read sample error", "index", sampleIdx[i], "error", err.Error())
+			return nil, nil, nil, nil, nil, err
 		}
 		encodedSamples[i] = encodedSample
 	}

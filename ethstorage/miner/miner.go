@@ -31,8 +31,10 @@ type L1API interface {
 type MiningProver interface {
 	GetStorageProof(encodedKVs [][]byte, encodingKey []common.Hash, sampleIdxInKv []uint64) ([]*big.Int, [][]byte, [][]byte, error)
 }
-
-type GetBlobFn func(kvIdx uint64, blobHash common.Hash) ([]byte, bool, error)
+type DataQuerier interface {
+	GetBlob(kvIdxe uint64, blobHash common.Hash) ([]byte, error)
+	ReadSample(shardIdx, sampleIdx uint64) (common.Hash, error)
+}
 
 type miningInfo struct {
 	LastMineTime uint64
@@ -66,7 +68,7 @@ func New(
 	db ethdb.Database,
 	storageMgr *ethstorage.StorageManager,
 	api L1API,
-	getBlob GetBlobFn,
+	dataQuerier DataQuerier,
 	prover MiningProver,
 	feed *event.Feed,
 	lg log.Logger,
@@ -79,7 +81,7 @@ func New(
 		startCh:     make(chan struct{}),
 		stopCh:      make(chan struct{}),
 		lg:          lg,
-		worker:      newWorker(*config, db, storageMgr, api, getBlob, chainHeadCh, prover, lg),
+		worker:      newWorker(*config, db, storageMgr, api, dataQuerier, chainHeadCh, prover, lg),
 	}
 	miner.wg.Add(1)
 	go miner.update()
