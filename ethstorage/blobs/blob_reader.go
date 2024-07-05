@@ -15,10 +15,10 @@ import (
 )
 
 const (
-	BlobQuerierName = "blob-querier"
+	BlobReaderSubKey = "blob-reader"
 )
 
-type BlobQuerier struct {
+type BlobReader struct {
 	encodedBlobs sync.Map
 	dlr          *downloader.Downloader
 	sm           *es.StorageManager
@@ -28,8 +28,8 @@ type BlobQuerier struct {
 	lg           log.Logger
 }
 
-func NewBlobQuerier(dlr *downloader.Downloader, sm *es.StorageManager, l1 *eth.PollingClient, lg log.Logger) *BlobQuerier {
-	n := &BlobQuerier{
+func NewBlobReader(dlr *downloader.Downloader, sm *es.StorageManager, l1 *eth.PollingClient, lg log.Logger) *BlobReader {
+	n := &BlobReader{
 		dlr:    dlr,
 		sm:     sm,
 		l1:     l1,
@@ -40,14 +40,14 @@ func NewBlobQuerier(dlr *downloader.Downloader, sm *es.StorageManager, l1 *eth.P
 	return n
 }
 
-func (n *BlobQuerier) sync() {
+func (n *BlobReader) sync() {
 	ch := make(chan common.Hash)
-	downloader.SubscribeNewBlobs(BlobQuerierName, ch)
+	downloader.SubscribeNewBlobs(BlobReaderSubKey, ch)
 	go func() {
 		defer func() {
 			close(ch)
-			downloader.Unsubscribe(BlobQuerierName)
-			n.lg.Info("Downloader cache unsubscribed", "name", BlobQuerierName)
+			downloader.Unsubscribe(BlobReaderSubKey)
+			n.lg.Info("Blob reader unsubscribed downloader cache.")
 			n.wg.Done()
 		}()
 		for {
@@ -58,7 +58,7 @@ func (n *BlobQuerier) sync() {
 					n.encodedBlobs.Store(blob.KvIdx(), encodedBlob)
 				}
 			case <-n.exitCh:
-				n.lg.Info("BlobQuerier is exiting from downloader sync loop")
+				n.lg.Info("Blob reader is exiting from downloader sync loop...")
 				return
 			}
 		}
@@ -66,18 +66,17 @@ func (n *BlobQuerier) sync() {
 	n.wg.Add(1)
 }
 
-func (n *BlobQuerier) encodeBlob(blob downloader.Blob) []byte {
+func (n *BlobReader) encodeBlob(blob downloader.Blob) []byte {
 	shardIdx := blob.KvIdx() >> n.sm.KvEntriesBits()
 	encodeType, _ := n.sm.GetShardEncodeType(shardIdx)
 	miner, _ := n.sm.GetShardMiner(shardIdx)
 	n.lg.Info("Encoding blob from downloader", "kvIdx", blob.KvIdx(), "shardIdx", shardIdx, "encodeType", encodeType, "miner", miner)
 	encodeKey := es.CalcEncodeKey(blob.Hash(), blob.KvIdx(), miner)
 	encodedBlob := es.EncodeChunk(blob.Size(), blob.Data(), encodeType, encodeKey)
-	n.lg.Info("Encoding blob from downloader done", "kvIdx", blob.KvIdx())
 	return encodedBlob
 }
 
-func (n *BlobQuerier) GetBlob(kvIdx uint64, kvHash common.Hash) ([]byte, error) {
+func (n *BlobReader) GetBlob(kvIdx uint64, kvHash common.Hash) ([]byte, error) {
 	blob := n.dlr.Cache.GetKeyValueByIndex(kvIdx, kvHash)
 	if blob != nil {
 		n.lg.Debug("Loaded blob from downloader cache", "kvIdx", kvIdx)
@@ -94,7 +93,7 @@ func (n *BlobQuerier) GetBlob(kvIdx uint64, kvHash common.Hash) ([]byte, error) 
 	return blob, nil
 }
 
-func (n *BlobQuerier) ReadSample(shardIdx, sampleIdx uint64) (common.Hash, error) {
+func (n *BlobReader) ReadSample(shardIdx, sampleIdx uint64) (common.Hash, error) {
 	sampleLenBits := n.sm.MaxKvSizeBits() - es.SampleSizeBits
 	kvIdx := sampleIdx >> sampleLenBits
 
@@ -114,8 +113,8 @@ func (n *BlobQuerier) ReadSample(shardIdx, sampleIdx uint64) (common.Hash, error
 	return encodedSample, nil
 }
 
-func (n *BlobQuerier) Close() {
-	n.lg.Info("Closing blob querier")
+func (n *BlobReader) Close() {
+	n.lg.Info("Blob reader is being closed...")
 	close(n.exitCh)
 	n.wg.Wait()
 }

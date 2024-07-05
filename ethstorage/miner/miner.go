@@ -31,7 +31,7 @@ type L1API interface {
 type MiningProver interface {
 	GetStorageProof(encodedKVs [][]byte, encodingKey []common.Hash, sampleIdxInKv []uint64) ([]*big.Int, [][]byte, [][]byte, error)
 }
-type DataQuerier interface {
+type DataReader interface {
 	GetBlob(kvIdxe uint64, blobHash common.Hash) ([]byte, error)
 	ReadSample(shardIdx, sampleIdx uint64) (common.Hash, error)
 	Close()
@@ -54,7 +54,7 @@ func (a *miningInfo) String() string {
 
 // Miner creates blocks and searches for proof-of-work values.
 type Miner struct {
-	dataQuerier DataQuerier
+	dataReader  DataReader
 	feed        *event.Feed
 	worker      *worker
 	exitCh      chan struct{}
@@ -70,21 +70,21 @@ func New(
 	db ethdb.Database,
 	storageMgr *ethstorage.StorageManager,
 	api L1API,
-	dataQuerier DataQuerier,
+	dr DataReader,
 	prover MiningProver,
 	feed *event.Feed,
 	lg log.Logger,
 ) *Miner {
 	chainHeadCh := make(chan eth.L1BlockRef, chainHeadChanSize)
 	miner := &Miner{
-		dataQuerier: dataQuerier,
+		dataReader:  dr,
 		feed:        feed,
 		ChainHeadCh: chainHeadCh,
 		exitCh:      make(chan struct{}),
 		startCh:     make(chan struct{}),
 		stopCh:      make(chan struct{}),
 		lg:          lg,
-		worker:      newWorker(*config, db, storageMgr, api, dataQuerier, chainHeadCh, prover, lg),
+		worker:      newWorker(*config, db, storageMgr, api, dr, chainHeadCh, prover, lg),
 	}
 	miner.wg.Add(1)
 	go miner.update()
@@ -148,7 +148,7 @@ func (miner *Miner) Stop() {
 }
 
 func (miner *Miner) Close() {
-	miner.dataQuerier.Close()
+	miner.dataReader.Close()
 	miner.Stop()
 	miner.lg.Warn("Miner is being closed...")
 	close(miner.exitCh)

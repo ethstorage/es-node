@@ -72,7 +72,7 @@ func newMiner(t *testing.T, storageMgr *es.StorageManager, client *eth.PollingCl
 	pvr := prover.NewKZGPoseidonProver(zkWorkingDir, defaultConfig.ZKeyFileName, defaultConfig.ZKProverMode, defaultConfig.ZKProverImpl, lg)
 	fd := new(event.Feed)
 	db := rawdb.NewMemoryDatabase()
-	bq := blobs.NewBlobQuerier(&downloader.Downloader{
+	bq := blobs.NewBlobReader(&downloader.Downloader{
 		Cache: downloader.NewBlobCache(),
 	}, storageMgr, client, lg)
 	miner := New(defaultConfig, db, storageMgr, l1api, bq, &pvr, fd, lg)
