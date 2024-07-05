@@ -18,6 +18,8 @@ const (
 	BlobReaderSubKey = "blob-reader"
 )
 
+// BlobReader provides unified interface for the miner to read blobs and samples
+// from StorageManager and downloader cache.
 type BlobReader struct {
 	encodedBlobs sync.Map
 	dlr          *downloader.Downloader
@@ -40,6 +42,8 @@ func NewBlobReader(dlr *downloader.Downloader, sm *es.StorageManager, l1 *eth.Po
 	return n
 }
 
+// In order to provide miner with encoded samples in a timely manner,
+// BlobReader is tracing the downloader and encoding newly cached blobs.
 func (n *BlobReader) sync() {
 	ch := make(chan common.Hash)
 	downloader.SubscribeNewBlobs(BlobReaderSubKey, ch)
