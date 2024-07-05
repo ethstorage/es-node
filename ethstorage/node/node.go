@@ -302,8 +302,8 @@ func (n *EsNode) initMiner(ctx context.Context, cfg *Config) error {
 		cfg.Mining.ZKProverImpl,
 		n.log,
 	)
-	dq := blobs.NewBlobReader(n.downloader, n.storageManager, n.l1Source, n.log)
-	n.miner = miner.New(cfg.Mining, n.db, n.storageManager, l1api, dq, &pvr, n.feed, n.log)
+	br := blobs.NewBlobReader(n.downloader, n.storageManager, n.l1Source, n.log)
+	n.miner = miner.New(cfg.Mining, n.db, n.storageManager, l1api, br, &pvr, n.feed, n.log)
 	n.log.Info("Initialized miner")
 	return nil
 }
