@@ -229,14 +229,20 @@ func (s *Downloader) downloadToCache() {
 	}
 	s.mu.Unlock()
 
-	// @Qiang devnet-4 have issues to get blob event for the latest block, so if we need roll back to devnet-4
-	// we may need to change it to s.downloadRange(start, end, true)
-	_, err := s.downloadRange(start+1, end, true)
+	for start < end {
+		rangeEnd := start + downloadBatchSize
+		if rangeEnd > end {
+			rangeEnd = end
+		}
+		_, err := s.downloadRange(start+1, rangeEnd, true)
 
-	if err == nil {
-		s.lastCacheBlock = end
-	} else {
-		s.log.Info("DownloadRange failed", "err", err)
+		if err != nil {
+			s.log.Error("DownloadRange failed", "err", err)
+			return
+		}
+
+		s.lastCacheBlock = rangeEnd
+		start = rangeEnd
 	}
 }
 
