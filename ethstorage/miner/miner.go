@@ -34,6 +34,7 @@ type MiningProver interface {
 type DataQuerier interface {
 	GetBlob(kvIdxe uint64, blobHash common.Hash) ([]byte, error)
 	ReadSample(shardIdx, sampleIdx uint64) (common.Hash, error)
+	Close()
 }
 
 type miningInfo struct {
@@ -53,6 +54,7 @@ func (a *miningInfo) String() string {
 
 // Miner creates blocks and searches for proof-of-work values.
 type Miner struct {
+	dataQuerier DataQuerier
 	feed        *event.Feed
 	worker      *worker
 	exitCh      chan struct{}
@@ -75,6 +77,7 @@ func New(
 ) *Miner {
 	chainHeadCh := make(chan eth.L1BlockRef, chainHeadChanSize)
 	miner := &Miner{
+		dataQuerier: dataQuerier,
 		feed:        feed,
 		ChainHeadCh: chainHeadCh,
 		exitCh:      make(chan struct{}),
@@ -145,6 +148,7 @@ func (miner *Miner) Stop() {
 }
 
 func (miner *Miner) Close() {
+	miner.dataQuerier.Close()
 	miner.Stop()
 	miner.lg.Warn("Miner is being closed...")
 	close(miner.exitCh)

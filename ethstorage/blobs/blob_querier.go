@@ -1,4 +1,4 @@
-// Copyright 2022-2023, EthStorage.
+// Copyright 2022-2023, es.
 // For license information, see https://github.com/ethstorage/es-node/blob/main/LICENSE
 
 package blobs
@@ -9,54 +9,71 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethstorage/go-ethstorage/ethstorage"
+	es "github.com/ethstorage/go-ethstorage/ethstorage"
 	"github.com/ethstorage/go-ethstorage/ethstorage/downloader"
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
 )
 
-const sampleSizeBits = 5
+const (
+	BlobQuerierName = "blob-querier"
+)
 
 type BlobQuerier struct {
-	dlr   *downloader.Downloader
-	sm    *ethstorage.StorageManager
-	l1    *eth.PollingClient
-	cache sync.Map
-	lg    log.Logger
+	encodedBlobs sync.Map
+	dlr          *downloader.Downloader
+	sm           *es.StorageManager
+	l1           *eth.PollingClient
+	wg           sync.WaitGroup
+	exitCh       chan struct{}
+	lg           log.Logger
 }
 
-func NewBlobQuerier(dlr *downloader.Downloader, sm *ethstorage.StorageManager, l1 *eth.PollingClient, lg log.Logger) *BlobQuerier {
+func NewBlobQuerier(dlr *downloader.Downloader, sm *es.StorageManager, l1 *eth.PollingClient, lg log.Logger) *BlobQuerier {
 	n := &BlobQuerier{
-		dlr: dlr,
-		sm:  sm,
-		l1:  l1,
-		lg:  lg,
+		dlr:    dlr,
+		sm:     sm,
+		l1:     l1,
+		lg:     lg,
+		exitCh: make(chan struct{}),
 	}
-	n.init()
+	n.sync()
 	return n
 }
 
-func (n *BlobQuerier) init() {
+func (n *BlobQuerier) sync() {
 	ch := make(chan common.Hash)
-	downloader.SubscribeNewBlobs("blob_querier", ch)
+	downloader.SubscribeNewBlobs(BlobQuerierName, ch)
 	go func() {
+		defer func() {
+			close(ch)
+			downloader.Unsubscribe(BlobQuerierName)
+			n.lg.Info("Downloader cache unsubscribed", "name", BlobQuerierName)
+			n.wg.Done()
+		}()
 		for {
-			blockHash := <-ch
-			n.lg.Info("Handling block from downloader cache", "blockHash", blockHash)
-			for _, blob := range n.dlr.Cache.Blobs(blockHash) {
-				encodedBlob := n.encodeBlob(blob)
-				n.cache.Store(blob.KvIdx(), encodedBlob)
+			select {
+			case blockHash := <-ch:
+				for _, blob := range n.dlr.Cache.Blobs(blockHash) {
+					encodedBlob := n.encodeBlob(blob)
+					n.encodedBlobs.Store(blob.KvIdx(), encodedBlob)
+				}
+			case <-n.exitCh:
+				n.lg.Info("BlobQuerier is exiting from downloader sync loop")
+				return
 			}
 		}
 	}()
+	n.wg.Add(1)
 }
 
 func (n *BlobQuerier) encodeBlob(blob downloader.Blob) []byte {
 	shardIdx := blob.KvIdx() >> n.sm.KvEntriesBits()
 	encodeType, _ := n.sm.GetShardEncodeType(shardIdx)
 	miner, _ := n.sm.GetShardMiner(shardIdx)
-	encodeKey := ethstorage.CalcEncodeKey(blob.Hash(), blob.KvIdx(), miner)
-	encodedBlob := ethstorage.EncodeChunk(blob.Size(), blob.Data(), encodeType, encodeKey)
-	n.lg.Info("Encoded blob", "kvIdx", blob.KvIdx(), "miner", miner)
+	n.lg.Info("Encoding blob from downloader", "kvIdx", blob.KvIdx(), "shardIdx", shardIdx, "encodeType", encodeType, "miner", miner)
+	encodeKey := es.CalcEncodeKey(blob.Hash(), blob.KvIdx(), miner)
+	encodedBlob := es.EncodeChunk(blob.Size(), blob.Data(), encodeType, encodeKey)
+	n.lg.Info("Encoding blob from downloader done", "kvIdx", blob.KvIdx())
 	return encodedBlob
 }
 
@@ -78,14 +95,14 @@ func (n *BlobQuerier) GetBlob(kvIdx uint64, kvHash common.Hash) ([]byte, error) 
 }
 
 func (n *BlobQuerier) ReadSample(shardIdx, sampleIdx uint64) (common.Hash, error) {
-	sampleLenBits := n.sm.MaxKvSizeBits() - sampleSizeBits
+	sampleLenBits := n.sm.MaxKvSizeBits() - es.SampleSizeBits
 	kvIdx := sampleIdx >> sampleLenBits
 
-	if value, ok := n.cache.Load(kvIdx); ok {
+	if value, ok := n.encodedBlobs.Load(kvIdx); ok {
 		encodedBlob := value.([]byte)
 		sampleIdxInKv := sampleIdx % (1 << sampleLenBits)
-		sampleSize := uint64(1 << sampleSizeBits)
-		sampleIdxByte := sampleIdxInKv * sampleSize
+		sampleSize := uint64(1 << es.SampleSizeBits)
+		sampleIdxByte := sampleIdxInKv << es.SampleSizeBits
 		sample := encodedBlob[sampleIdxByte : sampleIdxByte+sampleSize]
 		return common.BytesToHash(sample), nil
 	}
@@ -95,4 +112,10 @@ func (n *BlobQuerier) ReadSample(shardIdx, sampleIdx uint64) (common.Hash, error
 		return common.Hash{}, err
 	}
 	return encodedSample, nil
+}
+
+func (n *BlobQuerier) Close() {
+	n.lg.Info("Closing blob querier")
+	close(n.exitCh)
+	n.wg.Wait()
 }

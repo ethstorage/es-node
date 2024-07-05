@@ -26,7 +26,6 @@ const (
 	chainHeadChanSize        = 1
 	taskQueueSize            = 1
 	resultQueueSize          = 10
-	sampleSizeBits           = 5  // 32 bytes
 	slot                     = 12 // seconds
 	miningTransactionTimeout = 50 // seconds
 )
@@ -588,8 +587,10 @@ func (w *worker) mineTask(t *taskItem) (bool, error) {
 
 // computeHash calculates final hash from hash0
 func (w *worker) computeHash(shardIdx uint64, hash0 common.Hash) (common.Hash, []uint64, error) {
-	return hashimoto(w.storageMgr.KvEntriesBits(),
-		w.storageMgr.MaxKvSizeBits(), sampleSizeBits,
+	return hashimoto(
+		w.storageMgr.KvEntriesBits(),
+		w.storageMgr.MaxKvSizeBits(),
+		es.SampleSizeBits,
 		shardIdx,
 		w.config.RandomChecks,
 		w.dataQuerier.ReadSample,
@@ -603,7 +604,7 @@ func (w *worker) getMiningData(t *task, sampleIdx []uint64) ([][]byte, []uint64,
 	dataSet := make([][]byte, checksLen)
 	kvIdxs, sampleIdxsInKv := make([]uint64, checksLen), make([]uint64, checksLen)
 	encodingKeys, encodedSamples := make([]common.Hash, checksLen), make([]common.Hash, checksLen)
-	sampleLenBits := w.storageMgr.MaxKvSizeBits() - sampleSizeBits
+	sampleLenBits := w.storageMgr.MaxKvSizeBits() - es.SampleSizeBits
 	for i := uint64(0); i < checksLen; i++ {
 		kvIdxs[i] = sampleIdx[i] >> sampleLenBits
 	}
