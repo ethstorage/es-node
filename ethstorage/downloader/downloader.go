@@ -227,13 +227,13 @@ func (s *Downloader) downloadToCache() {
 		}
 		_, err := s.downloadRange(start+1, rangeEnd, true)
 
-		if err == nil {
-			s.lastCacheBlock = rangeEnd
-			start = rangeEnd
-		} else {
+		if err != nil {
 			s.log.Error("DownloadRange failed", "err", err)
 			return
 		}
+
+		s.lastCacheBlock = rangeEnd
+		start = rangeEnd
 	}
 }
 
