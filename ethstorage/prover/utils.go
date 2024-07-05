@@ -14,7 +14,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethstorage/go-ethstorage/ethstorage/encoder"
 	"github.com/iden3/go-rapidsnark/types"
 )
 
@@ -274,18 +273,4 @@ func GenerateInput(encodingKey common.Hash, sampleIdx uint64) ([]byte, error) {
 		XIn:           xIn.String(),
 	}
 	return json.Marshal(inputObj)
-}
-
-func GenerateMask(encodingKey common.Hash, sampleIdx uint64) ([]byte, error) {
-	if int(sampleIdx) >= eth.FieldElementsPerBlob {
-		return nil, fmt.Errorf("sample index out of scope")
-	}
-	encodingKeyMod := fr.Modulus().Mod(encodingKey.Big(), fr.Modulus())
-	masks, err := encoder.Encode(common.BigToHash(encodingKeyMod), eth.FieldElementsPerBlob*32)
-	if err != nil {
-		return nil, err
-	}
-	bytesIdx := sampleIdx * 32
-	mask := masks[bytesIdx : bytesIdx+32]
-	return mask, nil
 }
