@@ -45,22 +45,29 @@ func NewBlobReader(dlr *downloader.Downloader, sm *es.StorageManager, l1 *eth.Po
 // In order to provide miner with encoded samples in a timely manner,
 // BlobReader is tracing the downloader and encoding newly cached blobs.
 func (n *BlobReader) sync() {
-	ch := make(chan common.Hash)
-	downloader.SubscribeNewBlobs(BlobReaderSubKey, ch)
+	var (
+		iCh = make(chan common.Hash)
+		oCh = make(chan common.Hash)
+	)
+	downloader.SubscribeCachedBlobs(BlobReaderSubKey, iCh, oCh)
 	go func() {
 		defer func() {
-			close(ch)
+			close(iCh)
+			close(oCh)
 			downloader.Unsubscribe(BlobReaderSubKey)
 			n.lg.Info("Blob reader unsubscribed downloader cache.")
 			n.wg.Done()
 		}()
 		for {
 			select {
-			case blockHash := <-ch:
+			case blockHash := <-iCh:
 				for _, blob := range n.dlr.Cache.Blobs(blockHash) {
 					encodedBlob := n.encodeBlob(blob)
 					n.encodedBlobs.Store(blob.KvIdx(), encodedBlob)
 				}
+			case blockHash := <-oCh:
+				n.encodedBlobs.Delete(blockHash)
+				n.lg.Info("Blob reader deleted encoded blobs of block", "blockHash", blockHash)
 			case <-n.exitCh:
 				n.lg.Info("Blob reader is exiting from downloader sync loop...")
 				return

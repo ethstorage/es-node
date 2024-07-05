@@ -76,7 +76,7 @@ func (b *Blob) KvIdx() uint64     { return b.kvIndex.Uint64() }
 func (b *Blob) Size() uint64      { return b.kvSize.Uint64() }
 func (b *Blob) Hash() common.Hash { return b.hash }
 func (b *Blob) Data() []byte {
-	var blob []byte
+	blob := make([]byte, len(b.data))
 	copy(blob[:], b.data)
 	return blob
 }

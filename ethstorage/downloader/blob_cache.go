@@ -12,18 +12,29 @@ import (
 	"github.com/ethstorage/go-ethstorage/ethstorage"
 )
 
-var dataSubscribers = make(map[string]chan common.Hash)
+var (
+	storeSubscribers = make(map[string]chan common.Hash)
+	clearSubscribers = make(map[string]chan common.Hash)
+)
 
-func SubscribeNewBlobs(key string, ch chan common.Hash) {
-	dataSubscribers[key] = ch
+func SubscribeCachedBlobs(key string, ich, och chan common.Hash) {
+	storeSubscribers[key] = ich
+	clearSubscribers[key] = och
 }
 
 func Unsubscribe(key string) {
-	delete(dataSubscribers, key)
+	delete(storeSubscribers, key)
+	delete(clearSubscribers, key)
 }
 
-func notifySubscribers(data common.Hash) {
-	for _, ch := range dataSubscribers {
+func notifyStore(data common.Hash) {
+	for _, ch := range storeSubscribers {
+		ch <- data
+	}
+}
+
+func notifyClear(data common.Hash) {
+	for _, ch := range clearSubscribers {
 		ch <- data
 	}
 }
@@ -44,7 +55,7 @@ func (c *BlobCache) SetBlockBlobs(block *blockBlobs) {
 	defer c.mu.Unlock()
 	c.blocks[block.hash] = block
 
-	notifySubscribers(block.hash)
+	notifyStore(block.hash)
 }
 
 func (c *BlobCache) Blobs(hash common.Hash) []Blob {
@@ -86,6 +97,7 @@ func (c *BlobCache) Cleanup(finalized uint64) {
 	for hash, block := range c.blocks {
 		if block.number <= finalized {
 			delete(c.blocks, hash)
+			notifyClear(hash)
 		}
 	}
 }
