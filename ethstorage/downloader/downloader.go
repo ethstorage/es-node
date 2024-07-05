@@ -74,8 +74,12 @@ type Blob struct {
 
 func (b *Blob) KvIdx() uint64     { return b.kvIndex.Uint64() }
 func (b *Blob) Size() uint64      { return b.kvSize.Uint64() }
-func (b *Blob) Data() []byte      { return b.data }
 func (b *Blob) Hash() common.Hash { return b.hash }
+func (b *Blob) Data() []byte {
+	var blob []byte
+	copy(blob[:], b.data)
+	return blob
+}
 
 type blockBlobs struct {
 	timestamp uint64
