@@ -58,6 +58,7 @@ require (
 	github.com/hashicorp/go-bexpr v0.1.11 // indirect
 	github.com/hashicorp/golang-lru/arc/v2 v2.0.5 // indirect
 	github.com/herumi/bls-eth-go-binary v1.28.1 // indirect
+	github.com/holiman/billy v0.0.0-20240322075458-72a4e81ec6da // indirect
 	github.com/huin/goupnp v1.3.0 // indirect
 	github.com/jackpal/go-nat-pmp v1.0.2 // indirect
 	github.com/kilic/bls12-381 v0.1.1-0.20220929213557-ca162e8a70f4 // indirect

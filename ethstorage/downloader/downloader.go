@@ -110,7 +110,10 @@ func NewDownloader(
 }
 
 // Start starts up the state loop.
-func (s *Downloader) Start() error {
+func (s *Downloader) Start(datadir string) error {
+	if err := s.Cache.Init(datadir); err != nil {
+		return err
+	}
 	// user does NOT specify a download start in the flag
 	if s.lastDownloadBlock == 0 {
 		bs, err := s.db.Get(append(downloaderPrefix, lastDownloadKey...))
@@ -153,7 +156,7 @@ func (s *Downloader) Start() error {
 func (s *Downloader) Close() error {
 	s.done <- struct{}{}
 	s.wg.Wait()
-	return nil
+	return s.Cache.Close()
 }
 
 func (s *Downloader) OnL1Finalized(finalized uint64) {
@@ -368,7 +371,10 @@ func (s *Downloader) downloadRange(start int64, end int64, toCache bool) ([]blob
 			blobs = append(blobs, *elBlob)
 		}
 		if toCache {
-			s.Cache.SetBlockBlobs(elBlock)
+			if err := s.Cache.SetBlockBlobs(elBlock); err != nil {
+				s.log.Error("Failed to cache blobs", "block", elBlock.number, "err", err)
+				return nil, err
+			}
 		}
 	}
 
