@@ -148,11 +148,11 @@ func (miner *Miner) Stop() {
 }
 
 func (miner *Miner) Close() {
-	miner.dataReader.Close()
 	miner.Stop()
 	miner.lg.Warn("Miner is being closed...")
 	close(miner.exitCh)
 	miner.wg.Wait()
+	miner.dataReader.Close()
 }
 
 func (miner *Miner) Mining() bool {
