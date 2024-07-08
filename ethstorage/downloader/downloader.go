@@ -9,6 +9,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -19,6 +20,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
 
 	"github.com/ethstorage/go-ethstorage/ethstorage"
@@ -72,11 +74,77 @@ type blob struct {
 	data    []byte
 }
 
+func (b *blob) String() string {
+	return fmt.Sprintf("blob{kvIndex: %d, hash: %x, data: %s}", b.kvIndex, b.hash, b.data)
+}
+
+func (b *blob) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{
+		b.kvIndex,
+		b.kvSize,
+		b.hash,
+		b.data,
+	})
+}
+
+func (b *blob) DecodeRLP(s *rlp.Stream) error {
+	var decodedData struct {
+		KvIndex *big.Int
+		KvSize  *big.Int
+		Hash    common.Hash
+		Data    []byte
+	}
+
+	if err := s.Decode(&decodedData); err != nil {
+		return err
+	}
+
+	b.kvIndex = decodedData.KvIndex
+	b.kvSize = decodedData.KvSize
+	b.hash = decodedData.Hash
+	b.data = decodedData.Data
+
+	return nil
+}
+
 type blockBlobs struct {
 	timestamp uint64
 	number    uint64
 	hash      common.Hash
 	blobs     []*blob
+}
+
+func (b *blockBlobs) String() string {
+	return fmt.Sprintf("blockBlobs{number: %d, timestamp: %d, hash: %x, blobs: %d}", b.number, b.timestamp, b.hash, len(b.blobs))
+}
+
+func (bb *blockBlobs) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{
+		bb.timestamp,
+		bb.number,
+		bb.hash,
+		bb.blobs,
+	})
+}
+
+func (bb *blockBlobs) DecodeRLP(s *rlp.Stream) error {
+	var decodedData struct {
+		Timestamp uint64
+		Number    uint64
+		Hash      common.Hash
+		Blobs     []*blob
+	}
+
+	if err := s.Decode(&decodedData); err != nil {
+		return err
+	}
+
+	bb.timestamp = decodedData.Timestamp
+	bb.number = decodedData.Number
+	bb.hash = decodedData.Hash
+	bb.blobs = decodedData.Blobs
+
+	return nil
 }
 
 func NewDownloader(

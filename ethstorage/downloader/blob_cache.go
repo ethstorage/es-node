@@ -26,7 +26,7 @@ const (
 
 type BlobCache struct {
 	store  billy.Database
-	lookup map[common.Hash]uint64 // Lookup table mapping hashes to blob billy entries
+	lookup map[common.Hash]uint64 // Lookup table mapping hashes to blob billy entries id
 	mu     sync.RWMutex
 }
 
@@ -64,6 +64,8 @@ func (c *BlobCache) SetBlockBlobs(block *blockBlobs) error {
 	c.mu.Lock()
 	c.lookup[block.hash] = id
 	c.mu.Unlock()
+
+	log.Info("Set blockBlobs to cache", "id", id, "block", block.number)
 	return nil
 }
 
@@ -74,7 +76,8 @@ func (c *BlobCache) Blobs(hash common.Hash) []blob {
 	if !ok {
 		return nil
 	}
-	block, err := c.fromIdToBlock(id)
+	log.Info("Blobs from cache", "hash", hash, "id", id)
+	block, err := c.getBlockBlobsById(id)
 	if err != nil {
 		return nil
 	}
@@ -89,8 +92,9 @@ func (c *BlobCache) Blobs(hash common.Hash) []blob {
 func (c *BlobCache) GetKeyValueByIndex(idx uint64, hash common.Hash) []byte {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
+
 	for _, id := range c.lookup {
-		block, err := c.fromIdToBlock(id)
+		block, err := c.getBlockBlobsById(id)
 		if err != nil {
 			return nil
 		}
@@ -112,7 +116,7 @@ func (c *BlobCache) Cleanup(finalized uint64) {
 	defer c.mu.Unlock()
 
 	for hash, id := range c.lookup {
-		block, err := c.fromIdToBlock(id)
+		block, err := c.getBlockBlobsById(id)
 		if err != nil {
 			log.Warn("Failed to get block from id", "id", id, "err", err)
 			continue
@@ -122,11 +126,12 @@ func (c *BlobCache) Cleanup(finalized uint64) {
 				log.Error("Failed to delete block from id", "id", id, "err", err)
 			}
 			delete(c.lookup, hash)
+			log.Info("Cleanup deleted", "finalized", finalized, "block", block.number, "id", id)
 		}
 	}
 }
 
-func (c *BlobCache) fromIdToBlock(id uint64) (*blockBlobs, error) {
+func (c *BlobCache) getBlockBlobsById(id uint64) (*blockBlobs, error) {
 	data, err := c.store.Get(id)
 	if err != nil {
 		log.Error("Failed to get block from id", "id", id, "err", err)
@@ -137,6 +142,7 @@ func (c *BlobCache) fromIdToBlock(id uint64) (*blockBlobs, error) {
 		log.Error("Failed to decode block", "id", id, "err", err)
 		return nil, err
 	}
+	log.Debug("Get blockBlobs by id", "id", id, "blockBlobs", item)
 	return item, nil
 }
 
@@ -151,7 +157,8 @@ func newSlotter() func() (uint32, bool) {
 
 	return func() (size uint32, done bool) {
 		slotsize += blobSize
-		finished := slotsize > maxBlobsPerTransaction*blobSize
+		finished := slotsize >= maxBlobsPerTransaction*blobSize
+		log.Debug("new slotter", "slotSize", slotsize, "finished", finished)
 		return slotsize, finished
 	}
 }
