@@ -84,9 +84,7 @@ func TestMining(t *testing.T) {
 		lg,
 	)
 	db := rawdb.NewMemoryDatabase()
-	bq := blobs.NewBlobReader(&downloader.Downloader{
-		Cache: downloader.NewBlobCache(),
-	}, storageManager, pClient, lg)
+	bq := blobs.NewBlobReader(downloader.NewBlobMemCache(), storageManager, lg)
 	mnr := miner.New(miningConfig, db, storageManager, l1api, bq, &pvr, feed, lg)
 	lg.Info("Initialized miner")
 

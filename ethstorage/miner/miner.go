@@ -34,7 +34,6 @@ type MiningProver interface {
 type DataReader interface {
 	GetBlob(kvIdxe uint64, blobHash common.Hash) ([]byte, error)
 	ReadSample(shardIdx, sampleIdx uint64) (common.Hash, error)
-	Close()
 }
 
 type miningInfo struct {
@@ -152,7 +151,6 @@ func (miner *Miner) Close() {
 	miner.lg.Warn("Miner is being closed...")
 	close(miner.exitCh)
 	miner.wg.Wait()
-	miner.dataReader.Close()
 }
 
 func (miner *Miner) Mining() bool {

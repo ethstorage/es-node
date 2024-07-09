@@ -5,90 +5,35 @@ package blobs
 
 import (
 	"fmt"
-	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
 	es "github.com/ethstorage/go-ethstorage/ethstorage"
-	"github.com/ethstorage/go-ethstorage/ethstorage/downloader"
-	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
 )
 
-const (
-	BlobReaderSubKey = "blob-reader"
-)
+type BlobCacheReader interface {
+	GetKeyValueByIndex(index uint64, hash common.Hash) []byte
+	GetKeyValueByIndexUnchecked(index uint64) []byte
+}
 
 // BlobReader provides unified interface for the miner to read blobs and samples
 // from StorageManager and downloader cache.
 type BlobReader struct {
-	encodedBlobs sync.Map
-	dlr          *downloader.Downloader
-	sm           *es.StorageManager
-	l1           *eth.PollingClient
-	wg           sync.WaitGroup
-	exitCh       chan struct{}
-	lg           log.Logger
+	cr BlobCacheReader
+	sm *es.StorageManager
+	lg log.Logger
 }
 
-func NewBlobReader(dlr *downloader.Downloader, sm *es.StorageManager, l1 *eth.PollingClient, lg log.Logger) *BlobReader {
-	n := &BlobReader{
-		dlr:    dlr,
-		sm:     sm,
-		l1:     l1,
-		lg:     lg,
-		exitCh: make(chan struct{}),
+func NewBlobReader(cr BlobCacheReader, sm *es.StorageManager, lg log.Logger) *BlobReader {
+	return &BlobReader{
+		cr: cr,
+		sm: sm,
+		lg: lg,
 	}
-	n.sync()
-	return n
-}
-
-// In order to provide miner with encoded samples in a timely manner,
-// BlobReader is tracing the downloader and encoding newly cached blobs.
-func (n *BlobReader) sync() {
-	var (
-		iCh = make(chan common.Hash)
-		oCh = make(chan common.Hash)
-	)
-	downloader.SubscribeCachedBlobs(BlobReaderSubKey, iCh, oCh)
-	go func() {
-		defer func() {
-			close(iCh)
-			close(oCh)
-			downloader.Unsubscribe(BlobReaderSubKey)
-			n.lg.Info("Blob reader unsubscribed downloader cache.")
-			n.wg.Done()
-		}()
-		for {
-			select {
-			case blockHash := <-iCh:
-				for _, blob := range n.dlr.Cache.Blobs(blockHash) {
-					encodedBlob := n.encodeBlob(blob)
-					n.encodedBlobs.Store(blob.KvIdx(), encodedBlob)
-				}
-			case blockHash := <-oCh:
-				n.encodedBlobs.Delete(blockHash)
-				n.lg.Info("Blob reader deleted encoded blobs of block", "blockHash", blockHash)
-			case <-n.exitCh:
-				n.lg.Info("Blob reader is exiting from downloader sync loop...")
-				return
-			}
-		}
-	}()
-	n.wg.Add(1)
-}
-
-func (n *BlobReader) encodeBlob(blob downloader.Blob) []byte {
-	shardIdx := blob.KvIdx() >> n.sm.KvEntriesBits()
-	encodeType, _ := n.sm.GetShardEncodeType(shardIdx)
-	miner, _ := n.sm.GetShardMiner(shardIdx)
-	n.lg.Info("Encoding blob from downloader", "kvIdx", blob.KvIdx(), "shardIdx", shardIdx, "encodeType", encodeType, "miner", miner)
-	encodeKey := es.CalcEncodeKey(blob.Hash(), blob.KvIdx(), miner)
-	encodedBlob := es.EncodeChunk(n.sm.MaxKvSize(), blob.Data(), encodeType, encodeKey)
-	return encodedBlob
 }
 
 func (n *BlobReader) GetBlob(kvIdx uint64, kvHash common.Hash) ([]byte, error) {
-	blob := n.dlr.Cache.GetKeyValueByIndex(kvIdx, kvHash)
+	blob := n.cr.GetKeyValueByIndex(kvIdx, kvHash)
 	if blob != nil {
 		n.lg.Debug("Loaded blob from downloader cache", "kvIdx", kvIdx)
 		return blob, nil
@@ -108,12 +53,12 @@ func (n *BlobReader) ReadSample(shardIdx, sampleIdx uint64) (common.Hash, error)
 	sampleLenBits := n.sm.MaxKvSizeBits() - es.SampleSizeBits
 	kvIdx := sampleIdx >> sampleLenBits
 
-	if value, ok := n.encodedBlobs.Load(kvIdx); ok {
-		encodedBlob := value.([]byte)
+	if blob := n.cr.GetKeyValueByIndexUnchecked(kvIdx); blob != nil {
+		n.lg.Debug("Loaded blob from downloader cache", "kvIdx", kvIdx)
 		sampleIdxInKv := sampleIdx % (1 << sampleLenBits)
 		sampleSize := uint64(1 << es.SampleSizeBits)
 		sampleIdxByte := sampleIdxInKv << es.SampleSizeBits
-		sample := encodedBlob[sampleIdxByte : sampleIdxByte+sampleSize]
+		sample := blob[sampleIdxByte : sampleIdxByte+sampleSize]
 		return common.BytesToHash(sample), nil
 	}
 
@@ -122,10 +67,4 @@ func (n *BlobReader) ReadSample(shardIdx, sampleIdx uint64) (common.Hash, error)
 		return common.Hash{}, err
 	}
 	return encodedSample, nil
-}
-
-func (n *BlobReader) Close() {
-	n.lg.Info("Blob reader is being closed...")
-	close(n.exitCh)
-	n.wg.Wait()
 }
