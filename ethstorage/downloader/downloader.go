@@ -38,8 +38,15 @@ var (
 	lastDownloadKey  = []byte("last-download-block")
 )
 
+type BlobCache interface {
+	SetBlockBlobs(block *blockBlobs)
+	Blobs(hash common.Hash) []blob
+	GetKeyValueByIndex(idx uint64, hash common.Hash) []byte
+	Cleanup(finalized uint64)
+}
+
 type Downloader struct {
-	Cache *BlobCache
+	Cache BlobCache
 
 	// latestHead and finalizedHead are shared among multiple threads and thus locks must be required when being accessed
 	// others are only accessed by the downloader thread so it is safe to access them in DL thread without locks
@@ -85,6 +92,7 @@ func NewDownloader(
 	daClient *eth.DAClient,
 	db ethdb.Database,
 	sm *ethstorage.StorageManager,
+	cache BlobCache,
 	downloadStart int64,
 	downloadDump string,
 	minDurationForBlobsRequest uint64,
@@ -93,7 +101,7 @@ func NewDownloader(
 ) *Downloader {
 	sm.DownloadThreadNum = downloadThreadNum
 	return &Downloader{
-		Cache:                      NewBlobCache(),
+		Cache:                      cache,
 		l1Source:                   l1Source,
 		l1Beacon:                   l1Beacon,
 		daClient:                   daClient,
@@ -364,7 +372,8 @@ func (s *Downloader) downloadRange(start int64, end int64, toCache bool) ([]blob
 				s.log.Error("Did not find the event specified blob in the CL")
 
 			}
-			elBlob.data = clBlob.Data
+			// encode blobs so that miner can do sampling directly from cache
+			elBlob.data = s.sm.EncodeBlob(clBlob.Data, elBlob.hash, elBlob.kvIndex.Uint64())
 			blobs = append(blobs, *elBlob)
 		}
 		if toCache {

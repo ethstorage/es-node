@@ -140,6 +140,7 @@ func (n *EsNode) initL2(ctx context.Context, cfg *Config) error {
 		n.daClient,
 		n.db,
 		n.storageManager,
+		downloader.NewBlobMemCache(),
 		cfg.Downloader.DownloadStart,
 		cfg.Downloader.DownloadDump,
 		cfg.L1.L1MinDurationForBlobsRequest,
