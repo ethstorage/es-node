@@ -83,7 +83,7 @@ func (n *BlobReader) encodeBlob(blob downloader.Blob) []byte {
 	miner, _ := n.sm.GetShardMiner(shardIdx)
 	n.lg.Info("Encoding blob from downloader", "kvIdx", blob.KvIdx(), "shardIdx", shardIdx, "encodeType", encodeType, "miner", miner)
 	encodeKey := es.CalcEncodeKey(blob.Hash(), blob.KvIdx(), miner)
-	encodedBlob := es.EncodeChunk(blob.Size(), blob.Data(), encodeType, encodeKey)
+	encodedBlob := es.EncodeChunk(n.sm.MaxKvSize(), blob.Data(), encodeType, encodeKey)
 	return encodedBlob
 }
 
