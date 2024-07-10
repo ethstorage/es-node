@@ -61,6 +61,15 @@ func (s *StorageManager) EncodeBlob(blob []byte, blobHash common.Hash, kvIdx uin
 	return EncodeChunk(s.MaxKvSize(), blob, encodeType, encodeKey)
 }
 
+func (s *StorageManager) DecodeBlob(blob []byte, blobHash common.Hash, kvIdx uint64) []byte {
+	shardIdx := kvIdx >> s.KvEntriesBits()
+	encodeType, _ := s.GetShardEncodeType(shardIdx)
+	miner, _ := s.GetShardMiner(shardIdx)
+	log.Info("Encoding blob", "kvIdx", kvIdx, "shardIdx", shardIdx, "encodeType", encodeType, "miner", miner)
+	encodeKey := CalcEncodeKey(blobHash, kvIdx, miner)
+	return DecodeChunk(s.MaxKvSize(), blob, encodeType, encodeKey)
+}
+
 // DownloadFinished This function will be called when the node found new block are finalized, and it will update the
 // local L1 view and commit new blobs into local storage file.
 func (s *StorageManager) DownloadFinished(newL1 int64, kvIndices []uint64, blobs [][]byte, commits []common.Hash) error {
