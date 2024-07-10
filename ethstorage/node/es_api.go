@@ -6,6 +6,7 @@ package node
 import (
 	"bytes"
 	"errors"
+
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -63,6 +64,8 @@ func (api *esAPI) GetBlob(kvIndex uint64, blobHash common.Hash, decodeType Decod
 		if !found {
 			return nil, ethereum.NotFound
 		}
+	} else {
+		blob = api.sm.DecodeBlob(blob, blobHash, kvIndex, size)
 	}
 
 	ret := blob
