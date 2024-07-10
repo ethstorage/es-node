@@ -32,11 +32,12 @@ func NewBlobReader(cr BlobCacheReader, sm *es.StorageManager, lg log.Logger) *Bl
 }
 
 func (n *BlobReader) GetBlob(kvIdx uint64, kvHash common.Hash) ([]byte, error) {
-	blob := n.cr.GetKeyValueByIndex(kvIdx, kvHash)
-	if blob != nil {
+	if blob := n.cr.GetKeyValueByIndex(kvIdx, kvHash); blob != nil {
 		n.lg.Debug("Loaded blob from downloader cache", "kvIdx", kvIdx)
-		return blob, nil
+		blobDecoded := n.sm.DecodeBlob(blob, kvHash, kvIdx, n.sm.MaxKvSize())
+		return blobDecoded, nil
 	}
+
 	blob, exist, err := n.sm.TryRead(kvIdx, int(n.sm.MaxKvSize()), kvHash)
 	if err != nil {
 		return nil, err

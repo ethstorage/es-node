@@ -52,22 +52,20 @@ func NewStorageManager(sm *ShardManager, l1Source Il1Source) *StorageManager {
 	}
 }
 
-func (s *StorageManager) EncodeBlob(blob []byte, blobHash common.Hash, kvIdx uint64) []byte {
+func (s *StorageManager) EncodeBlob(blob []byte, blobHash common.Hash, kvIdx, size uint64) []byte {
 	shardIdx := kvIdx >> s.KvEntriesBits()
 	encodeType, _ := s.GetShardEncodeType(shardIdx)
 	miner, _ := s.GetShardMiner(shardIdx)
-	log.Info("Encoding blob", "kvIdx", kvIdx, "shardIdx", shardIdx, "encodeType", encodeType, "miner", miner)
 	encodeKey := CalcEncodeKey(blobHash, kvIdx, miner)
-	return EncodeChunk(s.MaxKvSize(), blob, encodeType, encodeKey)
+	return EncodeChunk(size, blob, encodeType, encodeKey)
 }
 
-func (s *StorageManager) DecodeBlob(blob []byte, blobHash common.Hash, kvIdx uint64) []byte {
+func (s *StorageManager) DecodeBlob(blob []byte, blobHash common.Hash, kvIdx, size uint64) []byte {
 	shardIdx := kvIdx >> s.KvEntriesBits()
 	encodeType, _ := s.GetShardEncodeType(shardIdx)
 	miner, _ := s.GetShardMiner(shardIdx)
-	log.Info("Encoding blob", "kvIdx", kvIdx, "shardIdx", shardIdx, "encodeType", encodeType, "miner", miner)
 	encodeKey := CalcEncodeKey(blobHash, kvIdx, miner)
-	return DecodeChunk(s.MaxKvSize(), blob, encodeType, encodeKey)
+	return DecodeChunk(size, blob, encodeType, encodeKey)
 }
 
 // DownloadFinished This function will be called when the node found new block are finalized, and it will update the

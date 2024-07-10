@@ -375,9 +375,9 @@ func (s *Downloader) downloadRange(start int64, end int64, toCache bool) ([]blob
 
 			}
 			// encode blobs so that miner can do sampling directly from cache
-			elBlob.data = s.sm.EncodeBlob(clBlob.Data, elBlob.hash, elBlob.kvIndex.Uint64())
+			elBlob.data = s.sm.EncodeBlob(clBlob.Data, elBlob.hash, elBlob.kvIndex.Uint64(), elBlob.kvSize.Uint64())
 			blobs = append(blobs, *elBlob)
-			s.log.Info("Download range", "cache", toCache, "kvIdx", elBlob.kvIndex)
+			s.log.Info("Download range", "blockNumber", elBlock.number, "kvIdx", elBlob.kvIndex)
 		}
 		if toCache {
 			s.Cache.SetBlockBlobs(elBlock)

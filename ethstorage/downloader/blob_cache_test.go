@@ -56,7 +56,7 @@ func TestBlobCache_GetKeyValueByIndex(t *testing.T) {
 		bb := newBlockBlobs(tt.blockNum, tt.blobLen)
 		t.Run(fmt.Sprintf("test %d", i), func(t *testing.T) {
 			for i, b := range bb.blobs {
-				bb.blobs[i].data = sm.EncodeBlob(b.data, b.hash, b.kvIndex.Uint64())
+				bb.blobs[i].data = sm.EncodeBlob(b.data, b.hash, b.kvIndex.Uint64(), kvSize)
 			}
 			bc.SetBlockBlobs(bb)
 			kvHash, ok, err := sm.TryReadMeta(tt.kvIdxWant)
@@ -67,7 +67,7 @@ func TestBlobCache_GetKeyValueByIndex(t *testing.T) {
 				t.Fatalf("TryReadMeta() got = %v, want %v", ok, true)
 			}
 			blobEncoded := bc.GetKeyValueByIndex(tt.kvIdxWant, common.Hash(kvHash))
-			blobDecoded := sm.DecodeBlob(blobEncoded, common.Hash(kvHash), tt.kvIdxWant)
+			blobDecoded := sm.DecodeBlob(blobEncoded, common.Hash(kvHash), tt.kvIdxWant, kvSize)
 			bytesWant := []byte(fmt.Sprintf(blobData, tt.kvIdxWant))
 			if !bytes.Equal(blobDecoded[:len(bytesWant)], bytesWant) {
 				t.Errorf("BlobMemCache.GetKeyValueByIndex() and decoded = %s, want %s", blobDecoded[:len(bytesWant)], bytesWant)
