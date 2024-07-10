@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"fmt"
 	"math/big"
+	"os"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -46,6 +47,11 @@ func TestBlobCache_GetKeyValueByIndex(t *testing.T) {
 	shardMgr.AddDataShard(shardID)
 	shardMgr.AddDataFile(df)
 	sm := ethstorage.NewStorageManager(shardMgr, nil)
+	defer func() {
+		sm.Close()
+		os.Remove(fileName)
+	}()
+
 	for i, tt := range tests {
 		bb := newBlockBlobs(tt.blockNum, tt.blobLen)
 		t.Run(fmt.Sprintf("test %d", i), func(t *testing.T) {
