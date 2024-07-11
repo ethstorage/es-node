@@ -141,7 +141,7 @@ common_flags=" --datadir $data_dir \
   --l1.rpc http://88.99.30.186:8545 \
   --storage.l1contract 0x804C520d3c084C805E37A35E90057Ac32831F96f \
   --storage.miner $ES_NODE_STORAGE_MINER \
-  "
+  $@"
 
 # init shard 0
 es_node_init="init --shard_index 0"
@@ -161,11 +161,29 @@ es_node_start=" --network devnet \
   --p2p.listen.udp 30305 \
   --p2p.sync.concurrency 32 \
   --p2p.bootnodes enr:-Li4QF3vBkkDQYNLHlVjW5NcEpXAsfNtE1lUVb_LgUQ_Ot2afS8jbDfnYQBDABJud_5Hd1hX_1cNeGVU6Tem06WDlfaGAY1e3vNvimV0aHN0b3JhZ2XbAYDY15SATFINPAhMgF43o16QBXrDKDH5b8GAgmlkgnY0gmlwhEFtP5qJc2VjcDI1NmsxoQK8XODtSv0IsrhBxZmTZBZEoLssb7bTX0YOVl6S0yLxuYN0Y3CCJAaDdWRwgnZh \
-$@"
-  
+"
+# remove undefined flags for init action
+declare -a valid_flags=("datadir" "l1.rpc" "storage.l1contract" "storage.miner")
+IFS=' ' read -ra args_array <<< "$common_flags"
+filtered_args=()
+for ((i = 0; i < ${#args_array[@]}; i++)); do
+    arg=${args_array[i]}
+    for flag in "${valid_flags[@]}"; do
+        if [[ $arg == --$flag* ]]; then
+            filtered_args+=("$arg")
+            if [[ $i -lt $((${#args_array[@]} - 1)) && ${args_array[$((i + 1))]} != --* ]]; then
+                filtered_args+=("${args_array[$((i + 1))]}")
+                ((i++))
+            fi
+            break
+        fi
+    done
+done
+filtered_init_args=$(IFS=' ' ; echo "${filtered_args[*]}")
+
 # create data file for shard 0 if not yet
 if [ ! -e $storage_file_0 ]; then
-  if $executable $es_node_init $common_flags ; then
+  if $executable $es_node_init $filtered_init_args; then
     echo "Initialized ${storage_file_0} successfully"
   else
     echo "Error: failed to initialize ${storage_file_0}"
@@ -174,4 +192,4 @@ if [ ! -e $storage_file_0 ]; then
 fi
 
 # start es-node
-exec $executable $common_flags $es_node_start
+exec $executable $es_node_start $common_flags
