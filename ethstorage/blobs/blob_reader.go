@@ -13,6 +13,7 @@ import (
 
 type BlobCacheReader interface {
 	GetKeyValueByIndex(index uint64, hash common.Hash) []byte
+	GetKeyValueByIndexUnchecked(index uint64) []byte
 }
 
 // BlobReader provides unified interface for the miner to read blobs and samples
@@ -52,14 +53,8 @@ func (n *BlobReader) GetBlob(kvIdx uint64, kvHash common.Hash) ([]byte, error) {
 func (n *BlobReader) ReadSample(shardIdx, sampleIdx uint64) (common.Hash, error) {
 	sampleLenBits := n.sm.MaxKvSizeBits() - es.SampleSizeBits
 	kvIdx := sampleIdx >> sampleLenBits
-	kvHash, ok, err := n.sm.TryReadMeta(kvIdx)
-	if err != nil {
-		return common.Hash{}, err
-	}
-	if !ok {
-		return common.Hash{}, fmt.Errorf("kv not found: index=%d", kvIdx)
-	}
-	if blob := n.cr.GetKeyValueByIndex(kvIdx, common.Hash(kvHash)); blob != nil {
+	// get blob without checking commit since kvHash is not available
+	if blob := n.cr.GetKeyValueByIndexUnchecked(kvIdx); blob != nil {
 		n.lg.Debug("Loaded blob from downloader cache", "kvIdx", kvIdx)
 		sampleIdxInKv := sampleIdx % (1 << sampleLenBits)
 		sampleSize := uint64(1 << es.SampleSizeBits)
@@ -68,9 +63,9 @@ func (n *BlobReader) ReadSample(shardIdx, sampleIdx uint64) (common.Hash, error)
 		return common.BytesToHash(sample), nil
 	}
 
-	encodedSample, err := n.sm.ReadSampleUnlocked(shardIdx, sampleIdx)
+	sample, err := n.sm.ReadSampleUnlocked(shardIdx, sampleIdx)
 	if err != nil {
 		return common.Hash{}, err
 	}
-	return encodedSample, nil
+	return sample, nil
 }

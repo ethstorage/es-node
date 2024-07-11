@@ -42,6 +42,7 @@ type BlobCache interface {
 	SetBlockBlobs(block *blockBlobs)
 	Blobs(hash common.Hash) []blob
 	GetKeyValueByIndex(idx uint64, hash common.Hash) []byte
+	GetKeyValueByIndexUnchecked(idx uint64) []byte
 	Cleanup(finalized uint64)
 }
 
