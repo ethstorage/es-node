@@ -65,7 +65,7 @@ func (api *esAPI) GetBlob(kvIndex uint64, blobHash common.Hash, decodeType Decod
 			return nil, ethereum.NotFound
 		}
 	} else {
-		blob = api.sm.DecodeBlob(blob, blobHash, kvIndex, size)
+		blob = api.sm.DecodeBlob(blob, blobHash, kvIndex, api.sm.MaxKvSize())
 	}
 
 	ret := blob
