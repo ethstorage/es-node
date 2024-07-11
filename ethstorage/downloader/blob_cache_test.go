@@ -21,7 +21,7 @@ var (
 	kvHashes  []common.Hash
 	fileName         = "test_shard_0.dat"
 	blobData         = "blob data of kvIndex %d"
-	minerAddr        = common.BigToAddress(common.Big0)
+	minerAddr        = common.BigToAddress(common.Big1)
 	kvSize    uint64 = 1 << 17
 	kvEntries uint64 = 16
 	shardID          = uint64(0)
@@ -38,6 +38,7 @@ func TestBlobCache_Encoding(t *testing.T) {
 	}{
 		{0, 1},
 		{1, 5},
+		{222, 6},
 		{1000, 4},
 		{12345, 2},
 		{2000000, 3},
@@ -56,8 +57,8 @@ func TestBlobCache_Encoding(t *testing.T) {
 		os.Remove(fileName)
 	}()
 
+	// download and save to cache
 	for _, tt := range blockBlobsParams {
-		// download and save to cache
 		bb, err := newBlockBlobs(tt.blockNum, tt.blobLen)
 		if err != nil {
 			t.Fatalf("failed to create block blobs: %v", err)
