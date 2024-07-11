@@ -13,9 +13,8 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/holiman/billy"
-
 	"github.com/ethstorage/go-ethstorage/ethstorage"
+	"github.com/holiman/billy"
 )
 
 const (
@@ -24,19 +23,19 @@ const (
 	blobCacheDir           = "cached_blobs"
 )
 
-type BlobCache struct {
+type BlobDiskCache struct {
 	store  billy.Database
 	lookup map[common.Hash]uint64 // Lookup table mapping hashes to blob billy entries id
 	mu     sync.RWMutex
 }
 
-func NewBlobCache() *BlobCache {
-	return &BlobCache{
+func NewBlobDiskCache() *BlobDiskCache {
+	return &BlobDiskCache{
 		lookup: make(map[common.Hash]uint64),
 	}
 }
 
-func (c *BlobCache) Init(datadir string) error {
+func (c *BlobDiskCache) Init(datadir string) error {
 	cbdir := filepath.Join(datadir, blobCacheDir)
 	if err := os.MkdirAll(cbdir, 0700); err != nil {
 		return err
@@ -49,7 +48,7 @@ func (c *BlobCache) Init(datadir string) error {
 	return nil
 }
 
-func (c *BlobCache) SetBlockBlobs(block *blockBlobs) error {
+func (c *BlobDiskCache) SetBlockBlobs(block *blockBlobs) error {
 	rlpBlock, err := rlp.EncodeToBytes(block)
 	if err != nil {
 		log.Error("Failed to encode transaction for storage", "hash", block.hash, "err", err)
@@ -69,7 +68,7 @@ func (c *BlobCache) SetBlockBlobs(block *blockBlobs) error {
 	return nil
 }
 
-func (c *BlobCache) Blobs(hash common.Hash) []blob {
+func (c *BlobDiskCache) Blobs(hash common.Hash) []blob {
 	c.mu.RLock()
 	id, ok := c.lookup[hash]
 	c.mu.RUnlock()
@@ -89,7 +88,24 @@ func (c *BlobCache) Blobs(hash common.Hash) []blob {
 	return res
 }
 
-func (c *BlobCache) GetKeyValueByIndex(idx uint64, hash common.Hash) []byte {
+func (c *BlobDiskCache) GetKeyValueByIndex(idx uint64, hash common.Hash) []byte {
+	blob := c.getBlobByIndex(idx)
+	if blob != nil ||
+		bytes.Equal(blob.hash[0:ethstorage.HashSizeInContract], hash[0:ethstorage.HashSizeInContract]) {
+		return blob.data
+	}
+	return nil
+}
+
+func (c *BlobDiskCache) GetKeyValueByIndexUnchecked(idx uint64) []byte {
+	blob := c.getBlobByIndex(idx)
+	if blob != nil {
+		return blob.data
+	}
+	return nil
+}
+
+func (c *BlobDiskCache) getBlobByIndex(idx uint64) *blob {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
@@ -99,9 +115,8 @@ func (c *BlobCache) GetKeyValueByIndex(idx uint64, hash common.Hash) []byte {
 			return nil
 		}
 		for _, blob := range block.blobs {
-			if blob.kvIndex.Uint64() == idx &&
-				bytes.Equal(blob.hash[0:ethstorage.HashSizeInContract], hash[0:ethstorage.HashSizeInContract]) {
-				return blob.data
+			if blob.kvIndex.Uint64() == idx {
+				return blob
 			}
 		}
 	}
@@ -111,7 +126,7 @@ func (c *BlobCache) GetKeyValueByIndex(idx uint64, hash common.Hash) []byte {
 // TODO: @Qiang An edge case that may need to be handled when Ethereum block is NOT finalized for a long time
 // We may need to add a counter in SetBlockBlobs(), if the counter is greater than a threshold which means
 // there has been a long time after last Cleanup, so we need to Cleanup anyway in SetBlockBlobs.
-func (c *BlobCache) Cleanup(finalized uint64) {
+func (c *BlobDiskCache) Cleanup(finalized uint64) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -131,7 +146,7 @@ func (c *BlobCache) Cleanup(finalized uint64) {
 	}
 }
 
-func (c *BlobCache) getBlockBlobsById(id uint64) (*blockBlobs, error) {
+func (c *BlobDiskCache) getBlockBlobsById(id uint64) (*blockBlobs, error) {
 	data, err := c.store.Get(id)
 	if err != nil {
 		log.Error("Failed to get block from id", "id", id, "err", err)
@@ -146,7 +161,7 @@ func (c *BlobCache) getBlockBlobsById(id uint64) (*blockBlobs, error) {
 	return item, nil
 }
 
-func (c *BlobCache) Close() error {
+func (c *BlobDiskCache) Close() error {
 	return c.store.Close()
 }
 

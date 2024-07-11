@@ -31,6 +31,10 @@ type L1API interface {
 type MiningProver interface {
 	GetStorageProof(encodedKVs [][]byte, encodingKey []common.Hash, sampleIdxInKv []uint64) ([]*big.Int, [][]byte, [][]byte, error)
 }
+type DataReader interface {
+	GetBlob(kvIdxe uint64, blobHash common.Hash) ([]byte, error)
+	ReadSample(shardIdx, sampleIdx uint64) (common.Hash, error)
+}
 
 type miningInfo struct {
 	LastMineTime uint64
@@ -49,6 +53,7 @@ func (a *miningInfo) String() string {
 
 // Miner creates blocks and searches for proof-of-work values.
 type Miner struct {
+	dataReader  DataReader
 	feed        *event.Feed
 	worker      *worker
 	exitCh      chan struct{}
@@ -59,16 +64,26 @@ type Miner struct {
 	lg          log.Logger
 }
 
-func New(config *Config, db ethdb.Database, storageMgr *ethstorage.StorageManager, api L1API, prover MiningProver, feed *event.Feed, lg log.Logger) *Miner {
+func New(
+	config *Config,
+	db ethdb.Database,
+	storageMgr *ethstorage.StorageManager,
+	api L1API,
+	dr DataReader,
+	prover MiningProver,
+	feed *event.Feed,
+	lg log.Logger,
+) *Miner {
 	chainHeadCh := make(chan eth.L1BlockRef, chainHeadChanSize)
 	miner := &Miner{
+		dataReader:  dr,
 		feed:        feed,
 		ChainHeadCh: chainHeadCh,
 		exitCh:      make(chan struct{}),
 		startCh:     make(chan struct{}),
 		stopCh:      make(chan struct{}),
 		lg:          lg,
-		worker:      newWorker(*config, db, storageMgr, api, chainHeadCh, prover, lg),
+		worker:      newWorker(*config, db, storageMgr, api, dr, chainHeadCh, prover, lg),
 	}
 	miner.wg.Add(1)
 	go miner.update()

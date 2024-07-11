@@ -40,8 +40,18 @@ var (
 	lastDownloadKey  = []byte("last-download-block")
 )
 
+type BlobCache interface {
+	Init(datadir string) error
+	SetBlockBlobs(block *blockBlobs) error
+	Blobs(hash common.Hash) []blob
+	GetKeyValueByIndex(idx uint64, hash common.Hash) []byte
+	GetKeyValueByIndexUnchecked(idx uint64) []byte
+	Cleanup(finalized uint64)
+	Close() error
+}
+
 type Downloader struct {
-	Cache *BlobCache
+	Cache BlobCache
 
 	// latestHead and finalizedHead are shared among multiple threads and thus locks must be required when being accessed
 	// others are only accessed by the downloader thread so it is safe to access them in DL thread without locks
@@ -153,6 +163,7 @@ func NewDownloader(
 	daClient *eth.DAClient,
 	db ethdb.Database,
 	sm *ethstorage.StorageManager,
+	cache BlobCache,
 	downloadStart int64,
 	downloadDump string,
 	minDurationForBlobsRequest uint64,
@@ -161,7 +172,7 @@ func NewDownloader(
 ) *Downloader {
 	sm.DownloadThreadNum = downloadThreadNum
 	return &Downloader{
-		Cache:                      NewBlobCache(),
+		Cache:                      cache,
 		l1Source:                   l1Source,
 		l1Beacon:                   l1Beacon,
 		daClient:                   daClient,
@@ -347,7 +358,9 @@ func (s *Downloader) download() {
 				s.log.Error("Save blobs error", "err", err)
 				return
 			}
-			log.Info("DownloadFinished", "duration(ms)", time.Since(ts).Milliseconds(), "blobs", len(blobs))
+			if len(blobs) > 0 {
+				log.Info("DownloadFinished", "duration(ms)", time.Since(ts).Milliseconds(), "blobs", len(blobs))
+			}
 
 			// save lastDownloadedBlock into database
 			bs := make([]byte, 8)
@@ -358,7 +371,7 @@ func (s *Downloader) download() {
 				s.log.Error("Save lastDownloadedBlock into db error", "err", err)
 				return
 			}
-			s.log.Info("LastDownloadedBlock saved into db", "lastDownloadedBlock", end)
+			s.log.Debug("LastDownloadedBlock saved into db", "lastDownloadedBlock", end)
 
 			s.dumpBlobsIfNeeded(blobs)
 
@@ -435,8 +448,10 @@ func (s *Downloader) downloadRange(start int64, end int64, toCache bool) ([]blob
 				s.log.Error("Did not find the event specified blob in the CL")
 
 			}
-			elBlob.data = clBlob.Data
+			// encode blobs so that miner can do sampling directly from cache
+			elBlob.data = s.sm.EncodeBlob(clBlob.Data, elBlob.hash, elBlob.kvIndex.Uint64(), s.sm.MaxKvSize())
 			blobs = append(blobs, *elBlob)
+			s.log.Info("Download range", "blockNumber", elBlock.number, "kvIdx", elBlob.kvIndex)
 		}
 		if toCache {
 			if err := s.Cache.SetBlockBlobs(elBlock); err != nil {
@@ -446,7 +461,9 @@ func (s *Downloader) downloadRange(start int64, end int64, toCache bool) ([]blob
 		}
 	}
 
-	s.log.Info("Download range", "cache", toCache, "start", start, "end", end, "blobNumber", len(blobs), "duration(ms)", time.Since(ts).Milliseconds())
+	if len(blobs) > 0 {
+		s.log.Info("Download range", "cache", toCache, "start", start, "end", end, "blobNumber", len(blobs), "duration(ms)", time.Since(ts).Milliseconds())
+	}
 
 	return blobs, nil
 }

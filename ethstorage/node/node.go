@@ -20,6 +20,7 @@ import (
 	ethRPC "github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethstorage/go-ethstorage/ethstorage"
 	"github.com/ethstorage/go-ethstorage/ethstorage/archiver"
+	"github.com/ethstorage/go-ethstorage/ethstorage/blobs"
 	"github.com/ethstorage/go-ethstorage/ethstorage/downloader"
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
 	"github.com/ethstorage/go-ethstorage/ethstorage/metrics"
@@ -40,11 +41,12 @@ type EsNode struct {
 	l1FinalizedSub ethereum.Subscription // Subscription to get L1 Finalized blocks, a.k.a. justified data (polling)
 	randaoHeadsSub ethereum.Subscription // Subscription to get randao heads (automatically re-subscribes on error)
 
-	randaoSource *eth.RandaoClient      // RPC client to fetch randao from
-	l1Source     *eth.PollingClient     // L1 Client to fetch data from
-	l1Beacon     *eth.BeaconClient      // L1 Beacon Chain to fetch blobs from
-	daClient     *eth.DAClient          // L1 Data Availability Client
-	downloader   *downloader.Downloader // L2 Engine to Sync
+	randaoSource *eth.RandaoClient         // RPC client to fetch randao from
+	l1Source     *eth.PollingClient        // L1 Client to fetch data from
+	l1Beacon     *eth.BeaconClient         // L1 Beacon Chain to fetch blobs from
+	daClient     *eth.DAClient             // L1 Data Availability Client
+	blobCache    *downloader.BlobDiskCache // Cache for blobs
+	downloader   *downloader.Downloader    // L2 Engine to Sync
 	// l2Source  *sources.EngineClient // L2 Execution Engine RPC bindings
 	// rpcSync   *sources.SyncClient   // Alt-sync RPC client, optional (may be nil)
 	server  *rpcServer   // RPC server hosting the rollup-node API
@@ -134,12 +136,14 @@ func (n *EsNode) init(ctx context.Context, cfg *Config) error {
 }
 
 func (n *EsNode) initL2(ctx context.Context, cfg *Config) error {
+	n.blobCache = downloader.NewBlobDiskCache()
 	n.downloader = downloader.NewDownloader(
 		n.l1Source,
 		n.l1Beacon,
 		n.daClient,
 		n.db,
 		n.storageManager,
+		n.blobCache,
 		cfg.Downloader.DownloadStart,
 		cfg.Downloader.DownloadDump,
 		cfg.L1.L1MinDurationForBlobsRequest,
@@ -301,8 +305,9 @@ func (n *EsNode) initMiner(ctx context.Context, cfg *Config) error {
 		cfg.Mining.ZKProverImpl,
 		n.log,
 	)
-	n.miner = miner.New(cfg.Mining, n.db, n.storageManager, l1api, &pvr, n.feed, n.log)
-	log.Info("Initialized miner")
+	br := blobs.NewBlobReader(n.blobCache, n.storageManager, n.log)
+	n.miner = miner.New(cfg.Mining, n.db, n.storageManager, l1api, br, &pvr, n.feed, n.log)
+	n.log.Info("Initialized miner")
 	return nil
 }
 
