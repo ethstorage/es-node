@@ -90,7 +90,7 @@ func (c *BlobDiskCache) Blobs(hash common.Hash) []blob {
 
 func (c *BlobDiskCache) GetKeyValueByIndex(idx uint64, hash common.Hash) []byte {
 	blob := c.getBlobByIndex(idx)
-	if blob != nil ||
+	if blob != nil &&
 		bytes.Equal(blob.hash[0:ethstorage.HashSizeInContract], hash[0:ethstorage.HashSizeInContract]) {
 		return blob.data
 	}

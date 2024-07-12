@@ -15,6 +15,7 @@ func TestBlobCache(t *testing.T) {
 		t.Fatalf("Failed to create datadir: %v", err)
 	}
 	t.Logf("datadir %s", datadir)
+	defer os.RemoveAll(datadir)
 	cache := NewBlobDiskCache()
 
 	err = cache.Init(datadir)
