@@ -5,6 +5,7 @@ package downloader
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
@@ -26,22 +27,26 @@ const (
 type BlobDiskCache struct {
 	store  billy.Database
 	lookup map[common.Hash]uint64 // Lookup table mapping hashes to blob billy entries id
+	lg     log.Logger
 	mu     sync.RWMutex
 }
 
-func NewBlobDiskCache() *BlobDiskCache {
+func NewBlobDiskCache(lg log.Logger) *BlobDiskCache {
 	return &BlobDiskCache{
 		lookup: make(map[common.Hash]uint64),
+		lg:     lg,
 	}
 }
 
 func (c *BlobDiskCache) Init(datadir string) error {
 	cbdir := filepath.Join(datadir, blobCacheDir)
 	if err := os.MkdirAll(cbdir, 0700); err != nil {
+		c.lg.Error("Failed to create cache directory", "dir", cbdir, "err", err)
 		return err
 	}
 	store, err := billy.Open(billy.Options{Path: cbdir, Repair: true}, newSlotter(), nil)
 	if err != nil {
+		c.lg.Error("Failed to open cache directory", "dir", cbdir, "err", err)
 		return err
 	}
 	c.store = store
@@ -51,12 +56,12 @@ func (c *BlobDiskCache) Init(datadir string) error {
 func (c *BlobDiskCache) SetBlockBlobs(block *blockBlobs) error {
 	rlpBlock, err := rlp.EncodeToBytes(block)
 	if err != nil {
-		log.Error("Failed to encode transaction for storage", "hash", block.hash, "err", err)
+		c.lg.Error("Failed to encode blockBlobs into RLP", "block", block.number, "err", err)
 		return err
 	}
 	id, err := c.store.Put(rlpBlock)
 	if err != nil {
-		log.Error("Failed to write blob into storage", "hash", block.hash, "err", err)
+		c.lg.Error("Failed to write blockBlobs into storage", "block", block.number, "err", err)
 		return err
 	}
 
@@ -64,7 +69,7 @@ func (c *BlobDiskCache) SetBlockBlobs(block *blockBlobs) error {
 	c.lookup[block.hash] = id
 	c.mu.Unlock()
 
-	log.Info("Set blockBlobs to cache", "id", id, "block", block.number)
+	c.lg.Debug("Set blockBlobs to cache", "id", id, "block", block.number)
 	return nil
 }
 
@@ -75,12 +80,11 @@ func (c *BlobDiskCache) Blobs(hash common.Hash) []blob {
 	if !ok {
 		return nil
 	}
-	log.Info("Blobs from cache", "hash", hash, "id", id)
 	block, err := c.getBlockBlobsById(id)
 	if err != nil {
 		return nil
 	}
-
+	c.lg.Info("Blobs from cache", "block", block.number, "id", id)
 	res := []blob{}
 	for _, blob := range block.blobs {
 		res = append(res, *blob)
@@ -133,15 +137,15 @@ func (c *BlobDiskCache) Cleanup(finalized uint64) {
 	for hash, id := range c.lookup {
 		block, err := c.getBlockBlobsById(id)
 		if err != nil {
-			log.Warn("Failed to get block from id", "id", id, "err", err)
+			c.lg.Warn("Failed to get block from id", "id", id, "err", err)
 			continue
 		}
 		if block.number <= finalized {
 			if err := c.store.Delete(id); err != nil {
-				log.Error("Failed to delete block from id", "id", id, "err", err)
+				c.lg.Error("Failed to delete block from id", "id", id, "err", err)
 			}
 			delete(c.lookup, hash)
-			log.Info("Cleanup deleted", "finalized", finalized, "block", block.number, "id", id)
+			c.lg.Info("Cleanup deleted", "finalized", finalized, "block", block.number, "id", id)
 		}
 	}
 }
@@ -149,19 +153,24 @@ func (c *BlobDiskCache) Cleanup(finalized uint64) {
 func (c *BlobDiskCache) getBlockBlobsById(id uint64) (*blockBlobs, error) {
 	data, err := c.store.Get(id)
 	if err != nil {
-		log.Error("Failed to get block from id", "id", id, "err", err)
+		c.lg.Error("Failed to get block from id", "id", id, "err", err)
 		return nil, err
+	}
+	if len(data) == 0 {
+		c.lg.Warn("BlockBlobs not found", "id", id)
+		return nil, fmt.Errorf("not found: id=%d", id)
 	}
 	item := new(blockBlobs)
 	if err := rlp.DecodeBytes(data, item); err != nil {
-		log.Error("Failed to decode block", "id", id, "err", err)
+		c.lg.Error("Failed to decode block", "id", id, "err", err)
 		return nil, err
 	}
-	log.Debug("Get blockBlobs by id", "id", id, "blockBlobs", item)
+	c.lg.Debug("Get blockBlobs by id", "id", id, "blockBlobs", item)
 	return item, nil
 }
 
 func (c *BlobDiskCache) Close() error {
+	c.lg.Warn("Closing BlobDiskCache")
 	return c.store.Close()
 }
 
@@ -173,7 +182,6 @@ func newSlotter() func() (uint32, bool) {
 	return func() (size uint32, done bool) {
 		slotsize += blobSize
 		finished := slotsize >= maxBlobsPerTransaction*blobSize
-		log.Debug("new slotter", "slotSize", slotsize, "finished", finished)
 		return slotsize, finished
 	}
 }

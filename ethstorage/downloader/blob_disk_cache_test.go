@@ -1,10 +1,12 @@
 package downloader
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
-	"reflect"
 	"testing"
+
+	"github.com/ethstorage/go-ethstorage/ethstorage/log"
 )
 
 func TestBlobCache(t *testing.T) {
@@ -15,8 +17,21 @@ func TestBlobCache(t *testing.T) {
 		t.Fatalf("Failed to create datadir: %v", err)
 	}
 	t.Logf("datadir %s", datadir)
-	defer os.RemoveAll(datadir)
-	cache := NewBlobDiskCache()
+	cache := NewBlobDiskCache(log.NewLogger(log.CLIConfig{
+		Level:  "debug",
+		Format: "text",
+	}))
+
+	defer func() {
+		err := cache.Close()
+		if err != nil {
+			t.Fatalf("Failed to close BlobCache: %v", err)
+		}
+		err = os.RemoveAll(datadir)
+		if err != nil {
+			t.Fatalf("Failed to remove datadir: %v", err)
+		}
+	}()
 
 	err = cache.Init(datadir)
 	if err != nil {
@@ -40,8 +55,8 @@ func TestBlobCache(t *testing.T) {
 
 	for i, blob := range block.blobs {
 		blobData := cache.GetKeyValueByIndex(uint64(i), blob.hash)
-		if !reflect.DeepEqual(blobData, blob.data) {
-			t.Fatalf("Unexpected blob data at index %d: got %+v, want %+v", i, blobData, blob.data)
+		if !bytes.Equal(blobData, blob.data) {
+			t.Fatalf("Unexpected blob data at index %d: got %x, want %x", i, blobData, blob.data)
 		}
 	}
 
@@ -51,10 +66,22 @@ func TestBlobCache(t *testing.T) {
 		t.Fatalf("Unexpected number of blobs after cleanup: got %d, want %d", len(blobsAfterCleanup), len(block.blobs))
 	}
 
-	err = cache.Close()
+	block, err = newBlockBlobs(20, 2)
 	if err != nil {
-		t.Fatalf("Failed to close BlobCache: %v", err)
+		t.Fatalf("Failed to create new block blobs: %v", err)
 	}
+
+	err = cache.SetBlockBlobs(block)
+	if err != nil {
+		t.Fatalf("Failed to set block blobs: %v", err)
+	}
+
+	cache.Cleanup(15)
+	blobsAfterCleanup = cache.Blobs(block.hash)
+	if len(blobsAfterCleanup) != len(block.blobs) {
+		t.Fatalf("Unexpected number of blobs after cleanup: got %d, want %d", len(blobsAfterCleanup), len(block.blobs))
+	}
+
 }
 
 func TestNewSlotter(t *testing.T) {

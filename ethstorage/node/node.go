@@ -136,7 +136,7 @@ func (n *EsNode) init(ctx context.Context, cfg *Config) error {
 }
 
 func (n *EsNode) initL2(ctx context.Context, cfg *Config) error {
-	n.blobCache = downloader.NewBlobDiskCache()
+	n.blobCache = downloader.NewBlobDiskCache(n.log)
 	n.downloader = downloader.NewDownloader(
 		n.l1Source,
 		n.l1Beacon,
