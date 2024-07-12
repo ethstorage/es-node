@@ -97,9 +97,16 @@ func (c *BlobDiskCache) GetKeyValueByIndex(idx uint64, hash common.Hash) []byte 
 }
 
 func (c *BlobDiskCache) GetKeyValueByIndexUnchecked(idx uint64) []byte {
-	blob := c.getBlobByIndex(idx)
-	if blob != nil {
-		return blob.data
+	for _, id := range c.lookup {
+		block, err := c.getBlockBlobsById(id)
+		if err != nil || block == nil {
+			return nil
+		}
+		for _, blob := range block.blobs {
+			if blob.kvIndex.Uint64() == idx {
+				return blob.data
+			}
+		}
 	}
 	return nil
 }
@@ -157,7 +164,6 @@ func (c *BlobDiskCache) getBlockBlobsById(id uint64) (*blockBlobs, error) {
 		c.lg.Error("Failed to decode block", "id", id, "err", err)
 		return nil, err
 	}
-	c.lg.Debug("Get blockBlobs by id", "id", id, "blockBlobs", item)
 	return item, nil
 }
 
