@@ -115,7 +115,7 @@ func (c *BlobDiskCache) getBlobByIndex(idx uint64) *blob {
 
 	for _, id := range c.lookup {
 		block, err := c.getBlockBlobsById(id)
-		if err != nil {
+		if err != nil || block == nil {
 			return nil
 		}
 		for _, blob := range block.blobs {
@@ -127,9 +127,6 @@ func (c *BlobDiskCache) getBlobByIndex(idx uint64) *blob {
 	return nil
 }
 
-// TODO: @Qiang An edge case that may need to be handled when Ethereum block is NOT finalized for a long time
-// We may need to add a counter in SetBlockBlobs(), if the counter is greater than a threshold which means
-// there has been a long time after last Cleanup, so we need to Cleanup anyway in SetBlockBlobs.
 func (c *BlobDiskCache) Cleanup(finalized uint64) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -140,7 +137,7 @@ func (c *BlobDiskCache) Cleanup(finalized uint64) {
 			c.lg.Warn("Failed to get block from id", "id", id, "err", err)
 			continue
 		}
-		if block.number <= finalized {
+		if block != nil && block.number <= finalized {
 			if err := c.store.Delete(id); err != nil {
 				c.lg.Error("Failed to delete block from id", "id", id, "err", err)
 			}

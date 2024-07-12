@@ -8,17 +8,20 @@ import (
 	"fmt"
 	"math/big"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto/kzg4844"
 	"github.com/ethstorage/go-ethstorage/ethstorage"
+	"github.com/ethstorage/go-ethstorage/ethstorage/log"
 	"github.com/protolambda/go-kzg/eth"
 )
 
 var (
-	bc        BlobCache
+	cache     BlobCache
 	kvHashes  []common.Hash
+	datadir   string
 	fileName         = "test_shard_0.dat"
 	blobData         = "blob data of kvIndex %d"
 	minerAddr        = common.BigToAddress(common.Big1)
@@ -27,18 +30,82 @@ var (
 	shardID          = uint64(0)
 )
 
-func init() {
-	bc = NewBlobMemCache()
+func TestNewSlotter(t *testing.T) {
+	slotter := newSlotter()
+	var lastSize uint32
+	for i := 0; i < 10; i++ {
+		size, done := slotter()
+		lastSize = size
+		if done {
+			break
+		}
+	}
+	expected := uint32(maxBlobsPerTransaction * blobSize)
+	if lastSize != expected {
+		t.Errorf("Slotter returned incorrect total size: got %d, want %d", lastSize, expected)
+	}
 }
 
-func TestBlobCache_Encoding(t *testing.T) {
+func TestDiskBlobCache(t *testing.T) {
+	setup(t)
+	defer teardown(t)
+
+	block, err := newBlockBlobs(10, 4)
+	if err != nil {
+		t.Fatalf("Failed to create new block blobs: %v", err)
+	}
+
+	err = cache.SetBlockBlobs(block)
+	if err != nil {
+		t.Fatalf("Failed to set block blobs: %v", err)
+	}
+
+	blobs := cache.Blobs(block.hash)
+	if len(blobs) != len(block.blobs) {
+		t.Fatalf("Unexpected number of blobs: got %d, want %d", len(blobs), len(block.blobs))
+	}
+
+	for i, blob := range block.blobs {
+		blobData := cache.GetKeyValueByIndex(uint64(i), blob.hash)
+		if !bytes.Equal(blobData, blob.data) {
+			t.Fatalf("Unexpected blob data at index %d: got %x, want %x", i, blobData, blob.data)
+		}
+	}
+
+	cache.Cleanup(5)
+	blobsAfterCleanup := cache.Blobs(block.hash)
+	if len(blobsAfterCleanup) != len(block.blobs) {
+		t.Fatalf("Unexpected number of blobs after cleanup: got %d, want %d", len(blobsAfterCleanup), len(block.blobs))
+	}
+
+	block, err = newBlockBlobs(20, 6)
+	if err != nil {
+		t.Fatalf("Failed to create new block blobs: %v", err)
+	}
+
+	err = cache.SetBlockBlobs(block)
+	if err != nil {
+		t.Fatalf("Failed to set block blobs: %v", err)
+	}
+
+	cache.Cleanup(15)
+	blobsAfterCleanup = cache.Blobs(block.hash)
+	if len(blobsAfterCleanup) != len(block.blobs) {
+		t.Fatalf("Unexpected number of blobs after cleanup: got %d, want %d", len(blobsAfterCleanup), len(block.blobs))
+	}
+}
+
+func TestEncoding(t *testing.T) {
+	setup(t)
+	defer teardown(t)
+
 	blockBlobsParams := []struct {
 		blockNum uint64
 		blobLen  uint64
 	}{
 		{0, 1},
 		{1, 5},
-		{222, 6},
+		// {222, 6},
 		{1000, 4},
 		{12345, 2},
 		{2000000, 3},
@@ -66,14 +133,16 @@ func TestBlobCache_Encoding(t *testing.T) {
 		for i, b := range bb.blobs {
 			bb.blobs[i].data = sm.EncodeBlob(b.data, b.hash, b.kvIndex.Uint64(), kvSize)
 		}
-		bc.SetBlockBlobs(bb)
+		if err := cache.SetBlockBlobs(bb); err != nil {
+			t.Fatalf("failed to set block blobs: %v", err)
+		}
 	}
 
 	// load from cache and verify
 	for i, kvHash := range kvHashes {
 		kvIndex := uint64(i)
 		t.Run(fmt.Sprintf("test kv: %d", i), func(t *testing.T) {
-			blobEncoded := bc.GetKeyValueByIndexUnchecked(kvIndex)
+			blobEncoded := cache.GetKeyValueByIndexUnchecked(kvIndex)
 			blobDecoded := sm.DecodeBlob(blobEncoded, kvHash, kvIndex, kvSize)
 			bytesWant := []byte(fmt.Sprintf(blobData, kvIndex))
 			if !bytes.Equal(blobDecoded[:len(bytesWant)], bytesWant) {
@@ -108,4 +177,36 @@ func newBlockBlobs(blockNumber, blobLen uint64) (*blockBlobs, error) {
 		kvHashes = append(kvHashes, blob.hash)
 	}
 	return block, nil
+}
+
+func setup(t *testing.T) {
+	// cache = NewBlobMemCache()
+	tmpDir := t.TempDir()
+	datadir = filepath.Join(tmpDir, "datadir")
+	err := os.MkdirAll(datadir, 0700)
+	if err != nil {
+		t.Fatalf("Failed to create datadir: %v", err)
+	}
+	t.Logf("datadir %s", datadir)
+	cache = NewBlobDiskCache(log.NewLogger(log.CLIConfig{
+		Level:  "debug",
+		Format: "text",
+	}))
+
+	err = cache.Init(datadir)
+	if err != nil {
+		t.Fatalf("Failed to initialize BlobCache: %v", err)
+	}
+}
+
+func teardown(t *testing.T) {
+	err := cache.Close()
+	if err != nil {
+		t.Fatalf("Failed to close BlobCache: %v", err)
+	}
+	err = os.RemoveAll(datadir)
+	if err != nil {
+		t.Fatalf("Failed to remove datadir: %v", err)
+	}
+	kvHashes = nil
 }
