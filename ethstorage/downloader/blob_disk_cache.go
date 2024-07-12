@@ -31,26 +31,21 @@ type BlobDiskCache struct {
 	mu     sync.RWMutex
 }
 
-func NewBlobDiskCache(lg log.Logger) *BlobDiskCache {
-	return &BlobDiskCache{
-		lookup: make(map[common.Hash]uint64),
-		lg:     lg,
-	}
-}
-
-func (c *BlobDiskCache) Init(datadir string) error {
+func NewBlobDiskCache(datadir string, lg log.Logger) *BlobDiskCache {
 	cbdir := filepath.Join(datadir, blobCacheDir)
 	if err := os.MkdirAll(cbdir, 0700); err != nil {
-		c.lg.Error("Failed to create cache directory", "dir", cbdir, "err", err)
-		return err
+		lg.Crit("Failed to create cache directory", "dir", cbdir, "err", err)
 	}
 	store, err := billy.Open(billy.Options{Path: cbdir, Repair: true}, newSlotter(), nil)
 	if err != nil {
-		c.lg.Error("Failed to open cache directory", "dir", cbdir, "err", err)
-		return err
+		lg.Crit("Failed to open cache directory", "dir", cbdir, "err", err)
 	}
-	c.store = store
-	return nil
+	lg.Info("BlobDiskCache initialized", "dir", cbdir)
+	return &BlobDiskCache{
+		store:  store,
+		lookup: make(map[common.Hash]uint64),
+		lg:     lg,
+	}
 }
 
 func (c *BlobDiskCache) SetBlockBlobs(block *blockBlobs) error {

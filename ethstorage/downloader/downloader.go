@@ -41,7 +41,6 @@ var (
 )
 
 type BlobCache interface {
-	Init(datadir string) error
 	SetBlockBlobs(block *blockBlobs) error
 	Blobs(hash common.Hash) []blob
 	GetKeyValueByIndex(idx uint64, hash common.Hash) []byte
@@ -190,9 +189,6 @@ func NewDownloader(
 
 // Start starts up the state loop.
 func (s *Downloader) Start(datadir string) error {
-	if err := s.Cache.Init(datadir); err != nil {
-		return err
-	}
 	// user does NOT specify a download start in the flag
 	if s.lastDownloadBlock == 0 {
 		bs, err := s.db.Get(append(downloaderPrefix, lastDownloadKey...))
@@ -235,7 +231,7 @@ func (s *Downloader) Start(datadir string) error {
 func (s *Downloader) Close() error {
 	s.done <- struct{}{}
 	s.wg.Wait()
-	return s.Cache.Close()
+	return nil
 }
 
 func (s *Downloader) OnL1Finalized(finalized uint64) {
@@ -451,7 +447,7 @@ func (s *Downloader) downloadRange(start int64, end int64, toCache bool) ([]blob
 			// encode blobs so that miner can do sampling directly from cache
 			elBlob.data = s.sm.EncodeBlob(clBlob.Data, elBlob.hash, elBlob.kvIndex.Uint64(), s.sm.MaxKvSize())
 			blobs = append(blobs, *elBlob)
-			s.log.Info("Download range", "blockNumber", elBlock.number, "kvIdx", elBlob.kvIndex)
+			s.log.Info("Downloaded and encoded", "blockNumber", elBlock.number, "kvIdx", elBlob.kvIndex)
 		}
 		if toCache {
 			if err := s.Cache.SetBlockBlobs(elBlock); err != nil {

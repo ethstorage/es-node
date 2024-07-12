@@ -41,12 +41,12 @@ type EsNode struct {
 	l1FinalizedSub ethereum.Subscription // Subscription to get L1 Finalized blocks, a.k.a. justified data (polling)
 	randaoHeadsSub ethereum.Subscription // Subscription to get randao heads (automatically re-subscribes on error)
 
-	randaoSource *eth.RandaoClient         // RPC client to fetch randao from
-	l1Source     *eth.PollingClient        // L1 Client to fetch data from
-	l1Beacon     *eth.BeaconClient         // L1 Beacon Chain to fetch blobs from
-	daClient     *eth.DAClient             // L1 Data Availability Client
-	blobCache    *downloader.BlobDiskCache // Cache for blobs
-	downloader   *downloader.Downloader    // L2 Engine to Sync
+	randaoSource *eth.RandaoClient      // RPC client to fetch randao from
+	l1Source     *eth.PollingClient     // L1 Client to fetch data from
+	l1Beacon     *eth.BeaconClient      // L1 Beacon Chain to fetch blobs from
+	daClient     *eth.DAClient          // L1 Data Availability Client
+	blobCache    downloader.BlobCache   // Cache for blobs
+	downloader   *downloader.Downloader // L2 Engine to Sync
 	// l2Source  *sources.EngineClient // L2 Execution Engine RPC bindings
 	// rpcSync   *sources.SyncClient   // Alt-sync RPC client, optional (may be nil)
 	server  *rpcServer   // RPC server hosting the rollup-node API
@@ -136,7 +136,7 @@ func (n *EsNode) init(ctx context.Context, cfg *Config) error {
 }
 
 func (n *EsNode) initL2(ctx context.Context, cfg *Config) error {
-	n.blobCache = downloader.NewBlobDiskCache(n.log)
+	n.blobCache = downloader.NewBlobDiskCache(cfg.DataDir, n.log)
 	n.downloader = downloader.NewDownloader(
 		n.l1Source,
 		n.l1Beacon,
@@ -510,6 +510,9 @@ func (n *EsNode) Close() error {
 	}
 	if n.miner != nil {
 		n.miner.Close()
+	}
+	if n.blobCache != nil {
+		n.blobCache.Close()
 	}
 
 	if n.archiverAPI != nil {

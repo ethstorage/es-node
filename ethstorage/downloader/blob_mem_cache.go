@@ -23,10 +23,6 @@ func NewBlobMemCache() *BlobMemCache {
 	}
 }
 
-func (c *BlobMemCache) Init(datadir string) error {
-	return nil
-}
-
 func (c *BlobMemCache) SetBlockBlobs(block *blockBlobs) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
