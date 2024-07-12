@@ -188,15 +188,10 @@ func setup(t *testing.T) {
 		t.Fatalf("Failed to create datadir: %v", err)
 	}
 	t.Logf("datadir %s", datadir)
-	cache = NewBlobDiskCache(log.NewLogger(log.CLIConfig{
+	cache = NewBlobDiskCache(datadir, log.NewLogger(log.CLIConfig{
 		Level:  "debug",
 		Format: "text",
 	}))
-
-	err = cache.Init(datadir)
-	if err != nil {
-		t.Fatalf("Failed to initialize BlobCache: %v", err)
-	}
 }
 
 func teardown(t *testing.T) {
