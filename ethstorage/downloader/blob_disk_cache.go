@@ -96,6 +96,7 @@ func (c *BlobDiskCache) GetKeyValueByIndex(idx uint64, hash common.Hash) []byte 
 	return nil
 }
 
+// Access without a lock or verification through a hash: only for miner sampling
 func (c *BlobDiskCache) GetKeyValueByIndexUnchecked(idx uint64) []byte {
 	for _, id := range c.lookup {
 		block, err := c.getBlockBlobsById(id)

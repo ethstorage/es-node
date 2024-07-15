@@ -55,7 +55,6 @@ func (n *BlobReader) ReadSample(shardIdx, sampleIdx uint64) (common.Hash, error)
 	kvIdx := sampleIdx >> sampleLenBits
 	// get blob without checking commit since kvHash is not available
 	if blob := n.cr.GetKeyValueByIndexUnchecked(kvIdx); blob != nil {
-		n.lg.Debug("Loaded blob from downloader cache", "kvIdx", kvIdx)
 		sampleIdxInKv := sampleIdx % (1 << sampleLenBits)
 		sampleSize := uint64(1 << es.SampleSizeBits)
 		sampleIdxByte := sampleIdxInKv << es.SampleSizeBits
