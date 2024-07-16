@@ -87,11 +87,11 @@ func (c *BlobDiskCache) parseBlockBlobs(id uint64, data []byte) (int, error) {
 	defer c.mu.Unlock()
 	blobs := 0
 	c.lookup[bb.hash] = id
-	c.lg.Info("Indexing blockBlobs in cache", "block", bb.number, "hash", bb.hash, "id", id)
+	c.lg.Debug("Indexing blockBlobs in cache", "block", bb.number, "hash", bb.hash, "id", id)
 	for _, b := range bb.blobs {
 		blobs++
 		c.index[b.kvIndex.Uint64()] = id
-		c.lg.Info("Indexing blob in cache", "kvIdx", b.kvIndex, "hash", b.hash, "id", id)
+		c.lg.Debug("Indexing blob in cache", "kvIdx", b.kvIndex, "hash", b.hash, "id", id)
 	}
 	return blobs, nil
 }
