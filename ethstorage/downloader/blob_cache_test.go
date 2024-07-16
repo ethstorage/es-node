@@ -9,9 +9,7 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
-	"runtime/pprof"
 	"testing"
-	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto/kzg4844"
@@ -152,39 +150,6 @@ func TestEncoding(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestPerf(t *testing.T) {
-	t.SkipNow()
-
-	setup(t)
-	defer teardown(t)
-
-	for i := uint64(0); i < 1000; i++ {
-		bb, err := newBlockBlobs(i, 6)
-		if err != nil {
-			t.Fatalf("failed to create block blobs: %v", err)
-		}
-		if err := cache.SetBlockBlobs(bb); err != nil {
-			t.Fatalf("failed to set block blobs: %v", err)
-		}
-	}
-
-	cpuProfile, err := os.Create("cpu_profile.pprof")
-	if err != nil {
-		panic(err)
-	}
-	if err := pprof.StartCPUProfile(cpuProfile); err != nil {
-		panic(err)
-	}
-	defer pprof.StopCPUProfile()
-
-	startTime := time.Now()
-	for i := range kvHashes {
-		kvIndex := uint64(i)
-		cache.GetKeyValueByIndexUnchecked(kvIndex)
-	}
-	t.Logf("Total spent %fs", time.Since(startTime).Seconds())
 }
 
 func newBlockBlobs(blockNumber, blobLen uint64) (*blockBlobs, error) {

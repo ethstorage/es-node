@@ -485,12 +485,13 @@ func (n *EsNode) Close() error {
 			result = multierror.Append(result, fmt.Errorf("failed to close p2p node: %w", err))
 		}
 	}
-
+	n.log.Info("P2p closed")
 	if n.downloader != nil {
 		if err := n.downloader.Close(); err != nil {
 			result = multierror.Append(result, fmt.Errorf("failed to close downloader: %w", err))
 		}
 	}
+	n.log.Info("Downloader closed")
 	// if n.p2pSigner != nil {
 	// 	if err := n.p2pSigner.Close(); err != nil {
 	// 		result = multierror.Append(result, fmt.Errorf("failed to close p2p signer: %w", err))
@@ -511,8 +512,11 @@ func (n *EsNode) Close() error {
 	if n.miner != nil {
 		n.miner.Close()
 	}
+	n.log.Info("Miner closed")
 	if n.blobCache != nil {
-		n.blobCache.Close()
+		if err := n.blobCache.Close(); err != nil {
+			result = multierror.Append(result, fmt.Errorf("failed to close blob cache: %w", err))
+		}
 	}
 
 	if n.archiverAPI != nil {
