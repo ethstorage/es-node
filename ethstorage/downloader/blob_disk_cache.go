@@ -27,8 +27,9 @@ const (
 type BlobDiskCache struct {
 	store  billy.Database
 	lookup map[common.Hash]uint64 // Lookup table mapping hashes to blob billy entries id
+	index  map[uint64]uint64      // Lookup table mapping kvIndex to blob billy entries id
+	mu     sync.RWMutex           // protects store, lookup and index maps
 	lg     log.Logger
-	mu     sync.RWMutex
 }
 
 func NewBlobDiskCache(datadir string, lg log.Logger) *BlobDiskCache {
@@ -36,16 +37,63 @@ func NewBlobDiskCache(datadir string, lg log.Logger) *BlobDiskCache {
 	if err := os.MkdirAll(cbdir, 0700); err != nil {
 		lg.Crit("Failed to create cache directory", "dir", cbdir, "err", err)
 	}
-	store, err := billy.Open(billy.Options{Path: cbdir, Repair: true}, newSlotter(), nil)
+	c := &BlobDiskCache{
+		lookup: make(map[common.Hash]uint64),
+		index:  make(map[uint64]uint64),
+		lg:     lg,
+	}
+	var (
+		fails      []uint64
+		totalSize  uint32
+		totalBlobs int
+	)
+	indexer := func(id uint64, size uint32, data []byte) {
+		totalSize += size
+		blobs, err := c.parseBlockBlobs(id, data)
+		if err != nil {
+			fails = append(fails, id)
+		}
+		totalBlobs += blobs
+	}
+
+	store, err := billy.Open(billy.Options{Path: cbdir, Repair: true}, newSlotter(), indexer)
 	if err != nil {
 		lg.Crit("Failed to open cache directory", "dir", cbdir, "err", err)
 	}
-	lg.Info("BlobDiskCache initialized", "dir", cbdir)
-	return &BlobDiskCache{
-		store:  store,
-		lookup: make(map[common.Hash]uint64),
-		lg:     lg,
+	c.store = store
+
+	if len(fails) > 0 {
+		log.Warn("Dropping invalidated cached entries", "ids", fails)
+		for _, id := range fails {
+			if err := c.store.Delete(id); err != nil {
+				log.Error("Failed to delete invalidated cached entry", "id", id, "err", err)
+			}
+		}
 	}
+	lg.Info("BlobDiskCache initialized", "dir", cbdir, "entries", len(c.lookup), "blobs", totalBlobs, "size", totalSize)
+	return c
+}
+
+// parseBlockBlobs is a callback method on pool creation that gets called for
+// each blockBlobs on disk to create the in-memory index.
+func (c *BlobDiskCache) parseBlockBlobs(id uint64, data []byte) (int, error) {
+	bb := new(blockBlobs)
+	if err := rlp.DecodeBytes(data, bb); err != nil {
+		c.lg.Error("Failed to decode blockBlobs from RLP", "id", id, "err", err)
+		return 0, err
+	}
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	blobs := 0
+	c.lookup[bb.hash] = id
+	c.lg.Info("Indexing blockBlobs in cache", "block", bb.number, "hash", bb.hash, "id", id)
+	for _, b := range bb.blobs {
+		blobs++
+		c.index[b.kvIndex.Uint64()] = id
+		c.lg.Info("Indexing blob in cache", "kvIdx", b.kvIndex, "hash", b.hash, "id", id)
+	}
+	return blobs, nil
 }
 
 func (c *BlobDiskCache) SetBlockBlobs(block *blockBlobs) error {
@@ -54,29 +102,32 @@ func (c *BlobDiskCache) SetBlockBlobs(block *blockBlobs) error {
 		c.lg.Error("Failed to encode blockBlobs into RLP", "block", block.number, "err", err)
 		return err
 	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	id, err := c.store.Put(rlpBlock)
 	if err != nil {
 		c.lg.Error("Failed to write blockBlobs into storage", "block", block.number, "err", err)
 		return err
 	}
-
-	c.mu.Lock()
 	c.lookup[block.hash] = id
-	c.mu.Unlock()
-
-	c.lg.Debug("Set blockBlobs to cache", "id", id, "block", block.number)
+	for _, b := range block.blobs {
+		c.index[b.kvIndex.Uint64()] = id
+		c.lg.Debug("Indexing blob in cache", "kvIdx", b.kvIndex, "hash", b.hash, "id", id)
+	}
+	c.lg.Info("Set blockBlobs to cache", "block", block.number, "id", id)
 	return nil
 }
 
 func (c *BlobDiskCache) Blobs(hash common.Hash) []blob {
 	c.mu.RLock()
 	id, ok := c.lookup[hash]
-	c.mu.RUnlock()
 	if !ok {
 		return nil
 	}
 	block, err := c.getBlockBlobsById(id)
-	if err != nil {
+	c.mu.RUnlock()
+	if err != nil || block == nil {
 		return nil
 	}
 	c.lg.Info("Blobs from cache", "block", block.number, "id", id)
@@ -96,35 +147,29 @@ func (c *BlobDiskCache) GetKeyValueByIndex(idx uint64, hash common.Hash) []byte 
 	return nil
 }
 
-// Access without a lock or verification through a hash: only for miner sampling
+// Access without verification through a hash: only for miner sampling
 func (c *BlobDiskCache) GetKeyValueByIndexUnchecked(idx uint64) []byte {
-	for _, id := range c.lookup {
-		block, err := c.getBlockBlobsById(id)
-		if err != nil || block == nil {
-			return nil
-		}
-		for _, blob := range block.blobs {
-			if blob.kvIndex.Uint64() == idx {
-				return blob.data
-			}
-		}
+	blob := c.getBlobByIndex(idx)
+	if blob != nil {
+		return blob.data
 	}
 	return nil
 }
 
 func (c *BlobDiskCache) getBlobByIndex(idx uint64) *blob {
 	c.mu.RLock()
-	defer c.mu.RUnlock()
-
-	for _, id := range c.lookup {
-		block, err := c.getBlockBlobsById(id)
-		if err != nil || block == nil {
-			return nil
-		}
-		for _, blob := range block.blobs {
-			if blob.kvIndex.Uint64() == idx {
-				return blob
-			}
+	id, ok := c.index[idx]
+	if !ok {
+		return nil
+	}
+	block, err := c.getBlockBlobsById(id)
+	c.mu.RUnlock()
+	if err != nil || block == nil {
+		return nil
+	}
+	for _, blob := range block.blobs {
+		if blob != nil && blob.kvIndex.Uint64() == idx {
+			return blob
 		}
 	}
 	return nil
@@ -137,7 +182,7 @@ func (c *BlobDiskCache) Cleanup(finalized uint64) {
 	for hash, id := range c.lookup {
 		block, err := c.getBlockBlobsById(id)
 		if err != nil {
-			c.lg.Warn("Failed to get block from id", "id", id, "err", err)
+			c.lg.Error("Failed to get block from id", "id", id, "err", err)
 			continue
 		}
 		if block != nil && block.number <= finalized {
@@ -145,6 +190,11 @@ func (c *BlobDiskCache) Cleanup(finalized uint64) {
 				c.lg.Error("Failed to delete block from id", "id", id, "err", err)
 			}
 			delete(c.lookup, hash)
+			for _, blob := range block.blobs {
+				if blob != nil && blob.kvIndex != nil {
+					delete(c.index, blob.kvIndex.Uint64())
+				}
+			}
 			c.lg.Info("Cleanup deleted", "finalized", finalized, "block", block.number, "id", id)
 		}
 	}
