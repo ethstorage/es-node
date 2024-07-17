@@ -332,7 +332,7 @@ func (n *EsNode) Start(ctx context.Context, cfg *Config) error {
 		n.miner.Start()
 	}
 
-	if err := n.downloader.Start(cfg.DataDir); err != nil {
+	if err := n.downloader.Start(); err != nil {
 		n.log.Error("Could not start a downloader", "err", err)
 		return err
 	}

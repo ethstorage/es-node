@@ -188,7 +188,7 @@ func NewDownloader(
 }
 
 // Start starts up the state loop.
-func (s *Downloader) Start(datadir string) error {
+func (s *Downloader) Start() error {
 	// user does NOT specify a download start in the flag
 	if s.lastDownloadBlock == 0 {
 		bs, err := s.db.Get(append(downloaderPrefix, lastDownloadKey...))
