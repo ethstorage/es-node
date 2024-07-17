@@ -223,14 +223,31 @@ func (c *BlobDiskCache) Close() error {
 	return c.store.Close()
 }
 
+var base = uint32(44)
+
 // newSlotter creates a helper method for the Billy datastore that returns the
 // individual shelf sizes used to store blobs in.
+
+// | blobs | shelf size | data size|
+// |--|--|--|
+// | 1 | 131160 |131158|
+// | 2 | 262276 |262275|
+// | 3 | 393392 |393391|
+// | 4 | 524508 |524505|
+// | 5 | 655624 |655618|
+// | 6 | 786740 |786734|
+
 func newSlotter() func() (uint32, bool) {
-	var slotsize uint32
+	var (
+		slotsize  uint32 = base
+		blobCount uint32 = 1
+	)
 
 	return func() (size uint32, done bool) {
-		slotsize += blobSize
-		finished := slotsize >= maxBlobsPerTransaction*blobSize
-		return slotsize, finished
+		slotsize += blobSize + base
+		size = slotsize
+		done = blobCount == maxBlobsPerTransaction
+		blobCount++
+		return
 	}
 }

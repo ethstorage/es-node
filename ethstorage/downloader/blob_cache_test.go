@@ -35,20 +35,25 @@ func TestNewSlotter(t *testing.T) {
 	var lastSize uint32
 	for i := 0; i < 10; i++ {
 		size, done := slotter()
-		lastSize = size
+		// shelf0 is for block with 1 blob
+		if !(size > uint32((i+1)*blobSize) && size < uint32((i+2)*blobSize)) {
+			t.Errorf("Slotter returned incorrect size at shelf %d", i)
+		}
 		if done {
+			lastSize = size
 			break
 		}
 	}
-	expected := uint32(maxBlobsPerTransaction * blobSize)
-	if lastSize != expected {
-		t.Errorf("Slotter returned incorrect total size: got %d, want %d", lastSize, expected)
+	if lastSize/blobSize != maxBlobsPerTransaction {
+		t.Errorf("Slotter did not return correct last size")
 	}
 }
 
 func TestDiskBlobCache(t *testing.T) {
 	setup(t)
-	defer teardown(t)
+	t.Cleanup(func() {
+		teardown(t)
+	})
 
 	block, err := newBlockBlobs(10, 4)
 	if err != nil {
@@ -97,16 +102,18 @@ func TestDiskBlobCache(t *testing.T) {
 
 func TestEncoding(t *testing.T) {
 	setup(t)
-	defer teardown(t)
+	t.Cleanup(func() {
+		teardown(t)
+	})
 
 	blockBlobsParams := []struct {
 		blockNum uint64
 		blobLen  uint64
 	}{
 		{0, 1},
-		{1, 5},
-		// {222, 6},
 		{1000, 4},
+		{1, 5},
+		{222, 6},
 		{12345, 2},
 		{2000000, 3},
 	}
@@ -189,7 +196,7 @@ func setup(t *testing.T) {
 	}
 	t.Logf("datadir %s", datadir)
 	cache = NewBlobDiskCache(datadir, log.NewLogger(log.CLIConfig{
-		Level:  "debug",
+		Level:  "warn",
 		Format: "text",
 	}))
 }
@@ -197,11 +204,11 @@ func setup(t *testing.T) {
 func teardown(t *testing.T) {
 	err := cache.Close()
 	if err != nil {
-		t.Fatalf("Failed to close BlobCache: %v", err)
+		t.Errorf("Failed to close BlobCache: %v", err)
 	}
 	err = os.RemoveAll(datadir)
 	if err != nil {
-		t.Fatalf("Failed to remove datadir: %v", err)
+		t.Errorf("Failed to remove datadir: %v", err)
 	}
 	kvHashes = nil
 }
