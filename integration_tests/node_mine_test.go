@@ -84,8 +84,8 @@ func TestMining(t *testing.T) {
 		lg,
 	)
 	db := rawdb.NewMemoryDatabase()
-	bq := blobs.NewBlobReader(downloader.NewBlobMemCache(), storageManager, lg)
-	mnr := miner.New(miningConfig, db, storageManager, l1api, bq, &pvr, feed, lg)
+	br := blobs.NewBlobReader(downloader.NewBlobMemCache(), storageManager, lg)
+	mnr := miner.New(miningConfig, db, storageManager, l1api, br, &pvr, feed, lg)
 	lg.Info("Initialized miner")
 
 	l1HeadsSub := event.ResubscribeErr(time.Second*10, func(ctx context.Context, err error) (event.Subscription, error) {
