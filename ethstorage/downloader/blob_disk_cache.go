@@ -123,6 +123,7 @@ func (c *BlobDiskCache) Blobs(hash common.Hash) []blob {
 	c.mu.RLock()
 	id, ok := c.lookup[hash]
 	if !ok {
+		c.mu.RUnlock()
 		return nil
 	}
 	block, err := c.getBlockBlobsById(id)
@@ -160,6 +161,7 @@ func (c *BlobDiskCache) getBlobByIndex(idx uint64) *blob {
 	c.mu.RLock()
 	id, ok := c.index[idx]
 	if !ok {
+		c.mu.RUnlock()
 		return nil
 	}
 	block, err := c.getBlockBlobsById(id)
