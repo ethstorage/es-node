@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 
 	"github.com/ethstorage/go-ethstorage/ethstorage/flags/types"
+	"github.com/ethstorage/go-ethstorage/ethstorage/prover"
 	"github.com/ethstorage/go-ethstorage/ethstorage/rollup"
 	"github.com/urfave/cli"
 )
@@ -21,6 +22,7 @@ const (
 	ZKeyFileNameFlagName     = "miner.zkey"
 	ZKWorkingDirFlagName     = "miner.zk-working-dir"
 	ZKProverModeFlagName     = "miner.zk-prover-mode"
+	ZKProverImplFlagName     = "miner.zk-prover-impl"
 	ThreadsPerShardFlagName  = "miner.threads-per-shard"
 	MinimumProfitFlagName    = "miner.min-profit"
 )
@@ -47,27 +49,33 @@ func CLIFlags(envPrefix string) []cli.Flag {
 		},
 		&types.BigFlag{
 			Name:   MinimumProfitFlagName,
-			Usage:  "Minimum profit for mining transactions",
+			Usage:  "Minimum profit for mining transactions in wei",
 			Value:  DefaultConfig.MinimumProfit,
 			EnvVar: rollup.PrefixEnvVar(envPrefix, "MIN_PROFIT"),
 		},
 		cli.StringFlag{
 			Name:   ZKeyFileNameFlagName,
-			Usage:  "zkey file name which should be put in the snarkjs folder",
+			Usage:  "zkey file name which should be put in the snark_lib folder",
 			Value:  DefaultConfig.ZKeyFileName,
 			EnvVar: rollup.PrefixEnvVar(envPrefix, "ZKEY_FILE"),
 		},
 		cli.StringFlag{
 			Name:   ZKWorkingDirFlagName,
-			Usage:  "Path to the snarkjs folder",
+			Usage:  "Path to the snark_lib folder",
 			Value:  DefaultConfig.ZKWorkingDir,
 			EnvVar: rollup.PrefixEnvVar(envPrefix, "ZK_WORKING_DIR"),
 		},
 		cli.Uint64Flag{
 			Name:   ZKProverModeFlagName,
-			Usage:  "ZK prover mode, 1: one proof per sample, 2: one proof for multiple samples. Default: 2",
+			Usage:  "ZK prover mode, 1: one proof per sample, 2: one proof for multiple samples",
 			Value:  DefaultConfig.ZKProverMode,
-			EnvVar: rollup.PrefixEnvVar(envPrefix, "ZK_PROVER_Mode"),
+			EnvVar: rollup.PrefixEnvVar(envPrefix, "ZK_PROVER_MODE"),
+		},
+		cli.Uint64Flag{
+			Name:   ZKProverImplFlagName,
+			Usage:  "ZK prover implementation, 1: snarkjs, 2: go-rapidsnark",
+			Value:  DefaultConfig.ZKProverImpl,
+			EnvVar: rollup.PrefixEnvVar(envPrefix, "ZK_PROVER_IMPL"),
 		},
 		cli.Uint64Flag{
 			Name:   ThreadsPerShardFlagName,
@@ -87,14 +95,15 @@ type CLIConfig struct {
 	ZKeyFileName     string
 	ZKWorkingDir     string
 	ZKProverMode     uint64
+	ZKProverImpl     uint64
 	ThreadsPerShard  uint64
 }
 
 func (c CLIConfig) Check() error {
-	info, err := os.Stat(filepath.Join(c.ZKWorkingDir, "snarkjs"))
+	info, err := os.Stat(filepath.Join(c.ZKWorkingDir, prover.SnarkLib))
 	if err != nil {
 		if os.IsNotExist(err) || !info.IsDir() {
-			return fmt.Errorf("snarkjs folder not found in ZKWorkingDir: %v", err)
+			return fmt.Errorf("%s folder not found in ZKWorkingDir: %v", prover.SnarkLib, err)
 		}
 	}
 	return nil
@@ -116,6 +125,7 @@ func (c CLIConfig) ToMinerConfig() (Config, error) {
 	cfg.MinimumProfit = c.MinimumProfit
 	cfg.ZKeyFileName = c.ZKeyFileName
 	cfg.ZKProverMode = c.ZKProverMode
+	cfg.ZKProverImpl = c.ZKProverImpl
 	cfg.ThreadsPerShard = c.ThreadsPerShard
 	return cfg, nil
 }
@@ -129,6 +139,7 @@ func ReadCLIConfig(ctx *cli.Context) CLIConfig {
 		ZKeyFileName:     ctx.GlobalString(ZKeyFileNameFlagName),
 		ZKWorkingDir:     ctx.GlobalString(ZKWorkingDirFlagName),
 		ZKProverMode:     ctx.GlobalUint64(ZKProverModeFlagName),
+		ZKProverImpl:     ctx.GlobalUint64(ZKProverImplFlagName),
 		ThreadsPerShard:  ctx.GlobalUint64(ThreadsPerShardFlagName),
 	}
 	return cfg

@@ -23,13 +23,11 @@ import (
 )
 
 const (
-	chainHeadChanSize = 1
-	taskQueueSize     = 1
-	resultQueueSize   = 10
-	sampleSizeBits    = 5 // 32 bytes
-	// always use new block hash to mine for each slot
-	mineTimeOut              = 12 // seconds
-	miningTransactionTimeout = 25 // seconds
+	chainHeadChanSize        = 1
+	taskQueueSize            = 1
+	resultQueueSize          = 10
+	slot                     = 12 // seconds
+	miningTransactionTimeout = 50 // seconds
 )
 
 var (
@@ -99,6 +97,7 @@ type result struct {
 type worker struct {
 	config     Config
 	l1API      L1API
+	dataReader DataReader
 	prover     MiningProver
 	db         ethdb.Database
 	storageMgr *es.StorageManager
@@ -126,6 +125,7 @@ func newWorker(
 	db ethdb.Database,
 	storageMgr *es.StorageManager,
 	api L1API,
+	dr DataReader,
 	chainHeadCh chan eth.L1BlockRef,
 	prover MiningProver,
 	lg log.Logger,
@@ -139,6 +139,7 @@ func newWorker(
 	worker := &worker{
 		config:           config,
 		l1API:            api,
+		dataReader:       dr,
 		prover:           prover,
 		chainHeadCh:      chainHeadCh,
 		shardTaskMap:     make(map[uint64]task),
@@ -249,7 +250,7 @@ func (w *worker) newWorkLoop() {
 			if !w.isRunning() {
 				break
 			}
-			w.lg.Info("Updating tasks with L1 new head", "blockNumber", block.Number, "blockTime", block.Time, "now", uint64(time.Now().Unix()))
+			w.lg.Debug("Updating tasks with L1 new head", "blockNumber", block.Number, "blockTime", block.Time, "blockHash", block.Hash, "now", uint64(time.Now().Unix()))
 			// TODO suspend mining if:
 			// 1) a mining tx is already submitted; or
 			// 2) if the last mining time is too close (the reward is not enough).
@@ -307,7 +308,7 @@ func (w *worker) assignTasks(task task, block eth.L1BlockRef, reqDiff *big.Int) 
 			w.lg.Debug("Mining task queued", "shard", ti.shardIdx, "thread", ti.thread, "block", ti.blockNumber, "blockTime", block.Time, "now", uint64(time.Now().Unix()))
 		}
 	}
-	w.lg.Info("Mining tasks assigned", "miner", task.miner, "shard", task.shardIdx, "threads", w.config.ThreadsPerShard, "block", block.Number, "nonces", w.config.NonceLimit)
+	w.lg.Debug("Mining tasks assigned", "miner", task.miner, "shard", task.shardIdx, "threads", w.config.ThreadsPerShard, "block", block.Number, "nonces", w.config.NonceLimit)
 }
 
 func (w *worker) updateDifficulty(shardIdx, blockTime uint64) (*big.Int, error) {
@@ -320,7 +321,7 @@ func (w *worker) updateDifficulty(shardIdx, blockTime uint64) (*big.Int, error) 
 		w.lg.Warn("Failed to get es mining info", "error", err.Error())
 		return nil, err
 	}
-	w.lg.Info("Mining info retrieved", "shard", shardIdx, "LastMineTime", info.LastMineTime, "Difficulty", info.Difficulty, "proofsSubmitted", info.BlockMined)
+	w.lg.Info("Mining info retrieved", "shard", shardIdx, "lastMineTime", info.LastMineTime, "difficulty", info.Difficulty, "proofsSubmitted", info.BlockMined)
 	reqDiff := new(big.Int).Div(maxUint256, expectedDiff(
 		info.LastMineTime,
 		blockTime,
@@ -510,7 +511,8 @@ func (w *worker) mineTask(t *taskItem) (bool, error) {
 	nonce := t.nonceStart
 	w.lg.Debug("Mining task started", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonces", fmt.Sprintf("%d~%d", t.nonceStart, t.nonceEnd))
 	for w.isRunning() {
-		if time.Since(startTime).Seconds() > mineTimeOut {
+		// always use new randao to mine for each slot
+		if time.Since(startTime).Seconds() > slot {
 			if t.thread == 0 {
 				nonceTriedTotal := (nonce - t.nonceStart) * w.config.ThreadsPerShard
 				w.lg.Warn("Mining tasks timed out", "shard", t.shardIdx, "block", t.blockNumber,
@@ -585,11 +587,13 @@ func (w *worker) mineTask(t *taskItem) (bool, error) {
 
 // computeHash calculates final hash from hash0
 func (w *worker) computeHash(shardIdx uint64, hash0 common.Hash) (common.Hash, []uint64, error) {
-	return hashimoto(w.storageMgr.KvEntriesBits(),
-		w.storageMgr.MaxKvSizeBits(), sampleSizeBits,
+	return hashimoto(
+		w.storageMgr.KvEntriesBits(),
+		w.storageMgr.MaxKvSizeBits(),
+		es.SampleSizeBits,
 		shardIdx,
 		w.config.RandomChecks,
-		w.storageMgr.ReadSampleUnlocked,
+		w.dataReader.ReadSample,
 		hash0,
 	)
 }
@@ -600,7 +604,7 @@ func (w *worker) getMiningData(t *task, sampleIdx []uint64) ([][]byte, []uint64,
 	dataSet := make([][]byte, checksLen)
 	kvIdxs, sampleIdxsInKv := make([]uint64, checksLen), make([]uint64, checksLen)
 	encodingKeys, encodedSamples := make([]common.Hash, checksLen), make([]common.Hash, checksLen)
-	sampleLenBits := w.storageMgr.MaxKvSizeBits() - sampleSizeBits
+	sampleLenBits := w.storageMgr.MaxKvSizeBits() - es.SampleSizeBits
 	for i := uint64(0); i < checksLen; i++ {
 		kvIdxs[i] = sampleIdx[i] >> sampleLenBits
 	}
@@ -610,23 +614,20 @@ func (w *worker) getMiningData(t *task, sampleIdx []uint64) ([][]byte, []uint64,
 		return nil, nil, nil, nil, nil, err
 	}
 	for i := uint64(0); i < checksLen; i++ {
-		kvData, exist, err := w.storageMgr.TryRead(kvIdxs[i], int(w.storageMgr.MaxKvSize()), kvHashes[i])
-		if exist && err == nil {
-			dataSet[i] = kvData
-			sampleIdxsInKv[i] = sampleIdx[i] % (1 << sampleLenBits)
-			encodingKeys[i] = es.CalcEncodeKey(kvHashes[i], kvIdxs[i], t.miner)
-			encodedSample, err := w.storageMgr.ReadSampleUnlocked(t.shardIdx, sampleIdx[i])
-			if err != nil {
-				return nil, nil, nil, nil, nil, err
-			}
-			encodedSamples[i] = encodedSample
-		} else {
-			if !exist {
-				err = fmt.Errorf("kv not found: index=%d", kvIdxs[i])
-			}
+		kvData, err := w.dataReader.GetBlob(kvIdxs[i], kvHashes[i])
+		if err != nil {
 			w.lg.Error("Get data error", "index", kvIdxs[i], "error", err.Error())
 			return nil, nil, nil, nil, nil, err
 		}
+		dataSet[i] = kvData
+		sampleIdxsInKv[i] = sampleIdx[i] % (1 << sampleLenBits)
+		encodingKeys[i] = es.CalcEncodeKey(kvHashes[i], kvIdxs[i], t.miner)
+		encodedSample, err := w.dataReader.ReadSample(t.shardIdx, sampleIdx[i])
+		if err != nil {
+			w.lg.Error("Read sample error", "index", sampleIdx[i], "error", err.Error())
+			return nil, nil, nil, nil, nil, err
+		}
+		encodedSamples[i] = encodedSample
 	}
 	return dataSet, kvIdxs, sampleIdxsInKv, encodingKeys, encodedSamples, nil
 }
