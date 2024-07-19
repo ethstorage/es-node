@@ -16,43 +16,44 @@ if [ ${#ES_NODE_STORAGE_MINER} -ne 42 ] || case $ES_NODE_STORAGE_MINER in 0x*) f
   echo "Error: ES_NODE_STORAGE_MINER should be prefixed with '0x' and have a total length of 42"
   exit 1
 fi
-
-
 # ZK prover implementation, 1: snarkjs, 2: go-rapidsnark. Default: 1
 zkp_impl=1
 # ZK prover mode, 1: one proof per sample, 2: one proof for multiple samples. Default: 2
 zkp_mode=2
+#!/bin/bash
 
+process_zkprover_options() {
+    local args=("$@")
 
-while [[ "$#" -gt 0 ]]; do
-    case "$1" in
-        --miner.zk-prover-impl)
-            if [ -n "$2" ]; then
-                zkp_impl="$2"
-                shift
-            else
-                echo "Error: Missing value for --miner.zk-prover-impl option."
-                exit 1
-            fi
-            ;;
-        --miner.zk-prover-mode)
-            if [ -n "$2" ]; then
-                zkp_mode="$2"
-                shift
-            else
-                echo "Error: Missing value for --miner.zk-prover-mode option."
-                exit 1
-            fi
-            ;;
-        *)
-            echo "Error: Unknown option: $1"
-            exit 1
-            ;;
-    esac
-    shift
-done
+    for ((i=0; i < ${#args[@]}; i++)); do
+        case "${args[$i]}" in
+            --miner.zk-prover-impl)
+                if [ -n "${args[$((i+1))]}" ]; then
+                    zkp_impl="${args[$((i+1))]}"
+                    unset 'args[i]'
+                    unset 'args[i+1]'
+                else
+                    echo "Error: Missing value for --miner.zk-prover-impl option."
+                    exit 1
+                fi
+                ;;
+            --miner.zk-prover-mode)
+                if [ -n "${args[$((i+1))]}" ]; then
+                    zkp_mode="${args[$((i+1))]}"
+                    unset 'args[i]'
+                    unset 'args[i+1]'
+                else
+                    echo "Error: Missing value for --miner.zk-prover-mode option."
+                    exit 1
+                fi
+                ;;
+        esac
+    done
 
-echo "zkp_impl is set to $zkp_impl"
+    echo "${args[@]}"
+}
+
+remaining_args=$(process_zkprover_options "$@")
 
 if [ -n "$zkp_mode" ] && [ "$zkp_mode" != 1 ] && [ "$zkp_mode" != 2 ]; then
   echo "Error: zk prover mode can only be 1 or 2."
@@ -84,6 +85,7 @@ else
   echo "√ ${zkey_file} already exists."
 fi
 
+echo "zkp_impl is set to $zkp_impl"
 if [ -n "$zkp_impl" ] && [ "$zkp_impl" != 1 ] && [ "$zkp_impl" != 2 ]; then
   echo "Error: miner.zk-prover-impl can only be 1 or 2"
   exit 1
@@ -125,9 +127,9 @@ if [ "$zkp_impl" = 1 ]; then
 fi
 
 executable="./build/bin/es-node"
-echo "============================"
+echo "========== build info =================="
 $executable --version
-echo "============================"
+echo "========================================"
 
 data_dir="./es-data"
 storage_file_0="$data_dir/shard-0.dat"
@@ -137,7 +139,10 @@ es_node_init="$executable init --shard_index 0 \
   --l1.rpc http://88.99.30.186:8545 \
   --storage.l1contract 0x804C520d3c084C805E37A35E90057Ac32831F96f \
   --storage.miner $ES_NODE_STORAGE_MINER \
-$@"
+$remaining_args"
+
+
+echo "$es_node_init"
 
 # create data file for shard 0 if not yet
 if [ ! -e $storage_file_0 ]; then
