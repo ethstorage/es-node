@@ -1,9 +1,12 @@
 #!/bin/bash
 
-# usage:
+# usage 1:
 # env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> ./run.sh
-# for one zk proof per sample (if the storage contract supports):
-# env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> ./run.sh --miner.zk-prover-mode 1 --l1.rpc <el_rpc> --l1.beacon <cl_rpc>
+# usage 2 (overriding rpc urls):
+# env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> ./run.sh --l1.rpc <el_rpc> --l1.beacon <cl_rpc>
+
+# Note: currently only zk prover mode is supported
+zkey_name="blob_poseidon2.zkey"
 
 if [ -z "$ES_NODE_STORAGE_MINER" ]; then
   echo "Please provide 'ES_NODE_STORAGE_MINER' as an environment variable"
@@ -25,119 +28,36 @@ if [ ${#ES_NODE_SIGNER_PRIVATE_KEY} -ne 64 ]; then
   exit 1
 fi
 
-if ! [ -x "$(command -v node)" ]; then
-  echo 'Error: Node.js is not installed.'
-  exit 1
-fi
-
-# check node js version
-node_version=$(node -v)
-major_version=$(echo $node_version | cut -d'v' -f2 | cut -d'.' -f1)
-
-if [ "$major_version" -lt 16 ]; then
-    echo "Error: Node.js version is too old."
-    exit 1
-fi
-
-# install snarkjs if not
-if ! [ "$(command -v snarkjs)" ]; then
-    echo "snarkjs not found, start installing..."
-    snarkjs_install=$(npm install -g snarkjs 2>&1)
-    if [ $? -eq 0 ]; then
-      echo "snarkjs installed successfully."
-    else
-      echo "Error: snarkjs install failed with the following error:"
-      echo "$snarkjs_install"
-      exit 1
-    fi
-fi
-
-# ZK prover mode, 1: one proof per sample, 2: one proof for multiple samples.
-zkp_mode=2 
-i=1
-while [ $i -le $# ]; do
-    if [ "${!i}" = "--miner.zk-prover-mode" ]; then
-        j=$((i+1))
-        zkp_mode="${!j}"
-        break
-    else
-        if echo "${!i}" | grep -qE -- "--miner\.zk-prover-mode=([0-9]+)"; then
-            zkp_mode=$(echo "${!i}" | sed -E 's/.*=([0-9]+)/\1/')
-            break
-        fi
-    fi
-    i=$((i+1))
-done
-
-if [ "$zkp_mode" != 1 ] && [ "$zkp_mode" != 2 ]; then
-  echo "Error: zk prover mode can only be 1 or 2."
-  exit 1  
-fi
-
-echo "zk prover mode is $zkp_mode"
-
-# download zkey if not yet
-zkey_name="blob_poseidon2.zkey"
-zkey_size=560301223
-zkey_url="https://es-node-zkey.s3.us-west-1.amazonaws.com/blob_poseidon2_testnet1.zkey"
-if [ "$zkp_mode" = 1 ]; then
-  zkey_name="blob_poseidon.zkey"
-  zkey_size=280151245
-  zkey_url="https://drive.usercontent.google.com/download?id=1ZLfhYeCXMnbk6wUiBADRAn1mZ8MI_zg-&export=download&confirm=t&uuid=16ddcd58-2498-4d65-8931-934df3d0065c"
-fi
-zkey_file="./build/bin/snarkjs/$zkey_name"
-if [ ! -e  ${zkey_file} ] || [ $(wc -c <  ${zkey_file}) -ne ${zkey_size} ]; then
-  echo "Start downloading ${zkey_file}..." 
-  curl $zkey_url -o ${zkey_file}
-  if [ ! -e  ${zkey_file} ]; then
-    echo "Error: The zkey file was not downloaded. Please try again."
-    exit 1
-  fi
-  if [ $(wc -c <  ${zkey_file}) -ne ${zkey_size} ]; then
-    echo "Error: The zkey file was not downloaded correctly. You can check the file content for more information."
-    exit 1
-  fi
-fi
-
 executable="./build/bin/es-node"
+echo "============================"
+$executable --version
+echo "============================"
+
 data_dir="./es-data"
 storage_file_0="$data_dir/shard-0.dat"
 
-common_flags=" --datadir $data_dir \
-  --l1.rpc http://88.99.30.186:8545 \
+if [ ! -e $storage_file_0 ]; then
+    echo "Error: storage file not found: ${storage_file_0}. Please run 'init.sh' first."
+    exit 1
+fi
+
+start_flags=" --network devnet \
+  --datadir $data_dir \
   --storage.l1contract 0x804C520d3c084C805E37A35E90057Ac32831F96f \
-  --storage.miner $ES_NODE_STORAGE_MINER \
-  "
-
-# init shard 0
-es_node_init="init --shard_index 0"
-
-# start node 
-# TODO remove --network
-es_node_start=" --network devnet \
-  --miner.enabled \
-  --miner.zkey $zkey_name \
   --storage.files $storage_file_0 \
-  --signer.private-key $ES_NODE_SIGNER_PRIVATE_KEY \
+  --storage.miner $ES_NODE_STORAGE_MINER \
+  --l1.rpc http://88.99.30.186:8545 \
   --l1.beacon http://88.99.30.186:3500 \
   --l1.beacon-based-time 1706684472 \
   --l1.beacon-based-slot 4245906 \
+  --signer.private-key $ES_NODE_SIGNER_PRIVATE_KEY \
+  --miner.enabled \
+  --miner.zkey $zkey_name \
   --download.thread 32 \
   --state.upload.url http://metrics.ethstorage.io:8080 \
   --p2p.listen.udp 30305 \
   --p2p.sync.concurrency 32 \
   --p2p.bootnodes enr:-Li4QF3vBkkDQYNLHlVjW5NcEpXAsfNtE1lUVb_LgUQ_Ot2afS8jbDfnYQBDABJud_5Hd1hX_1cNeGVU6Tem06WDlfaGAY1e3vNvimV0aHN0b3JhZ2XbAYDY15SATFINPAhMgF43o16QBXrDKDH5b8GAgmlkgnY0gmlwhEFtP5qJc2VjcDI1NmsxoQK8XODtSv0IsrhBxZmTZBZEoLssb7bTX0YOVl6S0yLxuYN0Y3CCJAaDdWRwgnZh \
 $@"
-  
-# create data file for shard 0 if not yet
-if [ ! -e $storage_file_0 ]; then
-  if $executable $es_node_init $common_flags ; then
-    echo "Initialized ${storage_file_0} successfully"
-  else
-    echo "Error: failed to initialize ${storage_file_0}"
-    exit 1
-  fi
-fi
 
-# start es-node
-exec $executable $common_flags $es_node_start
+exec $executable $start_flags
