@@ -44,6 +44,7 @@ jobs:
         run: |
           mkdir -p ${{ env.BIN_DIR }}/snarkbuild
           cp -r ethstorage/prover/snark_lib ${{ env.BIN_DIR }}
+          cp init.sh ${{ env.BUILD_DIR }}
           cp run.sh ${{ env.BUILD_DIR }}
 
       - name: Build
