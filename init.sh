@@ -22,38 +22,20 @@ zkp_impl=1
 zkp_mode=2
 #!/bin/bash
 
-process_zkprover_options() {
-    local args=("$@")
+remaining_args=""
 
-    for ((i=0; i < ${#args[@]}; i++)); do
-        case "${args[$i]}" in
-            --miner.zk-prover-impl)
-                if [ -n "${args[$((i+1))]}" ]; then
-                    zkp_impl="${args[$((i+1))]}"
-                    unset 'args[i]'
-                    unset 'args[i+1]'
-                else
-                    echo "Error: Missing value for --miner.zk-prover-impl option."
-                    exit 1
-                fi
-                ;;
-            --miner.zk-prover-mode)
-                if [ -n "${args[$((i+1))]}" ]; then
-                    zkp_mode="${args[$((i+1))]}"
-                    unset 'args[i]'
-                    unset 'args[i+1]'
-                else
-                    echo "Error: Missing value for --miner.zk-prover-mode option."
-                    exit 1
-                fi
-                ;;
-        esac
-    done
-
-    echo "${args[@]}"
-}
-
-remaining_args=$(process_zkprover_options "$@")
+while [ $# -gt 0 ]; do
+    if [[ $1 == --miner.zk-prover-impl ]]; then
+        zkp_impl=$2
+        shift 2
+    elif [[ $1 == --miner.zk-prover-mode ]]; then
+        zkp_mode=$2
+        shift 2
+    else
+        remaining_args="$remaining_args $1"
+        shift
+    fi
+done
 
 if [ -n "$zkp_mode" ] && [ "$zkp_mode" != 1 ] && [ "$zkp_mode" != 2 ]; then
   echo "Error: zk prover mode can only be 1 or 2."
