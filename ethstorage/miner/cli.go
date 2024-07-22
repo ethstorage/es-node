@@ -55,7 +55,7 @@ func CLIFlags(envPrefix string) []cli.Flag {
 		},
 		cli.StringFlag{
 			Name:   ZKeyFileNameFlagName,
-			Usage:  "zkey file name which should be put in the snark_lib folder",
+			Usage:  "zkey file name with path",
 			Value:  DefaultConfig.ZKeyFileName,
 			EnvVar: rollup.PrefixEnvVar(envPrefix, "ZKEY_FILE"),
 		},
@@ -118,14 +118,22 @@ func (c CLIConfig) ToMinerConfig() (Config, error) {
 		}
 		zkWorkingDir = dir
 	}
+	zkFile := c.ZKeyFileName
+	if !filepath.IsAbs(zkFile) {
+		dir, err := filepath.Abs(zkFile)
+		if err != nil {
+			return Config{}, fmt.Errorf("check ZKeyFileName error: %v", err)
+		}
+		zkFile = dir
+	}
 	cfg := DefaultConfig
 	cfg.ZKWorkingDir = zkWorkingDir
+	cfg.ZKeyFileName = zkFile
+	cfg.ZKProverMode = c.ZKProverMode
+	cfg.ZKProverImpl = c.ZKProverImpl
 	cfg.GasPrice = c.GasPrice
 	cfg.PriorityGasPrice = c.PriorityGasPrice
 	cfg.MinimumProfit = c.MinimumProfit
-	cfg.ZKeyFileName = c.ZKeyFileName
-	cfg.ZKProverMode = c.ZKProverMode
-	cfg.ZKProverImpl = c.ZKProverImpl
 	cfg.ThreadsPerShard = c.ThreadsPerShard
 	return cfg, nil
 }

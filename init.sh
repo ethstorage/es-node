@@ -16,6 +16,12 @@ if [ ${#ES_NODE_STORAGE_MINER} -ne 42 ] || case $ES_NODE_STORAGE_MINER in 0x*) f
   echo "Error: ES_NODE_STORAGE_MINER should be prefixed with '0x' and have a total length of 42"
   exit 1
 fi
+
+executable="./build/bin/es-node"
+echo "========== build info =================="
+$executable --version
+echo "========================================"
+
 # ZK prover implementation, 1: snarkjs, 2: go-rapidsnark. Default: 1
 zkp_impl=1
 # ZK prover mode, 1: one proof per sample, 2: one proof for multiple samples. Default: 2
@@ -51,7 +57,7 @@ if [ "$zkp_mode" = 1 ]; then
   zkey_size=280151245
   zkey_url="https://drive.usercontent.google.com/download?id=1ZLfhYeCXMnbk6wUiBADRAn1mZ8MI_zg-&export=download&confirm=t&uuid=16ddcd58-2498-4d65-8931-934df3d0065c"
 fi
-zkey_file="./build/bin/snark_lib/$zkey_name"
+zkey_file="./build/bin/snark_lib/zkey/$zkey_name"
 if [ ! -e  ${zkey_file} ] || [ $(wc -c <  ${zkey_file}) -ne ${zkey_size} ]; then
   echo "Start downloading ${zkey_file}..." 
   curl $zkey_url -o ${zkey_file}
@@ -107,11 +113,6 @@ if [ "$zkp_impl" = 1 ]; then
   fi
 
 fi
-
-executable="./build/bin/es-node"
-echo "========== build info =================="
-$executable --version
-echo "========================================"
 
 data_dir="./es-data"
 storage_file_0="$data_dir/shard-0.dat"
