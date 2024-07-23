@@ -162,7 +162,6 @@ func TestEncoding(t *testing.T) {
 func newBlockBlobs(blockNumber, blobLen uint64) (*blockBlobs, error) {
 	block := &blockBlobs{
 		number: blockNumber,
-		hash:   common.BigToHash(new(big.Int).SetUint64(blockNumber)),
 		blobs:  make([]*blob, blobLen),
 	}
 	for i := uint64(0); i < blobLen; i++ {

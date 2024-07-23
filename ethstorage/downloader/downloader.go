@@ -119,19 +119,17 @@ func (b *blob) DecodeRLP(s *rlp.Stream) error {
 type blockBlobs struct {
 	timestamp uint64
 	number    uint64
-	hash      common.Hash
 	blobs     []*blob
 }
 
 func (b *blockBlobs) String() string {
-	return fmt.Sprintf("blockBlobs{number: %d, timestamp: %d, hash: %x, blobs: %d}", b.number, b.timestamp, b.hash, len(b.blobs))
+	return fmt.Sprintf("blockBlobs{number: %d, timestamp: %d, blobs: %d}", b.number, b.timestamp, len(b.blobs))
 }
 
 func (bb *blockBlobs) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, []interface{}{
 		bb.timestamp,
 		bb.number,
-		bb.hash,
 		bb.blobs,
 	})
 }
@@ -140,7 +138,6 @@ func (bb *blockBlobs) DecodeRLP(s *rlp.Stream) error {
 	var decodedData struct {
 		Timestamp uint64
 		Number    uint64
-		Hash      common.Hash
 		Blobs     []*blob
 	}
 
@@ -150,7 +147,6 @@ func (bb *blockBlobs) DecodeRLP(s *rlp.Stream) error {
 
 	bb.timestamp = decodedData.Timestamp
 	bb.number = decodedData.Number
-	bb.hash = decodedData.Hash
 	bb.blobs = decodedData.Blobs
 
 	return nil
@@ -496,7 +492,6 @@ func (s *Downloader) eventsToBlocks(events []types.Log) ([]*blockBlobs, error) {
 			blocks = append(blocks, &blockBlobs{
 				timestamp: res.Time,
 				number:    event.BlockNumber,
-				hash:      event.BlockHash,
 				blobs:     []*blob{},
 			})
 		}

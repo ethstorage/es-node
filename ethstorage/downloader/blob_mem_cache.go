@@ -13,33 +13,33 @@ import (
 )
 
 type BlobMemCache struct {
-	blocks map[common.Hash]*blockBlobs
+	blocks map[uint64]*blockBlobs
 	mu     sync.RWMutex
 }
 
 func NewBlobMemCache() *BlobMemCache {
 	return &BlobMemCache{
-		blocks: map[common.Hash]*blockBlobs{},
+		blocks: map[uint64]*blockBlobs{},
 	}
 }
 
 func (c *BlobMemCache) SetBlockBlobs(block *blockBlobs) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.blocks[block.hash] = block
+	c.blocks[block.number] = block
 	return nil
 }
 
-func (c *BlobMemCache) Blobs(hash common.Hash) []blob {
+func (c *BlobMemCache) Blobs(number uint64) []blob {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	if _, exist := c.blocks[hash]; !exist {
+	if _, exist := c.blocks[number]; !exist {
 		return nil
 	}
 
 	res := []blob{}
-	for _, blob := range c.blocks[hash].blobs {
+	for _, blob := range c.blocks[number].blobs {
 		res = append(res, *blob)
 	}
 	return res
@@ -88,9 +88,6 @@ func (c *BlobMemCache) Cleanup(finalized uint64) {
 }
 
 func (c *BlobMemCache) Close() error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	c.blocks = map[common.Hash]*blockBlobs{}
+	c.blocks = nil
 	return nil
 }
