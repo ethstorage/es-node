@@ -42,58 +42,15 @@ func NewBlobDiskCache(datadir string, lg log.Logger) *BlobDiskCache {
 		index:  make(map[uint64]uint64),
 		lg:     lg,
 	}
-	var (
-		fails      []uint64
-		totalSize  uint32
-		totalBlobs int
-	)
-	indexer := func(id uint64, size uint32, data []byte) {
-		totalSize += size
-		blobs, err := c.parseBlockBlobs(id, data)
-		if err != nil {
-			fails = append(fails, id)
-		}
-		totalBlobs += blobs
-	}
 
-	store, err := billy.Open(billy.Options{Path: cbdir, Repair: true}, newSlotter(), indexer)
+	store, err := billy.Open(billy.Options{Path: cbdir, Repair: true}, newSlotter(), nil)
 	if err != nil {
 		lg.Crit("Failed to open cache directory", "dir", cbdir, "err", err)
 	}
 	c.store = store
 
-	if len(fails) > 0 {
-		log.Warn("Dropping invalidated cached entries", "ids", fails)
-		for _, id := range fails {
-			if err := c.store.Delete(id); err != nil {
-				log.Error("Failed to delete invalidated cached entry", "id", id, "err", err)
-			}
-		}
-	}
-	lg.Info("BlobDiskCache initialized", "dir", cbdir, "entries", len(c.lookup), "blobs", totalBlobs, "size", totalSize)
+	lg.Info("BlobDiskCache initialized", "dir", cbdir)
 	return c
-}
-
-// parseBlockBlobs is a callback method on pool creation that gets called for
-// each blockBlobs on disk to create the in-memory index.
-func (c *BlobDiskCache) parseBlockBlobs(id uint64, data []byte) (int, error) {
-	bb := new(blockBlobs)
-	if err := rlp.DecodeBytes(data, bb); err != nil {
-		c.lg.Error("Failed to decode blockBlobs from RLP", "id", id, "err", err)
-		return 0, err
-	}
-
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	blobs := 0
-	c.lookup[bb.hash] = id
-	c.lg.Debug("Indexing blockBlobs in cache", "block", bb.number, "hash", bb.hash, "id", id)
-	for _, b := range bb.blobs {
-		blobs++
-		c.index[b.kvIndex.Uint64()] = id
-		c.lg.Debug("Indexing blob in cache", "kvIdx", b.kvIndex, "hash", b.hash, "id", id)
-	}
-	return blobs, nil
 }
 
 func (c *BlobDiskCache) SetBlockBlobs(block *blockBlobs) error {
@@ -222,6 +179,15 @@ func (c *BlobDiskCache) getBlockBlobsById(id uint64) (*blockBlobs, error) {
 
 func (c *BlobDiskCache) Close() error {
 	c.lg.Warn("Closing BlobDiskCache")
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	for _, id := range c.lookup {
+		if err := c.store.Delete(id); err != nil {
+			c.lg.Warn("Failed to delete block from id", "id", id, "err", err)
+		}
+	}
+	c.lookup = nil
+	c.index = nil
 	return c.store.Close()
 }
 
