@@ -65,7 +65,7 @@ func TestDiskBlobCache(t *testing.T) {
 		t.Fatalf("Failed to set block blobs: %v", err)
 	}
 
-	blobs := cache.Blobs(block.hash)
+	blobs := cache.Blobs(block.number)
 	if len(blobs) != len(block.blobs) {
 		t.Fatalf("Unexpected number of blobs: got %d, want %d", len(blobs), len(block.blobs))
 	}
@@ -78,7 +78,7 @@ func TestDiskBlobCache(t *testing.T) {
 	}
 
 	cache.Cleanup(5)
-	blobsAfterCleanup := cache.Blobs(block.hash)
+	blobsAfterCleanup := cache.Blobs(block.number)
 	if len(blobsAfterCleanup) != len(block.blobs) {
 		t.Fatalf("Unexpected number of blobs after cleanup: got %d, want %d", len(blobsAfterCleanup), len(block.blobs))
 	}
@@ -94,7 +94,7 @@ func TestDiskBlobCache(t *testing.T) {
 	}
 
 	cache.Cleanup(15)
-	blobsAfterCleanup = cache.Blobs(block.hash)
+	blobsAfterCleanup = cache.Blobs(block.number)
 	if len(blobsAfterCleanup) != len(block.blobs) {
 		t.Fatalf("Unexpected number of blobs after cleanup: got %d, want %d", len(blobsAfterCleanup), len(block.blobs))
 	}

@@ -26,9 +26,9 @@ const (
 
 type BlobDiskCache struct {
 	store  billy.Database
-	lookup map[common.Hash]uint64 // Lookup table mapping hashes to blob billy entries id
-	index  map[uint64]uint64      // Lookup table mapping kvIndex to blob billy entries id
-	mu     sync.RWMutex           // protects store, lookup and index maps
+	lookup map[uint64]uint64 // Lookup table mapping block number to blob billy entries id
+	index  map[uint64]uint64 // Lookup table mapping kvIndex to blob billy entries id
+	mu     sync.RWMutex      // protects store, lookup and index maps
 	lg     log.Logger
 }
 
@@ -38,7 +38,7 @@ func NewBlobDiskCache(datadir string, lg log.Logger) *BlobDiskCache {
 		lg.Crit("Failed to create cache directory", "dir", cbdir, "err", err)
 	}
 	c := &BlobDiskCache{
-		lookup: make(map[common.Hash]uint64),
+		lookup: make(map[uint64]uint64),
 		index:  make(map[uint64]uint64),
 		lg:     lg,
 	}
@@ -67,7 +67,7 @@ func (c *BlobDiskCache) SetBlockBlobs(block *blockBlobs) error {
 		c.lg.Error("Failed to write blockBlobs into storage", "block", block.number, "err", err)
 		return err
 	}
-	c.lookup[block.hash] = id
+	c.lookup[block.number] = id
 	for _, b := range block.blobs {
 		c.index[b.kvIndex.Uint64()] = id
 		c.lg.Debug("Indexing blob in cache", "kvIdx", b.kvIndex, "hash", b.hash, "id", id)
@@ -76,9 +76,9 @@ func (c *BlobDiskCache) SetBlockBlobs(block *blockBlobs) error {
 	return nil
 }
 
-func (c *BlobDiskCache) Blobs(hash common.Hash) []blob {
+func (c *BlobDiskCache) Blobs(number uint64) []blob {
 	c.mu.RLock()
-	id, ok := c.lookup[hash]
+	id, ok := c.lookup[number]
 	if !ok {
 		c.mu.RUnlock()
 		return nil

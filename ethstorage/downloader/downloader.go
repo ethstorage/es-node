@@ -42,7 +42,7 @@ var (
 
 type BlobCache interface {
 	SetBlockBlobs(block *blockBlobs) error
-	Blobs(hash common.Hash) []blob
+	Blobs(number uint64) []blob
 	GetKeyValueByIndex(idx uint64, hash common.Hash) []byte
 	GetKeyValueByIndexUnchecked(idx uint64) []byte
 	Cleanup(finalized uint64)
@@ -401,7 +401,7 @@ func (s *Downloader) downloadRange(start int64, end int64, toCache bool) ([]blob
 	blobs := []blob{}
 	for _, elBlock := range elBlocks {
 		// attempt to read the blobs from the cache first
-		res := s.Cache.Blobs(elBlock.hash)
+		res := s.Cache.Blobs(elBlock.number)
 		if res != nil {
 			blobs = append(blobs, res...)
 			s.log.Info("Blob found in the cache, continue to the next block", "blockNumber", elBlock.number)
