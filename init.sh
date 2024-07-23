@@ -124,9 +124,6 @@ es_node_init="$executable init --shard_index 0 \
   --storage.miner $ES_NODE_STORAGE_MINER \
 $remaining_args"
 
-
-echo "$es_node_init"
-
 # create data file for shard 0 if not yet
 if [ ! -e $storage_file_0 ]; then
   if $es_node_init ; then
