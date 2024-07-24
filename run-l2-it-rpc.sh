@@ -1,10 +1,10 @@
 #!/bin/sh
 
 # usage:
-# ./run-l2-rpc.sh
+# env ES_NODE_CONTRACT_ADDRESS=<your_contract_address>  ./run-l2-it-rpc.sh
 
 executable="./build/bin/es-node"
-data_dir="./es-data-bootnode"
+data_dir="./es-data-it-bootnode"
 storage_file_0="$data_dir/shard-0.dat"
 
 common_flags=" --datadir $data_dir \
@@ -23,8 +23,13 @@ es_node_start=" --network integration \
   --l1.block_time 2 \
   --download.thread 32 \
   --rpc.addr 0.0.0.0 \
-  --p2p.listen.udp 30305 \
+  --rpc.port 9595 \
+  --p2p.listen.udp 30395 \
+  --p2p.listen.tcp 9295 \
   --p2p.sync.concurrency 32 \
+  --p2p.priv.path $data_dir/esnode_p2p_priv.txt \
+  --p2p.peerstore.path $data_dir/esnode_peerstore_db \
+  --p2p.discovery.path $data_dir/esnode_discovery_db \
 "
 # create data file for shard 0 if not yet
 if [ ! -e $storage_file_0 ]; then
