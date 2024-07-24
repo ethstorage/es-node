@@ -28,7 +28,7 @@ type BlobDiskCache struct {
 	store  billy.Database
 	lookup map[uint64]uint64 // Lookup table mapping block number to blob billy entries id
 	index  map[uint64]uint64 // Lookup table mapping kvIndex to blob billy entries id
-	mu     sync.RWMutex      // protects store, lookup and index maps
+	mu     sync.RWMutex      // protects lookup and index maps
 	lg     log.Logger
 }
 
@@ -59,19 +59,18 @@ func (c *BlobDiskCache) SetBlockBlobs(block *blockBlobs) error {
 		c.lg.Error("Failed to encode blockBlobs into RLP", "block", block.number, "err", err)
 		return err
 	}
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
 	id, err := c.store.Put(rlpBlock)
 	if err != nil {
 		c.lg.Error("Failed to write blockBlobs into storage", "block", block.number, "err", err)
 		return err
 	}
+	c.mu.Lock()
 	c.lookup[block.number] = id
 	for _, b := range block.blobs {
 		c.index[b.kvIndex.Uint64()] = id
 		c.lg.Debug("Indexing blob in cache", "kvIdx", b.kvIndex, "hash", b.hash, "id", id)
 	}
+	c.mu.Unlock()
 	c.lg.Info("Set blockBlobs to cache", "block", block.number, "id", id)
 	return nil
 }
@@ -79,12 +78,11 @@ func (c *BlobDiskCache) SetBlockBlobs(block *blockBlobs) error {
 func (c *BlobDiskCache) Blobs(number uint64) []blob {
 	c.mu.RLock()
 	id, ok := c.lookup[number]
+	c.mu.RUnlock()
 	if !ok {
-		c.mu.RUnlock()
 		return nil
 	}
 	block, err := c.getBlockBlobsById(id)
-	c.mu.RUnlock()
 	if err != nil || block == nil {
 		return nil
 	}
@@ -117,12 +115,11 @@ func (c *BlobDiskCache) GetKeyValueByIndexUnchecked(idx uint64) []byte {
 func (c *BlobDiskCache) getBlobByIndex(idx uint64) *blob {
 	c.mu.RLock()
 	id, ok := c.index[idx]
+	c.mu.RUnlock()
 	if !ok {
-		c.mu.RUnlock()
 		return nil
 	}
 	block, err := c.getBlockBlobsById(id)
-	c.mu.RUnlock()
 	if err != nil || block == nil {
 		return nil
 	}
