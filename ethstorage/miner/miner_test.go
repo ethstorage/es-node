@@ -77,7 +77,7 @@ func newMiner(t *testing.T, storageMgr *es.StorageManager, client *eth.PollingCl
 		}
 		defer os.Remove(zkey)
 	}
-	pvr := prover.NewKZGPoseidonProver(zkWorkingDir, defaultConfig.ZKeyFileName, defaultConfig.ZKProverMode, defaultConfig.ZKProverImpl, lg)
+	pvr := prover.NewKZGPoseidonProver(zkWorkingDir, zkey, defaultConfig.ZKProverMode, defaultConfig.ZKProverImpl, lg)
 	fd := new(event.Feed)
 	db := rawdb.NewMemoryDatabase()
 	br := blobs.NewBlobReader(downloader.NewBlobMemCache(), storageMgr, lg)

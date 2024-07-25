@@ -9,6 +9,7 @@ import (
 	"runtime"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethstorage/go-ethstorage/ethstorage/prover"
 	"github.com/ethstorage/go-ethstorage/ethstorage/signer"
 )
 
@@ -48,7 +49,7 @@ var DefaultConfig = Config{
 
 	GasPrice:         nil,
 	PriorityGasPrice: nil,
-	ZKeyFileName:     "blob_poseidon2.zkey",
+	ZKeyFileName:     filepath.Join("build", "bin", prover.SnarkLib, "blob_poseidon2.zkey"),
 	ZKWorkingDir:     filepath.Join("build", "bin"),
 	ZKProverMode:     2,
 	ZKProverImpl:     1,

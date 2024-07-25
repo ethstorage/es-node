@@ -61,7 +61,7 @@ func CLIFlags(envPrefix string) []cli.Flag {
 		},
 		cli.StringFlag{
 			Name:   ZKWorkingDirFlagName,
-			Usage:  "Path to the snark_lib folder",
+			Usage:  "Path to the snark library folder",
 			Value:  DefaultConfig.ZKWorkingDir,
 			EnvVar: rollup.PrefixEnvVar(envPrefix, "ZK_WORKING_DIR"),
 		},
