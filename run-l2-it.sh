@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # usage:
-# env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> ./run.sh
+# env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> ./run-l2-it.sh
 # for one zk proof per sample (if the storage contract supports):
-# env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> ./run.sh --miner.zk-prover-mode 1 --l1.rpc <el_rpc> --l1.beacon <cl_rpc>
+# env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> ./run-l2-it.sh --miner.zk-prover-mode 1 --l1.rpc <el_rpc> --l1.beacon <cl_rpc>
 
 if [ -z "$ES_NODE_STORAGE_MINER" ]; then
   echo "Please provide 'ES_NODE_STORAGE_MINER' as an environment variable"
@@ -155,6 +155,7 @@ es_node_start=" --network integration \
   --signer.private-key $ES_NODE_SIGNER_PRIVATE_KEY \
   --da.url http://65.109.20.29:8888 \
   --randao.url http://88.99.30.186:8545 \
+  --state.upload.url http://127.0.0.1:9096 \
   --l1.block_time 2 \
   --download.thread 32 \
   --rpc.port 9596 \

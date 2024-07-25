@@ -1,0 +1,63 @@
+name: Integration Test
+on:
+  schedule:
+    - cron: '1 0 * * 1,4'
+
+jobs:
+  es-node-integration-test:
+    runs-on: self-hosted
+    timeout-minutes: 2880
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      - name: Use Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18.x'
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+  # nvm use 18
+  # curl -L https://foundry.paradigm.xyz | bash
+  # source /root/.bashrc
+  # foundryup
+  # npm install
+  # git submodule init && git submodule update
+  # npm run test
+
+      - name: Checkout Contracts
+        run: |
+          cd ../storage-contracts-v1 
+          git checkout main
+          git pull
+          npm install 
+          git submodule init && git submodule update
+          npx hardhat run scripts/deployL2.js --network qkc_testnet
+          
+
+
+      - name: Clean Environment
+        run: |
+          rm -r es-data
+          rm -r esnode_peerstore_db
+          rm -r esnode_discovery_db
+          rm es-node.log
+
+      - name: Build and Run Node
+        run: |
+          make
+          env ES_NODE_STORAGE_MINER=0x5C935469C5592Aeeac3372e922d9bCEabDF8830d ES_NODE_SIGNER_PRIVATE_KEY=e690c916d02b6f3ad4bb70cc2663389ea88a79ded45613b1bd5545961d063258 ./run.sh >> es-node.log
+
+      - name: Test
+        run: |
+          make
+          env ES_NODE_STORAGE_MINER=0x5C935469C5592Aeeac3372e922d9bCEabDF8830d ES_NODE_SIGNER_PRIVATE_KEY=e690c916d02b6f3ad4bb70cc2663389ea88a79ded45613b1bd5545961d063258 ./run.sh >> es-node.log

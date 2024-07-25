@@ -4,7 +4,6 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -12,192 +11,181 @@ import (
 	"math"
 	"net/http"
 	"os"
-	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethstorage/go-ethstorage/ethstorage/metrics"
 	"github.com/ethstorage/go-ethstorage/ethstorage/node"
 )
 
 const (
-	timeoutTime = time.Minute * 10
+	expectedSaidHelloTime    = 10 * time.Minute
+	expectedStateRefreshTime = 5 * time.Minute
+	executionTime            = 2 * time.Hour
 )
 
 var (
-	listenAddrFlag  = flag.String("address", "0.0.0.0", "Listener address")
-	portFlag        = flag.Int("port", 8080, "Listener port for the es-node to report node status")
-	grafanaPortFlag = flag.Int("grafana", 9500, "Listener port for the metrics report")
-	logFlag         = flag.Int("loglevel", 3, "Log level to use for Ethereum and the faucet")
+	portFlag = flag.Int("port", 9096, "Listener port for the es-node to report node status")
 )
 
-type record struct {
-	receivedTime time.Time
-	state        *node.NodeState
-}
+var (
+	errorMessages = make([]string, 0)
+	lastQueryTime = time.Now()
+	lastRecord    *node.NodeState
+)
 
-type dashboard struct {
-	ctx    context.Context
-	lock   sync.Mutex
-	nodes  map[string]*record
-	m      *metrics.NetworkMetrics
-	logger log.Logger
-}
-
-func newDashboard() (*dashboard, error) {
-	var (
-		m      = metrics.NewNetworkMetrics()
-		logger = log.New("app", "Dashboard")
-		ctx    = context.Background()
-	)
-
-	return &dashboard{
-		ctx:    ctx,
-		nodes:  make(map[string]*record),
-		m:      m,
-		logger: logger,
-	}, nil
-}
-
-func (d *dashboard) HelloHandler(w http.ResponseWriter, r *http.Request) {
+func HelloHandler(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		d.logger.Warn("Read Hello body failed", "err", err.Error())
+		addErrorMessage(fmt.Sprintf("Read Hello body failed with error %s", err.Error()))
 		return
 	}
-	d.logger.Info("Get hello from node", "id", string(body))
+	log.Info("Get hello from node", "id", string(body))
+
+	if time.Since(lastQueryTime) > expectedSaidHelloTime {
+		addErrorMessage(fmt.Sprintf("Get Hello message later then expect time %v real value %v", expectedSaidHelloTime, time.Since(lastQueryTime)))
+	}
+	lastQueryTime = time.Now()
+	log.Info("Get Hello request from es-node", "id", string(body))
+
 	answer := `{"status":"ok"}`
 	w.Write([]byte(answer))
 }
 
-func (d *dashboard) ReportStateHandler(w http.ResponseWriter, r *http.Request) {
-	state := node.NodeState{}
+func ReportStateHandler(w http.ResponseWriter, r *http.Request) {
+	if time.Since(lastQueryTime) > expectedStateRefreshTime*2 {
+		addErrorMessage(fmt.Sprintf("Get Hello message later then expect time %v real value %v",
+			expectedStateRefreshTime*2, time.Since(lastQueryTime)))
+	}
+	lastQueryTime = time.Now()
 
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		d.logger.Warn("Read ReportState body failed", "err", err.Error())
+		addErrorMessage(fmt.Sprintf("Read ReportState body failed with error %s", err.Error()))
 		return
 	}
-	err = json.Unmarshal(body, &state)
+
+	state := &node.NodeState{}
+	err = json.Unmarshal(body, state)
 	if err != nil {
-		log.Warn("Parse node state failed", "error", err.Error())
+		addErrorMessage(fmt.Sprintf("Parse node state failed with error %s", err.Error()))
 		w.Write([]byte(fmt.Sprintf(`{"status":"error", "err message":"%s"}`, err.Error())))
 		return
 	}
 
-	log.Info("Get state from peer", "peer id", state.Id, "state", string(body))
-	d.lock.Lock()
-	d.nodes[state.Id] = &record{receivedTime: time.Now(), state: &state}
-	d.lock.Unlock()
-	for _, shard := range state.Shards {
-		d.m.SetPeerInfo(state.Id, state.Version, state.Address, shard.ShardId, shard.Miner)
-		sync, mining, submission := shard.SyncState, shard.MiningState, shard.SubmissionState
-		d.m.SetSyncState(state.Id, state.Version, state.Address, shard.ShardId, shard.Miner, sync.PeerCount, sync.SyncProgress,
-			sync.SyncedSeconds, sync.FillEmptyProgress, sync.FillEmptySeconds, shard.ProvidedBlob)
-		d.m.SetMiningState(state.Id, state.Version, state.Address, shard.ShardId, shard.Miner, mining.MiningPower, mining.SamplingTime)
-		d.m.SetSubmissionState(state.Id, state.Version, state.Address, shard.ShardId, shard.Miner, submission.Succeeded,
-			submission.Failed, submission.Dropped, submission.LastSucceededTime)
+	// If no state updated
+	log.Info("Get state from peer", "peer id", state.Id, "Version", state.Version)
+	if lastRecord != nil {
+		checkState(lastRecord, state)
 	}
+
+	lastRecord = state
+
 	w.Write([]byte(`{"status":"ok"}`))
 }
 
-func (d *dashboard) Report() {
-	var (
-		minerOfShards = make(map[uint64]map[common.Address]struct{})
-		versions      = make(map[string]int)
-		shards        = make(map[uint64]int)
-		phasesOfShard = make(map[uint64]map[string]int)
-	)
-
-	d.lock.Lock()
-	defer d.lock.Unlock()
-	for id, r := range d.nodes {
-		if time.Since(r.receivedTime) > timeoutTime {
-			delete(d.nodes, id)
-			for _, shard := range r.state.Shards {
-				d.m.DeletePeerInfo(r.state.Id, r.state.Version, r.state.Address, shard.ShardId, shard.Miner)
-			}
-			continue
-		}
-
-		if _, ok := versions[r.state.Version]; !ok {
-			versions[r.state.Version] = 0
-		}
-		versions[r.state.Version] = versions[r.state.Version] + 1
-
-		for _, s := range r.state.Shards {
-			if _, ok := shards[s.ShardId]; !ok {
-				shards[s.ShardId] = 0
-			}
-			shards[s.ShardId] = shards[s.ShardId] + 1
-
-			if _, ok := minerOfShards[s.ShardId]; !ok {
-				minerOfShards[s.ShardId] = make(map[common.Address]struct{})
-			}
-			minerOfShards[s.ShardId][s.Miner] = struct{}{}
-
-			if _, ok := phasesOfShard[s.ShardId]; !ok {
-				phases := make(map[string]int)
-				phases["syncing"] = 0
-				phases["mining"] = 0
-				phases["mined"] = 0
-				phasesOfShard[s.ShardId] = phases
-			}
-			if s.SyncState.SyncProgress < 10000 || s.SyncState.FillEmptyProgress < 10000 {
-				phasesOfShard[s.ShardId]["syncing"] = phasesOfShard[s.ShardId]["syncing"] + 1
-			} else if s.SubmissionState.Succeeded > 0 {
-				phasesOfShard[s.ShardId]["mined"] = phasesOfShard[s.ShardId]["mined"] + 1
-			} else {
-				phasesOfShard[s.ShardId]["mining"] = phasesOfShard[s.ShardId]["mining"] + 1
-			}
-		}
+func checkState(oldState, newState *node.NodeState) {
+	if len(oldState.Shards) != len(newState.Shards) {
+		addErrorMessage(fmt.Sprintf("shards count mismatch between two state, new %d, old %d", len(newState.Shards), len(oldState.Shards)))
+		return
 	}
 
-	d.m.SetStaticMetrics(len(d.nodes), minerOfShards, versions, shards, phasesOfShard)
-}
+	for _, shardState := range newState.Shards {
+		check := false
+		for _, oldShardState := range oldState.Shards {
+			if shardState.ShardId != oldShardState.ShardId {
+				continue
+			}
+			check = true
+			if shardState.SyncState.PeerCount <= 0 {
+				addErrorMessage(fmt.Sprintf("es-node peer count should larger than 0, peers: %d", shardState.SyncState.PeerCount))
+			}
 
-func (d *dashboard) loop() {
-	ticker := time.NewTicker(time.Minute)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ticker.C:
-			d.Report()
-		case <-d.ctx.Done():
-			return
+			if oldShardState.SyncState.SyncProgress < 10000 &&
+				(shardState.SyncState.BlobsSynced < oldShardState.SyncState.BlobsSynced ||
+					shardState.SyncState.SyncProgress < oldShardState.SyncState.SyncProgress) {
+				addErrorMessage(fmt.Sprintf("es-node sync progress do not increase in %f minutes, "+
+					"old synced: %d, new synced %d; old progress: %d, new progress: %d", expectedStateRefreshTime.Minutes(), oldShardState.SyncState.BlobsSynced,
+					shardState.SyncState.BlobsSynced, oldShardState.SyncState.SyncProgress, shardState.SyncState.SyncProgress))
+			}
+			if oldShardState.SyncState.FillEmptyProgress < 10000 &&
+				(shardState.SyncState.EmptyFilled < oldShardState.SyncState.EmptyFilled ||
+					shardState.SyncState.FillEmptyProgress < oldShardState.SyncState.FillEmptyProgress) {
+				addErrorMessage(fmt.Sprintf("es-node fill empty progress do not increase in %f minutes, "+
+					"old filled: %d, new filled %d; old progress: %d, new progress: %d", expectedStateRefreshTime.Minutes(), oldShardState.SyncState.EmptyFilled,
+					shardState.SyncState.EmptyFilled, oldShardState.SyncState.FillEmptyProgress, shardState.SyncState.FillEmptyProgress))
+			}
+
+			if oldShardState.SyncState.FillEmptyProgress == 10000 && oldShardState.SyncState.SyncProgress == 10000 &&
+				(shardState.MiningState.MiningPower == 0 || shardState.MiningState.SamplingTime == 0) {
+				addErrorMessage("Mining should be start after sync done.")
+			}
+		}
+		if check {
+			addErrorMessage(fmt.Sprintf("Shard %d in the new state do not exist in the old state", shardState.ShardId))
 		}
 	}
 }
 
-func (d *dashboard) listenAndServe(port int) error {
-	go d.loop()
+func checkFinalState(state *node.NodeState) {
+	if state != nil {
+		addErrorMessage("No state submitted during the test")
+		return
+	}
 
-	http.HandleFunc("/hello", d.HelloHandler)
-	http.HandleFunc("/reportstate", d.ReportStateHandler)
+	log.Info("Final state", "id", state.Id, "version", state.Version)
+	for _, shardState := range state.Shards {
+		if shardState.SyncState.SyncProgress != 10000 {
+			addErrorMessage("Sync should be finished during the test")
+		}
+		if shardState.SyncState.FillEmptyProgress != 10000 {
+			addErrorMessage("Fill should be finished during the test")
+		}
+		if shardState.MiningState.SamplingTime == 0 || shardState.MiningState.MiningPower == 0 {
+			addErrorMessage("Mining should be start after sync done.")
+		}
+		if shardState.SubmissionState.LastSucceededTime == 0 || shardState.SubmissionState.Succeeded == 0 {
+			addErrorMessage("At lease one block should be mined successfully during the test.")
+		}
+		if shardState.SubmissionState.Failed > 0 {
+			addErrorMessage(fmt.Sprintf("%d submission failed during the test.", shardState.SubmissionState.Failed))
+		}
+		if shardState.SubmissionState.Dropped > 0 {
+			addErrorMessage(fmt.Sprintf("%d submission dropped during the test.", shardState.SubmissionState.Dropped))
+		}
+		log.Info("Final state", "id", state.Id, "shard", shardState.ShardId, "miner", shardState.Miner, "sync progress",
+			shardState.SyncState.SyncProgress, "fill progress", shardState.SyncState.FillEmptyProgress, "mining power",
+			shardState.MiningState.MiningPower, "sampling time", shardState.MiningState.SamplingTime, "succeeded submission",
+			shardState.SubmissionState.Succeeded, "failed submission", shardState.SubmissionState.Failed, "dropped submission",
+			shardState.SubmissionState.Dropped, "last succeeded time", shardState.SubmissionState.LastSucceededTime)
+	}
+}
+
+func addErrorMessage(errMessage string) {
+	log.Warn("Add error message", "msg", errMessage)
+	errorMessages = append(errorMessages, errMessage)
+}
+
+func listenAndServe(port int) error {
+	http.HandleFunc("/hello", HelloHandler)
+	http.HandleFunc("/reportstate", ReportStateHandler)
 	return http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
 }
 
 func main() {
 	// Parse the flags and set up the logger to print everything requested
 	flag.Parse()
-	log.Root().SetHandler(log.LvlFilterHandler(log.Lvl(*logFlag), log.StreamHandler(os.Stderr, log.TerminalFormat(true))))
+	log.Root().SetHandler(log.LvlFilterHandler(log.Lvl(3), log.StreamHandler(os.Stderr, log.TerminalFormat(true))))
 
 	if *portFlag < 0 || *portFlag > math.MaxUint16 {
 		log.Crit("Invalid port")
 	}
 
-	if *grafanaPortFlag < 0 || *grafanaPortFlag > math.MaxUint16 {
-		log.Crit("Invalid grafana port")
-	}
-	d, err := newDashboard()
-	if err != nil {
-		log.Crit("New dashboard fail", "err", err)
-	}
+	go listenAndServe(*portFlag)
 
-	go d.listenAndServe(*portFlag)
+	time.Sleep(executionTime)
+	checkFinalState(lastRecord)
 
-	if err := d.m.Serve(d.ctx, *listenAddrFlag, *grafanaPortFlag); err != nil {
-		log.Crit("Error starting metrics server", "err", err)
+	if len(errorMessages) > 0 {
+		panic(fmt.Sprintf("integration test fail %v", errorMessages))
 	}
 }
