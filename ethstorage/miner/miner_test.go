@@ -69,6 +69,14 @@ func newMiner(t *testing.T, storageMgr *es.StorageManager, client *eth.PollingCl
 	}
 	l1api := NewL1MiningAPI(client, nil, lg)
 	zkWorkingDir, _ := filepath.Abs("../prover")
+	zkey := filepath.Join(zkWorkingDir, prover.SnarkLib, defaultConfig.ZKeyFileName)
+	if _, err := os.Stat(zkey); os.IsNotExist(err) {
+		_, err := os.Create(zkey)
+		if err != nil {
+			t.Fatalf("Create failed %v", err)
+		}
+		defer os.Remove(zkey)
+	}
 	pvr := prover.NewKZGPoseidonProver(zkWorkingDir, defaultConfig.ZKeyFileName, defaultConfig.ZKProverMode, defaultConfig.ZKProverImpl, lg)
 	fd := new(event.Feed)
 	db := rawdb.NewMemoryDatabase()
