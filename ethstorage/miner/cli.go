@@ -56,7 +56,7 @@ func CLIFlags(envPrefix string) []cli.Flag {
 		cli.StringFlag{
 			Name:   ZKeyFileNameFlagName,
 			Usage:  "zkey file name with path",
-			Value:  DefaultConfig.ZKeyFileName,
+			Value:  DefaultConfig.ZKeyFile,
 			EnvVar: rollup.PrefixEnvVar(envPrefix, "ZKEY_FILE"),
 		},
 		cli.StringFlag{
@@ -128,7 +128,7 @@ func (c CLIConfig) ToMinerConfig() (Config, error) {
 	}
 	cfg := DefaultConfig
 	cfg.ZKWorkingDir = zkWorkingDir
-	cfg.ZKeyFileName = zkFile
+	cfg.ZKeyFile = zkFile
 	cfg.ZKProverMode = c.ZKProverMode
 	cfg.ZKProverImpl = c.ZKProverImpl
 	cfg.GasPrice = c.GasPrice

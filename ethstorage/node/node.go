@@ -300,7 +300,7 @@ func (n *EsNode) initMiner(ctx context.Context, cfg *Config) error {
 	l1api := miner.NewL1MiningAPI(n.l1Source, n.randaoSource, n.log)
 	pvr := prover.NewKZGPoseidonProver(
 		cfg.Mining.ZKWorkingDir,
-		cfg.Mining.ZKeyFileName,
+		cfg.Mining.ZKeyFile,
 		cfg.Mining.ZKProverMode,
 		cfg.Mining.ZKProverImpl,
 		n.log,

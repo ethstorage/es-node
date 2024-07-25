@@ -127,7 +127,7 @@ $remaining_args"
 # create data file for shard 0 if not yet
 if [ ! -e $storage_file_0 ]; then
   if $es_node_init ; then
-    echo "Initialized ${storage_file_0} successfully"
+    echo "√ Initialized ${storage_file_0} successfully"
   else
     echo "Error: failed to initialize ${storage_file_0}"
     exit 1
