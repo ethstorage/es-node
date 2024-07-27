@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # usage:
-# env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> ./run-l2-it.sh
+# env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> ES_NODE_CONTRACT_ADDRESS=<your_contract_address> ./run-l2-it.sh
 # for one zk proof per sample (if the storage contract supports):
-# env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> ./run-l2-it.sh --miner.zk-prover-mode 1 --l1.rpc <el_rpc> --l1.beacon <cl_rpc>
+# env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> ES_NODE_CONTRACT_ADDRESS=<your_contract_address> ./run-l2-it.sh --miner.zk-prover-mode 1 --l1.rpc <el_rpc> --l1.beacon <cl_rpc>
 
 if [ -z "$ES_NODE_STORAGE_MINER" ]; then
   echo "Please provide 'ES_NODE_STORAGE_MINER' as an environment variable"
@@ -165,7 +165,7 @@ es_node_start=" --network integration \
   --p2p.priv.path $data_dir/esnode_p2p_priv.txt \
   --p2p.peerstore.path $data_dir/esnode_peerstore_db \
   --p2p.discovery.path $data_dir/esnode_discovery_db \
-  --p2p.bootnodes enr:-Li4QGUAA21O-0pgqnGoBLwvvminrlDjfxhqL6DvXhfOtvNdK871LELAT1Nn-NAa3hUi0Wmb-VIj1qi6fnbyA9yp5RGGAZALHvLnimV0aHN0b3JhZ2XbAYDY15SQpwjA3KCBykiphRqKMmd1FV-H_cGAgmlkgnY0gmlwhEFtMpGJc2VjcDI1NmsxoQJ8_OUONb_H7RMF6kXzZWDut2xriJ5JeKnH2cnb8en0e4N0Y3CCJAaDdWRwgnZh \
+  --p2p.bootnodes enr:-Li4QBp6QW2ji7JF-3yijZrQ54PqPZ-Io_xEtMUslxxcmGS5TAXiiU6hypBZbB_atxh2Pc72-MgonzU5_R-_qd_PBXyGAZDucmwzimV0aHN0b3JhZ2XbAYDY15SXhtonBXvE13WNGfkk7Nj9Y4_Qr8GAgmlkgnY0gmlwhFhjHrqJc2VjcDI1NmsxoQJ8KIsZjyfFPHZOR66JORtqr5ax0QU6QmvT6QE0QllVZIN0Y3CCJE-DdWRwgna7 \
 $@"
 
 # create data file for shard 0 if not yet
