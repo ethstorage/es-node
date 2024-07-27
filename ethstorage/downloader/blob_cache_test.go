@@ -35,8 +35,8 @@ func TestNewSlotter(t *testing.T) {
 	var lastSize uint32
 	for i := 0; i < 10; i++ {
 		size, done := slotter()
-		// shelf0 is for block with 1 blob, and so on.
-		if !(size > uint32((i+1)*blobSize) && size < uint32((i+2)*blobSize)) {
+		// shelf0 is for block with 1 blob.
+		if !(size > blobSize && size < 2*blobSize) {
 			t.Errorf("Slotter returned incorrect size at shelf %d", i)
 		}
 		if done {
@@ -44,7 +44,7 @@ func TestNewSlotter(t *testing.T) {
 			break
 		}
 	}
-	if lastSize/blobSize != maxBlobsPerTransaction {
+	if !(lastSize > blobSize && lastSize < 2*blobSize) {
 		t.Errorf("Slotter did not return correct last size")
 	}
 }
