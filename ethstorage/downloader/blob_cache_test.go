@@ -149,7 +149,7 @@ func TestEncoding(t *testing.T) {
 	for i, kvHash := range kvHashes {
 		kvIndex := uint64(i)
 		t.Run(fmt.Sprintf("test kv: %d", i), func(t *testing.T) {
-			blobEncoded := cache.GetKeyValueByIndexUnchecked(kvIndex)
+			blobEncoded := cache.GetKeyValueByIndex(kvIndex, kvHash)
 			blobDecoded := sm.DecodeBlob(blobEncoded, kvHash, kvIndex, kvSize)
 			bytesWant := []byte(fmt.Sprintf(blobData, kvIndex))
 			if !bytes.Equal(blobDecoded[:len(bytesWant)], bytesWant) {
