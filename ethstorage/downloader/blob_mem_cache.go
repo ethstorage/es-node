@@ -59,14 +59,17 @@ func (c *BlobMemCache) GetKeyValueByIndex(idx uint64, hash common.Hash) []byte {
 	return nil
 }
 
-func (c *BlobMemCache) GetKeyValueByIndexUnchecked(idx uint64) []byte {
+func (c *BlobMemCache) GetSampleData(idx, sampleIdxInKv uint64) []byte {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
 	for _, block := range c.blocks {
 		for _, blob := range block.blobs {
 			if blob.kvIndex.Uint64() == idx {
-				return blob.data
+				sampleSize := uint64(1 << ethstorage.SampleSizeBits)
+				sampleIdxByte := sampleIdxInKv << ethstorage.SampleSizeBits
+				sample := blob.data[sampleIdxByte : sampleIdxByte+sampleSize]
+				return sample
 			}
 		}
 	}
