@@ -5,7 +5,6 @@ package downloader
 
 import (
 	"bytes"
-	"math/big"
 	"os"
 	"path/filepath"
 	"sync"
@@ -24,25 +23,12 @@ const (
 	blobCacheDir   = "cached_blobs"
 )
 
-type blockBlobsCached struct {
-	timestamp uint64
-	number    uint64
-	blobs     []*blobCached
-}
-
-type blobCached struct {
-	kvIndex *big.Int
-	kvSize  *big.Int
-	hash    common.Hash
-	dataId  uint64
-}
-
 type BlobDiskCache struct {
-	store  billy.Database
-	lookup map[uint64]*blockBlobsCached // Lookup table mapping block number to blockBlob
-	index  map[uint64]uint64            // Lookup table mapping kvIndex to blob billy entries id
-	mu     sync.RWMutex                 // protects lookup and index maps
-	lg     log.Logger
+	store         billy.Database
+	blockLookup   map[uint64]*blockBlobs // Lookup table mapping block number to blockBlob
+	kvIndexLookup map[uint64]uint64      // Lookup table mapping kvIndex to blob billy entries id
+	mu            sync.RWMutex           // protects lookup and index maps
+	lg            log.Logger
 }
 
 func NewBlobDiskCache(datadir string, lg log.Logger) *BlobDiskCache {
@@ -51,9 +37,9 @@ func NewBlobDiskCache(datadir string, lg log.Logger) *BlobDiskCache {
 		lg.Crit("Failed to create cache directory", "dir", cbdir, "err", err)
 	}
 	c := &BlobDiskCache{
-		lookup: make(map[uint64]*blockBlobsCached),
-		index:  make(map[uint64]uint64),
-		lg:     lg,
+		blockLookup:   make(map[uint64]*blockBlobs),
+		kvIndexLookup: make(map[uint64]uint64),
+		lg:            lg,
 	}
 
 	store, err := billy.Open(billy.Options{Path: cbdir, Repair: true}, newSlotter(), nil)
@@ -70,25 +56,25 @@ func (c *BlobDiskCache) SetBlockBlobs(block *blockBlobs) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	var bcs []*blobCached
+	var blbs []*blob
 	for _, b := range block.blobs {
 		id, err := c.store.Put(b.data)
 		if err != nil {
 			c.lg.Error("Failed to write blockBlobs into storage", "block", block.number, "err", err)
 			return err
 		}
-		c.index[b.kvIndex.Uint64()] = id
-		bcs = append(bcs, &blobCached{
+		c.kvIndexLookup[b.kvIndex.Uint64()] = id
+		blbs = append(blbs, &blob{
 			kvIndex: b.kvIndex,
 			kvSize:  b.kvSize,
 			hash:    b.hash,
 			dataId:  id,
 		})
 	}
-	c.lookup[block.number] = &blockBlobsCached{
+	c.blockLookup[block.number] = &blockBlobs{
 		timestamp: block.timestamp,
 		number:    block.number,
-		blobs:     bcs,
+		blobs:     blbs,
 	}
 	c.lg.Info("Set blockBlobs to cache", "block", block.number)
 	return nil
@@ -96,23 +82,23 @@ func (c *BlobDiskCache) SetBlockBlobs(block *blockBlobs) error {
 
 func (c *BlobDiskCache) Blobs(number uint64) []blob {
 	c.mu.RLock()
-	bb, ok := c.lookup[number]
+	bb, ok := c.blockLookup[number]
 	c.mu.RUnlock()
 	if !ok {
 		return nil
 	}
 	c.lg.Info("Blobs from cache", "block", bb.number)
 	res := []blob{}
-	for _, bc := range bb.blobs {
-		data, err := c.store.Get(bc.dataId)
+	for _, blb := range bb.blobs {
+		data, err := c.store.Get(blb.dataId)
 		if err != nil {
 			c.lg.Error("Failed to get blockBlobs from storage", "block", number, "err", err)
 			return nil
 		}
 		res = append(res, blob{
-			kvIndex: bc.kvIndex,
-			kvSize:  bc.kvSize,
-			hash:    bc.hash,
+			kvIndex: blb.kvIndex,
+			kvSize:  blb.kvSize,
+			hash:    blb.hash,
 			data:    data,
 		})
 	}
@@ -123,7 +109,7 @@ func (c *BlobDiskCache) GetKeyValueByIndex(idx uint64, hash common.Hash) []byte 
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	for _, bb := range c.lookup {
+	for _, bb := range c.blockLookup {
 		for _, b := range bb.blobs {
 			if b.kvIndex.Uint64() == idx &&
 				bytes.Equal(b.hash[0:ethstorage.HashSizeInContract], hash[0:ethstorage.HashSizeInContract]) {
@@ -141,7 +127,7 @@ func (c *BlobDiskCache) GetKeyValueByIndex(idx uint64, hash common.Hash) []byte 
 
 func (c *BlobDiskCache) GetSampleData(idx, sampleIdx uint64) []byte {
 	c.mu.RLock()
-	id, ok := c.index[idx]
+	id, ok := c.kvIndexLookup[idx]
 	c.mu.RUnlock()
 	if !ok {
 		return nil
@@ -160,12 +146,12 @@ func (c *BlobDiskCache) Cleanup(finalized uint64) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	for number, block := range c.lookup {
+	for number, block := range c.blockLookup {
 		if number <= finalized {
-			delete(c.lookup, number)
+			delete(c.blockLookup, number)
 			for _, blob := range block.blobs {
 				if blob.kvIndex != nil {
-					delete(c.index, blob.kvIndex.Uint64())
+					delete(c.kvIndexLookup, blob.kvIndex.Uint64())
 				}
 				if err := c.store.Delete(blob.dataId); err != nil {
 					c.lg.Error("Failed to delete block from id", "id", blob.dataId, "err", err)
@@ -180,13 +166,13 @@ func (c *BlobDiskCache) Close() error {
 	c.lg.Warn("Closing BlobDiskCache")
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	for _, id := range c.index {
+	for _, id := range c.kvIndexLookup {
 		if err := c.store.Delete(id); err != nil {
 			c.lg.Warn("Failed to delete blob from id", "id", id, "err", err)
 		}
 	}
-	c.lookup = nil
-	c.index = nil
+	c.blockLookup = nil
+	c.kvIndexLookup = nil
 	return c.store.Close()
 }
 

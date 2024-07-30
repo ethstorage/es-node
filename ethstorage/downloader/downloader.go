@@ -79,6 +79,7 @@ type blob struct {
 	kvSize  *big.Int
 	hash    common.Hash
 	data    []byte
+	dataId  uint64
 }
 
 func (b *blob) String() string {
