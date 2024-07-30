@@ -18,9 +18,10 @@ import (
 )
 
 const (
-	blobSize               = params.BlobTxFieldElementsPerBlob * params.BlobTxBytesPerFieldElement
-	maxBlobsPerTransaction = params.MaxBlobGasPerBlock / params.BlobTxBlobGasPerBlob
-	blobCacheDir           = "cached_blobs"
+	itemHeaderSize = 4 // size of the per-item header of billy
+	sampleSize     = uint64(1 << ethstorage.SampleSizeBits)
+	blobSize       = params.BlobTxFieldElementsPerBlob * params.BlobTxBytesPerFieldElement
+	blobCacheDir   = "cached_blobs"
 )
 
 type blockBlobsCached struct {
@@ -69,7 +70,6 @@ func (c *BlobDiskCache) SetBlockBlobs(block *blockBlobs) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	var blobIds []uint64
 	var bcs []*blobCached
 	for _, b := range block.blobs {
 		id, err := c.store.Put(b.data)
@@ -77,7 +77,6 @@ func (c *BlobDiskCache) SetBlockBlobs(block *blockBlobs) error {
 			c.lg.Error("Failed to write blockBlobs into storage", "block", block.number, "err", err)
 			return err
 		}
-		blobIds = append(blobIds, id)
 		c.index[b.kvIndex.Uint64()] = id
 		bcs = append(bcs, &blobCached{
 			kvIndex: b.kvIndex,
@@ -149,9 +148,9 @@ func (c *BlobDiskCache) GetSampleData(idx, sampleIdx uint64) []byte {
 	}
 
 	off := sampleIdx << ethstorage.SampleSizeBits
-	size := uint64(1 << ethstorage.SampleSizeBits)
-	data, err := c.store.GetSample(id, off, size)
+	data, err := c.store.GetSample(id, off, sampleSize)
 	if err != nil {
+		c.lg.Error("Failed to get sample from downloader cache", "kvIndex", idx, "id", id, "err", err)
 		return nil
 	}
 	return data
@@ -193,6 +192,6 @@ func (c *BlobDiskCache) Close() error {
 
 func newSlotter() func() (uint32, bool) {
 	return func() (size uint32, done bool) {
-		return blobSize + 4, true
+		return blobSize + itemHeaderSize, true
 	}
 }

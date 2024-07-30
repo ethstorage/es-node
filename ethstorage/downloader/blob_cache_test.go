@@ -7,9 +7,11 @@ import (
 	"bytes"
 	"fmt"
 	"math/big"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto/kzg4844"
@@ -24,30 +26,12 @@ var (
 	datadir   string
 	fileName         = "test_shard_0.dat"
 	blobData         = "blob data of kvIndex %d"
+	sampleLen        = blobSize / sampleSize
 	minerAddr        = common.BigToAddress(common.Big1)
 	kvSize    uint64 = 1 << 17
 	kvEntries uint64 = 16
 	shardID          = uint64(0)
 )
-
-func TestNewSlotter(t *testing.T) {
-	slotter := newSlotter()
-	var lastSize uint32
-	for i := 0; i < 10; i++ {
-		size, done := slotter()
-		// shelf0 is for block with 1 blob.
-		if !(size > blobSize && size < 2*blobSize) {
-			t.Errorf("Slotter returned incorrect size at shelf %d", i)
-		}
-		if done {
-			lastSize = size
-			break
-		}
-	}
-	if !(lastSize > blobSize && lastSize < 2*blobSize) {
-		t.Errorf("Slotter did not return correct last size")
-	}
-}
 
 func TestDiskBlobCache(t *testing.T) {
 	setup(t)
@@ -157,6 +141,80 @@ func TestEncoding(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestBlobDiskCache_GetSampleData(t *testing.T) {
+	setup(t)
+	t.Cleanup(func() {
+		teardown(t)
+	})
+
+	const blockStart = 10000000
+	rand.New(rand.NewSource(time.Now().UnixNano()))
+	kvIndex2BlockNumber := map[uint64]uint64{}
+	kvIndex2BlobIndex := map[uint64]uint64{}
+
+	newBlockBlobsFilled := func(blockNumber, blobLen uint64) (*blockBlobs, error) {
+		block := &blockBlobs{
+			number: blockNumber,
+			blobs:  make([]*blob, blobLen),
+		}
+		for i := uint64(0); i < blobLen; i++ {
+			kvIndex := uint64(len(kvHashes))
+			blob := &blob{
+				kvIndex: new(big.Int).SetUint64(kvIndex),
+				data:    fill(blockNumber, i),
+			}
+			kzgBlob := kzg4844.Blob{}
+			copy(kzgBlob[:], blob.data)
+			commitment, err := kzg4844.BlobToCommitment(kzgBlob)
+			if err != nil {
+				return nil, fmt.Errorf(
+					"failed to create commitment for blob %d: %w", kvIndex, err)
+			}
+			blob.hash = common.Hash(eth.KZGToVersionedHash(eth.KZGCommitment(commitment)))
+			block.blobs[i] = blob
+			kvHashes = append(kvHashes, blob.hash)
+			kvIndex2BlockNumber[kvIndex] = blockNumber
+			kvIndex2BlobIndex[kvIndex] = i
+		}
+		t.Log("Block created", "number", block.number, "blobs", blobLen)
+		return block, nil
+	}
+	for i := 0; i < 10; i++ {
+		blockn, blobn := blockStart+i, rand.Intn(6)+1
+		block, err := newBlockBlobsFilled(uint64(blockn), uint64(blobn))
+		if err != nil {
+			t.Fatalf("Failed to create new block blobs: %v", err)
+		}
+		if err := cache.SetBlockBlobs(block); err != nil {
+			t.Fatalf("Failed to set block blobs: %v", err)
+		}
+	}
+
+	for kvi := range kvHashes {
+		kvIndex := uint64(kvi)
+		sampleIndex := rand.Intn(int(sampleLen))
+		sample := cache.GetSampleData(kvIndex, uint64(sampleIndex))
+		sampleWant := make([]byte, sampleSize)
+		copy(sampleWant, fmt.Sprintf("%d_%d_%d", kvIndex2BlockNumber[kvIndex], kvIndex2BlobIndex[kvIndex], sampleIndex))
+		t.Run(fmt.Sprintf("test sample: kvIndex=%d, sampleIndex=%d", kvIndex, sampleIndex), func(t *testing.T) {
+			if !bytes.Equal(sample, sampleWant) {
+				t.Errorf("GetSampleData got %x, want %x", sample, sampleWant)
+			}
+		})
+	}
+
+}
+
+func fill(blockNumber, blobIndex uint64) []byte {
+	var content []byte
+	for i := uint64(0); i < sampleLen; i++ {
+		sample := make([]byte, sampleSize)
+		copy(sample, fmt.Sprintf("%d_%d_%d", blockNumber, blobIndex, i))
+		content = append(content, sample...)
+	}
+	return content
 }
 
 func newBlockBlobs(blockNumber, blobLen uint64) (*blockBlobs, error) {
