@@ -5,6 +5,7 @@ package downloader
 
 import (
 	"bytes"
+	"errors"
 	"os"
 	"path/filepath"
 	"sync"
@@ -25,6 +26,7 @@ const (
 
 type BlobDiskCache struct {
 	store         billy.Database
+	storePath     string
 	blockLookup   map[uint64]*blockBlobs // Lookup table mapping block number to blockBlob
 	kvIndexLookup map[uint64]uint64      // Lookup table mapping kvIndex to blob billy entries id
 	mu            sync.RWMutex           // protects lookup and index maps
@@ -39,6 +41,7 @@ func NewBlobDiskCache(datadir string, lg log.Logger) *BlobDiskCache {
 	c := &BlobDiskCache{
 		blockLookup:   make(map[uint64]*blockBlobs),
 		kvIndexLookup: make(map[uint64]uint64),
+		storePath:     cbdir,
 		lg:            lg,
 	}
 
@@ -58,12 +61,18 @@ func (c *BlobDiskCache) SetBlockBlobs(block *blockBlobs) error {
 
 	var blbs []*blob
 	for _, b := range block.blobs {
+		kvi := b.kvIndex.Uint64()
+		if id, ok := c.kvIndexLookup[kvi]; ok {
+			if err := c.store.Delete(id); err != nil {
+				c.lg.Warn("Failed to delete blob from cache", "kvIndex", kvi, "id", id, "err", err)
+			}
+		}
 		id, err := c.store.Put(b.data)
 		if err != nil {
-			c.lg.Error("Failed to write blockBlobs into storage", "block", block.number, "err", err)
+			c.lg.Error("Failed to put blob into cache", "block", block.number, "kvIndex", kvi, "err", err)
 			return err
 		}
-		c.kvIndexLookup[b.kvIndex.Uint64()] = id
+		c.kvIndexLookup[kvi] = id
 		blbs = append(blbs, &blob{
 			kvIndex: b.kvIndex,
 			kvSize:  b.kvSize,
@@ -163,17 +172,24 @@ func (c *BlobDiskCache) Cleanup(finalized uint64) {
 }
 
 func (c *BlobDiskCache) Close() error {
-	c.lg.Warn("Closing BlobDiskCache")
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	for _, id := range c.kvIndexLookup {
-		if err := c.store.Delete(id); err != nil {
-			c.lg.Warn("Failed to delete blob from id", "id", id, "err", err)
+	var er error
+	if err := c.store.Close(); err != nil {
+		c.lg.Error("Failed to close cache", "err", err)
+		er = err
+	}
+	if err := os.RemoveAll(c.storePath); err != nil {
+		c.lg.Error("Failed to remove cache dir", "err", err)
+		if er == nil {
+			er = err
+		} else {
+			er = errors.New(er.Error() + "; " + err.Error())
 		}
 	}
-	c.blockLookup = nil
-	c.kvIndexLookup = nil
-	return c.store.Close()
+	if er != nil {
+		return er
+	}
+	c.lg.Info("BlobDiskCache closed.")
+	return nil
 }
 
 func newSlotter() func() (uint32, bool) {
