@@ -29,9 +29,9 @@ if [ ${#ES_NODE_SIGNER_PRIVATE_KEY} -ne 64 ]; then
 fi
 
 executable="./build/bin/es-node"
-echo "============================"
+echo "========== build info =================="
 $executable --version
-echo "============================"
+echo "========================================"
 
 data_dir="./es-data"
 storage_file_0="$data_dir/shard-0.dat"
