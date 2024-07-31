@@ -60,14 +60,16 @@ func (c *BlobDiskCache) SetBlockBlobs(block *blockBlobs) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
+	if blockOld, ok := c.blockLookup[block.number]; ok {
+		for _, b := range blockOld.blobs {
+			if err := c.store.Delete(b.dataId); err != nil {
+				c.lg.Warn("Failed to delete blob from cache", "kvIndex", b.kvIndex, "id", b.dataId, "err", err)
+			}
+		}
+	}
 	var blbs []*blob
 	for _, b := range block.blobs {
 		kvi := b.kvIndex.Uint64()
-		if id, ok := c.kvIndexLookup[kvi]; ok {
-			if err := c.store.Delete(id); err != nil {
-				c.lg.Warn("Failed to delete blob from cache", "kvIndex", kvi, "id", id, "err", err)
-			}
-		}
 		id, err := c.store.Put(b.data)
 		if err != nil {
 			c.lg.Error("Failed to put blob into cache", "block", block.number, "kvIndex", kvi, "err", err)
