@@ -26,38 +26,45 @@ jobs:
         with:
           version: nightly
 
-  # nvm use 18
-  # curl -L https://foundry.paradigm.xyz | bash
-  # source /root/.bashrc
-  # foundryup
-  # npm install
-  # git submodule init && git submodule update
-  # npm run test
+      - name: Install forge-std
+        run: git submodule init && git submodule update
 
       - name: Checkout Contracts
         run: |
           cd ../storage-contracts-v1 
-          git checkout main
+          git checkout integration-test
           git pull
           npm install 
-          git submodule init && git submodule update
-          npx hardhat run scripts/deployL2.js --network qkc_testnet
-          
-
+          npx hardhat run scripts/deployL2-it.js --network qkc_testnet >> deploy.log
+          echo ES_NODE_CONTRACT_ADDRESS=`cat .caddr` >> "$GITHUB_ENV"
 
       - name: Clean Environment
         run: |
-          rm -r es-data
-          rm -r esnode_peerstore_db
-          rm -r esnode_discovery_db
-          rm es-node.log
+          cd ../es-node
+          rm -r es-data-it-bootnode
+          rm -r es-data-it
+          mkdir es-data-it-bootnode
+          echo 8714eb2672bb7ab01089a1060150b30bc374a3b00e18926460f169256d126339 > es-data-it-bootnode/esnode_p2p_priv.txt
 
-      - name: Build and Run Node
+      - name: Build and Run Bootnode Node
         run: |
           make
-          env ES_NODE_STORAGE_MINER=0x5C935469C5592Aeeac3372e922d9bCEabDF8830d ES_NODE_SIGNER_PRIVATE_KEY=e690c916d02b6f3ad4bb70cc2663389ea88a79ded45613b1bd5545961d063258 ./run.sh >> es-node.log
+          ./run-l2-it-rpc.sh >> es-data-it-bootnode/es-node.log&
+
+      - name: Upload blobs
+        run: |
+          cd ../ethstorage-sdk 
+          git checkout main
+          git pull
+          npm install 
+          rollup -c
+          node it.js
+          # upload multi
 
       - name: Test
         run: |
-          make
-          env ES_NODE_STORAGE_MINER=0x5C935469C5592Aeeac3372e922d9bCEabDF8830d ES_NODE_SIGNER_PRIVATE_KEY=e690c916d02b6f3ad4bb70cc2663389ea88a79ded45613b1bd5545961d063258 ./run.sh >> es-node.log
+          cd ../es-node/cmd/integration-test-server
+          go build
+          ./integration-test-server > itserver.log&
+          cd ../..
+          env ES_NODE_STORAGE_MINER=0x5C935469C5592Aeeac3372e922d9bCEabDF8830d ES_NODE_SIGNER_PRIVATE_KEY=e690c916d02b6f3ad4bb70cc2663389ea88a79ded45613b1bd5545961d063258 ./run-l2-it.sh >> es-data-it/es-node.log&
