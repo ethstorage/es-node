@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
@@ -145,16 +146,21 @@ func (c *BlobDiskCache) GetSampleData(idx, sampleIdx uint64) []byte {
 	off := sampleIdx << ethstorage.SampleSizeBits
 	data, err := c.store.GetSample(id, off, sampleSize)
 	if err != nil {
-		c.lg.Error("Failed to get sample from downloader cache", "kvIndex", idx, "id", id, "err", err)
+		c.lg.Error("Failed to get sample from downloader cache", "kvIndex", idx, "sampleIndex", sampleIdx, "id", id, "err", err)
 		return nil
 	}
 	return data
 }
 
 func (c *BlobDiskCache) Cleanup(finalized uint64) {
+	start := time.Now()
+	defer func() {
+		c.lg.Info("BlobDiskCache cleanup done", "took", time.Since(start))
+	}()
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
+	var blocksCleaned, blobsCleaned int
 	for number, block := range c.blockLookup {
 		if number <= finalized {
 			delete(c.blockLookup, number)
@@ -165,10 +171,12 @@ func (c *BlobDiskCache) Cleanup(finalized uint64) {
 				if err := c.store.Delete(blob.dataId); err != nil {
 					c.lg.Error("Failed to delete block from id", "id", blob.dataId, "err", err)
 				}
+				blobsCleaned++
 			}
-			c.lg.Info("Cleanup deleted", "finalized", finalized, "block", block.number)
+			blocksCleaned++
 		}
 	}
+	c.lg.Info("Cleanup done", "blockFinalized", finalized, "blocksCleaned", blocksCleaned, "blobsCleaned", blobsCleaned)
 }
 
 func (c *BlobDiskCache) Close() error {
