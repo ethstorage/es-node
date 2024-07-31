@@ -1,11 +1,9 @@
 #!/bin/bash
 
-# usage 1 (use snarkjs, will check Node.js version and snarkjs installation):
+# usage 1 (use go-rapisnark):
 # env ES_NODE_STORAGE_MINER=<miner> ./init.sh
-# usage 2 (use go-rapisnark):
-# env ES_NODE_STORAGE_MINER=<miner> ./init.sh --miner.zk-prover-impl 2
-
-# Note: currently only zk prover mode is supported
+# usage 2 (use snarkjs, will check Node.js version and snarkjs installation):
+# env ES_NODE_STORAGE_MINER=<miner> ./init.sh --miner.zk-prover-impl 1
 
 if [ -z "$ES_NODE_STORAGE_MINER" ]; then
   echo "Please provide 'ES_NODE_STORAGE_MINER' as an environment variable"
@@ -22,9 +20,10 @@ echo "========== build info =================="
 $executable --version
 echo "========================================"
 
-# ZK prover implementation, 1: snarkjs, 2: go-rapidsnark. Default: 1
-zkp_impl=1
-# ZK prover mode, 1: one proof per sample, 2: one proof for multiple samples. Default: 2
+# ZK prover implementation, 1: snarkjs, 2: go-rapidsnark.
+zkp_impl=2
+# ZK prover mode, 1: one proof per sample, 2: one proof for multiple samples.
+# Note: currently only zk prover mode 2 is supported
 zkp_mode=2
 #!/bin/bash
 

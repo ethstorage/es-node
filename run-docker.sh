@@ -40,18 +40,26 @@ else
             sudo docker build -t $image_name .
             echo "image $image_name built"
         fi
+        
+        sudo docker run --rm \
+          -v ./es-data:/es-node/es-data \
+          -v ./build/bin/snark_lib/zkey:/es-node/build/bin/snark_lib/zkey \
+          -e ES_NODE_STORAGE_MINER=$ES_NODE_STORAGE_MINER \
+          --entrypoint /es-node/init.sh \
+          $image_name
+
         # run container in the background
-       sudo docker run --name $container_name \
-            -v ./es-data:/es-node/es-data \
-            -e ES_NODE_STORAGE_MINER=$ES_NODE_STORAGE_MINER \
-            -e ES_NODE_SIGNER_PRIVATE_KEY=$ES_NODE_SIGNER_PRIVATE_KEY \
-            -p 9545:9545 \
-            -p 9222:9222 \
-            -p 30305:30305/udp \
-            -d \
-            --entrypoint /es-node/run.sh \
-            $image_name \
-            --miner.zk-prover-impl 2
+        sudo docker run --name $container_name \
+          -v ./es-data:/es-node/es-data \
+          -v ./build/bin/snark_lib/zkey:/es-node/build/bin/snark_lib/zkey \
+          -e ES_NODE_STORAGE_MINER=$ES_NODE_STORAGE_MINER \
+          -e ES_NODE_SIGNER_PRIVATE_KEY=$ES_NODE_SIGNER_PRIVATE_KEY \
+          -p 9545:9545 \
+          -p 9222:9222 \
+          -p 30305:30305/udp \
+          -d \
+          --entrypoint /es-node/run.sh \
+          $image_name
         echo "container $container_name started"
     fi
 fi

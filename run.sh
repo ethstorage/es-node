@@ -5,7 +5,7 @@
 # usage 2 (overriding rpc urls):
 # env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> ./run.sh --l1.rpc <el_rpc> --l1.beacon <cl_rpc>
 
-# Note: currently only zk prover mode is supported
+# Note: currently only zk prover mode 2 is supported
 zkey_file="./build/bin/snark_lib/zkey/blob_poseidon2.zkey"
 
 if [ -z "$ES_NODE_STORAGE_MINER" ]; then
@@ -53,6 +53,7 @@ start_flags=" --network devnet \
   --signer.private-key $ES_NODE_SIGNER_PRIVATE_KEY \
   --miner.enabled \
   --miner.zkey $zkey_file \
+  --miner.zk-prover-impl 2 \
   --download.thread 32 \
   --state.upload.url http://metrics.ethstorage.io:8080 \
   --p2p.listen.udp 30305 \
