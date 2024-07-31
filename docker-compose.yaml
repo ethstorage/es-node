@@ -8,9 +8,10 @@ services:
       - '30305:30305/udp'
     volumes:
       - ./es-data:/es-node/es-data
+      - ./es-node/build/bin/snark_lib/zkey:/es-node/build/bin/snark_lib/zkey
     environment:
       - ES_NODE_STORAGE_MINER=${ES_NODE_STORAGE_MINER}
       - ES_NODE_SIGNER_PRIVATE_KEY=${ES_NODE_SIGNER_PRIVATE_KEY}
-    command:  ["bash", "-c", "/es-node/run.sh --miner.zk-prover-impl=2"]
+    command:  ["bash", "-c", "/es-node/run.sh"]
     container_name: es
     tty: true
