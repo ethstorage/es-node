@@ -41,12 +41,15 @@ else
             echo "image $image_name built"
         fi
         
-        sudo docker run --rm \
-          -v ./es-data:/es-node/es-data \
-          -v ./build/bin/snark_lib/zkey:/es-node/build/bin/snark_lib/zkey \
-          -e ES_NODE_STORAGE_MINER=$ES_NODE_STORAGE_MINER \
-          --entrypoint /es-node/init.sh \
-          $image_name
+        # check if data folder exist
+        if [ ! -d "./es-data" ]; then
+          sudo docker run --rm \
+            -v ./es-data:/es-node/es-data \
+            -v ./build/bin/snark_lib/zkey:/es-node/build/bin/snark_lib/zkey \
+            -e ES_NODE_STORAGE_MINER=$ES_NODE_STORAGE_MINER \
+            --entrypoint /es-node/init.sh \
+            $image_name 
+        fi
 
         # run container in the background
         sudo docker run --name $container_name \
