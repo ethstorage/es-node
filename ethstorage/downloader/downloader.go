@@ -39,11 +39,12 @@ var (
 )
 
 type BlobCache interface {
-	SetBlockBlobs(block *blockBlobs)
-	Blobs(hash common.Hash) []blob
+	SetBlockBlobs(block *blockBlobs) error
+	Blobs(number uint64) []blob
 	GetKeyValueByIndex(idx uint64, hash common.Hash) []byte
-	GetKeyValueByIndexUnchecked(idx uint64) []byte
+	GetSampleData(idx uint64, sampleIdx uint64) []byte
 	Cleanup(finalized uint64)
+	Close() error
 }
 
 type Downloader struct {
@@ -78,13 +79,21 @@ type blob struct {
 	kvSize  *big.Int
 	hash    common.Hash
 	data    []byte
+	dataId  uint64
+}
+
+func (b *blob) String() string {
+	return fmt.Sprintf("blob{kvIndex: %d, hash: %x, data: %s}", b.kvIndex, b.hash, b.data)
 }
 
 type blockBlobs struct {
 	timestamp uint64
 	number    uint64
-	hash      common.Hash
 	blobs     []*blob
+}
+
+func (b *blockBlobs) String() string {
+	return fmt.Sprintf("blockBlobs{number: %d, timestamp: %d, blobs: %d}", b.number, b.timestamp, len(b.blobs))
 }
 
 func NewDownloader(
@@ -332,7 +341,7 @@ func (s *Downloader) downloadRange(start int64, end int64, toCache bool) ([]blob
 	blobs := []blob{}
 	for _, elBlock := range elBlocks {
 		// attempt to read the blobs from the cache first
-		res := s.Cache.Blobs(elBlock.hash)
+		res := s.Cache.Blobs(elBlock.number)
 		if res != nil {
 			blobs = append(blobs, res...)
 			s.log.Info("Blob found in the cache, continue to the next block", "blockNumber", elBlock.number)
@@ -378,10 +387,13 @@ func (s *Downloader) downloadRange(start int64, end int64, toCache bool) ([]blob
 			// encode blobs so that miner can do sampling directly from cache
 			elBlob.data = s.sm.EncodeBlob(clBlob.Data, elBlob.hash, elBlob.kvIndex.Uint64(), s.sm.MaxKvSize())
 			blobs = append(blobs, *elBlob)
-			s.log.Info("Download range", "blockNumber", elBlock.number, "kvIdx", elBlob.kvIndex)
+			s.log.Info("Downloaded and encoded", "blockNumber", elBlock.number, "kvIdx", elBlob.kvIndex)
 		}
 		if toCache {
-			s.Cache.SetBlockBlobs(elBlock)
+			if err := s.Cache.SetBlockBlobs(elBlock); err != nil {
+				s.log.Error("Failed to cache blobs", "block", elBlock.number, "err", err)
+				return nil, err
+			}
 		}
 	}
 
@@ -424,7 +436,6 @@ func (s *Downloader) eventsToBlocks(events []types.Log) ([]*blockBlobs, error) {
 			blocks = append(blocks, &blockBlobs{
 				timestamp: res.Time,
 				number:    event.BlockNumber,
-				hash:      event.BlockHash,
 				blobs:     []*blob{},
 			})
 		}
