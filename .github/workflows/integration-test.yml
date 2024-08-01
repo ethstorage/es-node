@@ -40,7 +40,7 @@ jobs:
         run: |
           cd ../es-node
           make
-          ./run-l2-it-rpc.sh >> es-data-it-bootnode/es-node.log&
+          ./run-l2-it-rpc.sh >> es-node-it-bootnode.log&
 
       - name: Upload blobs
         run: |
@@ -57,4 +57,4 @@ jobs:
           go build
           ./integration-test-server > itserver.log&
           cd ../..
-          env ES_NODE_STORAGE_MINER=0x5C935469C5592Aeeac3372e922d9bCEabDF8830d ES_NODE_SIGNER_PRIVATE_KEY=e690c916d02b6f3ad4bb70cc2663389ea88a79ded45613b1bd5545961d063258 ./run-l2-it.sh >> es-data-it/es-node.log
+          env ES_NODE_STORAGE_MINER=0x5C935469C5592Aeeac3372e922d9bCEabDF8830d ES_NODE_SIGNER_PRIVATE_KEY=e690c916d02b6f3ad4bb70cc2663389ea88a79ded45613b1bd5545961d063258 ./run-l2-it.sh >> es-node-it.log

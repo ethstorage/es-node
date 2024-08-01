@@ -137,7 +137,7 @@ executable="./build/bin/es-node"
 data_dir="./es-data-it"
 storage_file_0="$data_dir/shard-0.dat"
 
-if [ ! -e  ${data_dir} ]; then
+if test -d  ${data_dir} ; then
   rm -r ${data_dir}
 fi
 mkdir ${data_dir}
