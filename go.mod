@@ -11,6 +11,7 @@ require (
 	github.com/ethereum-optimism/go-ethereum-hdwallet v0.1.3
 	github.com/ethereum-optimism/optimism v1.2.0
 	github.com/ethereum/go-ethereum v1.13.5
+	github.com/ethstorage/billy v0.0.0-20240730021803-ca24378685e7
 	github.com/golang/snappy v0.0.5-0.20220116011046-fa5810519dcb
 	github.com/gorilla/mux v1.8.1
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d

@@ -13,32 +13,33 @@ import (
 )
 
 type BlobMemCache struct {
-	blocks map[common.Hash]*blockBlobs
+	blocks map[uint64]*blockBlobs
 	mu     sync.RWMutex
 }
 
 func NewBlobMemCache() *BlobMemCache {
 	return &BlobMemCache{
-		blocks: map[common.Hash]*blockBlobs{},
+		blocks: map[uint64]*blockBlobs{},
 	}
 }
 
-func (c *BlobMemCache) SetBlockBlobs(block *blockBlobs) {
+func (c *BlobMemCache) SetBlockBlobs(block *blockBlobs) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.blocks[block.hash] = block
+	c.blocks[block.number] = block
+	return nil
 }
 
-func (c *BlobMemCache) Blobs(hash common.Hash) []blob {
+func (c *BlobMemCache) Blobs(number uint64) []blob {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	if _, exist := c.blocks[hash]; !exist {
+	if _, exist := c.blocks[number]; !exist {
 		return nil
 	}
 
 	res := []blob{}
-	for _, blob := range c.blocks[hash].blobs {
+	for _, blob := range c.blocks[number].blobs {
 		res = append(res, *blob)
 	}
 	return res
@@ -58,14 +59,17 @@ func (c *BlobMemCache) GetKeyValueByIndex(idx uint64, hash common.Hash) []byte {
 	return nil
 }
 
-func (c *BlobMemCache) GetKeyValueByIndexUnchecked(idx uint64) []byte {
+func (c *BlobMemCache) GetSampleData(idx, sampleIdxInKv uint64) []byte {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
 	for _, block := range c.blocks {
 		for _, blob := range block.blobs {
 			if blob.kvIndex.Uint64() == idx {
-				return blob.data
+				sampleSize := uint64(1 << ethstorage.SampleSizeBits)
+				sampleIdxByte := sampleIdxInKv << ethstorage.SampleSizeBits
+				sample := blob.data[sampleIdxByte : sampleIdxByte+sampleSize]
+				return sample
 			}
 		}
 	}
@@ -84,4 +88,9 @@ func (c *BlobMemCache) Cleanup(finalized uint64) {
 			delete(c.blocks, hash)
 		}
 	}
+}
+
+func (c *BlobMemCache) Close() error {
+	c.blocks = nil
+	return nil
 }
