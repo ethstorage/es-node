@@ -137,6 +137,11 @@ executable="./build/bin/es-node"
 data_dir="./es-data-it"
 storage_file_0="$data_dir/shard-0.dat"
 
+if [ ! -e  ${data_dir} ]; then
+  rm -r ${data_dir}
+fi
+mkdir ${data_dir}
+
 common_flags=" --datadir $data_dir \
   --l1.rpc http://65.109.20.29:8545 \
   --storage.l1contract $ES_NODE_CONTRACT_ADDRESS \

@@ -7,6 +7,12 @@ executable="./build/bin/es-node"
 data_dir="./es-data-it-bootnode"
 storage_file_0="$data_dir/shard-0.dat"
 
+if [ ! -e  ${data_dir} ]; then
+  rm -r ${data_dir}
+fi
+mkdir ${data_dir}
+echo "8714eb2672bb7ab01089a1060150b30bc374a3b00e18926460f169256d126339" > "${data_dir}/esnode_p2p_priv.txt"
+
 common_flags=" --datadir $data_dir \
   --l1.rpc http://65.109.20.29:8545 \
   --storage.l1contract $ES_NODE_CONTRACT_ADDRESS \
