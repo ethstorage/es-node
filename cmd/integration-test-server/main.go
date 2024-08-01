@@ -97,7 +97,7 @@ func checkState(oldState, newState *node.NodeState) {
 			}
 			check = true
 			if shardState.SyncState.PeerCount <= 0 {
-				addErrorMessage(fmt.Sprintf("es-node peer count should larger than 0, peers: %d", shardState.SyncState.PeerCount))
+				addErrorMessage("es-node peer count should larger than 0")
 			}
 
 			if oldShardState.SyncState.SyncProgress < 10000 &&
@@ -120,7 +120,7 @@ func checkState(oldState, newState *node.NodeState) {
 				addErrorMessage("Mining should be start after sync done.")
 			}
 		}
-		if check {
+		if !check {
 			addErrorMessage(fmt.Sprintf("Shard %d in the new state do not exist in the old state", shardState.ShardId))
 		}
 	}
@@ -162,7 +162,7 @@ func checkFinalState(state *node.NodeState) {
 
 func addErrorMessage(errMessage string) {
 	log.Warn("Add error message", "msg", errMessage)
-	errorMessages = append(errorMessages, errMessage)
+	errorMessages = append(errorMessages, errMessage+"\n")
 }
 
 func listenAndServe(port int) error {
