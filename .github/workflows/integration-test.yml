@@ -45,7 +45,7 @@ jobs:
           cd ../ethstorage-sdk 
           git checkout integration-test
           git pull
-          npm install 
+          npm install --force
           rollup -c
           node ituploader.js
 
