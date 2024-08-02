@@ -46,7 +46,9 @@ jobs:
           git checkout integration-test
           git pull
           npm install --force
+          echo "====================================="
           rollup -c
+          echo "====================================="
           node ituploader.js
 
       - name: Test
