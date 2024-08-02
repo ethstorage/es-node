@@ -21,6 +21,8 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethstorage/go-ethstorage/cmd/es-utils/utils"
 	"github.com/ethstorage/go-ethstorage/ethstorage"
+	"github.com/ethstorage/go-ethstorage/ethstorage/blobs"
+	"github.com/ethstorage/go-ethstorage/ethstorage/downloader"
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
 	"github.com/ethstorage/go-ethstorage/ethstorage/miner"
 	"github.com/ethstorage/go-ethstorage/ethstorage/p2p/protocol"
@@ -78,7 +80,8 @@ func TestMining(t *testing.T) {
 		lg,
 	)
 	db := rawdb.NewMemoryDatabase()
-	mnr := miner.New(miningConfig, db, storageManager, l1api, &pvr, feed, lg)
+	br := blobs.NewBlobReader(downloader.NewBlobMemCache(), storageManager, lg)
+	mnr := miner.New(miningConfig, db, storageManager, l1api, br, &pvr, feed, lg)
 	lg.Info("Initialized miner")
 
 	l1HeadsSub := event.ResubscribeErr(time.Second*10, func(ctx context.Context, err error) (event.Subscription, error) {

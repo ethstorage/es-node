@@ -25,35 +25,8 @@ if [ ${#ES_NODE_SIGNER_PRIVATE_KEY} -ne 64 ]; then
   exit 1
 fi
 
-if ! [ -x "$(command -v node)" ]; then
-  echo 'Error: Node.js is not installed.'
-  exit 1
-fi
-
-# check node js version
-node_version=$(node -v)
-major_version=$(echo $node_version | cut -d'v' -f2 | cut -d'.' -f1)
-
-if [ "$major_version" -lt 16 ]; then
-    echo "Error: Node.js version is too old."
-    exit 1
-fi
-
-# install snarkjs if not
-if ! [ "$(command -v snarkjs)" ]; then
-    echo "snarkjs not found, start installing..."
-    snarkjs_install=$(npm install -g snarkjs 2>&1)
-    if [ $? -eq 0 ]; then
-      echo "snarkjs installed successfully."
-    else
-      echo "Error: snarkjs install failed with the following error:"
-      echo "$snarkjs_install"
-      exit 1
-    fi
-fi
-
 # ZK prover mode, 1: one proof per sample, 2: one proof for multiple samples.
-zkp_mode=2 
+zkp_mode=
 i=1
 while [ $i -le $# ]; do
     if [ "${!i}" = "--miner.zk-prover-mode" ]; then
@@ -69,12 +42,14 @@ while [ $i -le $# ]; do
     i=$((i+1))
 done
 
-if [ "$zkp_mode" != 1 ] && [ "$zkp_mode" != 2 ]; then
+if [ -n "$zkp_mode" ] && [ "$zkp_mode" != 1 ] && [ "$zkp_mode" != 2 ]; then
   echo "Error: zk prover mode can only be 1 or 2."
   exit 1  
-fi
+fi 
 
-echo "zk prover mode is $zkp_mode"
+if [ -n "$zkp_mode" ]; then
+  echo "The zk prover mode has been overridden to $zkp_mode"
+fi 
 
 # download zkey if not yet
 zkey_name="blob_poseidon2.zkey"
@@ -85,7 +60,7 @@ if [ "$zkp_mode" = 1 ]; then
   zkey_size=280151245
   zkey_url="https://drive.usercontent.google.com/download?id=1ZLfhYeCXMnbk6wUiBADRAn1mZ8MI_zg-&export=download&confirm=t&uuid=16ddcd58-2498-4d65-8931-934df3d0065c"
 fi
-zkey_file="./build/bin/snarkjs/$zkey_name"
+zkey_file="./build/bin/snark_lib/$zkey_name"
 if [ ! -e  ${zkey_file} ] || [ $(wc -c <  ${zkey_file}) -ne ${zkey_size} ]; then
   echo "Start downloading ${zkey_file}..." 
   curl $zkey_url -o ${zkey_file}
@@ -99,13 +74,72 @@ if [ ! -e  ${zkey_file} ] || [ $(wc -c <  ${zkey_file}) -ne ${zkey_size} ]; then
   fi
 fi
 
+
+# ZK prover implementation, 1: snarkjs, 2: go-rapidsnark.
+zkp_impl=
+i=1
+while [ $i -le $# ]; do
+    if [ "${!i}" = "--miner.zk-prover-impl" ]; then
+        j=$((i+1))
+        zkp_impl="${!j}"
+        break
+    else
+        if echo "${!i}" | grep -qE -- "--miner\.zk-prover-impl=([0-9]+)"; then
+            zkp_impl=$(echo "${!i}" | sed -E 's/.*=([0-9]+)/\1/')
+            break
+        fi
+    fi
+    i=$((i+1))
+done
+
+
+if [ -n "$zkp_impl" ] && [ "$zkp_impl" != 1 ] && [ "$zkp_impl" != 2 ]; then
+  echo "miner.zk-prover-impl can only be 1 or 2"
+  exit 1
+fi 
+
+if [ -n "$zkp_impl" ]; then
+  echo "The zk prover implementation has been overridden to $zkp_impl"
+fi 
+
+if [ "$zkp_impl" = 1 ]; then
+
+  if ! [ -x "$(command -v node)" ]; then
+    echo 'Error: Node.js is not installed.'
+    exit 1
+  fi
+
+  # check node js version
+  node_version=$(node -v)
+  major_version=$(echo $node_version | cut -d'v' -f2 | cut -d'.' -f1)
+
+  if [ "$major_version" -lt 16 ]; then
+      echo "Error: Node.js version is too old."
+      exit 1
+  fi
+
+  # install snarkjs if not
+  if ! [ "$(command -v snarkjs)" ]; then
+      echo "snarkjs not found, start installing..."
+      snarkjs_install=$(npm install -g snarkjs 2>&1)
+      if [ $? -eq 0 ]; then
+        echo "snarkjs installed successfully."
+      else
+        echo "Error: snarkjs install failed with the following error:"
+        echo "$snarkjs_install"
+        exit 1
+      fi
+  fi
+
+fi
+
 executable="./build/bin/es-node"
 data_dir="./es-data"
 storage_file_0="$data_dir/shard-0.dat"
 
 common_flags=" --datadir $data_dir \
-  --l1.rpc http://142.132.154.16:8545 \
-  --storage.l1contract 0x90a708C0dca081ca48a9851a8A326775155f87Fd \
+  --l1.rpc http://65.109.20.29:8545 \
+  --storage.l1contract 0x64003adbdf3014f7E38FC6BE752EB047b95da89A \
   --storage.miner $ES_NODE_STORAGE_MINER \
   "
 
@@ -119,13 +153,13 @@ es_node_start=" --network devnet \
   --miner.zkey $zkey_name \
   --storage.files $storage_file_0 \
   --signer.private-key $ES_NODE_SIGNER_PRIVATE_KEY \
-  --da.url http://142.132.154.16:8888 \
+  --da.url http://65.109.20.29:8888 \
   --randao.url http://88.99.30.186:8545 \
   --l1.block_time 2 \
   --download.thread 32 \
   --p2p.listen.udp 30305 \
   --p2p.sync.concurrency 32 \
-  --p2p.bootnodes enr:-Li4QGUAA21O-0pgqnGoBLwvvminrlDjfxhqL6DvXhfOtvNdK871LELAT1Nn-NAa3hUi0Wmb-VIj1qi6fnbyA9yp5RGGAZALHvLnimV0aHN0b3JhZ2XbAYDY15SQpwjA3KCBykiphRqKMmd1FV-H_cGAgmlkgnY0gmlwhEFtMpGJc2VjcDI1NmsxoQJ8_OUONb_H7RMF6kXzZWDut2xriJ5JeKnH2cnb8en0e4N0Y3CCJAaDdWRwgnZh \
+  --p2p.bootnodes enr:-Li4QA-fcxSHHu68uzHxsGnR8Q8lnvPir8L3cb5-RSq5fvU7cmxukZinZ9N-XRcnvWauQl6KK2tnlD3RZTwOxI4KgIaGAZC-hjTfimV0aHN0b3JhZ2XbAYDY15RkADrb3zAU9-OPxr51LrBHuV2omsGAgmlkgnY0gmlwhEFtcySJc2VjcDI1NmsxoQNY8raIsHIGPniQ738UiNmIvifax5L6R51YLPoflGzix4N0Y3CCJAaDdWRwgnZh \
 $@"
   
 # create data file for shard 0 if not yet
