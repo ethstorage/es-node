@@ -74,7 +74,7 @@ func TestMining(t *testing.T) {
 	l1api := miner.NewL1MiningAPI(pClient, nil, lg)
 	pvr := prover.NewKZGPoseidonProver(
 		miningConfig.ZKWorkingDir,
-		miningConfig.ZKeyFileName,
+		miningConfig.ZKeyFile,
 		miningConfig.ZKProverMode,
 		miningConfig.ZKProverImpl,
 		lg,
@@ -381,7 +381,7 @@ func initMiningConfig(t *testing.T, client *eth.PollingClient) *miner.Config {
 	}
 	miningConfig.PrepaidAmount = new(big.Int).SetBytes(result)
 
-	miningConfig.ZKeyFileName = zkey2Name
+	miningConfig.ZKeyFile = zkey2Name
 	proverPath, _ := filepath.Abs(prPath)
 	miningConfig.ZKWorkingDir = proverPath
 	miningConfig.ZKProverMode = 2
