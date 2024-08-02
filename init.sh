@@ -114,7 +114,6 @@ if [ "$zkp_impl" = 1 ]; then
 fi
 
 data_dir="./es-data"
-storage_file_0="$data_dir/shard-0.dat"
 
 es_node_init="$executable init --shard_index 0 \
   --datadir $data_dir \
@@ -123,14 +122,10 @@ es_node_init="$executable init --shard_index 0 \
   --storage.miner $ES_NODE_STORAGE_MINER \
 $remaining_args"
 
-# create data file for shard 0 if not yet
-if [ ! -e $storage_file_0 ]; then
-  if $es_node_init ; then
-    echo "√ Initialized ${storage_file_0} successfully"
-  else
-    echo "Error: failed to initialize ${storage_file_0}"
-    exit 1
-  fi
-else 
-  echo "Warning: storage file ${storage_file_0} already exists, skip initialization."
+# es-node will skip init if data files already exist
+if $es_node_init ; then
+  echo "√ Initialized data files successfully."
+else
+  echo "Error: failed to initialize data files."
+  exit 1
 fi

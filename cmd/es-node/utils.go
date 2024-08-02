@@ -170,8 +170,8 @@ func createDataFile(cfg *storage.StorageConfig, shardIdxList []uint64, datadir s
 	for _, shardIdx := range shardIdxList {
 		dataFile := filepath.Join(datadir, fmt.Sprintf(fileName, shardIdx))
 		if _, err := os.Stat(dataFile); err == nil {
-			log.Error("Creating data file", "error", "file already exists, will not overwrite", "file", dataFile)
-			return nil, err
+			log.Warn("Creating data file", "error", "file already exists, will not overwrite", "file", dataFile)
+			continue
 		}
 		if cfg.ChunkSize == 0 {
 			return nil, fmt.Errorf("chunk size should not be 0")

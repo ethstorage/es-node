@@ -230,8 +230,16 @@ func EsNodeInit(ctx *cli.Context) error {
 	log.Info("Storage config loaded", "storageCfg", storageCfg)
 	var shardIdxList []uint64
 	if len(shardIndexes) > 0 {
+	out:
 		for i := 0; i < len(shardIndexes); i++ {
-			shardIdxList = append(shardIdxList, uint64(shardIndexes[i]))
+			new := uint64(shardIndexes[i])
+			// prevent duplicated
+			for _, s := range shardIdxList {
+				if s == new {
+					continue out
+				}
+			}
+			shardIdxList = append(shardIdxList, new)
 		}
 	} else {
 		// get shard indexes of length shardLen from contract
