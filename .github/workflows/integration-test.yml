@@ -26,7 +26,6 @@ jobs:
 
       - name: Checkout Contracts
         run: |
-          pwd
           cd ../storage-contracts-v1 
           git checkout integration-test
           git pull
@@ -34,17 +33,16 @@ jobs:
           git submodule init && git submodule update
           npx hardhat run scripts/deployL2-it.js --network qkc_testnet >> deploy.log
           echo ES_NODE_CONTRACT_ADDRESS=`cat .caddr` >> "$GITHUB_ENV"
+          echo $ES_NODE_CONTRACT_ADDRESS
 
       - name: Build and Run Bootnode Node
         run: |
-          pwd
           cd ../es-node
           make
           ./run-l2-it-rpc.sh > es-node-it-bootnode.log&
 
       - name: Upload Blobs
         run: |
-          pwd
           cd ../ethstorage-sdk 
           git checkout integration-test
           git pull
