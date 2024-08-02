@@ -39,21 +39,24 @@ jobs:
 
       - name: Build and Run Bootnode Node
         run: |
+          pwd
           cd ../es-node
           make
           ./run-l2-it-rpc.sh > es-node-it-bootnode.log&
 
       - name: Upload Blobs
         run: |
+          pwd
           cd ../ethstorage-sdk 
-          git checkout main
+          git checkout integration-test
           git pull
           npm install 
           rollup -c
-          node it.js
+          node ituploader.js
 
       - name: Test
-        run: |          
+        run: |
+          pwd
           cd ../es-node
           env ES_NODE_STORAGE_MINER=0x5C935469C5592Aeeac3372e922d9bCEabDF8830d ES_NODE_SIGNER_PRIVATE_KEY=e690c916d02b6f3ad4bb70cc2663389ea88a79ded45613b1bd5545961d063258 ./run-l2-it.sh > es-node-it.log&
           cd ./cmd/integration-test-server
