@@ -6,7 +6,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"math/big"
 	"net"
 	"os"
 	"os/signal"
@@ -231,21 +230,8 @@ func EsNodeInit(ctx *cli.Context) error {
 	log.Info("Storage config loaded", "storageCfg", storageCfg)
 	var shardIdxList []uint64
 	if len(shardIndexes) > 0 {
-		// check existense of shard indexes but add shard 0 anyway
 		for i := 0; i < len(shardIndexes); i++ {
-			shard := uint64(shardIndexes[i])
-			if shard > 0 {
-				timeStamp, err := getLastMineTime(cctx, client, l1Contract, shard)
-				if err != nil {
-					log.Error("Failed to get shard info from contract", "error", err)
-					return err
-				}
-				// lastMineTime will be set to non-zero when opening a new shard
-				if timeStamp != nil && timeStamp.Cmp(big.NewInt(0)) == 0 {
-					return fmt.Errorf("shard not exist: %d", shard)
-				}
-			}
-			shardIdxList = append(shardIdxList, shard)
+			shardIdxList = append(shardIdxList, uint64(shardIndexes[i]))
 		}
 	} else {
 		// get shard indexes of length shardLen from contract
