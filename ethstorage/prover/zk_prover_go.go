@@ -19,20 +19,15 @@ import (
 )
 
 type ZKProverGo struct {
-	calc witness.Calculator
 	zkey []byte
+	wasm []byte
 	lg   log.Logger
 }
 
 func NewZKProverGo(libDir, zkeyName, wasmName string, lg log.Logger) (*ZKProverGo, error) {
-	wasmBytes, err := os.ReadFile(filepath.Join(libDir, wasmName))
+	wasm, err := os.ReadFile(filepath.Join(libDir, wasmName))
 	if err != nil {
 		lg.Error("Read wasm file failed", "error", err)
-		return nil, err
-	}
-	calc, err := witness.NewCalculator(wasmBytes, witness.WithWasmEngine(wazero.NewCircom2WZWitnessCalculator))
-	if err != nil {
-		lg.Error("Create witness calculator failed", "error", err)
 		return nil, err
 	}
 	zkey, err := os.ReadFile(filepath.Join(libDir, zkeyName))
@@ -42,7 +37,7 @@ func NewZKProverGo(libDir, zkeyName, wasmName string, lg log.Logger) (*ZKProverG
 	}
 	return &ZKProverGo{
 		zkey: zkey,
-		calc: calc,
+		wasm: wasm,
 		lg:   lg,
 	}, nil
 }
@@ -120,7 +115,12 @@ func (p *ZKProverGo) prove(inputBytes []byte) ([]byte, string, error) {
 		p.lg.Error("Parse input failed", "error", err)
 		return nil, "", err
 	}
-	wtnsBytes, err := p.calc.CalculateWTNSBin(parsedInputs, true)
+	calc, err := witness.NewCalculator(p.wasm, witness.WithWasmEngine(wazero.NewCircom2WZWitnessCalculator))
+	if err != nil {
+		p.lg.Error("Create witness calculator failed", "error", err)
+		return nil, "", err
+	}
+	wtnsBytes, err := calc.CalculateWTNSBin(parsedInputs, true)
 	if err != nil {
 		p.lg.Error("Calculate witness failed", "error", err)
 		return nil, "", err
