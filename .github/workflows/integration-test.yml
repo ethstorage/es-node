@@ -4,7 +4,7 @@ on: [push]
 jobs:
   es-node-integration-test:
     runs-on: self-hosted
-    timeout-minutes: 2880
+    timeout-minutes: 1440
 
     steps:
       - uses: actions/checkout@v3
@@ -24,7 +24,7 @@ jobs:
         with:
           version: nightly
 
-      - name: Checkout Contracts
+      - name: Deploy Contracts
         run: |
           cd ../storage-contracts-v1 
           git checkout integration-test

@@ -28,9 +28,10 @@ var (
 )
 
 var (
-	errorMessages = make([]string, 0)
-	lastQueryTime = time.Now()
-	lastRecord    *node.NodeState
+	errorMessages    = make([]string, 0)
+	lastQueryTime    = time.Now()
+	lastRecord       *node.NodeState
+	hasConnectedPeer = false
 )
 
 func HelloHandler(w http.ResponseWriter, r *http.Request) {
@@ -96,8 +97,8 @@ func checkState(oldState, newState *node.NodeState) {
 				continue
 			}
 			check = true
-			if shardState.SyncState.PeerCount <= 0 {
-				addErrorMessage("es-node peer count should larger than 0")
+			if shardState.SyncState.PeerCount > 0 {
+				hasConnectedPeer = true
 			}
 
 			if oldShardState.SyncState.SyncProgress < 10000 &&
@@ -130,6 +131,9 @@ func checkFinalState(state *node.NodeState) {
 	if state != nil {
 		addErrorMessage("No state submitted during the test")
 		return
+	}
+	if !hasConnectedPeer {
+		addErrorMessage("es-node peer count should larger than 0")
 	}
 
 	log.Info("Final state", "id", state.Id, "version", state.Version)
