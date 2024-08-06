@@ -32,17 +32,18 @@ $executable --version
 echo "========================================"
 
 data_dir="./es-data"
-storage_file_0="$data_dir/shard-0.dat"
-
-if [ ! -e $storage_file_0 ]; then
-    echo "Error: storage file not found: ${storage_file_0}. Please run 'init.sh' first."
-    exit 1
-fi
+file_flags=""
+ 
+for file in ${data_dir}/shard-[0-9]*.dat; do 
+    if [ -f "$file" ]; then 
+        file_flags+=" --storage.files $file"
+    fi
+done
 
 start_flags=" --network devnet \
   --datadir $data_dir \
+  $file_flags \
   --storage.l1contract 0x64003adbdf3014f7E38FC6BE752EB047b95da89A \
-  --storage.files $storage_file_0 \
   --storage.miner $ES_NODE_STORAGE_MINER \
   --l1.rpc http://65.109.20.29:8545 \
   --l1.block_time 2 \
