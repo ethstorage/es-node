@@ -33,7 +33,6 @@ else
     # start container if exist
     if sudo docker ps -a --format "{{.Names}}" | grep -q "^$container_name$"; then
         sudo docker start $container_name
-        echo "container $container_name started"
     else
         # build an image if not exist
         if ! sudo docker images --format "{{.Repository}}" | grep -q "^$image_name$"; then
@@ -63,6 +62,5 @@ else
           -d \
           --entrypoint /es-node/run.sh \
           $image_name
-        echo "container $container_name started"
     fi
 fi

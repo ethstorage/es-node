@@ -3,7 +3,6 @@
 # usage:
 # env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> ./run-l2.sh
 
-# Note: currently only zk prover mode 2 is supported
 zkey_file="./build/bin/snark_lib/zkey/blob_poseidon2.zkey"
 
 if [ -z "$ES_NODE_STORAGE_MINER" ]; then
@@ -51,7 +50,7 @@ start_flags=" --network devnet \
   --signer.private-key $ES_NODE_SIGNER_PRIVATE_KEY \
   --miner.enabled \
   --miner.zkey $zkey_file \
-  --miner.zk-prover-impl 2 \
+  --miner.zk-prover-impl 1 \
   --download.thread 32 \
   --p2p.listen.udp 30305 \
   --p2p.sync.concurrency 32 \

@@ -53,7 +53,7 @@ start_flags=" --network devnet \
   --signer.private-key $ES_NODE_SIGNER_PRIVATE_KEY \
   --miner.enabled \
   --miner.zkey $zkey_file \
-  --miner.zk-prover-impl 2 \
+  --miner.zk-prover-impl 1 \
   --download.thread 32 \
   --state.upload.url http://metrics.ethstorage.io:8080 \
   --p2p.listen.udp 30305 \
