@@ -92,7 +92,7 @@ type CLIConfig struct {
 	GasPrice         *big.Int
 	PriorityGasPrice *big.Int
 	MinimumProfit    *big.Int
-	ZKeyFileName     string
+	ZKeyFile         string
 	ZKWorkingDir     string
 	ZKProverMode     uint64
 	ZKProverImpl     uint64
@@ -118,7 +118,7 @@ func (c CLIConfig) ToMinerConfig() (Config, error) {
 		}
 		zkWorkingDir = dir
 	}
-	zkFile := c.ZKeyFileName
+	zkFile := c.ZKeyFile
 	if !filepath.IsAbs(zkFile) {
 		dir, err := filepath.Abs(zkFile)
 		if err != nil {
@@ -144,7 +144,7 @@ func ReadCLIConfig(ctx *cli.Context) CLIConfig {
 		GasPrice:         types.GlobalBig(ctx, GasPriceFlagName),
 		PriorityGasPrice: types.GlobalBig(ctx, PriorityGasPriceFlagName),
 		MinimumProfit:    types.GlobalBig(ctx, MinimumProfitFlagName),
-		ZKeyFileName:     ctx.GlobalString(ZKeyFileNameFlagName),
+		ZKeyFile:         ctx.GlobalString(ZKeyFileNameFlagName),
 		ZKWorkingDir:     ctx.GlobalString(ZKWorkingDirFlagName),
 		ZKProverMode:     ctx.GlobalUint64(ZKProverModeFlagName),
 		ZKProverImpl:     ctx.GlobalUint64(ZKProverImplFlagName),
