@@ -8,7 +8,7 @@
   "dependencies": {
     "dotenv": "^16.4.5",
     "ethers": "^6.13.1",
-    "ethstorage-sdk": "^2.0.5"
+    "ethstorage-sdk": "^2.1.1"
   },
   "repository": {
     "type": "git",
