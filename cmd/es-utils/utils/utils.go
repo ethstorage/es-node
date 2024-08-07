@@ -16,6 +16,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus/misc/eip4844"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/crypto/kzg4844"
@@ -126,9 +127,24 @@ func SendBlobTx(
 		}
 	}
 
-	maxFeePerDataGas256, err := DecodeUint256String(maxFeePerDataGas)
-	if err != nil {
-		log.Crit("Invalid max_fee_per_data_gas", "error", err)
+	var blobPrice *uint256.Int
+	if maxFeePerDataGas != "" {
+		maxFeePerDataGas256, err := DecodeUint256String(maxFeePerDataGas)
+		if err != nil {
+			log.Crit("Invalid max_fee_per_data_gas", "error", err)
+		}
+		blobPrice = maxFeePerDataGas256
+	} else {
+		blobBaseFee, err := queryBlobBaseFee(client)
+		if err != nil {
+			log.Crit("Error getting blob base fee", "error", err)
+		}
+		log.Info("Query blob base fee done", "blobBaseFee", blobBaseFee)
+		blobBaseFee256, nok := uint256.FromBig(blobBaseFee)
+		if nok {
+			log.Crit("Error converting blob base fee to uint256", "blobBaseFee", blobBaseFee)
+		}
+		blobPrice = blobBaseFee256
 	}
 	var blobs []kzg4844.Blob
 	if needEncoding {
@@ -159,7 +175,7 @@ func SendBlobTx(
 		To:         to,
 		Value:      value256,
 		Data:       calldataBytes,
-		BlobFeeCap: maxFeePerDataGas256,
+		BlobFeeCap: blobPrice,
 		BlobHashes: versionedHashes,
 		Sidecar:    sideCar,
 	}
@@ -325,7 +341,7 @@ func UploadBlobs(
 		5000000,
 		"",
 		"",
-		"300000000",
+		"",
 		chainID,
 		calldata,
 	)
@@ -372,6 +388,16 @@ func UploadBlobs(
 	}
 	// if wait receipt timed out or failed, query contract for data hash
 	return getKvInfo(pc, contractAddr, len(blobs))
+}
+
+func queryBlobBaseFee(l1 *ethclient.Client) (*big.Int, error) {
+	block, err := l1.BlockByNumber(context.Background(), new(big.Int).SetInt64(rpc.LatestBlockNumber.Int64()))
+	if err != nil {
+		return nil, err
+	}
+	excessBlobGas := eip4844.CalcExcessBlobGas(*block.ExcessBlobGas(), *block.BlobGasUsed())
+	blobBaseFee := eip4844.CalcBlobFee(excessBlobGas)
+	return blobBaseFee, nil
 }
 
 func getKvInfo(pc *eth.PollingClient, contractAddr common.Address, blobLen int) ([]uint64, []common.Hash, error) {

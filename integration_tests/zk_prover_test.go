@@ -31,6 +31,8 @@ var zkp1Contract = common.HexToAddress(os.Getenv("ES_NODE_STORAGE_L1CONTRACT_ZKP
 const zkeyName = "blob_poseidon.zkey"
 
 func TestZKProver_GenerateZKProofPerSample(t *testing.T) {
+	// skip now as zkey is not ready for mode 1
+	t.SkipNow()
 	proverPath, _ := filepath.Abs(prPath)
 	zkeyFull := filepath.Join(proverPath, prover.SnarkLib, zkeyName)
 	if _, err := os.Stat(zkeyFull); os.IsNotExist(err) {

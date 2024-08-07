@@ -117,6 +117,14 @@ func getShardList(ctx context.Context, client *ethclient.Client, contract common
 }
 
 func getDifficulty(ctx context.Context, client *ethclient.Client, contract common.Address, shardIdx uint64) (*big.Int, error) {
+	res, err := getMiningInfo(ctx, client, contract, shardIdx)
+	if err != nil {
+		return nil, err
+	}
+	return res[1].(*big.Int), nil
+}
+
+func getMiningInfo(ctx context.Context, client *ethclient.Client, contract common.Address, shardIdx uint64) ([]interface{}, error) {
 	uint256Type, _ := abi.NewType("uint256", "", nil)
 	dataField, _ := abi.Arguments{{Type: uint256Type}}.Pack(new(big.Int).SetUint64(shardIdx))
 	h := crypto.Keccak256Hash([]byte(`infos(uint256)`))
@@ -136,10 +144,10 @@ func getDifficulty(ctx context.Context, client *ethclient.Client, contract commo
 		{Type: uint256Type},
 	}.UnpackValues(bs)
 	if res == nil || len(res) < 3 {
-		log.Error("Query difficulty by shard", "error", "invalid result", "result", res)
+		log.Error("Query mining info by shard", "error", "invalid result", "result", res)
 		return nil, fmt.Errorf("invalid result: %v", res)
 	}
-	return res[1].(*big.Int), nil
+	return res, nil
 }
 
 func createDataFile(cfg *storage.StorageConfig, shardIdxList []uint64, datadir string, encodingType int) ([]string, error) {
@@ -154,8 +162,8 @@ func createDataFile(cfg *storage.StorageConfig, shardIdxList []uint64, datadir s
 	for _, shardIdx := range shardIdxList {
 		dataFile := filepath.Join(datadir, fmt.Sprintf(fileName, shardIdx))
 		if _, err := os.Stat(dataFile); err == nil {
-			log.Error("Creating data file", "error", "file already exists, will not overwrite", "file", dataFile)
-			return nil, err
+			log.Warn("Creating data file", "error", "file already exists, will not overwrite", "file", dataFile)
+			continue
 		}
 		if cfg.ChunkSize == 0 {
 			return nil, fmt.Errorf("chunk size should not be 0")

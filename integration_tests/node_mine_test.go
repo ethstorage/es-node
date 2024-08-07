@@ -11,7 +11,6 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -33,12 +32,11 @@ import (
 )
 
 const (
-	maxBlobsPerTx = 4
+	maxBlobsPerTx = 3
 	dataFileName  = "shard-%d.dat"
 )
 
-// TODO: test 2 shards
-var shardIds = []uint64{0}
+var shardIds = []uint64{0, 1}
 
 func TestMining(t *testing.T) {
 	contract := l1Contract
@@ -47,13 +45,12 @@ func TestMining(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to connect to the Ethereum client: %v", err)
 	}
-
+	// verify it is an empty contract
 	lastKv, err := pClient.GetStorageLastBlobIdx(rpc.LatestBlockNumber.Int64())
 	if err != nil {
-		lg.Error("Failed to get lastKvIdx", "error", err)
-	} else {
-		lg.Info("lastKv", "lastKv", lastKv)
+		t.Fatalf("Failed to get lastKvIdx: %v", err)
 	}
+	lg.Info("lastKv", "lastKv", lastKv)
 	if lastKv != 0 {
 		t.Fatalf("A newly deployed storage contract is required")
 	}
@@ -63,9 +60,8 @@ func TestMining(t *testing.T) {
 		t.Fatalf("Create data files error: %v", err)
 	}
 	storConfig.Filenames = files
-	miningConfig := initMiningConfig(t, contract, pClient)
+	miningConfig := initMiningConfig(t, pClient)
 	lg.Info("Initialzed mining config", "miningConfig", fmt.Sprintf("%+v", miningConfig))
-	defer cleanFiles(miningConfig.ZKWorkingDir)
 	shardManager, err := initShardManager(*storConfig)
 	if err != nil {
 		t.Fatalf("init shard manager error: %v", err)
@@ -107,14 +103,24 @@ func TestMining(t *testing.T) {
 		}
 		lg.Error("L1 heads subscription error", "err", err)
 	}()
-
-	mnr.Start()
+	fillEmpty(t, storageManager)
 	prepareData(t, pClient, storageManager, miningConfig.StorageCost.String())
-	fillEmpty(t, pClient, storageManager)
-
+	mnr.Start()
 	var wg sync.WaitGroup
+	minedShardSig := make(chan uint64, len(shardIds))
 	minedShardCh := make(chan uint64)
-	for _, s := range shardIds {
+	minedShards := make(map[uint64]bool)
+	go func() {
+		for minedShard := range minedShardCh {
+			minedShardSig <- minedShard
+			lg.Info("Mined shard", "shard", minedShard)
+			if !minedShards[minedShard] {
+				minedShards[minedShard] = true
+				wg.Done()
+			}
+		}
+	}()
+	for i, s := range shardIds {
 		feed.Send(protocol.EthStorageSyncDone{
 			DoneType: protocol.SingleShardDone,
 			ShardId:  s,
@@ -129,52 +135,22 @@ func TestMining(t *testing.T) {
 		}
 		go waitForMined(l1api, contract, mnr.ChainHeadCh, s, info.BlockMined.Uint64(), minedShardCh)
 		wg.Add(1)
-		time.Sleep(360 * time.Second)
-	}
-
-	go func() {
-		minedShards := make(map[uint64]bool)
-		for minedShard := range minedShardCh {
-			if !minedShards[minedShard] {
-				lg.Info("Mined shard", "shard", minedShard)
-				minedShards[minedShard] = true
-				wg.Done()
-				lg.Info("wait group done")
+		// defer next shard mining so that the started shard can be mined for a while
+		if i != len(shardIds)-1 {
+			var miningTime time.Duration = 60
+			timeout := time.After(miningTime * time.Second)
+			select {
+			case minedShard := <-minedShardSig:
+				lg.Info(fmt.Sprintf("Shard %d successfully mined, will start next shard: %d", minedShard, i+1))
+			case <-timeout:
+				lg.Info(fmt.Sprintf("Shard %d has been mined for %ds, will start next shard: %d", i, miningTime, i+1))
 			}
 		}
-	}()
-	lg.Info("wait group waiting")
+	}
 	wg.Wait()
 	l1HeadsSub.Unsubscribe()
 	mnr.Close()
 	close()
-}
-
-func cleanFiles(proverDir string) {
-	for _, shardId := range shardIds {
-		fileName := fmt.Sprintf(dataFileName, shardId)
-		if _, err := os.Stat(fileName); !os.IsNotExist(err) {
-			err = os.Remove(fileName)
-			if err != nil {
-				fmt.Println(err)
-			}
-		}
-	}
-
-	folderPath := filepath.Join(proverDir, "snarkbuild")
-	files, err := os.ReadDir(folderPath)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	for _, file := range files {
-		if !strings.HasPrefix(file.Name(), ".") {
-			err = os.RemoveAll(filepath.Join(folderPath, file.Name()))
-			if err != nil {
-				fmt.Println(err)
-			}
-		}
-	}
 }
 
 func waitForMined(l1api miner.L1API, contract common.Address, chainHeadCh chan eth.L1BlockRef, shardIdx, lastMined uint64, exitCh chan uint64) {
@@ -239,13 +215,11 @@ func initShardManager(storConfig storage.StorageConfig) (*ethstorage.ShardManage
 	return shardManager, nil
 }
 
-func fillEmpty(t *testing.T, l1Client *eth.PollingClient, storageMgr *ethstorage.StorageManager) {
-	lg.Info("Filling empty started")
-	totalBlobs := storageMgr.KvEntries() * uint64(len(shardIds))
+func fillEmpty(t *testing.T, storageMgr *ethstorage.StorageManager) {
 	lastKvIdx := storageMgr.LastKvIndex()
-	lg.Info("Filling empty", "lastBlobIdx", lastKvIdx, "totalBlobs", totalBlobs)
-
-	inserted, next, err := storageMgr.CommitEmptyBlobs(lastKvIdx, totalBlobs-1)
+	totalEntries := storageMgr.KvEntries() * uint64(len(shardIds))
+	lg.Info("Filling empty", "lastKvIdx", lastKvIdx)
+	inserted, next, err := storageMgr.CommitEmptyBlobs(lastKvIdx, totalEntries-1)
 	if err != nil {
 		t.Fatalf("Commit empty blobs failed %v", err)
 	}
@@ -253,7 +227,7 @@ func fillEmpty(t *testing.T, l1Client *eth.PollingClient, storageMgr *ethstorage
 }
 
 func prepareData(t *testing.T, l1Client *eth.PollingClient, storageMgr *ethstorage.StorageManager, value string) {
-	data := generateRandomContent(124 * 10)
+	data := generateRandomContent(124 * 5)
 	blobs := utils.EncodeBlobs(data)
 	t.Logf("Blobs len %d \n", len(blobs))
 	var hashs []common.Hash
@@ -272,11 +246,11 @@ func prepareData(t *testing.T, l1Client *eth.PollingClient, storageMgr *ethstora
 		t.Fatalf("Get chain id failed %v", err)
 	}
 	for i := 0; i < txs; i++ {
-		max := maxBlobsPerTx
+		blobsPerTx := maxBlobsPerTx
 		if i == txs-1 {
-			max = last
+			blobsPerTx = last
 		}
-		blobGroup := blobs[i*maxBlobsPerTx : i*maxBlobsPerTx+max]
+		blobGroup := blobs[i*maxBlobsPerTx : i*maxBlobsPerTx+blobsPerTx]
 		var blobData []byte
 		for _, bd := range blobGroup {
 			blobData = append(blobData, bd[:]...)
@@ -302,20 +276,12 @@ func prepareData(t *testing.T, l1Client *eth.PollingClient, storageMgr *ethstora
 	if err != nil {
 		t.Fatalf("Download all metas failed %v", err)
 	}
-	totalKvs := len(shardIds) * int(storageMgr.KvEntries())
-	limit := totalKvs
-	if limit > len(ids) {
-		limit = len(ids)
-	}
-	for i := 0; i < limit; i++ {
+	for i := 0; i < len(ids); i++ {
 		err := storageMgr.CommitBlob(ids[i], blobs[i][:], hashs[i])
 		if err != nil {
-			t.Fatalf("Failed to commit blob: i=%d, id=%d, error: %v", i, ids[i], err)
+			t.Fatalf("Failed to commit blob: i=%d, id=%d, hash=%x, error: %v", i, ids[i], hashs[i], err)
 		}
-	}
-	_, _, err = storageMgr.CommitEmptyBlobs(uint64(limit), uint64(totalKvs)-1)
-	if err != nil {
-		t.Fatalf("Commit empty blobs failed %v", err)
+		t.Logf("Committed blob: i=%d, id=%d, hash=%x", i, ids[i], hashs[i])
 	}
 }
 
@@ -348,7 +314,7 @@ func createDataFiles(cfg *storage.StorageConfig) ([]string, error) {
 	return files, nil
 }
 
-func initMiningConfig(t *testing.T, l1Contract common.Address, client *eth.PollingClient) *miner.Config {
+func initMiningConfig(t *testing.T, client *eth.PollingClient) *miner.Config {
 	miningConfig := &miner.Config{}
 	factory, addrFrom, err := signer.SignerFactoryFromConfig(signer.CLIConfig{
 		PrivateKey: privateKey,
@@ -419,7 +385,7 @@ func initMiningConfig(t *testing.T, l1Contract common.Address, client *eth.Polli
 	proverPath, _ := filepath.Abs(prPath)
 	miningConfig.ZKWorkingDir = proverPath
 	miningConfig.ZKProverMode = 2
-	miningConfig.ZKProverImpl = 1
+	miningConfig.ZKProverImpl = 2
 	miningConfig.ThreadsPerShard = 2
 	miningConfig.MinimumProfit = new(big.Int).SetInt64(-1e18)
 	return miningConfig
