@@ -13,7 +13,7 @@ const contractABI = [
 
 const provider = new ethers.JsonRpcProvider(RPC);
 const contract = new Contract(contractAddr, contractABI, provider);
-const MAX_BLOB = 144n;
+const MAX_BLOB = 192n;
 
 async function UploadBlobsForIntegrationTest() {
 	// put blobs
