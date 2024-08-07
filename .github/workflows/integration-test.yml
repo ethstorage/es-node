@@ -33,6 +33,7 @@ jobs:
           git submodule init && git submodule update
 
       - name: Set ENV Parameters
+        run: |
           echo ES_NODE_CONTRACT_ADDRESS=`cat .caddr` >> "$GITHUB_ENV"
           echo $ES_NODE_CONTRACT_ADDRESS
           echo ES_NODE_SIGNER_PRIVATE_KEY=e690c916d02b6f3ad4bb70cc2663389ea88a79ded45613b1bd5545961d063258 >> "$GITHUB_ENV"
