@@ -72,7 +72,6 @@ else
   echo "√ ${zkey_file} already exists."
 fi
 
-echo "zkp_impl is set to $zkp_impl"
 if [ -n "$zkp_impl" ] && [ "$zkp_impl" != 1 ] && [ "$zkp_impl" != 2 ]; then
   echo "Error: miner.zk-prover-impl can only be 1 or 2"
   exit 1
