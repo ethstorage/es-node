@@ -128,7 +128,7 @@ func checkState(oldState, newState *node.NodeState) {
 }
 
 func checkFinalState(state *node.NodeState) {
-	if state != nil {
+	if state == nil {
 		addErrorMessage("No state submitted during the test")
 		return
 	}
