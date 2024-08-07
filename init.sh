@@ -1,19 +1,7 @@
 #!/bin/bash
 
-# usage 1 (use go-rapisnark):
+# usage:
 # env ES_NODE_STORAGE_MINER=<miner> ./init.sh
-# usage 2 (use snarkjs, will check Node.js version and snarkjs installation):
-# env ES_NODE_STORAGE_MINER=<miner> ./init.sh --miner.zk-prover-impl 1
-
-if [ -z "$ES_NODE_STORAGE_MINER" ]; then
-  echo "Please provide 'ES_NODE_STORAGE_MINER' as an environment variable"
-  exit 1
-fi
-
-if [ ${#ES_NODE_STORAGE_MINER} -ne 42 ] || case $ES_NODE_STORAGE_MINER in 0x*) false;; *) true;; esac; then
-  echo "Error: ES_NODE_STORAGE_MINER should be prefixed with '0x' and have a total length of 42"
-  exit 1
-fi
 
 executable="./build/bin/es-node"
 echo "========== build info =================="
@@ -119,7 +107,6 @@ es_node_init="$executable init --shard_index 0 \
   --datadir $data_dir \
   --l1.rpc http://88.99.30.186:8545 \
   --storage.l1contract 0x804C520d3c084C805E37A35E90057Ac32831F96f \
-  --storage.miner $ES_NODE_STORAGE_MINER \
 $remaining_args"
 
 # create data file for shard 0 if not yet
