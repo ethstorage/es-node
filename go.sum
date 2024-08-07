@@ -162,6 +162,8 @@ github.com/ethereum/c-kzg-4844 v0.4.0 h1:3MS1s4JtA868KpJxroZoepdV0ZKBp3u/O5HcZ7R
 github.com/ethereum/c-kzg-4844 v0.4.0/go.mod h1:VewdlzQmpT5QSrVhbBuGoCdFJkpaJlO1aQputP83wc0=
 github.com/ethereum/go-ethereum v1.13.5 h1:U6TCRciCqZRe4FPXmy1sMGxTfuk8P7u2UoinF3VbaFk=
 github.com/ethereum/go-ethereum v1.13.5/go.mod h1:yMTu38GSuyxaYzQMViqNmQ1s3cE84abZexQmTgenWk0=
+github.com/ethstorage/billy v0.0.0-20240730021803-ca24378685e7 h1:wOhbhs4WO8Mf0LT9c2qRxUbspAU9Tg4olLiastQTO5A=
+github.com/ethstorage/billy v0.0.0-20240730021803-ca24378685e7/go.mod h1:y+M5PibhfdCZkQbwwFRIRIgGVc1txfqc3qvBeoQGoGw=
 github.com/ethstorage/go-iden3-crypto v0.0.0-20230406080944-d89aec086425 h1:dKQu1oXrt6ndFl4XtAZsfBubU8c5W59T85L8MGtWawE=
 github.com/ethstorage/go-iden3-crypto v0.0.0-20230406080944-d89aec086425/go.mod h1:dLpM4vEPJ3nDHzhWFXDjzkn1qHoBeOT/3UEhXsEsP3E=
 github.com/fasthttp-contrib/websocket v0.0.0-20160511215533-1f3b11f56072/go.mod h1:duJ4Jxv5lDcvg4QuQr0oowTf7dz4/CR8NtyCooz9HL8=

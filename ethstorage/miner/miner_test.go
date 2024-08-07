@@ -18,6 +18,8 @@ import (
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/event"
 	es "github.com/ethstorage/go-ethstorage/ethstorage"
+	"github.com/ethstorage/go-ethstorage/ethstorage/blobs"
+	"github.com/ethstorage/go-ethstorage/ethstorage/downloader"
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
 	esLog "github.com/ethstorage/go-ethstorage/ethstorage/log"
 	"github.com/ethstorage/go-ethstorage/ethstorage/p2p/protocol"
@@ -67,10 +69,19 @@ func newMiner(t *testing.T, storageMgr *es.StorageManager, client *eth.PollingCl
 	}
 	l1api := NewL1MiningAPI(client, nil, lg)
 	zkWorkingDir, _ := filepath.Abs("../prover")
+	zkey := filepath.Join(zkWorkingDir, prover.SnarkLib, defaultConfig.ZKeyFileName)
+	if _, err := os.Stat(zkey); os.IsNotExist(err) {
+		_, err := os.Create(zkey)
+		if err != nil {
+			t.Fatalf("Create failed %v", err)
+		}
+		defer os.Remove(zkey)
+	}
 	pvr := prover.NewKZGPoseidonProver(zkWorkingDir, defaultConfig.ZKeyFileName, defaultConfig.ZKProverMode, defaultConfig.ZKProverImpl, lg)
 	fd := new(event.Feed)
 	db := rawdb.NewMemoryDatabase()
-	miner := New(defaultConfig, db, storageMgr, l1api, &pvr, fd, lg)
+	br := blobs.NewBlobReader(downloader.NewBlobMemCache(), storageMgr, lg)
+	miner := New(defaultConfig, db, storageMgr, l1api, br, &pvr, fd, lg)
 	return miner
 }
 

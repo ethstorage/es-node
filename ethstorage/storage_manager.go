@@ -52,6 +52,24 @@ func NewStorageManager(sm *ShardManager, l1Source Il1Source) *StorageManager {
 	}
 }
 
+func (s *StorageManager) EncodeBlob(blob []byte, blobHash common.Hash, kvIdx, size uint64) []byte {
+	encodeType, encodeKey := s.getEncodingParams(kvIdx, blobHash)
+	return EncodeChunk(size, blob, encodeType, encodeKey)
+}
+
+func (s *StorageManager) DecodeBlob(blob []byte, blobHash common.Hash, kvIdx, size uint64) []byte {
+	encodeType, encodeKey := s.getEncodingParams(kvIdx, blobHash)
+	return DecodeChunk(size, blob, encodeType, encodeKey)
+}
+
+func (s *StorageManager) getEncodingParams(kvIdx uint64, blobHash common.Hash) (uint64, common.Hash) {
+	shardIdx := kvIdx >> s.KvEntriesBits()
+	encodeType, _ := s.GetShardEncodeType(shardIdx)
+	miner, _ := s.GetShardMiner(shardIdx)
+	encodeKey := CalcEncodeKey(blobHash, kvIdx, miner)
+	return encodeType, encodeKey
+}
+
 // DownloadFinished This function will be called when the node found new block are finalized, and it will update the
 // local L1 view and commit new blobs into local storage file.
 func (s *StorageManager) DownloadFinished(newL1 int64, kvIndices []uint64, blobs [][]byte, commits []common.Hash) error {
@@ -94,7 +112,7 @@ func (s *StorageManager) DownloadFinished(newL1 int64, kvIndices []uint64, blobs
 			for _, idx := range insertIdx {
 				c := prepareCommit(commits[idx])
 				// if return false, just ignore because we are not interested in it
-				_, err = s.shardManager.TryWrite(kvIndices[idx], blobs[idx], c)
+				_, err = s.shardManager.TryWriteEncoded(kvIndices[idx], blobs[idx], c)
 				if err != nil {
 					break
 				}

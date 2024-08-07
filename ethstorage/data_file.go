@@ -25,6 +25,8 @@ const (
 	VERSION = uint64(1)
 
 	HEADER_SIZE = 4096
+
+	SampleSizeBits = 5 // 32 bytes
 )
 
 // A DataFile represents a local file for a consecutive chunks
@@ -131,7 +133,7 @@ func (df *DataFile) ContainsKv(kvIdx uint64) bool {
 }
 
 func (df *DataFile) ContainsSample(sampleIdx uint64) bool {
-	return df.Contains(sampleIdx * 32 / df.chunkSize)
+	return df.Contains(sampleIdx << SampleSizeBits / df.chunkSize)
 }
 
 func (df *DataFile) ChunkIdxEnd() uint64 {
@@ -174,13 +176,13 @@ func (df *DataFile) ReadSample(sampleIdx uint64) (common.Hash, error) {
 	if !df.ContainsSample(sampleIdx) {
 		return common.Hash{}, fmt.Errorf("sample not found")
 	}
-
-	md := make([]byte, 32)
-	n, err := df.file.ReadAt(md, HEADER_SIZE+int64(sampleIdx*32)-int64(df.chunkIdxStart*df.chunkSize))
+	sampleSize := 1 << SampleSizeBits
+	md := make([]byte, sampleSize)
+	n, err := df.file.ReadAt(md, HEADER_SIZE+int64(sampleIdx<<SampleSizeBits)-int64(df.chunkIdxStart*df.chunkSize))
 	if err != nil {
 		return common.Hash{}, err
 	}
-	if n != 32 {
+	if n != sampleSize {
 		return common.Hash{}, fmt.Errorf("not full read")
 	}
 	return common.BytesToHash(md), nil
