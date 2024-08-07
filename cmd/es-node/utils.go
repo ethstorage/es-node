@@ -124,14 +124,6 @@ func getDifficulty(ctx context.Context, client *ethclient.Client, contract commo
 	return res[1].(*big.Int), nil
 }
 
-func getLastMineTime(ctx context.Context, client *ethclient.Client, contract common.Address, shardIdx uint64) (*big.Int, error) {
-	res, err := getMiningInfo(ctx, client, contract, shardIdx)
-	if err != nil {
-		return nil, err
-	}
-	return res[0].(*big.Int), nil
-}
-
 func getMiningInfo(ctx context.Context, client *ethclient.Client, contract common.Address, shardIdx uint64) ([]interface{}, error) {
 	uint256Type, _ := abi.NewType("uint256", "", nil)
 	dataField, _ := abi.Arguments{{Type: uint256Type}}.Pack(new(big.Int).SetUint64(shardIdx))
