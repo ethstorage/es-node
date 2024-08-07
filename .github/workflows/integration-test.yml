@@ -52,7 +52,6 @@ jobs:
 
       - name: Test
         run: |
-          cd ../..
           ./run-l2-it.sh > es-node-it.log&
           cd ./cmd/integration-test-server
           go build
