@@ -67,7 +67,7 @@ func NewConfig(ctx *cli.Context, log log.Logger) (*node.Config, error) {
 	}
 
 	dlConfig := NewDownloaderConfig(ctx)
-	minerConfig, err := NewMinerConfig(ctx, client, storageConfig.L1Contract)
+	minerConfig, err := NewMinerConfig(ctx, client, storageConfig.L1Contract, storageConfig.Miner)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load miner config: %w", err)
 	}
@@ -124,10 +124,13 @@ func NewConfig(ctx *cli.Context, log log.Logger) (*node.Config, error) {
 	return cfg, nil
 }
 
-func NewMinerConfig(ctx *cli.Context, client *ethclient.Client, l1Contract common.Address) (*miner.Config, error) {
+func NewMinerConfig(ctx *cli.Context, client *ethclient.Client, l1Contract, minerAddr common.Address) (*miner.Config, error) {
 	cliConfig := miner.ReadCLIConfig(ctx)
 	if !cliConfig.Enabled {
 		return nil, nil
+	}
+	if minerAddr == (common.Address{}) {
+		return nil, fmt.Errorf("miner address cannot be empty")
 	}
 	log.Debug("Read mining config from cli", "config", fmt.Sprintf("%+v", cliConfig))
 	err := cliConfig.Check()
@@ -243,6 +246,7 @@ func NewRollupConfig(ctx *cli.Context) (*rollup.EsConfig, error) {
 func NewStorageConfig(ctx *cli.Context, client *ethclient.Client) (*storage.StorageConfig, error) {
 	l1Contract := common.HexToAddress(ctx.GlobalString(flags.StorageL1Contract.Name))
 	miner := common.HexToAddress(ctx.GlobalString(flags.StorageMiner.Name))
+	log.Info("Loaded storage config", "l1Contract", l1Contract, "miner", miner)
 	storageCfg, err := initStorageConfig(context.Background(), client, l1Contract, miner)
 	if err != nil {
 		log.Error("Failed to load storage config from contract", "error", err)
