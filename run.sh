@@ -5,28 +5,7 @@
 # usage 2 (overriding rpc urls):
 # env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> ./run.sh --l1.rpc <el_rpc> --l1.beacon <cl_rpc>
 
-# Note: currently only zk prover mode 2 is supported
 zkey_file="./build/bin/snark_lib/zkey/blob_poseidon2.zkey"
-
-if [ -z "$ES_NODE_STORAGE_MINER" ]; then
-  echo "Please provide 'ES_NODE_STORAGE_MINER' as an environment variable"
-  exit 1
-fi
-
-if [ ${#ES_NODE_STORAGE_MINER} -ne 42 ] || case $ES_NODE_STORAGE_MINER in 0x*) false;; *) true;; esac; then
-  echo "Error: ES_NODE_STORAGE_MINER should be prefixed with '0x' and have a total length of 42"
-  exit 1
-fi
-
-if [ -z "$ES_NODE_SIGNER_PRIVATE_KEY" ]; then
-  echo "Please provide 'ES_NODE_SIGNER_PRIVATE_KEY' as an environment variable"
-  exit 1
-fi
-
-if [ ${#ES_NODE_SIGNER_PRIVATE_KEY} -ne 64 ]; then
-  echo "Error: ES_NODE_SIGNER_PRIVATE_KEY should have a length of 64"
-  exit 1
-fi
 
 executable="./build/bin/es-node"
 echo "========== build info =================="
@@ -36,21 +15,14 @@ echo "========================================"
 data_dir="./es-data"
 storage_file_0="$data_dir/shard-0.dat"
 
-if [ ! -e $storage_file_0 ]; then
-    echo "Error: storage file not found: ${storage_file_0}. Please run 'init.sh' first."
-    exit 1
-fi
-
 start_flags=" --network devnet \
   --datadir $data_dir \
   --storage.l1contract 0x804C520d3c084C805E37A35E90057Ac32831F96f \
   --storage.files $storage_file_0 \
-  --storage.miner $ES_NODE_STORAGE_MINER \
   --l1.rpc http://88.99.30.186:8545 \
   --l1.beacon http://88.99.30.186:3500 \
   --l1.beacon-based-time 1706684472 \
   --l1.beacon-based-slot 4245906 \
-  --signer.private-key $ES_NODE_SIGNER_PRIVATE_KEY \
   --miner.enabled \
   --miner.zkey $zkey_file \
   --miner.zk-prover-impl 1 \

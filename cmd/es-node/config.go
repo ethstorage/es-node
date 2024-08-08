@@ -127,6 +127,7 @@ func NewConfig(ctx *cli.Context, log log.Logger) (*node.Config, error) {
 func NewMinerConfig(ctx *cli.Context, client *ethclient.Client, l1Contract, minerAddr common.Address) (*miner.Config, error) {
 	cliConfig := miner.ReadCLIConfig(ctx)
 	if !cliConfig.Enabled {
+		log.Info("Miner is not enabled.")
 		return nil, nil
 	}
 	if minerAddr == (common.Address{}) {
