@@ -10,6 +10,7 @@ LDFLAGS := -ldflags "$(LDFLAGSSTRING)"
 
 es-node: build
 	cp -r ethstorage/prover/snark_lib build/bin
+	mkdir -p build/bin/snark_lib/zkey
 	mkdir -p build/bin/snarkbuild
 
 build:

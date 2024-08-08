@@ -181,13 +181,13 @@ func EsNodeInit(ctx *cli.Context) error {
 	}
 	log := eslog.NewLogger(logCfg)
 	log.Info("Will create data files for storage node")
-	l1Rpc := readRequiredFlag(ctx, flags.L1NodeAddr.Name)
-	contract := readRequiredFlag(ctx, flags.StorageL1Contract.Name)
+	l1Rpc := readRequiredFlag(ctx, flags.L1NodeAddr)
+	contract := readRequiredFlag(ctx, flags.StorageL1Contract)
 	if !common.IsHexAddress(contract) {
 		return fmt.Errorf("invalid contract address %s", contract)
 	}
 
-	datadir := readRequiredFlag(ctx, flags.DataDir.Name)
+	datadir := readRequiredFlag(ctx, flags.DataDir)
 	encodingType := ethstorage.ENCODE_BLOB_POSEIDON
 	miner := "0x"
 	if ctx.IsSet(encodingTypeFlagName) {
@@ -198,7 +198,7 @@ func EsNodeInit(ctx *cli.Context) error {
 		}
 	}
 	if encodingType != ethstorage.NO_ENCODE {
-		miner = readRequiredFlag(ctx, flags.StorageMiner.Name)
+		miner = readRequiredFlag(ctx, flags.StorageMiner)
 		if !common.IsHexAddress(miner) {
 			return fmt.Errorf("invalid miner address %s", miner)
 		}

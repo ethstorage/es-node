@@ -190,9 +190,10 @@ func sortBigIntSlice(slice []*big.Int) []int {
 	return indices
 }
 
-func readRequiredFlag(ctx *cli.Context, name string) string {
+func readRequiredFlag(ctx *cli.Context, flag cli.StringFlag) string {
+	name := flag.GetName()
 	if !ctx.IsSet(name) {
-		log.Crit("Flag is required", "flag", name)
+		log.Crit("Flag or environment variable is required", "flag", name, "envVar", flag.EnvVar)
 	}
 	value := ctx.String(name)
 	log.Info("Read flag", "name", name, "value", value)

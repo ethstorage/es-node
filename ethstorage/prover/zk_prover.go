@@ -27,14 +27,14 @@ const (
 )
 
 type ZKProver struct {
-	dir, zkeyName, wasmName string
+	dir, zkeyFile, wasmName string
 	lg                      log.Logger
 }
 
-func NewZKProver(workingDir, zkeyName, wasmName string, lg log.Logger) *ZKProver {
+func NewZKProver(workingDir, zkey, wasmName string, lg log.Logger) *ZKProver {
 	return &ZKProver{
 		dir:      workingDir,
-		zkeyName: zkeyName,
+		zkeyFile: zkey,
 		wasmName: wasmName,
 		lg:       lg,
 	}
@@ -146,7 +146,7 @@ func (p *ZKProver) prove(dir string, pubInputs []byte) ([]byte, string, error) {
 	proofFile := filepath.Join(buildDir, proofName)
 	publicFile := filepath.Join(buildDir, publicName)
 	cmd = exec.Command("snarkjs", "groth16", "prove",
-		filepath.Join(libDir, p.zkeyName),
+		p.zkeyFile,
 		wtnsFile,
 		proofFile,
 		publicFile,

@@ -6,7 +6,6 @@
 package miner
 
 import (
-	"math/big"
 	"os"
 	"path/filepath"
 	"runtime/debug"
@@ -14,7 +13,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/event"
 	es "github.com/ethstorage/go-ethstorage/ethstorage"
@@ -38,7 +36,6 @@ var (
 	kvSize       uint64 = 1 << kvSizeBits
 	kvEntries    uint64 = 1 << kvEntriesBits
 	shardID             = uint64(0)
-	value               = hexutil.EncodeUint64(10000000000000)
 	lg                  = esLog.NewLogger(esLog.DefaultCLIConfig())
 )
 
@@ -54,34 +51,32 @@ func initStorageManager(t *testing.T, client *eth.PollingClient) *es.StorageMana
 }
 
 func newMiner(t *testing.T, storageMgr *es.StorageManager, client *eth.PollingClient) *Miner {
-	defaultConfig := &Config{
-		RandomChecks:     2,
-		NonceLimit:       1048576,
-		MinimumDiff:      new(big.Int).SetUint64(5000000),
-		Cutoff:           new(big.Int).SetUint64(60),
-		DiffAdjDivisor:   new(big.Int).SetUint64(1024),
-		GasPrice:         nil,
-		PriorityGasPrice: new(big.Int).SetUint64(10),
-		ThreadsPerShard:  1,
-		ZKProverMode:     2,
-		ZKProverImpl:     1,
-		ZKeyFileName:     "blob_poseidon2.zkey",
-	}
-	l1api := NewL1MiningAPI(client, nil, lg)
+	testConfig := &DefaultConfig
+
 	zkWorkingDir, _ := filepath.Abs("../prover")
-	zkey := filepath.Join(zkWorkingDir, prover.SnarkLib, defaultConfig.ZKeyFileName)
+	testConfig.ZKWorkingDir = zkWorkingDir
+	dir := filepath.Join(zkWorkingDir, prover.SnarkLib, "zkey")
+	zkey := filepath.Join(dir, "blob_poseidon2.zkey")
+	testConfig.ZKeyFile = zkey
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		err := os.Mkdir(dir, 0755)
+		if err != nil {
+			t.Fatalf("Mkdir failed %v", err)
+		}
+	}
 	if _, err := os.Stat(zkey); os.IsNotExist(err) {
 		_, err := os.Create(zkey)
 		if err != nil {
 			t.Fatalf("Create failed %v", err)
 		}
-		defer os.Remove(zkey)
+		defer os.RemoveAll(dir)
 	}
-	pvr := prover.NewKZGPoseidonProver(zkWorkingDir, defaultConfig.ZKeyFileName, defaultConfig.ZKProverMode, defaultConfig.ZKProverImpl, lg)
+	pvr := prover.NewKZGPoseidonProver(zkWorkingDir, zkey, testConfig.ZKProverMode, testConfig.ZKProverImpl, lg)
 	fd := new(event.Feed)
 	db := rawdb.NewMemoryDatabase()
 	br := blobs.NewBlobReader(downloader.NewBlobMemCache(), storageMgr, lg)
-	miner := New(defaultConfig, db, storageMgr, l1api, br, &pvr, fd, lg)
+	l1api := NewL1MiningAPI(client, nil, lg)
+	miner := New(testConfig, db, storageMgr, l1api, br, &pvr, fd, lg)
 	return miner
 }
 

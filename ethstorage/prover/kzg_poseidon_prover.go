@@ -40,18 +40,17 @@ type KZGPoseidonProver struct {
 
 // Prover that can be used directly by miner to prove both KZG and Poseidon hash
 // workingDir specifies the working directory of the command relative to the caller.
-// zkeyFileName specifies the zkey file name to generate snark proof
+// zkeyFile specifies the zkey file with path to generate snark proof
 // zkProverMode specifies the mode of the zk prover, 1 for per sample, 2 for samples
 // zkProverImpl specifies the implementation of the snark prover, 1 for snarkjs, 2 for go-rapidsnark
 // lg specifies the logger to log the info
 // returns a prover that can generate a combined KZG + zk proof
-func NewKZGPoseidonProver(workingDir, zkeyFileName string, zkProverMode, zkProverImpl uint64, lg log.Logger) KZGPoseidonProver {
+func NewKZGPoseidonProver(workingDir, zkeyFile string, zkProverMode, zkProverImpl uint64, lg log.Logger) KZGPoseidonProver {
 	// check dependencies when es-node starts
 	libDir := filepath.Join(workingDir, SnarkLib)
 	if _, err := os.Stat(libDir); errors.Is(err, os.ErrNotExist) {
 		lg.Crit("Init ZK prover failed", "error", "snark lib does not exist", "dir", libDir)
 	}
-	zkeyFile := filepath.Join(libDir, zkeyFileName)
 	if _, err := os.Stat(zkeyFile); errors.Is(err, os.ErrNotExist) {
 		lg.Crit("Init ZK prover failed", "error", "zkey does not exist", "dir", zkeyFile)
 	}
@@ -71,7 +70,7 @@ func NewKZGPoseidonProver(workingDir, zkeyFileName string, zkProverMode, zkProve
 		zkProverMode: zkProverMode,
 		zkProverImpl: zkProverImpl,
 		libDir:       libDir,
-		zkey:         zkeyFileName,
+		zkey:         zkeyFile,
 		wasm:         wasmName,
 		lg:           lg,
 	}
