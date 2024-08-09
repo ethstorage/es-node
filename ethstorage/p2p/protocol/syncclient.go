@@ -895,12 +895,9 @@ func (s *SyncClient) assignFillEmptyBlobTasks() {
 					s.notifyUpdate()
 					s.wg.Done()
 				}()
-				t := time.Now()
 				next, err := s.FillFileWithEmptyBlob(start, limit)
 				if err != nil {
 					log.Warn("Fill in empty fail", "err", err.Error())
-				} else {
-					log.Debug("Fill in empty done", "time", time.Now().Sub(t).Seconds())
 				}
 				filled := next - start
 
