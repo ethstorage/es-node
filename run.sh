@@ -1,10 +1,14 @@
 #!/bin/bash
 
-# usage 1:
+# usage example 1:
 # env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> ./run.sh
-# usage 2 (overriding rpc urls):
+# usage example 2 (overriding rpc urls):
 # env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> ./run.sh --l1.rpc <el_rpc> --l1.beacon <cl_rpc>
+# usage example 3 (overriding zk options, make sure to use the same configuration when running both init.sh and run.sh):
+# env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> ./run.sh --miner.zk-prover-impl 2 --miner.zk-prover-mode 1
 
+# The following is the default zkey file path downloaded by `init.sh`, which is compatible with zk mode 2. 
+# You can override the zkey file by using the `--miner.zkey` flag. Just ensure that the provided zkey file is compatible with the zkey mode.
 zkey_file="./build/bin/snark_lib/zkey/blob_poseidon2.zkey"
 
 executable="./build/bin/es-node"
@@ -25,7 +29,6 @@ start_flags=" --network devnet \
   --l1.beacon-based-slot 4245906 \
   --miner.enabled \
   --miner.zkey $zkey_file \
-  --miner.zk-prover-impl 1 \
   --download.thread 32 \
   --state.upload.url http://metrics.ethstorage.io:8080 \
   --p2p.listen.udp 30305 \
