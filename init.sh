@@ -13,7 +13,6 @@ zkp_impl=1
 # ZK prover mode, 1: one proof per sample, 2: one proof for multiple samples.
 # Note: currently only zk prover mode 2 is supported
 zkp_mode=2
-#!/bin/bash
 
 remaining_args=""
 
