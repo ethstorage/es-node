@@ -20,7 +20,6 @@ const (
 	GasPriceFlagName         = "miner.gas-price"
 	PriorityGasPriceFlagName = "miner.priority-gas-price"
 	ZKeyFileNameFlagName     = "miner.zkey"
-	ZKWorkingDirFlagName     = "miner.zk-working-dir"
 	ZKProverModeFlagName     = "miner.zk-prover-mode"
 	ZKProverImplFlagName     = "miner.zk-prover-impl"
 	ThreadsPerShardFlagName  = "miner.threads-per-shard"
@@ -58,12 +57,6 @@ func CLIFlags(envPrefix string) []cli.Flag {
 			Usage:  "zkey file name with path",
 			Value:  DefaultConfig.ZKeyFile,
 			EnvVar: rollup.PrefixEnvVar(envPrefix, "ZKEY_FILE"),
-		},
-		cli.StringFlag{
-			Name:   ZKWorkingDirFlagName,
-			Usage:  "Path to the snark library folder",
-			Value:  DefaultConfig.ZKWorkingDir,
-			EnvVar: rollup.PrefixEnvVar(envPrefix, "ZK_WORKING_DIR"),
 		},
 		cli.Uint64Flag{
 			Name:   ZKProverModeFlagName,
@@ -145,7 +138,7 @@ func ReadCLIConfig(ctx *cli.Context) CLIConfig {
 		PriorityGasPrice: types.GlobalBig(ctx, PriorityGasPriceFlagName),
 		MinimumProfit:    types.GlobalBig(ctx, MinimumProfitFlagName),
 		ZKeyFile:         ctx.GlobalString(ZKeyFileNameFlagName),
-		ZKWorkingDir:     ctx.GlobalString(ZKWorkingDirFlagName),
+		ZKWorkingDir:     DefaultConfig.ZKWorkingDir,
 		ZKProverMode:     ctx.GlobalUint64(ZKProverModeFlagName),
 		ZKProverImpl:     ctx.GlobalUint64(ZKProverImplFlagName),
 		ThreadsPerShard:  ctx.GlobalUint64(ThreadsPerShardFlagName),

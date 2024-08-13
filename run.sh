@@ -1,32 +1,15 @@
 #!/bin/bash
 
-# usage 1:
+# usage example 1:
 # env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> ./run.sh
-# usage 2 (overriding rpc urls):
+# usage example 2 (overriding rpc urls):
 # env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> ./run.sh --l1.rpc <el_rpc> --l1.beacon <cl_rpc>
+# usage example 3 (overriding zk options, make sure to use the same configuration when running both init.sh and run.sh):
+# env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> ./run.sh --miner.zk-prover-impl 2 --miner.zk-prover-mode 1
 
-# Note: currently only zk prover mode 2 is supported
+# The following is the default zkey file path downloaded by `init.sh`, which is compatible with zk mode 2. 
+# You can override the zkey file by using the `--miner.zkey` flag. Just ensure that the provided zkey file is compatible with the zkey mode.
 zkey_file="./build/bin/snark_lib/zkey/blob_poseidon2.zkey"
-
-if [ -z "$ES_NODE_STORAGE_MINER" ]; then
-  echo "Please provide 'ES_NODE_STORAGE_MINER' as an environment variable"
-  exit 1
-fi
-
-if [ ${#ES_NODE_STORAGE_MINER} -ne 42 ] || case $ES_NODE_STORAGE_MINER in 0x*) false;; *) true;; esac; then
-  echo "Error: ES_NODE_STORAGE_MINER should be prefixed with '0x' and have a total length of 42"
-  exit 1
-fi
-
-if [ -z "$ES_NODE_SIGNER_PRIVATE_KEY" ]; then
-  echo "Please provide 'ES_NODE_SIGNER_PRIVATE_KEY' as an environment variable"
-  exit 1
-fi
-
-if [ ${#ES_NODE_SIGNER_PRIVATE_KEY} -ne 64 ]; then
-  echo "Error: ES_NODE_SIGNER_PRIVATE_KEY should have a length of 64"
-  exit 1
-fi
 
 executable="./build/bin/es-node"
 echo "========== build info =================="
@@ -35,7 +18,7 @@ echo "========================================"
 
 data_dir="./es-data"
 file_flags=""
- 
+
 for file in ${data_dir}/shard-[0-9]*.dat; do 
     if [ -f "$file" ]; then 
         file_flags+=" --storage.files $file"
@@ -51,10 +34,8 @@ start_flags=" --network devnet \
   --l1.beacon http://88.99.30.186:3500 \
   --l1.beacon-based-time 1706684472 \
   --l1.beacon-based-slot 4245906 \
-  --signer.private-key $ES_NODE_SIGNER_PRIVATE_KEY \
   --miner.enabled \
   --miner.zkey $zkey_file \
-  --miner.zk-prover-impl 1 \
   --download.thread 32 \
   --state.upload.url http://metrics.ethstorage.io:8080 \
   --p2p.listen.udp 30305 \
