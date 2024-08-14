@@ -31,31 +31,40 @@ import (
 	"github.com/ethstorage/go-ethstorage/ethstorage/storage"
 )
 
+var (
+	datadir         string
+	randaoSourceURL = os.Getenv("ES_NODE_RANDAO_RPC")
+)
+
 const (
 	maxBlobsPerTx = 3
 	dataFileName  = "shard-%d.dat"
 )
 
-var shardIds = []uint64{0, 1}
-
 func TestMining(t *testing.T) {
+	setup(t)
+	t.Cleanup(func() {
+		teardown(t)
+	})
+
 	contract := l1Contract
 	lg.Info("Test mining", "l1Endpoint", l1Endpoint, "contract", contract)
-	pClient, err := eth.Dial(l1Endpoint, contract, 12, lg)
+	pClient, err := eth.Dial(l1Endpoint, contract, 2, lg)
 	if err != nil {
 		t.Fatalf("Failed to connect to the Ethereum client: %v", err)
 	}
-	// verify it is an empty contract
+	storConfig := initStorageConfig(t, pClient, contract, minerAddr)
+
 	lastKv, err := pClient.GetStorageLastBlobIdx(rpc.LatestBlockNumber.Int64())
 	if err != nil {
 		t.Fatalf("Failed to get lastKvIdx: %v", err)
 	}
 	lg.Info("lastKv", "lastKv", lastKv)
-	if lastKv != 0 {
-		t.Fatalf("A newly deployed storage contract is required")
-	}
-	storConfig := initStorageConfig(t, pClient, contract, minerAddr)
-	files, err := createDataFiles(storConfig)
+	curShard := lastKv / storConfig.KvEntriesPerShard
+	lg.Info("Current shard", "shardId", curShard)
+	shardIds := []uint64{curShard + 1, curShard + 2}
+	lg.Info("Shards to mine", "shardIds", shardIds)
+	files, err := createDataFiles(storConfig, shardIds)
 	if err != nil {
 		t.Fatalf("Create data files error: %v", err)
 	}
@@ -71,7 +80,12 @@ func TestMining(t *testing.T) {
 	resourcesCtx, close := context.WithCancel(context.Background())
 	feed := new(event.Feed)
 
-	l1api := miner.NewL1MiningAPI(pClient, nil, lg)
+	rc, err := eth.DialRandaoSource(resourcesCtx, randaoSourceURL, l1Endpoint, 2, lg)
+	if err != nil {
+		t.Fatalf("Failed to connect to the randao source: %v", err)
+	}
+
+	l1api := miner.NewL1MiningAPI(pClient, rc, lg)
 	pvr := prover.NewKZGPoseidonProver(
 		miningConfig.ZKWorkingDir,
 		miningConfig.ZKeyFile,
@@ -103,8 +117,10 @@ func TestMining(t *testing.T) {
 		}
 		lg.Error("L1 heads subscription error", "err", err)
 	}()
-	fillEmpty(t, storageManager)
-	prepareData(t, pClient, storageManager, miningConfig.StorageCost.String())
+	if err := fillEmpty(storageManager, lastKv); err != nil {
+		t.Fatalf("Failed to fill empty: %v", err)
+	}
+	prepareData(t, pClient, storageManager, miningConfig.StorageCost)
 	mnr.Start()
 	var wg sync.WaitGroup
 	minedShardSig := make(chan uint64, len(shardIds))
@@ -215,19 +231,20 @@ func initShardManager(storConfig storage.StorageConfig) (*ethstorage.ShardManage
 	return shardManager, nil
 }
 
-func fillEmpty(t *testing.T, storageMgr *ethstorage.StorageManager) {
-	lastKvIdx := storageMgr.LastKvIndex()
-	totalEntries := storageMgr.KvEntries() * uint64(len(shardIds))
+func fillEmpty(storageMgr *ethstorage.StorageManager, lastKvIdx uint64) error {
+	totalEntries := storageMgr.KvEntries() * 2
 	lg.Info("Filling empty", "lastKvIdx", lastKvIdx)
-	inserted, next, err := storageMgr.CommitEmptyBlobs(lastKvIdx, totalEntries-1)
+	inserted, next, err := storageMgr.CommitEmptyBlobs(lastKvIdx+1, lastKvIdx+totalEntries)
 	if err != nil {
-		t.Fatalf("Commit empty blobs failed %v", err)
+		return err
 	}
 	lg.Info("Filling empty done", "inserted", inserted, "next", next)
+	return nil
 }
 
-func prepareData(t *testing.T, l1Client *eth.PollingClient, storageMgr *ethstorage.StorageManager, value string) {
-	data := generateRandomContent(124 * 5)
+// fill contract with 2 shards of blobs
+func prepareData(t *testing.T, l1Client *eth.PollingClient, storageMgr *ethstorage.StorageManager, value *big.Int) {
+	data := generateRandomBlobs(int(storageMgr.KvEntries() * 2))
 	blobs := utils.EncodeBlobs(data)
 	t.Logf("Blobs len %d \n", len(blobs))
 	var hashs []common.Hash
@@ -258,7 +275,8 @@ func prepareData(t *testing.T, l1Client *eth.PollingClient, storageMgr *ethstora
 		if len(blobData) == 0 {
 			break
 		}
-		kvIdxes, dataHashes, err := utils.UploadBlobs(l1Client, l1Endpoint, privateKey, chainID.String(), storageMgr.ContractAddress(), blobData, false, value)
+		totalValue := new(big.Int).Mul(value, big.NewInt(int64(blobsPerTx)))
+		kvIdxes, dataHashes, err := utils.UploadBlobs(l1Client, l1Endpoint, privateKey, chainID.String(), storageMgr.ContractAddress(), blobData, false, totalValue.String())
 		if err != nil {
 			t.Fatalf("Upload blobs failed %v", err)
 		}
@@ -285,10 +303,10 @@ func prepareData(t *testing.T, l1Client *eth.PollingClient, storageMgr *ethstora
 	}
 }
 
-func createDataFiles(cfg *storage.StorageConfig) ([]string, error) {
+func createDataFiles(cfg *storage.StorageConfig, shardIds []uint64) ([]string, error) {
 	var files []string
 	for _, shardIdx := range shardIds {
-		fileName := fmt.Sprintf(dataFileName, shardIdx)
+		fileName := filepath.Join(datadir, fmt.Sprintf(dataFileName, shardIdx))
 		if _, err := os.Stat(fileName); err == nil {
 			lg.Warn("Creating data file: file already exists, will be overwritten", "file", fileName)
 		}
@@ -375,18 +393,38 @@ func initMiningConfig(t *testing.T, client *eth.PollingClient) *miner.Config {
 		t.Fatal("get storageCost", err)
 	}
 	miningConfig.StorageCost = new(big.Int).SetBytes(result)
+	t.Logf("storageCost=%d\n", miningConfig.StorageCost.Int64())
 	result, err = client.ReadContractField("prepaidAmount", nil)
 	if err != nil {
 		t.Fatal("get prepaidAmount", err)
 	}
 	miningConfig.PrepaidAmount = new(big.Int).SetBytes(result)
-
-	miningConfig.ZKeyFile = zkey2Name
 	proverPath, _ := filepath.Abs(prPath)
+	zkeyFull := filepath.Join(proverPath, prover.SnarkLib, zkey2Name)
+	if _, err := os.Stat(zkeyFull); os.IsNotExist(err) {
+		t.Fatalf("%s not found", zkeyFull)
+	}
+	miningConfig.ZKeyFile = zkeyFull
 	miningConfig.ZKWorkingDir = proverPath
 	miningConfig.ZKProverMode = 2
 	miningConfig.ZKProverImpl = 2
 	miningConfig.ThreadsPerShard = 2
 	miningConfig.MinimumProfit = new(big.Int).SetInt64(-1e18)
 	return miningConfig
+}
+
+func setup(t *testing.T) {
+	datadir = t.TempDir()
+	err := os.MkdirAll(datadir, 0700)
+	if err != nil {
+		t.Fatalf("Failed to create datadir: %v", err)
+	}
+	t.Logf("datadir %s", datadir)
+}
+
+func teardown(t *testing.T) {
+	err := os.RemoveAll(datadir)
+	if err != nil {
+		t.Errorf("Failed to remove datadir: %v", err)
+	}
 }

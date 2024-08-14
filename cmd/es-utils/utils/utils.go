@@ -316,6 +316,8 @@ func UploadBlobs(
 	}
 	signer := crypto.PubkeyToAddress(key.PublicKey)
 	var keys []common.Hash
+	var blobIndex []*big.Int
+	var lengthes []*big.Int
 
 	var blobs []kzg4844.Blob
 	if needEncoding {
@@ -325,10 +327,23 @@ func UploadBlobs(
 	}
 	for i, blob := range blobs {
 		keys = append(keys, genKey(signer, i, blob[:]))
+		blobIndex = append(blobIndex, new(big.Int).SetUint64(uint64(i)))
+		lengthes = append(lengthes, new(big.Int).SetUint64(BlobSize))
 	}
 	bytes32Array, _ := abi.NewType("bytes32[]", "", nil)
-	dataField, _ := abi.Arguments{{Type: bytes32Array}}.Pack(keys)
-	h := crypto.Keccak256Hash([]byte("putBlobs(bytes32[])"))
+	uint256Array, _ := abi.NewType("uint256[]", "", nil)
+	args := abi.Arguments{
+		{Type: bytes32Array},
+		{Type: uint256Array},
+		{Type: uint256Array},
+	}
+	fmt.Println("blobIndex", blobIndex, "lengthes", lengthes)
+	dataField, err := args.Pack(keys, blobIndex, lengthes)
+	if err != nil {
+		log.Error("Failed to pack data", "err", err)
+		return nil, nil, err
+	}
+	h := crypto.Keccak256Hash([]byte("putBlobs(bytes32[],uint256[],uint256[])"))
 	calldata := "0x" + common.Bytes2Hex(append(h[0:4], dataField...))
 	tx := SendBlobTx(
 		rpc,
@@ -391,11 +406,11 @@ func UploadBlobs(
 }
 
 func queryBlobBaseFee(l1 *ethclient.Client) (*big.Int, error) {
-	block, err := l1.BlockByNumber(context.Background(), new(big.Int).SetInt64(rpc.LatestBlockNumber.Int64()))
+	block, err := l1.HeaderByNumber(context.Background(), nil)
 	if err != nil {
 		return nil, err
 	}
-	excessBlobGas := eip4844.CalcExcessBlobGas(*block.ExcessBlobGas(), *block.BlobGasUsed())
+	excessBlobGas := eip4844.CalcExcessBlobGas(*block.ExcessBlobGas, *block.BlobGasUsed)
 	blobBaseFee := eip4844.CalcBlobFee(excessBlobGas)
 	return blobBaseFee, nil
 }
