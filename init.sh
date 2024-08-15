@@ -13,6 +13,7 @@ zkp_impl=1
 # ZK prover mode, 1: one proof per sample, 2: one proof for multiple samples.
 # Note: currently only zk prover mode 2 is supported
 zkp_mode=2
+data_dir="./es-data"
 
 remaining_args=""
 
@@ -22,6 +23,9 @@ while [ $# -gt 0 ]; do
         shift 2
     elif [[ $1 == --miner.zk-prover-mode ]]; then
         zkp_mode=$2
+        shift 2
+    elif [[ $1 == --datadir ]]; then
+        data_dir=$2
         shift 2
     else
         remaining_args="$remaining_args $1"
@@ -99,7 +103,6 @@ if [ "$zkp_impl" = 1 ]; then
 
 fi
 
-data_dir="./es-data"
 storage_file_0="$data_dir/shard-0.dat"
 
 es_node_init="$executable init --shard_index 0 \

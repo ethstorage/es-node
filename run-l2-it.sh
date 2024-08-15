@@ -1,12 +1,5 @@
 #!/bin/bash
 
-# usage:
-# env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> ES_NODE_CONTRACT_ADDRESS=<your_contract_address> ./run-l2-it.sh
-# for one zk proof per sample (if the storage contract supports):
-# env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> ES_NODE_CONTRACT_ADDRESS=<your_contract_address> ./run-l2-it.sh --miner.zk-prover-mode 1 --l1.rpc <el_rpc> --l1.beacon <cl_rpc>
-
-
-executable="./build/bin/es-node"
 data_dir="./es-data-it"
 storage_file_0="$data_dir/shard-0.dat"
 
@@ -20,11 +13,17 @@ mkdir ${data_dir}
   --storage.l1contract $ES_NODE_CONTRACT_ADDRESS
 
 
-./run-l2.sh \
+exec ./build/bin/es-node \
   --network integration \
   --datadir $data_dir \
   --storage.files $storage_file_0 \
   --storage.l1contract $ES_NODE_CONTRACT_ADDRESS \
+  --miner.enabled \
+  --miner.zkey $zkey_file \
+  --l1.block_time 2 \
+  --l1.rpc http://65.109.20.29:8545 \
+  --da.url http://65.109.20.29:8888 \
+  --randao.url http://88.99.30.186:8545 \
   --state.upload.url http://127.0.0.1:9096 \
   --rpc.port 9596 \
   --p2p.listen.udp 30396 \
@@ -33,4 +32,3 @@ mkdir ${data_dir}
   --p2p.peerstore.path $data_dir/esnode_peerstore_db \
   --p2p.discovery.path $data_dir/esnode_discovery_db \
   --p2p.bootnodes enr:-Li4QBp6QW2ji7JF-3yijZrQ54PqPZ-Io_xEtMUslxxcmGS5TAXiiU6hypBZbB_atxh2Pc72-MgonzU5_R-_qd_PBXyGAZDucmwzimV0aHN0b3JhZ2XbAYDY15SXhtonBXvE13WNGfkk7Nj9Y4_Qr8GAgmlkgnY0gmlwhFhjHrqJc2VjcDI1NmsxoQJ8KIsZjyfFPHZOR66JORtqr5ax0QU6QmvT6QE0QllVZIN0Y3CCJE-DdWRwgna7
-
