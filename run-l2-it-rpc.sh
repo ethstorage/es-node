@@ -2,6 +2,7 @@
 
 data_dir="./es-data-it-bootnode"
 storage_file_0="$data_dir/shard-0.dat"
+zkey_file="./build/bin/snark_lib/zkey/blob_poseidon2.zkey"
 
 if test -d  ${data_dir} ; then
   rm -r ${data_dir}
