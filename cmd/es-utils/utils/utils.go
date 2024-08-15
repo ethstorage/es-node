@@ -16,7 +16,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus/misc/eip4844"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/crypto/kzg4844"
@@ -330,6 +329,7 @@ func UploadBlobs(
 		blobIndex = append(blobIndex, new(big.Int).SetUint64(uint64(i)))
 		lengthes = append(lengthes, new(big.Int).SetUint64(BlobSize))
 	}
+	log.Info("blobs", "keys", keys, "blobIndexes", blobIndex, "sizes", lengthes)
 	bytes32Array, _ := abi.NewType("bytes32[]", "", nil)
 	uint256Array, _ := abi.NewType("uint256[]", "", nil)
 	args := abi.Arguments{
@@ -337,7 +337,6 @@ func UploadBlobs(
 		{Type: uint256Array},
 		{Type: uint256Array},
 	}
-	fmt.Println("blobIndex", blobIndex, "lengthes", lengthes)
 	dataField, err := args.Pack(keys, blobIndex, lengthes)
 	if err != nil {
 		log.Error("Failed to pack data", "err", err)
@@ -402,20 +401,23 @@ func UploadBlobs(
 		log.Info("Timed out for receipt, query contract for data hash...")
 	}
 	// if wait receipt timed out or failed, query contract for data hash
-	return getKvInfo(pc, contractAddr, len(blobs))
+	return getKvInfo(pc, len(blobs))
 }
 
 func queryBlobBaseFee(l1 *ethclient.Client) (*big.Int, error) {
-	block, err := l1.HeaderByNumber(context.Background(), nil)
+	var hex string
+	err := l1.Client().CallContext(context.Background(), &hex, "eth_blobBaseFee")
 	if err != nil {
 		return nil, err
 	}
-	excessBlobGas := eip4844.CalcExcessBlobGas(*block.ExcessBlobGas, *block.BlobGasUsed)
-	blobBaseFee := eip4844.CalcBlobFee(excessBlobGas)
+	blobBaseFee, ok := new(big.Int).SetString(hex, 0)
+	if !ok {
+		return nil, errors.New("invalid blob base fee")
+	}
 	return blobBaseFee, nil
 }
 
-func getKvInfo(pc *eth.PollingClient, contractAddr common.Address, blobLen int) ([]uint64, []common.Hash, error) {
+func getKvInfo(pc *eth.PollingClient, blobLen int) ([]uint64, []common.Hash, error) {
 	lastIdx, err := pc.GetStorageLastBlobIdx(rpc.LatestBlockNumber.Int64())
 	if err != nil {
 		return nil, nil, err
