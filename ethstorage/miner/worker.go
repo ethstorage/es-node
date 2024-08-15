@@ -456,6 +456,9 @@ func (w *worker) resultLoop() {
 			errorCache = append(errorCache, err)
 		case <-w.exitCh:
 			w.lg.Warn("Worker is exiting from result loop...")
+			for _, e := range errorCache {
+				w.lg.Error("Mining error since es-node launched", "err", e)
+			}
 			return
 		}
 	}
