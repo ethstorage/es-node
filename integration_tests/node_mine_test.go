@@ -37,7 +37,7 @@ var (
 )
 
 const (
-	maxBlobsPerTx = 3
+	maxBlobsPerTx = 6
 	dataFileName  = "shard-%d.dat"
 )
 
@@ -54,7 +54,6 @@ func TestMining(t *testing.T) {
 		t.Fatalf("Failed to connect to the Ethereum client: %v", err)
 	}
 	storConfig := initStorageConfig(t, pClient, contract, minerAddr)
-
 	lastKv, err := pClient.GetStorageLastBlobIdx(rpc.LatestBlockNumber.Int64())
 	if err != nil {
 		t.Fatalf("Failed to get lastKvIdx: %v", err)
@@ -98,11 +97,12 @@ func TestMining(t *testing.T) {
 	mnr := miner.New(miningConfig, db, storageManager, l1api, br, &pvr, feed, lg)
 	lg.Info("Initialized miner")
 
-	l1HeadsSub := event.ResubscribeErr(time.Second*10, func(ctx context.Context, err error) (event.Subscription, error) {
+	randaoHeadsSub := event.ResubscribeErr(time.Second*10, func(ctx context.Context, err error) (event.Subscription, error) {
 		if err != nil {
-			lg.Warn("Resubscribing after failed L1 subscription", "err", err)
+			lg.Warn("Resubscribing after failed randao head subscription", "err", err)
 		}
-		return eth.WatchHeadChanges(resourcesCtx, pClient, func(ctx context.Context, sig eth.L1BlockRef) {
+		return eth.WatchHeadChanges(resourcesCtx, rc, func(ctx context.Context, sig eth.L1BlockRef) {
+			lg.Debug("OnNewRandaoSourceHead", "blockNumber", sig.Number)
 			select {
 			case mnr.ChainHeadCh <- sig:
 			default:
@@ -110,17 +110,19 @@ func TestMining(t *testing.T) {
 			}
 		})
 	})
+	lg.Info("Randao head subscribed")
 	go func() {
-		err, ok := <-l1HeadsSub.Err()
+		err, ok := <-randaoHeadsSub.Err()
 		if !ok {
 			return
 		}
-		lg.Error("L1 heads subscription error", "err", err)
+		lg.Error("Randao heads subscription error", "err", err)
 	}()
-	if err := fillEmpty(storageManager, lastKv); err != nil {
+
+	if err := fillEmpty(storageManager, shardIds); err != nil {
 		t.Fatalf("Failed to fill empty: %v", err)
 	}
-	prepareData(t, pClient, storageManager, miningConfig.StorageCost)
+	prepareData(t, pClient, storageManager)
 	mnr.Start()
 	var wg sync.WaitGroup
 	minedShardSig := make(chan uint64, len(shardIds))
@@ -157,14 +159,14 @@ func TestMining(t *testing.T) {
 			timeout := time.After(miningTime * time.Second)
 			select {
 			case minedShard := <-minedShardSig:
-				lg.Info(fmt.Sprintf("Shard %d successfully mined, will start next shard: %d", minedShard, i+1))
+				lg.Info(fmt.Sprintf("Shard %d successfully mined, will start next shard: %d", minedShard, shardIds[i+1]))
 			case <-timeout:
-				lg.Info(fmt.Sprintf("Shard %d has been mined for %ds, will start next shard: %d", i, miningTime, i+1))
+				lg.Info(fmt.Sprintf("Shard %d has been mined for %ds, will start next shard: %d", shardIds[i], miningTime, shardIds[i+1]))
 			}
 		}
 	}
 	wg.Wait()
-	l1HeadsSub.Unsubscribe()
+	randaoHeadsSub.Unsubscribe()
 	mnr.Close()
 	close()
 }
@@ -231,10 +233,11 @@ func initShardManager(storConfig storage.StorageConfig) (*ethstorage.ShardManage
 	return shardManager, nil
 }
 
-func fillEmpty(storageMgr *ethstorage.StorageManager, lastKvIdx uint64) error {
-	totalEntries := storageMgr.KvEntries() * 2
-	lg.Info("Filling empty", "lastKvIdx", lastKvIdx)
-	inserted, next, err := storageMgr.CommitEmptyBlobs(lastKvIdx+1, lastKvIdx+totalEntries)
+func fillEmpty(storageMgr *ethstorage.StorageManager, shards []uint64) error {
+	start := shards[0] * storageMgr.KvEntries()
+	totalEntries := storageMgr.KvEntries()*uint64(len(shards)) - 1
+	lg.Info("Filling empty to shards", "start", start, "end", start+totalEntries)
+	inserted, next, err := storageMgr.CommitEmptyBlobs(start, start+totalEntries)
 	if err != nil {
 		return err
 	}
@@ -242,9 +245,9 @@ func fillEmpty(storageMgr *ethstorage.StorageManager, lastKvIdx uint64) error {
 	return nil
 }
 
-// fill contract with 2 shards of blobs
-func prepareData(t *testing.T, l1Client *eth.PollingClient, storageMgr *ethstorage.StorageManager, value *big.Int) {
-	data := generateRandomBlobs(int(storageMgr.KvEntries() * 2))
+func prepareData(t *testing.T, l1Client *eth.PollingClient, storageMgr *ethstorage.StorageManager) {
+	// fill contract with almost 2 shards of blobs
+	data := generateRandomBlobs(int(storageMgr.KvEntries()*2) - 1)
 	blobs := utils.EncodeBlobs(data)
 	t.Logf("Blobs len %d \n", len(blobs))
 	var hashs []common.Hash
@@ -262,6 +265,12 @@ func prepareData(t *testing.T, l1Client *eth.PollingClient, storageMgr *ethstora
 	if err != nil {
 		t.Fatalf("Get chain id failed %v", err)
 	}
+	result, err := l1Client.ReadContractField("upfrontPayment", nil)
+	if err != nil {
+		t.Fatal("get upfrontPayment", err)
+	}
+	payment := new(big.Int).SetBytes(result)
+	lg.Info("Query upfront payment", "upfrontPayment", payment)
 	for i := 0; i < txs; i++ {
 		blobsPerTx := maxBlobsPerTx
 		if i == txs-1 {
@@ -275,10 +284,11 @@ func prepareData(t *testing.T, l1Client *eth.PollingClient, storageMgr *ethstora
 		if len(blobData) == 0 {
 			break
 		}
-		totalValue := new(big.Int).Mul(value, big.NewInt(int64(blobsPerTx)))
+		totalValue := new(big.Int).Mul(payment, big.NewInt(int64(blobsPerTx)))
+		totalValue = totalValue.Div(totalValue.Mul(totalValue, big.NewInt(11)), big.NewInt(10))
 		kvIdxes, dataHashes, err := utils.UploadBlobs(l1Client, l1Endpoint, privateKey, chainID.String(), storageMgr.ContractAddress(), blobData, false, totalValue.String())
 		if err != nil {
-			t.Fatalf("Upload blobs failed %v", err)
+			t.Fatalf("Upload blobs failed: %v", err)
 		}
 		t.Logf("kvIdxes=%v \n", kvIdxes)
 		t.Logf("dataHashes=%x \n", dataHashes)
@@ -294,12 +304,16 @@ func prepareData(t *testing.T, l1Client *eth.PollingClient, storageMgr *ethstora
 	if err != nil {
 		t.Fatalf("Download all metas failed %v", err)
 	}
+	startKv := storageMgr.Shards()[0] * storageMgr.KvEntries()
 	for i := 0; i < len(ids); i++ {
+		if ids[i] < startKv {
+			continue
+		}
 		err := storageMgr.CommitBlob(ids[i], blobs[i][:], hashs[i])
 		if err != nil {
-			t.Fatalf("Failed to commit blob: i=%d, id=%d, hash=%x, error: %v", i, ids[i], hashs[i], err)
+			t.Fatalf("Failed to commit blob: i=%d, kvIndex=%d, hash=%x, error: %v", i, ids[i], hashs[i], err)
 		}
-		t.Logf("Committed blob: i=%d, id=%d, hash=%x", i, ids[i], hashs[i])
+		t.Logf("Committed blob: i=%d, kvIndex=%d, hash=%x", i, ids[i], hashs[i])
 	}
 }
 
@@ -393,7 +407,6 @@ func initMiningConfig(t *testing.T, client *eth.PollingClient) *miner.Config {
 		t.Fatal("get storageCost", err)
 	}
 	miningConfig.StorageCost = new(big.Int).SetBytes(result)
-	t.Logf("storageCost=%d\n", miningConfig.StorageCost.Int64())
 	result, err = client.ReadContractField("prepaidAmount", nil)
 	if err != nil {
 		t.Fatal("get prepaidAmount", err)
