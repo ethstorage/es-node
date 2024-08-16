@@ -69,3 +69,5 @@ async function UploadBlobsForIntegrationTest() {
 
 UploadBlobsForIntegrationTest();
 
+setTimeout(() => console.log("Upload done!"), 120000)
+
