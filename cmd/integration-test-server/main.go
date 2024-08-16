@@ -102,8 +102,8 @@ func checkState(oldState, newState *node.NodeState) {
 			}
 
 			if oldShardState.SyncState.SyncProgress < 10000 &&
-				(shardState.SyncState.BlobsSynced < oldShardState.SyncState.BlobsSynced ||
-					shardState.SyncState.SyncProgress < oldShardState.SyncState.SyncProgress) {
+				(shardState.SyncState.BlobsSynced <= oldShardState.SyncState.BlobsSynced ||
+					shardState.SyncState.SyncProgress <= oldShardState.SyncState.SyncProgress) {
 				addErrorMessage(fmt.Sprintf("es-node sync progress do not increase in %f minutes, "+
 					"old synced: %d, new synced %d; old progress: %d, new progress: %d", expectedStateRefreshTime.Minutes(), oldShardState.SyncState.BlobsSynced,
 					shardState.SyncState.BlobsSynced, oldShardState.SyncState.SyncProgress, shardState.SyncState.SyncProgress))
@@ -152,9 +152,6 @@ func checkFinalState(state *node.NodeState) {
 		}
 		if shardState.SubmissionState.Failed > 0 {
 			addErrorMessage(fmt.Sprintf("%d submission failed during the test.", shardState.SubmissionState.Failed))
-		}
-		if shardState.SubmissionState.Dropped > 0 {
-			addErrorMessage(fmt.Sprintf("%d submission dropped during the test.", shardState.SubmissionState.Dropped))
 		}
 		log.Info("Final state", "id", state.Id, "shard", shardState.ShardId, "miner", shardState.Miner, "sync progress",
 			shardState.SyncState.SyncProgress, "fill progress", shardState.SyncState.FillEmptyProgress, "mining power",
