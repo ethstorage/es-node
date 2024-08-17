@@ -59,7 +59,7 @@ async function UploadBlobsForIntegrationTest() {
                 new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })
             );
             if (latestBlock.number < finalizedBlock.number) {
-                setTimeout(() => console.log("Upload done!"), 120000)
+                setTimeout(() => console.log("Upload done!"), 300000)
                 clearInterval(intervalId);
             }
         } catch (e) {
