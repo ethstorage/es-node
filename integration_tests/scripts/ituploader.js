@@ -59,15 +59,14 @@ async function UploadBlobsForIntegrationTest() {
                 new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })
             );
             if (latestBlock.number < finalizedBlock.number) {
+                setTimeout(() => console.log("Upload done!"), 120000)
                 clearInterval(intervalId);
             }
         } catch (e) {
             console.error(`EthStorage: get finalized block failed!`, e.message);
         }
-    }, 60000);
+    }, 120000);
 }
 
 UploadBlobsForIntegrationTest();
-
-setTimeout(() => console.log("Upload done!"), 120000)
 
