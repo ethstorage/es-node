@@ -45,7 +45,8 @@ async function UploadBlobsForIntegrationTest() {
         latestBlock = await provider.getBlock();
         console.log("latest block number is", latestBlock.number);
     } catch (e) {
-        core.setFailed(`EthStorage: get latest block failed!` + e.message);
+        core.setFailed(`EthStorage: get latest block failed with message: ${e.message}`);
+        return
     }
 
     // wait for blobs finalized
