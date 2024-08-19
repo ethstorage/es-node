@@ -1,6 +1,7 @@
 const {ethers, Contract} = require("ethers");
 const crypto = require('crypto');
 const {EthStorage} = require("ethstorage-sdk");
+const core = require('@actions/core');
 
 const dotenv = require("dotenv")
 dotenv.config()
@@ -44,8 +45,7 @@ async function UploadBlobsForIntegrationTest() {
         latestBlock = await provider.getBlock();
         console.log("latest block number is", latestBlock.number);
     } catch (e) {
-        console.error(`EthStorage: get latest block failed!`, e.message);
-        return
+        core.setFailed(`EthStorage: get latest block failed!` + e.message);
     }
 
     // wait for blobs finalized
