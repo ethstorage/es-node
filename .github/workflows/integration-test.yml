@@ -29,7 +29,7 @@ jobs:
       - name: Deploy Contracts
         run: |
           cd ../storage-contracts-v1 
-          git checkout integration-test
+          git checkout main
           git pull
           npm install 
           git submodule init && git submodule update
@@ -44,7 +44,7 @@ jobs:
 
       - name: Set ENV Parameters
         run: |
-          echo ES_NODE_SIGNER_PRIVATE_KEY=e690c916d02b6f3ad4bb70cc2663389ea88a79ded45613b1bd5545961d063258 >> "$GITHUB_ENV"
+          echo ES_NODE_SIGNER_PRIVATE_KEY=`cat ../private.key` >> "$GITHUB_ENV"
           echo ES_NODE_STORAGE_MINER=0x5C935469C5592Aeeac3372e922d9bCEabDF8830d >> "$GITHUB_ENV"
 
       - name: Upload Blobs
