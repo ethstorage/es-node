@@ -29,7 +29,6 @@ start_flags=" --network devnet \
   --datadir $data_dir \
   $file_flags \
   --storage.l1contract 0x804C520d3c084C805E37A35E90057Ac32831F96f \
-  --storage.miner $ES_NODE_STORAGE_MINER \
   --l1.rpc http://88.99.30.186:8545 \
   --l1.beacon http://88.99.30.186:3500 \
   --l1.beacon-based-time 1706684472 \
