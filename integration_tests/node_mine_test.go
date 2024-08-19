@@ -15,8 +15,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethstorage/go-ethstorage/cmd/es-utils/utils"
@@ -143,15 +146,7 @@ func TestMining(t *testing.T) {
 			DoneType: protocol.SingleShardDone,
 			ShardId:  s,
 		})
-		info, err := l1api.GetMiningInfo(
-			context.Background(),
-			contract,
-			s,
-		)
-		if err != nil {
-			t.Fatalf("Failed to get es mining info for shard %d: %v", s, err)
-		}
-		go waitForMined(l1api, contract, mnr.ChainHeadCh, s, info.BlockMined.Uint64(), minedShardCh)
+		go waitForMined(l1api, contract, mnr.ChainHeadCh, s, minedShardCh)
 		wg.Add(1)
 		// defer next shard mining so that the started shard can be mined for a while
 		if i != len(shardIds)-1 {
@@ -171,7 +166,7 @@ func TestMining(t *testing.T) {
 	close()
 }
 
-func waitForMined(l1api miner.L1API, contract common.Address, chainHeadCh chan eth.L1BlockRef, shardIdx, lastMined uint64, exitCh chan uint64) {
+func waitForMined(l1api miner.L1API, contract common.Address, chainHeadCh chan eth.L1BlockRef, shardIdx uint64, exitCh chan uint64) {
 	for range chainHeadCh {
 		info, err := l1api.GetMiningInfo(
 			context.Background(),
@@ -182,8 +177,9 @@ func waitForMined(l1api miner.L1API, contract common.Address, chainHeadCh chan e
 			lg.Warn("Failed to get es mining info", "error", err.Error())
 			continue
 		}
-		if info.BlockMined.Uint64() > lastMined {
-			lg.Info("Mined new", "shard", shardIdx, "lastMined", lastMined, "justMined", info.BlockMined)
+		lg.Info("Starting shard mining", "shard", shardIdx, "lastMined", info.BlockMined, "blockNumber", info.LastMineTime)
+		if info.BlockMined.Uint64() > 0 {
+			lg.Info("Mined new", "shard", shardIdx, "justMined", info.BlockMined)
 			exitCh <- shardIdx
 			return
 		}
@@ -245,6 +241,23 @@ func fillEmpty(storageMgr *ethstorage.StorageManager, shards []uint64) error {
 	return nil
 }
 
+func getPayment(l1Client *eth.PollingClient, contract common.Address, batch uint64) (*big.Int, error) {
+	uint256Type, _ := abi.NewType("uint256", "", nil)
+	dataField, _ := abi.Arguments{{Type: uint256Type}}.Pack(new(big.Int).SetUint64(batch))
+	h := crypto.Keccak256Hash([]byte(`upfrontPaymentInBatch(uint256)`))
+	calldata := append(h[0:4], dataField...)
+	msg := ethereum.CallMsg{
+		To:   &contract,
+		Data: calldata,
+	}
+	bs, err := l1Client.CallContract(context.Background(), msg, nil)
+	if err != nil {
+		lg.Error("Failed to call contract", "error", err.Error())
+		return nil, err
+	}
+	return new(big.Int).SetBytes(bs), nil
+}
+
 func prepareData(t *testing.T, l1Client *eth.PollingClient, storageMgr *ethstorage.StorageManager) {
 	// fill contract with almost 2 shards of blobs
 	data := generateRandomBlobs(int(storageMgr.KvEntries()*2) - 1)
@@ -265,12 +278,6 @@ func prepareData(t *testing.T, l1Client *eth.PollingClient, storageMgr *ethstora
 	if err != nil {
 		t.Fatalf("Get chain id failed %v", err)
 	}
-	result, err := l1Client.ReadContractField("upfrontPayment", nil)
-	if err != nil {
-		t.Fatal("get upfrontPayment", err)
-	}
-	payment := new(big.Int).SetBytes(result)
-	lg.Info("Query upfront payment", "upfrontPayment", payment)
 	for i := 0; i < txs; i++ {
 		blobsPerTx := maxBlobsPerTx
 		if i == txs-1 {
@@ -284,8 +291,11 @@ func prepareData(t *testing.T, l1Client *eth.PollingClient, storageMgr *ethstora
 		if len(blobData) == 0 {
 			break
 		}
-		totalValue := new(big.Int).Mul(payment, big.NewInt(int64(blobsPerTx)))
-		totalValue = totalValue.Div(totalValue.Mul(totalValue, big.NewInt(11)), big.NewInt(10))
+		totalValue, err := getPayment(l1Client, l1Contract, uint64(blobsPerTx))
+		if err != nil {
+			t.Fatalf("Get payment failed %v", err)
+		}
+		t.Logf("Get payment totalValue=%v \n", totalValue)
 		kvIdxes, dataHashes, err := utils.UploadBlobs(l1Client, l1Endpoint, privateKey, chainID.String(), storageMgr.ContractAddress(), blobData, false, totalValue.String())
 		if err != nil {
 			t.Fatalf("Upload blobs failed: %v", err)
