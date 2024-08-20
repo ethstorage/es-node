@@ -47,3 +47,6 @@ func generateRandomContent(sizeInKB int) []byte {
 	}
 	return []byte(content)
 }
+func generateRandomBlobs(blobLen int) []byte {
+	return generateRandomContent(128 * 31 / 32 * blobLen)
+}

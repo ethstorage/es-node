@@ -20,6 +20,7 @@ import (
 	ethRPC "github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethstorage/go-ethstorage/ethstorage"
 	"github.com/ethstorage/go-ethstorage/ethstorage/archiver"
+	"github.com/ethstorage/go-ethstorage/ethstorage/blobs"
 	"github.com/ethstorage/go-ethstorage/ethstorage/downloader"
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
 	"github.com/ethstorage/go-ethstorage/ethstorage/metrics"
@@ -44,6 +45,7 @@ type EsNode struct {
 	l1Source     *eth.PollingClient     // L1 Client to fetch data from
 	l1Beacon     *eth.BeaconClient      // L1 Beacon Chain to fetch blobs from
 	daClient     *eth.DAClient          // L1 Data Availability Client
+	blobCache    downloader.BlobCache   // Cache for blobs
 	downloader   *downloader.Downloader // L2 Engine to Sync
 	// l2Source  *sources.EngineClient // L2 Execution Engine RPC bindings
 	// rpcSync   *sources.SyncClient   // Alt-sync RPC client, optional (may be nil)
@@ -134,12 +136,14 @@ func (n *EsNode) init(ctx context.Context, cfg *Config) error {
 }
 
 func (n *EsNode) initL2(ctx context.Context, cfg *Config) error {
+	n.blobCache = downloader.NewBlobDiskCache(cfg.DataDir, n.log)
 	n.downloader = downloader.NewDownloader(
 		n.l1Source,
 		n.l1Beacon,
 		n.daClient,
 		n.db,
 		n.storageManager,
+		n.blobCache,
 		cfg.Downloader.DownloadStart,
 		cfg.Downloader.DownloadDump,
 		cfg.L1.L1MinDurationForBlobsRequest,
@@ -156,10 +160,12 @@ func (n *EsNode) initL1(ctx context.Context, cfg *Config) error {
 	}
 	n.l1Source = client
 
-	if cfg.L1.L1BeaconURL != "" {
-		n.l1Beacon = eth.NewBeaconClient(cfg.L1.L1BeaconURL, cfg.L1.L1BeaconBasedTime, cfg.L1.L1BeaconBasedSlot, cfg.L1.L1BeaconSlotTime)
-	} else if cfg.L1.DAURL != "" {
+	if cfg.L1.DAURL != "" {
 		n.daClient = eth.NewDAClient(cfg.L1.DAURL)
+		n.log.Info("Using DA URL", "url", cfg.L1.DAURL)
+	} else if cfg.L1.L1BeaconURL != "" {
+		n.l1Beacon = eth.NewBeaconClient(cfg.L1.L1BeaconURL, cfg.L1.L1BeaconBasedTime, cfg.L1.L1BeaconBasedSlot, cfg.L1.L1BeaconSlotTime)
+		n.log.Info("Using L1 Beacon URL", "url", cfg.L1.L1BeaconURL)
 	} else {
 		return fmt.Errorf("no L1 beacon or DA URL provided")
 	}
@@ -169,6 +175,7 @@ func (n *EsNode) initL1(ctx context.Context, cfg *Config) error {
 			return fmt.Errorf("failed to create randao source: %w", err)
 		}
 		n.randaoSource = rc
+		n.log.Info("Using randao source", "url", cfg.RandaoSourceURL)
 	}
 	return nil
 }
@@ -296,13 +303,14 @@ func (n *EsNode) initMiner(ctx context.Context, cfg *Config) error {
 	l1api := miner.NewL1MiningAPI(n.l1Source, n.randaoSource, n.log)
 	pvr := prover.NewKZGPoseidonProver(
 		cfg.Mining.ZKWorkingDir,
-		cfg.Mining.ZKeyFileName,
+		cfg.Mining.ZKeyFile,
 		cfg.Mining.ZKProverMode,
 		cfg.Mining.ZKProverImpl,
 		n.log,
 	)
-	n.miner = miner.New(cfg.Mining, n.db, n.storageManager, l1api, &pvr, n.feed, n.log)
-	log.Info("Initialized miner")
+	br := blobs.NewBlobReader(n.blobCache, n.storageManager, n.log)
+	n.miner = miner.New(cfg.Mining, n.db, n.storageManager, l1api, br, &pvr, n.feed, n.log)
+	n.log.Info("Initialized miner")
 	return nil
 }
 
@@ -480,7 +488,6 @@ func (n *EsNode) Close() error {
 			result = multierror.Append(result, fmt.Errorf("failed to close p2p node: %w", err))
 		}
 	}
-
 	if n.downloader != nil {
 		if err := n.downloader.Close(); err != nil {
 			result = multierror.Append(result, fmt.Errorf("failed to close downloader: %w", err))
@@ -505,6 +512,11 @@ func (n *EsNode) Close() error {
 	}
 	if n.miner != nil {
 		n.miner.Close()
+	}
+	if n.blobCache != nil {
+		if err := n.blobCache.Close(); err != nil {
+			result = multierror.Append(result, fmt.Errorf("failed to close blob cache: %w", err))
+		}
 	}
 
 	if n.archiverAPI != nil {

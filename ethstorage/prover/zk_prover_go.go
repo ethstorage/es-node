@@ -24,7 +24,7 @@ type ZKProverGo struct {
 	lg   log.Logger
 }
 
-func NewZKProverGo(libDir, zkeyName, wasmName string, lg log.Logger) (*ZKProverGo, error) {
+func NewZKProverGo(libDir, zkeyFile, wasmName string, lg log.Logger) (*ZKProverGo, error) {
 	wasmBytes, err := os.ReadFile(filepath.Join(libDir, wasmName))
 	if err != nil {
 		lg.Error("Read wasm file failed", "error", err)
@@ -35,7 +35,7 @@ func NewZKProverGo(libDir, zkeyName, wasmName string, lg log.Logger) (*ZKProverG
 		lg.Error("Create witness calculator failed", "error", err)
 		return nil, err
 	}
-	zkey, err := os.ReadFile(filepath.Join(libDir, zkeyName))
+	zkey, err := os.ReadFile(zkeyFile)
 	if err != nil {
 		lg.Error("Read zkey file failed", "error", err)
 		return nil, err
