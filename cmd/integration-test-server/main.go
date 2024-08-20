@@ -4,7 +4,10 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -13,14 +16,27 @@ import (
 	"os"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethstorage/go-ethstorage/ethstorage"
+	es "github.com/ethstorage/go-ethstorage/ethstorage"
 	"github.com/ethstorage/go-ethstorage/ethstorage/node"
+	prv "github.com/ethstorage/go-ethstorage/ethstorage/prover"
 )
 
 const (
 	expectedSaidHelloTime    = 10 * time.Minute
 	expectedStateRefreshTime = 5 * time.Minute
 	executionTime            = 2 * time.Hour
+
+	kvEntries = 32768
+	kvSize    = 128 * 1024
+	dataSize  = 126976
+
+	blobEmptyFillingMask = byte(0b10000000)
+
+	uploadedDataFile = ".data"
+	shardFile        = "../../es-data-it/shard-0.dat"
 )
 
 var (
@@ -32,6 +48,8 @@ var (
 	lastQueryTime    = time.Now()
 	lastRecord       *node.NodeState
 	hasConnectedPeer = false
+	testLog          = log.New("IntegrationTest")
+	prover           = prv.NewKZGProver(testLog)
 )
 
 func HelloHandler(w http.ResponseWriter, r *http.Request) {
@@ -161,6 +179,50 @@ func checkFinalState(state *node.NodeState) {
 	}
 }
 
+func verifyData() error {
+	file, err := os.OpenFile(uploadedDataFile, os.O_RDONLY, 0755)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	fileScanner := bufio.NewScanner(file)
+	fileScanner.Split(bufio.ScanLines)
+
+	df, err := es.OpenDataFile(shardFile)
+	if err != nil {
+		return err
+	}
+
+	ds := es.NewDataShard(0, kvSize, kvEntries, kvSize)
+	ds.AddDataFile(df)
+
+	i := uint64(0)
+	for fileScanner.Scan() {
+		expectedData := common.Hex2Bytes(fileScanner.Text())
+		root, _ := prover.GetRoot(expectedData, 1, kvSize)
+		commit := generateMetadata(root)
+		data, err := ds.Read(i, dataSize, commit)
+		if err != nil {
+			return errors.New(fmt.Sprintf("read %d from shard fail with err: %s", i, err.Error()))
+		}
+		if bytes.Compare(expectedData, data) != 0 {
+			return errors.New(fmt.Sprintf("compare data %d fail, expected data %s; data: %s",
+				i, common.Bytes2Hex(expectedData[:256]), common.Bytes2Hex(data[:256])))
+		}
+	}
+	return nil
+}
+
+func generateMetadata(hash common.Hash) common.Hash {
+	meta := make([]byte, 32)
+
+	copy(meta[0:ethstorage.HashSizeInContract], hash[0:ethstorage.HashSizeInContract])
+	meta[ethstorage.HashSizeInContract] = meta[ethstorage.HashSizeInContract] | blobEmptyFillingMask
+
+	return common.BytesToHash(meta)
+}
+
 func addErrorMessage(errMessage string) {
 	log.Warn("Add error message", "msg", errMessage)
 	errorMessages = append(errorMessages, errMessage+"\n")
@@ -185,8 +247,11 @@ func main() {
 
 	time.Sleep(executionTime)
 	checkFinalState(lastRecord)
+	if err := verifyData(); err != nil {
+		addErrorMessage(err.Error())
+	}
 
 	if len(errorMessages) > 0 {
-		panic(fmt.Sprintf("integration test fail %v", errorMessages))
+		log.Crit(fmt.Sprintf("integration test fail %v", errorMessages))
 	}
 }

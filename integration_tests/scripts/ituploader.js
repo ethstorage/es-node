@@ -2,6 +2,7 @@ const {ethers, Contract} = require("ethers");
 const crypto = require('crypto');
 const {EthStorage} = require("ethstorage-sdk");
 const core = require('@actions/core');
+const fs = require('fs');
 
 const dotenv = require("dotenv")
 dotenv.config()
@@ -33,11 +34,12 @@ async function UploadBlobsForIntegrationTest() {
         }
         const buf = crypto.randomBytes(126976);
         const cost = await es.estimateCost(buf.subarray(0,32).toString('hex'), buf);
-        console.log(cost)
+        console.log(cost);
 
         // write
         let status = await es.write(buf.subarray(0,32).toString('hex'), buf);
-        console.log(status)
+        console.log(status);
+        fs.writeFileSync(".data", buf.toString('hex')+'\n', { flag: 'a+' });
     }
 
     let latestBlock
