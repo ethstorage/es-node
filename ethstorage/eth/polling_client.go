@@ -313,7 +313,7 @@ func (w *PollingClient) GetMiningReward(shard uint64, blockNumber int64) (*big.I
 		To:   &w.esContract,
 		Data: calldata,
 	}
-	bs, err := w.Client.CallContract(context.Background(), callMsg, new(big.Int).SetInt64(blockNumber))
+	bs, err := w.Client.CallContract(context.Background(), callMsg, nil)
 	if err != nil {
 		return nil, err
 	}
