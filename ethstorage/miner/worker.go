@@ -352,7 +352,7 @@ func (w *worker) taskLoop(taskCh chan *taskItem) {
 				w.lg.Info("Mine task success", "shard", ti.shardIdx, "thread", ti.thread, "block", ti.blockNumber)
 			}
 		case <-w.exitCh:
-			w.lg.Warn("Worker is exiting from task loop...")
+			w.lg.Debug("Worker is exiting from task loop...")
 			return
 		}
 	}
