@@ -18,6 +18,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethstorage/go-ethstorage/cmd/es-utils/utils"
 	"github.com/ethstorage/go-ethstorage/ethstorage"
 	es "github.com/ethstorage/go-ethstorage/ethstorage"
 	"github.com/ethstorage/go-ethstorage/ethstorage/node"
@@ -187,6 +188,7 @@ func verifyData() error {
 	defer file.Close()
 
 	fileScanner := bufio.NewScanner(file)
+	fileScanner.Buffer(make([]byte, dataSize*2), kvSize*2)
 	fileScanner.Split(bufio.ScanLines)
 
 	df, err := es.OpenDataFile(shardFile)
@@ -200,16 +202,17 @@ func verifyData() error {
 	i := uint64(0)
 	for fileScanner.Scan() {
 		expectedData := common.Hex2Bytes(fileScanner.Text())
-		root, _ := prover.GetRoot(expectedData, 1, kvSize)
-		commit := generateMetadata(root)
-		data, err := ds.Read(i, dataSize, commit)
+		blobs := utils.EncodeBlobs(expectedData)
+		commit, _ := ds.ReadMeta(i)
+		data, err := ds.Read(i, kvSize, common.BytesToHash(commit))
 		if err != nil {
 			return errors.New(fmt.Sprintf("read %d from shard fail with err: %s", i, err.Error()))
 		}
-		if bytes.Compare(expectedData, data) != 0 {
+		if bytes.Compare(blobs[0][:], data) != 0 {
 			return errors.New(fmt.Sprintf("compare data %d fail, expected data %s; data: %s",
-				i, common.Bytes2Hex(expectedData[:256]), common.Bytes2Hex(data[:256])))
+				i, common.Bytes2Hex(blobs[0][:256]), common.Bytes2Hex(data[:256])))
 		}
+		i++
 	}
 	return nil
 }
