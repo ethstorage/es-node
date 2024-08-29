@@ -322,9 +322,12 @@ func (w *worker) updateDifficulty(shardIdx, blockTime uint64) (*big.Int, error) 
 		return nil, err
 	}
 	w.lg.Info("Mining info retrieved", "shard", shardIdx, "lastMineTime", info.LastMineTime, "difficulty", info.Difficulty, "proofsSubmitted", info.BlockMined)
+
+	if blockTime <= info.LastMineTime {
+		return nil, errors.New("minedTs too small")
+	}
 	reqDiff := new(big.Int).Div(maxUint256, expectedDiff(
-		info.LastMineTime,
-		blockTime,
+		blockTime-info.LastMineTime,
 		info.Difficulty,
 		w.config.Cutoff,
 		w.config.DiffAdjDivisor,
