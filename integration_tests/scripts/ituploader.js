@@ -33,12 +33,22 @@ async function UploadBlobsForIntegrationTest() {
             break;
         }
         const buf = crypto.randomBytes(126976);
-        const cost = await es.estimateCost(buf.subarray(0,32).toString('hex'), buf);
-        console.log(cost);
+        try {
+            let cost = await es.estimateCost(buf.subarray(0,32).toString('hex'), buf);
+            console.log(cost);
+        } catch (e) {
+            console.log("estimateCost error:", e.message);
+            continue
+        }
 
         // write
-        let status = await es.write(buf.subarray(0,32).toString('hex'), buf);
-        console.log(status);
+        try {
+            let status = await es.write(buf.subarray(0,32).toString('hex'), buf);
+            console.log(status);
+        } catch (e) {
+            console.log("upload blob error:", e.message);
+            continue
+        }
         fs.writeFileSync(".data", buf.toString('hex')+'\n', { flag: 'a+' });
     }
 

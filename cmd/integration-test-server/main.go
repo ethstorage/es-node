@@ -19,7 +19,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethstorage/go-ethstorage/cmd/es-utils/utils"
-	"github.com/ethstorage/go-ethstorage/ethstorage"
 	es "github.com/ethstorage/go-ethstorage/ethstorage"
 	"github.com/ethstorage/go-ethstorage/ethstorage/node"
 	prv "github.com/ethstorage/go-ethstorage/ethstorage/prover"
@@ -215,15 +214,6 @@ func verifyData() error {
 		i++
 	}
 	return nil
-}
-
-func generateMetadata(hash common.Hash) common.Hash {
-	meta := make([]byte, 32)
-
-	copy(meta[0:ethstorage.HashSizeInContract], hash[0:ethstorage.HashSizeInContract])
-	meta[ethstorage.HashSizeInContract] = meta[ethstorage.HashSizeInContract] | blobEmptyFillingMask
-
-	return common.BytesToHash(meta)
 }
 
 func addErrorMessage(errMessage string) {
