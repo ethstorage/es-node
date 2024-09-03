@@ -49,13 +49,6 @@ echo ES_NODE_L1_ETH_RPC = $ES_NODE_L1_ETH_RPC
 echo ES_NODE_STORAGE_L1CONTRACT = $ES_NODE_STORAGE_L1CONTRACT
 echo ES_NODE_STORAGE_MINER = $ES_NODE_STORAGE_MINER
 
-# download zkeys if not yet
-# zkey_file="./ethstorage/prover/snark_lib/blob_poseidon.zkey"
-# if [ ! -e  ${zkey_file} ]; then
-#   echo "${zkey_file} not found, start downloading..."
-#   zkey_url="https://drive.usercontent.google.com/download?id=1ZLfhYeCXMnbk6wUiBADRAn1mZ8MI_zg-&export=download&confirm=t&uuid=16ddcd58-2498-4d65-8931-934df3d0065c"
-#   curl $zkey_url -o ${zkey_file} 
-# fi
 zkey_file="./ethstorage/prover/snark_lib/blob_poseidon2.zkey"
 if [ ! -e  ${zkey_file} ]; then
   echo "${zkey_file} not found, start downloading..."
