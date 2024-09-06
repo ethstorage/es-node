@@ -15,6 +15,7 @@ const contractABI = [
 
 const provider = new ethers.JsonRpcProvider(RPC);
 const contract = new Contract(contractAddr, contractABI, provider);
+// TODO after support test multi shards, change MAX_BLOB to cover one shard.
 const MAX_BLOB = 4096n;
 
 async function UploadBlobsForIntegrationTest() {

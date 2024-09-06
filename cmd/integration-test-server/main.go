@@ -102,6 +102,7 @@ func ReportStateHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(`{"status":"ok"}`))
 }
 
+// TODO support multi shards
 func checkState(oldState, newState *node.NodeState) {
 	if len(oldState.Shards) != len(newState.Shards) {
 		addErrorMessage(fmt.Sprintf("shards count mismatch between two state, new %d, old %d", len(newState.Shards), len(oldState.Shards)))
