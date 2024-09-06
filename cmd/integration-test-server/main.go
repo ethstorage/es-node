@@ -180,6 +180,8 @@ func checkFinalState(state *node.NodeState) {
 	}
 }
 
+// TODO support multi shards
+// TODO read data from RPC
 func verifyData() error {
 	file, err := os.OpenFile(uploadedDataFile, os.O_RDONLY, 0755)
 	if err != nil {
