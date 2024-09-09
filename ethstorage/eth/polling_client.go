@@ -29,7 +29,6 @@ var ErrSubscriberClosed = errors.New("subscriber closed")
 
 type PollingClient struct {
 	*ethclient.Client
-	queryHeader func() (*types.Header, error)
 	isHTTP      bool
 	lgr         log.Logger
 	pollRate    time.Duration
@@ -38,6 +37,8 @@ type PollingClient struct {
 	currHead    *types.Header
 	esContract  common.Address
 	subID       int
+	NetworkID   *big.Int
+	queryHeader func() (*types.Header, error)
 
 	// pollReqCh is used to request new polls of the upstream
 	// RPC client.
@@ -74,6 +75,10 @@ func NewClient(
 	lgr log.Logger,
 ) *PollingClient {
 	ctx, cancel := context.WithCancel(ctx)
+	networkID, err := c.NetworkID(ctx)
+	if err != nil {
+		lgr.Crit("Failed to get network id", "err", err)
+	}
 	res := &PollingClient{
 		Client:     c,
 		isHTTP:     isHTTP,
@@ -85,6 +90,7 @@ func NewClient(
 		pollReqCh:  make(chan struct{}, 1),
 		subs:       make(map[int]chan *types.Header),
 		closedCh:   make(chan struct{}),
+		NetworkID:  networkID,
 	}
 	if qh == nil {
 		res.queryHeader = res.getLatestHeader
@@ -290,6 +296,28 @@ func (w *PollingClient) GetKvMetas(kvIndices []uint64, blockNumber int64) ([][32
 	}
 
 	return res[0].([][32]byte), nil
+}
+
+func (w *PollingClient) GetMiningReward(shard uint64, blockNumber int64) (*big.Int, error) {
+	h := crypto.Keccak256Hash([]byte(`miningReward(uint256,uint256)`))
+	uint256Type, _ := abi.NewType("uint256", "", nil)
+	dataField, err := abi.Arguments{
+		{Type: uint256Type},
+		{Type: uint256Type},
+	}.Pack(new(big.Int).SetUint64(shard), new(big.Int).SetInt64(blockNumber))
+	if err != nil {
+		return nil, err
+	}
+	calldata := append(h[0:4], dataField...)
+	callMsg := ethereum.CallMsg{
+		To:   &w.esContract,
+		Data: calldata,
+	}
+	bs, err := w.Client.CallContract(context.Background(), callMsg, nil)
+	if err != nil {
+		return nil, err
+	}
+	return new(big.Int).SetBytes(bs), nil
 }
 
 func (w *PollingClient) ReadContractField(fieldName string, blockNumber *big.Int) ([]byte, error) {

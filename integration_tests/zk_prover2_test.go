@@ -47,8 +47,8 @@ func TestZKProver_GenerateZKProof(t *testing.T) {
 		"12199007973319674300030596965685270475268514105269206407619072166392043015767",
 	}
 	libDir := filepath.Join(proverPath, prover.SnarkLib)
-	pjs := prover.NewZKProver(proverPath, zkey2Name, prover.Wasm2Name, lg)
-	pgo, err := prover.NewZKProverGo(libDir, zkey2Name, prover.Wasm2Name, lg)
+	pjs := prover.NewZKProver(proverPath, zkeyFull, prover.Wasm2Name, lg)
+	pgo, err := prover.NewZKProverGo(libDir, zkeyFull, prover.Wasm2Name, lg)
 	if err != nil {
 		t.Errorf("NewZKProverGo() error = %v", err)
 		return
