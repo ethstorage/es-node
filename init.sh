@@ -15,6 +15,7 @@ zkp_impl=1
 zkp_mode=2
 
 remaining_args=""
+shards="--shard_index 0"
 
 while [ $# -gt 0 ]; do
     if [[ $1 == --miner.zk-prover-impl ]]; then
@@ -24,6 +25,9 @@ while [ $# -gt 0 ]; do
         zkp_mode=$2
         shift 2
     else
+        if [[ $1 == --shard_index ]]; then
+            shards=""
+        fi
         remaining_args="$remaining_args $1"
         shift
     fi
@@ -101,7 +105,7 @@ fi
 
 data_dir="./es-data"
 
-es_node_init="$executable init --shard_index 0 \
+es_node_init="$executable init $shards \
   --datadir $data_dir \
   --l1.rpc http://88.99.30.186:8545 \
   --storage.l1contract 0x804C520d3c084C805E37A35E90057Ac32831F96f \
