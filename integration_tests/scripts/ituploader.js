@@ -15,8 +15,8 @@ const contractABI = [
 
 const provider = new ethers.JsonRpcProvider(RPC);
 const contract = new Contract(contractAddr, contractABI, provider);
-// TODO after support test multi shards, change MAX_BLOB to cover one shard.
-const MAX_BLOB = 4096n;
+const MAX_BLOB = 10800n;
+const BATCH_SIZE = 6n;
 
 async function UploadBlobsForIntegrationTest() {
     // put blobs
@@ -33,24 +33,26 @@ async function UploadBlobsForIntegrationTest() {
         if (totalCount <= 0) {
             break;
         }
-        const buf = crypto.randomBytes(126976);
-        try {
-            let cost = await es.estimateCost(buf.subarray(0,32).toString('hex'), buf);
-            console.log(cost);
-        } catch (e) {
-            console.log("estimateCost error:", e.message);
-            continue
+
+        let keys = [];
+        let blobs = [];
+        for (let i = 0; i < BATCH_SIZE && i < totalCount; i++) {
+            const buf = crypto.randomBytes(126976);
+            keys[i] = buf.subarray(0,32).toString('hex')
+            blobs[i] = buf
         }
 
-        // write
+        // write blobs
         try {
-            let status = await es.write(buf.subarray(0,32).toString('hex'), buf);
+            let status = await es.writeBlobs(keys, blobs);
             console.log(status);
         } catch (e) {
             console.log("upload blob error:", e.message);
             continue
         }
-        fs.writeFileSync(".data", buf.toString('hex')+'\n', { flag: 'a+' });
+        for (let i = 0; i < blobs.length; i++) {
+            fs.writeFileSync(".data", blobs[i].toString('hex')+'\n', { flag: 'a+' });
+        }
     }
 
     let latestBlock
