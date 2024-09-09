@@ -15,6 +15,7 @@ zkp_impl=1
 zkp_mode=2
 
 remaining_args=""
+shards="--shard_index 0"
 
 while [ $# -gt 0 ]; do
     if [[ $1 == --miner.zk-prover-impl ]]; then
@@ -24,6 +25,9 @@ while [ $# -gt 0 ]; do
         zkp_mode=$2
         shift 2
     else
+        if [[ $1 == --shard_index ]]; then
+            shards=""
+        fi
         remaining_args="$remaining_args $1"
         shift
     fi
@@ -100,22 +104,17 @@ if [ "$zkp_impl" = 1 ]; then
 fi
 
 data_dir="./es-data"
-storage_file_0="$data_dir/shard-0.dat"
 
-es_node_init="$executable init --shard_index 0 \
+es_node_init="$executable init $shards \
   --datadir $data_dir \
   --l1.rpc http://88.99.30.186:8545 \
   --storage.l1contract 0x804C520d3c084C805E37A35E90057Ac32831F96f \
 $remaining_args"
 
-# create data file for shard 0 if not yet
-if [ ! -e $storage_file_0 ]; then
-  if $es_node_init ; then
-    echo "√ Initialized ${storage_file_0} successfully"
-  else
-    echo "Error: failed to initialize ${storage_file_0}"
-    exit 1
-  fi
-else 
-  echo "Warning: storage file ${storage_file_0} already exists, skip initialization."
+# es-node will skip init if data files already exist
+if $es_node_init ; then
+  echo "√ Initialized data files successfully."
+else
+  echo "Error: failed to initialize data files."
+  exit 1
 fi

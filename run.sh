@@ -17,12 +17,18 @@ $executable --version
 echo "========================================"
 
 data_dir="./es-data"
-storage_file_0="$data_dir/shard-0.dat"
+file_flags=""
+
+for file in ${data_dir}/shard-[0-9]*.dat; do 
+    if [ -f "$file" ]; then 
+        file_flags+=" --storage.files $file"
+    fi
+done
 
 start_flags=" --network devnet \
   --datadir $data_dir \
+  $file_flags \
   --storage.l1contract 0x804C520d3c084C805E37A35E90057Ac32831F96f \
-  --storage.files $storage_file_0 \
   --l1.rpc http://88.99.30.186:8545 \
   --l1.beacon http://88.99.30.186:3500 \
   --l1.beacon-based-time 1706684472 \

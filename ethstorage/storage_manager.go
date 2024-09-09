@@ -186,7 +186,7 @@ func (s *StorageManager) CommitBlobs(kvIndices []uint64, blobs [][]byte, commits
 	for i := 0; i < len(kvIndices); i++ {
 		encodedBlob, success, err := s.shardManager.TryEncodeKV(kvIndices[i], blobs[i], commits[i])
 		if !success || err != nil {
-			log.Warn("Blob encode failed", "index", kvIndices[i], "err", err.Error())
+			log.Warn("Blob encode failed", "index", kvIndices[i], "err", err)
 			continue
 		}
 		encodedBlobs[i] = encodedBlob
@@ -230,7 +230,7 @@ func (s *StorageManager) CommitEmptyBlobs(start, limit uint64) (uint64, uint64, 
 	for i := start; i <= limit; i++ {
 		encodedBlob, success, err := s.shardManager.TryEncodeKV(i, emptyBs, hash)
 		if !success || err != nil {
-			log.Warn("Blob encode failed", "index", i, "err", err.Error())
+			log.Warn("Blob encode failed", "index", i, "err", err)
 			break
 		}
 		encodedBlobs = append(encodedBlobs, encodedBlob)
