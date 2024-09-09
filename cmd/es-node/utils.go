@@ -124,14 +124,6 @@ func getDifficulty(ctx context.Context, client *ethclient.Client, contract commo
 	return res[1].(*big.Int), nil
 }
 
-func getLastMineTime(ctx context.Context, client *ethclient.Client, contract common.Address, shardIdx uint64) (*big.Int, error) {
-	res, err := getMiningInfo(ctx, client, contract, shardIdx)
-	if err != nil {
-		return nil, err
-	}
-	return res[0].(*big.Int), nil
-}
-
 func getMiningInfo(ctx context.Context, client *ethclient.Client, contract common.Address, shardIdx uint64) ([]interface{}, error) {
 	uint256Type, _ := abi.NewType("uint256", "", nil)
 	dataField, _ := abi.Arguments{{Type: uint256Type}}.Pack(new(big.Int).SetUint64(shardIdx))
@@ -170,8 +162,8 @@ func createDataFile(cfg *storage.StorageConfig, shardIdxList []uint64, datadir s
 	for _, shardIdx := range shardIdxList {
 		dataFile := filepath.Join(datadir, fmt.Sprintf(fileName, shardIdx))
 		if _, err := os.Stat(dataFile); err == nil {
-			log.Error("Creating data file", "error", "file already exists, will not overwrite", "file", dataFile)
-			return nil, err
+			log.Warn("Creating data file", "error", "file already exists, will not overwrite", "file", dataFile)
+			continue
 		}
 		if cfg.ChunkSize == 0 {
 			return nil, fmt.Errorf("chunk size should not be 0")
@@ -206,9 +198,10 @@ func sortBigIntSlice(slice []*big.Int) []int {
 	return indices
 }
 
-func readRequiredFlag(ctx *cli.Context, name string) string {
+func readRequiredFlag(ctx *cli.Context, flag cli.StringFlag) string {
+	name := flag.GetName()
 	if !ctx.IsSet(name) {
-		log.Crit("Flag is required", "flag", name)
+		log.Crit("Flag or environment variable is required", "flag", name, "envVar", flag.EnvVar)
 	}
 	value := ctx.String(name)
 	log.Info("Read flag", "name", name, "value", value)

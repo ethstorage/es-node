@@ -6,7 +6,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"math/big"
 	"net"
 	"os"
 	"os/signal"
@@ -181,13 +180,13 @@ func EsNodeInit(ctx *cli.Context) error {
 	}
 	log := eslog.NewLogger(logCfg)
 	log.Info("Will create data files for storage node")
-	l1Rpc := readRequiredFlag(ctx, flags.L1NodeAddr.Name)
-	contract := readRequiredFlag(ctx, flags.StorageL1Contract.Name)
+	l1Rpc := readRequiredFlag(ctx, flags.L1NodeAddr)
+	contract := readRequiredFlag(ctx, flags.StorageL1Contract)
 	if !common.IsHexAddress(contract) {
 		return fmt.Errorf("invalid contract address %s", contract)
 	}
 
-	datadir := readRequiredFlag(ctx, flags.DataDir.Name)
+	datadir := readRequiredFlag(ctx, flags.DataDir)
 	encodingType := ethstorage.ENCODE_BLOB_POSEIDON
 	miner := "0x"
 	if ctx.IsSet(encodingTypeFlagName) {
@@ -198,7 +197,7 @@ func EsNodeInit(ctx *cli.Context) error {
 		}
 	}
 	if encodingType != ethstorage.NO_ENCODE {
-		miner = readRequiredFlag(ctx, flags.StorageMiner.Name)
+		miner = readRequiredFlag(ctx, flags.StorageMiner)
 		if !common.IsHexAddress(miner) {
 			return fmt.Errorf("invalid miner address %s", miner)
 		}
@@ -231,21 +230,16 @@ func EsNodeInit(ctx *cli.Context) error {
 	log.Info("Storage config loaded", "storageCfg", storageCfg)
 	var shardIdxList []uint64
 	if len(shardIndexes) > 0 {
-		// check existense of shard indexes but add shard 0 anyway
+	out:
 		for i := 0; i < len(shardIndexes); i++ {
-			shard := uint64(shardIndexes[i])
-			if shard > 0 {
-				timeStamp, err := getLastMineTime(cctx, client, l1Contract, shard)
-				if err != nil {
-					log.Error("Failed to get shard info from contract", "error", err)
-					return err
-				}
-				// lastMineTime will be set to non-zero when opening a new shard
-				if timeStamp != nil && timeStamp.Cmp(big.NewInt(0)) == 0 {
-					return fmt.Errorf("shard not exist: %d", shard)
+			new := uint64(shardIndexes[i])
+			// prevent duplicated
+			for _, s := range shardIdxList {
+				if s == new {
+					continue out
 				}
 			}
-			shardIdxList = append(shardIdxList, shard)
+			shardIdxList = append(shardIdxList, new)
 		}
 	} else {
 		// get shard indexes of length shardLen from contract
