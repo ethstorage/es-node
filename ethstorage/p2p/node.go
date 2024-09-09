@@ -96,7 +96,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 					shards       map[common.Address][]uint64
 					remotePeerId = conn.RemotePeer()
 				)
-				if len(n.host.Peerstore().Addrs(remotePeerId)) == 0 {
+				if len(n.host.Peerstore().Addrs(remotePeerId)) == 0 && conn.Stat().Direction == network.DirOutbound {
 					// As the node host enable NATService, which will create a new connection with another
 					// peer id and its Addrs will not be set to Peerstore, so if len of peer Addrs is 0,
 					// then ignore this connection.
