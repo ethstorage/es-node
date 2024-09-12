@@ -10,14 +10,18 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"io"
 	"math"
 	"net/http"
 	"os"
 	"time"
 
+	"github.com/crate-crypto/go-proto-danksharding-crypto/eth"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto/kzg4844"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethstorage/go-ethstorage/cmd/es-utils/utils"
 	es "github.com/ethstorage/go-ethstorage/ethstorage"
 	"github.com/ethstorage/go-ethstorage/ethstorage/node"
@@ -29,18 +33,19 @@ const (
 	expectedStateRefreshTime = 5 * time.Minute
 	executionTime            = 2 * time.Hour
 
-	kvEntries = 32768
-	kvSize    = 128 * 1024
-	dataSize  = 126976
+	kvEntries = 8192
+	kvSize    = 32 * 4096
+	dataSize  = 31 * 4096
 
-	blobEmptyFillingMask = byte(0b10000000)
-
+	rpcEndpoint      = "http://127.0.0.1:9595"
 	uploadedDataFile = ".data"
-	shardFile        = "../../es-data-it/shard-0.dat"
+	shardFile0       = "../../es-data-it/shard-0.dat"
+	shardFile1       = "../../es-data-it/shard-1.dat"
 )
 
 var (
-	portFlag = flag.Int("port", 9096, "Listener port for the es-node to report node status")
+	portFlag     = flag.Int("port", 9096, "Listener port for the es-node to report node status")
+	contractAddr = flag.String("contract_addr", "", "EthStorage contract address")
 )
 
 var (
@@ -50,6 +55,7 @@ var (
 	hasConnectedPeer = false
 	testLog          = log.New("IntegrationTest")
 	prover           = prv.NewKZGProver(testLog)
+	contractAddress  = common.Address{}
 )
 
 func HelloHandler(w http.ResponseWriter, r *http.Request) {
@@ -102,7 +108,6 @@ func ReportStateHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(`{"status":"ok"}`))
 }
 
-// TODO support multi shards
 func checkState(oldState, newState *node.NodeState) {
 	if len(oldState.Shards) != len(newState.Shards) {
 		addErrorMessage(fmt.Sprintf("shards count mismatch between two state, new %d, old %d", len(newState.Shards), len(oldState.Shards)))
@@ -180,8 +185,29 @@ func checkFinalState(state *node.NodeState) {
 	}
 }
 
-// TODO support multi shards
-// TODO read data from RPC
+func createShardManager() (*es.ShardManager, error) {
+	sm := es.NewShardManager(contractAddress, kvSize, kvEntries, kvSize)
+	df0, err := es.OpenDataFile(shardFile0)
+	if err != nil {
+		return nil, err
+	}
+	err = sm.AddDataFileAndShard(df0)
+	if err != nil {
+		return nil, err
+	}
+
+	df1, err := es.OpenDataFile(shardFile1)
+	if err != nil {
+		return nil, err
+	}
+	err = sm.AddDataFileAndShard(df1)
+	if err != nil {
+		return nil, err
+	}
+
+	return sm, nil
+}
+
 func verifyData() error {
 	file, err := os.OpenFile(uploadedDataFile, os.O_RDONLY, 0755)
 	if err != nil {
@@ -193,30 +219,86 @@ func verifyData() error {
 	fileScanner.Buffer(make([]byte, dataSize*2), kvSize*2)
 	fileScanner.Split(bufio.ScanLines)
 
-	df, err := es.OpenDataFile(shardFile)
+	sm, err := createShardManager()
 	if err != nil {
 		return err
 	}
 
-	ds := es.NewDataShard(0, kvSize, kvEntries, kvSize)
-	ds.AddDataFile(df)
-
 	i := uint64(0)
 	for fileScanner.Scan() {
 		expectedData := common.Hex2Bytes(fileScanner.Text())
-		blobs := utils.EncodeBlobs(expectedData)
-		commit, _ := ds.ReadMeta(i)
-		data, err := ds.Read(i, kvSize, common.BytesToHash(commit))
+		blob := utils.EncodeBlobs(expectedData)[0]
+		commit, _, _ := sm.TryReadMeta(i)
+		data, _, err := sm.TryRead(i, kvSize, common.BytesToHash(commit))
 		if err != nil {
 			return errors.New(fmt.Sprintf("read %d from shard fail with err: %s", i, err.Error()))
 		}
-		if bytes.Compare(blobs[0][:], data) != 0 {
-			return errors.New(fmt.Sprintf("compare data %d fail, expected data %s; data: %s",
-				i, common.Bytes2Hex(blobs[0][:256]), common.Bytes2Hex(data[:256])))
+		if bytes.Compare(blob[:], data) != 0 {
+			return errors.New(fmt.Sprintf("compare shard data %d fail, expected data %s; data: %s",
+				i, common.Bytes2Hex(blob[:256]), common.Bytes2Hex(data[:256])))
 		}
 		i++
 	}
 	return nil
+}
+
+func verifyDataFromRPC() error {
+	client, err := rpc.DialHTTP(rpcEndpoint)
+	if err != nil {
+		return err
+	}
+	defer client.Close()
+
+	file, err := os.OpenFile(uploadedDataFile, os.O_RDONLY, 0755)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	fileScanner := bufio.NewScanner(file)
+	fileScanner.Buffer(make([]byte, dataSize*2), kvSize*2)
+	fileScanner.Split(bufio.ScanLines)
+
+	i := uint64(0)
+	for fileScanner.Scan() {
+		expectedData := common.Hex2Bytes(fileScanner.Text())
+		blob := utils.EncodeBlobs(expectedData)[0]
+		commit, err := kzg4844.BlobToCommitment(blob)
+		if err != nil {
+			return fmt.Errorf("blobToCommitment failed: %w", err)
+		}
+		hash := common.Hash(eth.KZGToVersionedHash(commit))
+
+		data, err := downloadBlobFromRPC(client, i, hash)
+		if err != nil {
+			return errors.New(fmt.Sprintf("get data %d from rpc fail with err: %s", i, err.Error()))
+		}
+		if bytes.Compare(blob[:], data) != 0 {
+			return errors.New(fmt.Sprintf("compare rpc data %d fail, expected data %s; data: %s",
+				i, common.Bytes2Hex(blob[:256]), common.Bytes2Hex(data[:256])))
+		}
+		i++
+	}
+	return nil
+}
+
+func downloadBlobFromRPC(client *rpc.Client, kvIndex uint64, hash common.Hash) ([]byte, error) {
+	var result hexutil.Bytes
+	err := client.Call(&result, "es_getBlob", kvIndex, hash, 0, 0, 4096*32)
+	if err != nil {
+		return nil, err
+	}
+
+	var blob kzg4844.Blob
+	copy(blob[:], result)
+	commit, err := kzg4844.BlobToCommitment(blob)
+	if err != nil {
+		return nil, fmt.Errorf("blobToCommitment failed: %w", err)
+	}
+	if common.Hash(eth.KZGToVersionedHash(commit)) != hash {
+		return nil, fmt.Errorf("invalid blob for %s", hash)
+	}
+	return result, nil
 }
 
 func addErrorMessage(errMessage string) {
@@ -238,12 +320,20 @@ func main() {
 	if *portFlag < 0 || *portFlag > math.MaxUint16 {
 		log.Crit("Invalid port")
 	}
+	if *contractAddr == "" {
+		log.Crit("Invalid contract address")
+	} else {
+		contractAddress = common.HexToAddress(*contractAddr)
+	}
 
 	go listenAndServe(*portFlag)
 
 	time.Sleep(executionTime)
 	checkFinalState(lastRecord)
 	if err := verifyData(); err != nil {
+		addErrorMessage(err.Error())
+	}
+	if err := verifyDataFromRPC(); err != nil {
 		addErrorMessage(err.Error())
 	}
 

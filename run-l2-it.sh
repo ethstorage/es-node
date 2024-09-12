@@ -2,6 +2,7 @@
 
 data_dir="./es-data-it"
 storage_file_0="$data_dir/shard-0.dat"
+storage_file_1="$data_dir/shard-1.dat"
 zkey_file="./build/bin/snark_lib/zkey/blob_poseidon2.zkey"
 
 if test -d  ${data_dir} ; then
@@ -10,6 +11,8 @@ fi
 mkdir ${data_dir}
 
 ./init-l2.sh \
+  --shard_index 0 \
+  --shard_index 1 \
   --datadir $data_dir \
   --storage.l1contract $ES_NODE_CONTRACT_ADDRESS
 
@@ -18,6 +21,7 @@ exec ./build/bin/es-node \
   --network integration \
   --datadir $data_dir \
   --storage.files $storage_file_0 \
+  --storage.files $storage_file_1 \
   --storage.l1contract $ES_NODE_CONTRACT_ADDRESS \
   --miner.enabled \
   --miner.zkey $zkey_file \

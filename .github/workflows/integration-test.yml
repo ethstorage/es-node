@@ -50,12 +50,13 @@ jobs:
         run: |
           cd ./integration_tests/scripts 
           npm install --force
-          node ituploader.js > upload.log
+          node ituploader.js 10800 true > upload.log
 
       - name: Test
         run: |
           ./run-l2-it.sh > es-node-it.log&
           cp ./integration_tests/scripts/.data  ./cmd/integration-test-server/.data
-          cd ./cmd/integration-test-server
+          node ituploader.js  12288 false > upload.log&
+          cd ./cmd/integration-test-server --contract_addr $ES_NODE_CONTRACT_ADDRESS
           go build
           ./integration-test-server > itserver.log

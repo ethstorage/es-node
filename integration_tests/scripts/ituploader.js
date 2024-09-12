@@ -15,8 +15,9 @@ const contractABI = [
 
 const provider = new ethers.JsonRpcProvider(RPC);
 const contract = new Contract(contractAddr, contractABI, provider);
-const MAX_BLOB = 10800n;
+const MAX_BLOB = BigInt(process.argv[2]);
 const BATCH_SIZE = 6n;
+const NEED_WAIT = (process.argv[3] === 'true');
 
 async function UploadBlobsForIntegrationTest() {
     // put blobs
@@ -53,6 +54,10 @@ async function UploadBlobsForIntegrationTest() {
         for (let i = 0; i < blobs.length; i++) {
             fs.writeFileSync(".data", blobs[i].toString('hex')+'\n', { flag: 'a+' });
         }
+    }
+
+    if (!NEED_WAIT) {
+        return
     }
 
     let latestBlock
