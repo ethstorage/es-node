@@ -20,7 +20,6 @@ const (
 	GasPriceFlagName         = "miner.gas-price"
 	PriorityGasPriceFlagName = "miner.priority-gas-price"
 	ZKeyFileNameFlagName     = "miner.zkey"
-	ZKWorkingDirFlagName     = "miner.zk-working-dir"
 	ZKProverModeFlagName     = "miner.zk-prover-mode"
 	ZKProverImplFlagName     = "miner.zk-prover-impl"
 	ThreadsPerShardFlagName  = "miner.threads-per-shard"
@@ -55,15 +54,9 @@ func CLIFlags(envPrefix string) []cli.Flag {
 		},
 		cli.StringFlag{
 			Name:   ZKeyFileNameFlagName,
-			Usage:  "zkey file name which should be put in the snark_lib folder",
-			Value:  DefaultConfig.ZKeyFileName,
+			Usage:  "zkey file name with path",
+			Value:  DefaultConfig.ZKeyFile,
 			EnvVar: rollup.PrefixEnvVar(envPrefix, "ZKEY_FILE"),
-		},
-		cli.StringFlag{
-			Name:   ZKWorkingDirFlagName,
-			Usage:  "Path to the snark_lib folder",
-			Value:  DefaultConfig.ZKWorkingDir,
-			EnvVar: rollup.PrefixEnvVar(envPrefix, "ZK_WORKING_DIR"),
 		},
 		cli.Uint64Flag{
 			Name:   ZKProverModeFlagName,
@@ -92,7 +85,7 @@ type CLIConfig struct {
 	GasPrice         *big.Int
 	PriorityGasPrice *big.Int
 	MinimumProfit    *big.Int
-	ZKeyFileName     string
+	ZKeyFile         string
 	ZKWorkingDir     string
 	ZKProverMode     uint64
 	ZKProverImpl     uint64
@@ -118,14 +111,22 @@ func (c CLIConfig) ToMinerConfig() (Config, error) {
 		}
 		zkWorkingDir = dir
 	}
+	zkFile := c.ZKeyFile
+	if !filepath.IsAbs(zkFile) {
+		dir, err := filepath.Abs(zkFile)
+		if err != nil {
+			return Config{}, fmt.Errorf("check ZKeyFileName error: %v", err)
+		}
+		zkFile = dir
+	}
 	cfg := DefaultConfig
 	cfg.ZKWorkingDir = zkWorkingDir
+	cfg.ZKeyFile = zkFile
+	cfg.ZKProverMode = c.ZKProverMode
+	cfg.ZKProverImpl = c.ZKProverImpl
 	cfg.GasPrice = c.GasPrice
 	cfg.PriorityGasPrice = c.PriorityGasPrice
 	cfg.MinimumProfit = c.MinimumProfit
-	cfg.ZKeyFileName = c.ZKeyFileName
-	cfg.ZKProverMode = c.ZKProverMode
-	cfg.ZKProverImpl = c.ZKProverImpl
 	cfg.ThreadsPerShard = c.ThreadsPerShard
 	return cfg, nil
 }
@@ -136,8 +137,8 @@ func ReadCLIConfig(ctx *cli.Context) CLIConfig {
 		GasPrice:         types.GlobalBig(ctx, GasPriceFlagName),
 		PriorityGasPrice: types.GlobalBig(ctx, PriorityGasPriceFlagName),
 		MinimumProfit:    types.GlobalBig(ctx, MinimumProfitFlagName),
-		ZKeyFileName:     ctx.GlobalString(ZKeyFileNameFlagName),
-		ZKWorkingDir:     ctx.GlobalString(ZKWorkingDirFlagName),
+		ZKeyFile:         ctx.GlobalString(ZKeyFileNameFlagName),
+		ZKWorkingDir:     DefaultConfig.ZKWorkingDir,
 		ZKProverMode:     ctx.GlobalUint64(ZKProverModeFlagName),
 		ZKProverImpl:     ctx.GlobalUint64(ZKProverImplFlagName),
 		ThreadsPerShard:  ctx.GlobalUint64(ThreadsPerShardFlagName),

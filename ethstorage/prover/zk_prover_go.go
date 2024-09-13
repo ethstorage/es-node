@@ -24,20 +24,20 @@ type ZKProverGo struct {
 	lg   log.Logger
 }
 
-func NewZKProverGo(libDir, zkeyName, wasmName string, lg log.Logger) (*ZKProverGo, error) {
-	wasm, err := os.ReadFile(filepath.Join(libDir, wasmName))
+func NewZKProverGo(libDir, zkeyFile, wasmName string, lg log.Logger) (*ZKProverGo, error) {
+	wasmBytes, err := os.ReadFile(filepath.Join(libDir, wasmName))
 	if err != nil {
 		lg.Error("Read wasm file failed", "error", err)
 		return nil, err
 	}
-	zkey, err := os.ReadFile(filepath.Join(libDir, zkeyName))
+	zkey, err := os.ReadFile(zkeyFile)
 	if err != nil {
 		lg.Error("Read zkey file failed", "error", err)
 		return nil, err
 	}
 	return &ZKProverGo{
 		zkey: zkey,
-		wasm: wasm,
+		wasm: wasmBytes,
 		lg:   lg,
 	}, nil
 }

@@ -322,9 +322,12 @@ func (w *worker) updateDifficulty(shardIdx, blockTime uint64) (*big.Int, error) 
 		return nil, err
 	}
 	w.lg.Info("Mining info retrieved", "shard", shardIdx, "lastMineTime", info.LastMineTime, "difficulty", info.Difficulty, "proofsSubmitted", info.BlockMined)
+
+	if blockTime <= info.LastMineTime {
+		return nil, errors.New("minedTs too small")
+	}
 	reqDiff := new(big.Int).Div(maxUint256, expectedDiff(
-		info.LastMineTime,
-		blockTime,
+		blockTime-info.LastMineTime,
 		info.Difficulty,
 		w.config.Cutoff,
 		w.config.DiffAdjDivisor,
@@ -352,7 +355,7 @@ func (w *worker) taskLoop(taskCh chan *taskItem) {
 				w.lg.Info("Mine task success", "shard", ti.shardIdx, "thread", ti.thread, "block", ti.blockNumber)
 			}
 		case <-w.exitCh:
-			w.lg.Warn("Worker is exiting from task loop...")
+			w.lg.Debug("Worker is exiting from task loop...")
 			return
 		}
 	}
@@ -456,6 +459,9 @@ func (w *worker) resultLoop() {
 			errorCache = append(errorCache, err)
 		case <-w.exitCh:
 			w.lg.Warn("Worker is exiting from result loop...")
+			for _, e := range errorCache {
+				w.lg.Error("Mining error since es-node launched", "err", e)
+			}
 			return
 		}
 	}
@@ -545,19 +551,19 @@ func (w *worker) mineTask(t *taskItem) (bool, error) {
 			return false, err
 		}
 		if t.requiredDiff.Cmp(new(big.Int).SetBytes(hash1.Bytes())) >= 0 {
-			w.lg.Info("Calculated a valid hash", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonce", nonce)
+			w.lg.Info("Calculated a valid hash", "shard", t.shardIdx, "block", t.blockNumber, "timestamp", t.mineTime, "randao", t.mixHash, "nonce", nonce, "hash0", hash0, "hash1", hash1, "sampleIdxs", sampleIdxs)
 			dataSet, kvIdxs, sampleIdxsInKv, encodingKeys, encodedSamples, err := w.getMiningData(t.task, sampleIdxs)
 			if err != nil {
 				w.lg.Error("Get sample data failed", "kvIdxs", kvIdxs, "sampleIdxsInKv", sampleIdxsInKv, "err", err.Error())
 				return false, err
 			}
-			w.lg.Info("Got sample data", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "kvIdxs", kvIdxs, "sampleIdxsInKv", sampleIdxsInKv)
+			w.lg.Info("Got sample data", "shard", t.shardIdx, "block", t.blockNumber, "encodedSamples", encodedSamples)
 			masks, decodeProof, inclusiveProofs, err := w.prover.GetStorageProof(dataSet, encodingKeys, sampleIdxsInKv)
 			if err != nil {
 				w.lg.Error("Get storage proof error", "kvIdx", kvIdxs, "sampleIdxsInKv", sampleIdxsInKv, "error", err.Error())
 				return false, fmt.Errorf("get proof err: %v", err)
 			}
-			w.lg.Info("Got storage proof", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "kvIdx", kvIdxs, "sampleIdxsInKv", sampleIdxsInKv)
+			w.lg.Info("Got storage proof", "shard", t.shardIdx, "block", t.blockNumber, "kvIdx", kvIdxs, "sampleIdxsInKv", sampleIdxsInKv)
 			newResult := &result{
 				blockNumber:     t.blockNumber,
 				startShardId:    t.shardIdx,

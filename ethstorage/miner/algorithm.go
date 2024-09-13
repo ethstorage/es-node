@@ -40,23 +40,29 @@ func initHash(miner common.Address, mixedHash common.Hash, nonce uint64) common.
 	)
 }
 
-func expectedDiff(lastMineTime, minedTime uint64, difficulty, cutoff, diffAdjDivisor, minDiff *big.Int) *big.Int {
-	interval := new(big.Int).SetUint64(minedTime - lastMineTime)
-	diff := difficulty
-	if interval.Cmp(cutoff) < 0 {
-		// diff = diff + (diff-interval*diff/cutoff)/diffAdjDivisor
-		diff = new(big.Int).Add(diff, new(big.Int).Div(
-			new(big.Int).Sub(diff, new(big.Int).Div(new(big.Int).Mul(interval, diff), cutoff)), diffAdjDivisor))
+func expectedDiff(interval uint64, difficulty, cutoff, diffAdjDivisor, minDiff *big.Int) *big.Int {
+	diff := new(big.Int).Set(difficulty)
+	x := interval / cutoff.Uint64()
+	if x == 0 {
+		// diff = diff + ((1 - interval / _cutoff) * diff) / _diffAdjDivisor;
+		adjust := new(big.Int).Div(diff, diffAdjDivisor)
+		diff = new(big.Int).Add(diff, adjust)
 		if diff.Cmp(minDiff) < 0 {
 			diff = minDiff
 		}
 	} else {
-		// dec := (interval*diff/cutoff - diff) / diffAdjDivisor
-		dec := new(big.Int).Div(new(big.Int).Sub(new(big.Int).Div(new(big.Int).Mul(interval, diff), cutoff), diff), diffAdjDivisor)
-		if new(big.Int).Add(dec, minDiff).Cmp(diff) > 0 {
+		// diff = diff - ((interval / _cutoff - 1) * diff) / _diffAdjDivisor;
+		adjust := new(big.Int).Div(
+			new(big.Int).Mul(
+				new(big.Int).SetUint64(x-1),
+				diff,
+			),
+			diffAdjDivisor,
+		)
+		if new(big.Int).Add(adjust, minDiff).Cmp(diff) > 0 {
 			diff = minDiff
 		} else {
-			diff = new(big.Int).Sub(diff, dec)
+			diff = new(big.Int).Sub(diff, adjust)
 		}
 	}
 
