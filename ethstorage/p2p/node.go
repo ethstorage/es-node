@@ -96,20 +96,19 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 					shards       map[common.Address][]uint64
 					remotePeerId = conn.RemotePeer()
 				)
-				if len(n.host.Peerstore().Addrs(remotePeerId)) == 0 && conn.Stat().Direction == network.DirOutbound {
-					// As the node host enable NATService, which will create a new connection with another
-					// peer id and its Addrs will not be set to Peerstore, so if len of peer Addrs is 0,
-					// then ignore this connection.
-					log.Debug("No addresses to get shard list, return without close conn", "peer", remotePeerId)
-					return
-				}
 				css, err := n.Host().Peerstore().Get(remotePeerId, protocol.EthStorageENRKey)
 				if err != nil {
 					// for node which is new to the ethstorage network, and it dial the nodes which do not contain
 					// the new node's enr, so the nodes do not know its shard list from enr, so it needs to call
 					// n.RequestShardList to fetch the shard list of the new node.
 					remoteShardList, e := n.RequestShardList(remotePeerId)
-					if e != nil {
+					if e != nil && len(n.host.Peerstore().Addrs(remotePeerId)) == 0 {
+						// As the node host enable NATService, which will create a new connection with another
+						// peer id and its Addrs will not be set to Peerstore, so if len of peer Addrs is 0 and
+						// cannot get the remote node's shard list, then ignore this connection.
+						log.Debug("No addresses to get shard list, return without close conn", "peer", n.host.ID(), "conn peer", conn.LocalPeer(), "remote peer", remotePeerId, "Direction", conn.Stat().Direction, "remote address", conn.RemoteMultiaddr().String())
+						return
+					} else if e != nil {
 						log.Debug("Get remote shard list fail", "peer", remotePeerId, "err", e.Error())
 						conn.Close()
 						return
