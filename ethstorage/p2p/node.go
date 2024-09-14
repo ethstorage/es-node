@@ -104,16 +104,20 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 					remoteShardList, e := n.RequestShardList(remotePeerId)
 					if e != nil && len(n.host.Peerstore().Addrs(remotePeerId)) == 0 {
 						// As the node host enable NATService, which will create a new connection with another
-						// peer id and its Addrs will not be set to Peerstore, so if len of peer Addrs is 0 and
+						// peer id and its Addrs will not be set to Peerstore. So if len of peer Addrs is 0 and
 						// cannot get the remote node's shard list, then ignore this connection.
-						log.Debug("No addresses to get shard list, return without close conn", "peer", n.host.ID(), "conn peer", conn.LocalPeer(), "remote peer", remotePeerId, "Direction", conn.Stat().Direction, "remote address", conn.RemoteMultiaddr().String())
+						log.Debug("No addresses to get shard list, return without close conn", "peer", n.host.ID(),
+							"conn peer", conn.LocalPeer(), "remote peer", remotePeerId, "Direction", conn.Stat().Direction,
+							"remote address", conn.RemoteMultiaddr().String())
 						return
 					} else if e != nil {
-						log.Debug("Get remote shard list fail", "peer", remotePeerId, "err", e.Error())
+						log.Debug("Get remote shard list fail", "peer", remotePeerId, "Direction", conn.Stat().Direction,
+							"remote address", conn.RemoteMultiaddr().String(), "err", e.Error())
 						conn.Close()
 						return
 					}
-					log.Debug("Get remote shard list success", "peer", remotePeerId, "shards", remoteShardList)
+					log.Debug("Get remote shard list success", "peer", remotePeerId, "shards", remoteShardList,
+						"Direction", conn.Stat().Direction, "remote address", conn.RemoteMultiaddr().String())
 					n.Host().Peerstore().Put(remotePeerId, protocol.EthStorageENRKey, remoteShardList)
 					shards = protocol.ConvertToShardList(remoteShardList)
 				} else {
