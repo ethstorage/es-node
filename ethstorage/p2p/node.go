@@ -106,9 +106,8 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 						// As the node host enable NATService, which will create a new connection with another
 						// peer id and its Addrs will not be set to Peerstore. So if len of peer Addrs is 0 and
 						// cannot get the remote node's shard list, then ignore this connection.
-						log.Debug("No addresses to get shard list, return without close conn", "peer", n.host.ID(),
-							"conn peer", conn.LocalPeer(), "remote peer", remotePeerId, "Direction", conn.Stat().Direction,
-							"remote address", conn.RemoteMultiaddr().String())
+						log.Debug("No addresses to get shard list, return without close conn", "peer", n.host.ID(), "remote peer",
+							remotePeerId, "Direction", conn.Stat().Direction, "remote address", conn.RemoteMultiaddr().String(), "error", e.Error())
 						return
 					} else if e != nil {
 						log.Debug("Get remote shard list fail", "peer", remotePeerId, "Direction", conn.Stat().Direction,
