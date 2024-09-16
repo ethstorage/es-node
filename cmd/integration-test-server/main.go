@@ -224,6 +224,12 @@ func verifyData() error {
 		return err
 	}
 
+	client, err := rpc.DialHTTP(rpcEndpoint)
+	if err != nil {
+		return err
+	}
+	defer client.Close()
+
 	i := uint64(0)
 	for fileScanner.Scan() {
 		expectedData := common.Hex2Bytes(fileScanner.Text())
@@ -237,45 +243,14 @@ func verifyData() error {
 			return errors.New(fmt.Sprintf("compare shard data %d fail, expected data %s; data: %s",
 				i, common.Bytes2Hex(blob[:256]), common.Bytes2Hex(data[:256])))
 		}
-		i++
-	}
-	return nil
-}
 
-func verifyDataFromRPC() error {
-	client, err := rpc.DialHTTP(rpcEndpoint)
-	if err != nil {
-		return err
-	}
-	defer client.Close()
-
-	file, err := os.OpenFile(uploadedDataFile, os.O_RDONLY, 0755)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	fileScanner := bufio.NewScanner(file)
-	fileScanner.Buffer(make([]byte, dataSize*2), kvSize*2)
-	fileScanner.Split(bufio.ScanLines)
-
-	i := uint64(0)
-	for fileScanner.Scan() {
-		expectedData := common.Hex2Bytes(fileScanner.Text())
-		blob := utils.EncodeBlobs(expectedData)[0]
-		commit, err := kzg4844.BlobToCommitment(blob)
-		if err != nil {
-			return fmt.Errorf("blobToCommitment failed: %w", err)
-		}
-		hash := common.Hash(eth.KZGToVersionedHash(commit))
-
-		data, err := downloadBlobFromRPC(client, i, hash)
+		rpcdata, err := downloadBlobFromRPC(client, i, common.BytesToHash(commit))
 		if err != nil {
 			return errors.New(fmt.Sprintf("get data %d from rpc fail with err: %s", i, err.Error()))
 		}
-		if bytes.Compare(blob[:], data) != 0 {
+		if bytes.Compare(blob[:], rpcdata) != 0 {
 			return errors.New(fmt.Sprintf("compare rpc data %d fail, expected data %s; data: %s",
-				i, common.Bytes2Hex(blob[:256]), common.Bytes2Hex(data[:256])))
+				i, common.Bytes2Hex(blob[:256]), common.Bytes2Hex(rpcdata[:256])))
 		}
 		i++
 	}
@@ -298,6 +273,7 @@ func downloadBlobFromRPC(client *rpc.Client, kvIndex uint64, hash common.Hash) (
 	if common.Hash(eth.KZGToVersionedHash(commit)) != hash {
 		return nil, fmt.Errorf("invalid blob for %s", hash)
 	}
+
 	return result, nil
 }
 
@@ -331,9 +307,6 @@ func main() {
 	time.Sleep(executionTime)
 	checkFinalState(lastRecord)
 	if err := verifyData(); err != nil {
-		addErrorMessage(err.Error())
-	}
-	if err := verifyDataFromRPC(); err != nil {
 		addErrorMessage(err.Error())
 	}
 
