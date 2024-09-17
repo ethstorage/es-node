@@ -31,7 +31,7 @@ jobs:
           git pull
           npm install 
           git submodule init && git submodule update
-          npx hardhat run scripts/deployL2-it.js --network qkc_testnet >> deploy.log
+ #         npx hardhat run scripts/deployL2-it.js --network qkc_testnet >> deploy.log
           echo ES_NODE_CONTRACT_ADDRESS=`cat .caddr` >> "$GITHUB_ENV"
 
       - name: Build and Run Bootnode Node
