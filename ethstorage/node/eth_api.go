@@ -22,7 +22,7 @@ type ethAPI struct {
 }
 
 const (
-	defaultCallTimeout = 2 * time.Second
+	defaultCallTimeout = 5 * time.Second
 )
 
 var (
