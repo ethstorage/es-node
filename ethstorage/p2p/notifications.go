@@ -46,11 +46,11 @@ func (notif *notifications) ListenClose(n network.Network, a ma.Multiaddr) {
 }
 func (notif *notifications) Connected(n network.Network, v network.Conn) {
 	notif.m.IncPeerCount()
-	notif.log.Info("Connected to peer", "peer", v.RemotePeer(), "addr", v.RemoteMultiaddr())
+	notif.log.Info("Connected to peer", "peer", v.RemotePeer(), "Direction", v.Stat().Direction, "addr", v.RemoteMultiaddr())
 }
 func (notif *notifications) Disconnected(n network.Network, v network.Conn) {
 	notif.m.DecPeerCount()
-	notif.log.Info("Disconnected from peer", "peer", v.RemotePeer(), "addr", v.RemoteMultiaddr())
+	notif.log.Info("Disconnected from peer", "peer", v.RemotePeer(), "Direction", v.Stat().Direction, "addr", v.RemoteMultiaddr())
 }
 func (notif *notifications) OpenedStream(n network.Network, v network.Stream) {
 	notif.m.IncStreamCount()
