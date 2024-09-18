@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"net/http"
 	"os"
 	"os/signal"
 	"runtime"
@@ -107,10 +106,6 @@ func main() {
 
 func EsNodeMain(ctx *cli.Context) error {
 	log.Info("Configuring EthStorage Node")
-	go func() {
-		fmt.Println(http.ListenAndServe(":6060", nil))
-	}()
-
 	logCfg := eslog.ReadCLIConfig(ctx)
 	if err := logCfg.Check(); err != nil {
 		log.Error("Unable to create the log config", "error", err)
