@@ -10,7 +10,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"io"
 	"math"
 	"net/http"
@@ -19,6 +18,7 @@ import (
 
 	"github.com/crate-crypto/go-proto-danksharding-crypto/eth"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto/kzg4844"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rpc"
@@ -241,7 +241,7 @@ func verifyData() error {
 		}
 		if bytes.Compare(blob[:], data) != 0 {
 			return errors.New(fmt.Sprintf("compare shard data %d fail, expected data %s; data: %s",
-				i, common.Bytes2Hex(blob[:256]), common.Bytes2Hex(data[:256])))
+				i, common.Bytes2Hex(blob[:64]), common.Bytes2Hex(data[:64])))
 		}
 
 		rpcdata, err := downloadBlobFromRPC(client, i, common.BytesToHash(commit))
@@ -250,7 +250,7 @@ func verifyData() error {
 		}
 		if bytes.Compare(blob[:], rpcdata) != 0 {
 			return errors.New(fmt.Sprintf("compare rpc data %d fail, expected data %s; data: %s",
-				i, common.Bytes2Hex(blob[:256]), common.Bytes2Hex(rpcdata[:256])))
+				i, common.Bytes2Hex(blob[:64]), common.Bytes2Hex(rpcdata[:64])))
 		}
 		i++
 	}
@@ -270,8 +270,9 @@ func downloadBlobFromRPC(client *rpc.Client, kvIndex uint64, hash common.Hash) (
 	if err != nil {
 		return nil, fmt.Errorf("blobToCommitment failed: %w", err)
 	}
-	if common.Hash(eth.KZGToVersionedHash(commit)) != hash {
-		return nil, fmt.Errorf("invalid blob for %s", hash)
+	cmt := common.Hash(eth.KZGToVersionedHash(commit))
+	if bytes.Compare(cmt[:es.HashSizeInContract], hash[:es.HashSizeInContract]) != 0 {
+		return nil, fmt.Errorf("invalid blob for %d hash: %s, commit: %s", kvIndex, hash, cmt)
 	}
 
 	return result, nil
