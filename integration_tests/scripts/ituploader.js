@@ -46,7 +46,7 @@ async function UploadBlobsForIntegrationTest() {
         // write blobs
         try {
             let status = await es.writeBlobs(keys, blobs);
-            if status == false {
+            if (status == false) {
                 continue
             }
             console.log(status);
