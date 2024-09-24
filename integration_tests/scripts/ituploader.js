@@ -30,7 +30,7 @@ async function UploadBlobsForIntegrationTest() {
     while (true) {
         const currentIndex = await contract.lastKvIdx();
         const totalCount = MAX_BLOB - currentIndex;
-        console.log("Current Number:", currentIndex, " Total Number:", totalCount);
+        console.log("Current Number:", currentIndex, " Total Number:", totalCount, "at", new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
         if (totalCount <= 0) {
             break;
         }
@@ -46,6 +46,9 @@ async function UploadBlobsForIntegrationTest() {
         // write blobs
         try {
             let status = await es.writeBlobs(keys, blobs);
+            if status == false {
+                continue
+            }
             console.log(status);
         } catch (e) {
             console.log("upload blob error:", e.message);
