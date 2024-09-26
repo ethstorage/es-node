@@ -339,6 +339,7 @@ func (s *Downloader) downloadRange(start int64, end int64, toCache bool) ([]blob
 		return nil, err
 	}
 	blobs := []blob{}
+	var downloadTime int64
 	for _, elBlock := range elBlocks {
 		// attempt to read the blobs from the cache first
 		res := s.Cache.Blobs(elBlock.number)
@@ -356,6 +357,7 @@ func (s *Downloader) downloadRange(start int64, end int64, toCache bool) ([]blob
 			)
 		}
 
+		ts := time.Now()
 		var clBlobs map[common.Hash]eth.Blob
 		if s.l1Beacon != nil {
 			clBlobs, err = s.l1Beacon.DownloadBlobs(s.l1Beacon.Timestamp2Slot(elBlock.timestamp))
@@ -377,6 +379,7 @@ func (s *Downloader) downloadRange(start int64, end int64, toCache bool) ([]blob
 		} else {
 			return nil, fmt.Errorf("no beacon client or DA client is available")
 		}
+		downloadTime += time.Since(ts).Milliseconds()
 
 		for _, elBlob := range elBlock.blobs {
 			clBlob, exists := clBlobs[elBlob.hash]
@@ -398,7 +401,7 @@ func (s *Downloader) downloadRange(start int64, end int64, toCache bool) ([]blob
 	}
 
 	if len(blobs) > 0 {
-		s.log.Info("Download range", "cache", toCache, "start", start, "end", end, "blobNumber", len(blobs), "duration(ms)", time.Since(ts).Milliseconds())
+		s.log.Info("Download range", "cache", toCache, "start", start, "end", end, "blobNumber", len(blobs), "duration(ms)", time.Since(ts).Milliseconds(), "downloadTime(ms)", downloadTime)
 	}
 
 	return blobs, nil
