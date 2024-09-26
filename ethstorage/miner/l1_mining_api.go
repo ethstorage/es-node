@@ -90,17 +90,17 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 		m.lg.Error("Failed to compose calldata", "error", err)
 		return common.Hash{}, err
 	}
-	tip, baseFee, err := m.suggestGasPrices(ctx, cfg)
+
+	baseFee, tip, gasFeeCap, useConfig, err := m.suggestGasPrices(ctx, cfg)
 	if err != nil {
 		m.lg.Error("Failed to suggest gas prices", "error", err)
 		return common.Hash{}, err
 	}
-	m.lg.Info("Suggested gas prices", "gasTipCap", tip, "baseFee", baseFee)
 	estimatedGas, err := m.EstimateGas(ctx, ethereum.CallMsg{
 		From:      cfg.SignerAddr,
 		To:        &contract,
 		GasTipCap: tip,
-		GasFeeCap: new(big.Int).Add(baseFee, tip),
+		GasFeeCap: gasFeeCap,
 		Value:     common.Big0,
 		Data:      calldata,
 	})
@@ -109,6 +109,7 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 		return common.Hash{}, fmt.Errorf("failed to estimate gas: %w", err)
 	}
 	m.lg.Info("Estimated gas done", "gas", estimatedGas)
+
 	reward, err := m.GetMiningReward(rst.startShardId, rst.blockNumber.Int64())
 	if err != nil {
 		m.lg.Error("Query mining reward failed", "error", err.Error())
@@ -123,14 +124,6 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 		return profit.Cmp(cfg.MinimumProfit) == 1
 	}
 
-	var useConfig bool
-	gasFeeCap := cfg.GasPrice
-	if gasFeeCap == nil || gasFeeCap.Cmp(common.Big0) == 0 {
-		gasFeeCap = new(big.Int).Add(baseFee, tip)
-	} else {
-		useConfig = true
-		m.lg.Info("Using configured gas price as gasFeeCap", "gasFeeCap", gasFeeCap)
-	}
 	if !isProfitable(gasFeeCap) {
 		m.lg.Warn("Will drop the tx: the profit will not meet expectation", "minimumProfit", fmtEth(cfg.MinimumProfit))
 		return common.Hash{}, errDropped
@@ -250,22 +243,31 @@ func (m *l1MiningAPI) composeCalldata(ctx context.Context, rst result) ([]byte, 
 	return calldata, nil
 }
 
-func (m *l1MiningAPI) suggestGasPrices(ctx context.Context, cfg Config) (*big.Int, *big.Int, error) {
+func (m *l1MiningAPI) suggestGasPrices(ctx context.Context, cfg Config) (*big.Int, *big.Int, *big.Int, bool, error) {
+	var baseFee *big.Int
+	gasFeeCap := cfg.GasPrice
 	tip := cfg.PriorityGasPrice
-	if tip == nil || tip.Cmp(common.Big0) == 0 {
-		suggested, err := m.SuggestGasTipCap(ctx)
+	useConfig := true
+	if gasFeeCap == nil || gasFeeCap.Cmp(common.Big0) == 0 {
+		useConfig = false
+		blockHeader, err := m.HeaderByNumber(ctx, nil)
 		if err != nil {
-			m.lg.Error("Query gas tip cap failed", "error", err.Error())
-			suggested = common.Big0
+			m.lg.Error("Failed to get block header", "error", err)
+			return nil, nil, nil, false, err
 		}
-		tip = suggested
-		m.lg.Info("Query gas tip cap done", "gasTipGap", tip)
+		baseFee = blockHeader.BaseFee
+		m.lg.Info("Query baseFee done", "baseFee", baseFee)
+		if tip == nil || tip.Cmp(common.Big0) == 0 {
+			suggested, err := m.SuggestGasTipCap(ctx)
+			if err != nil {
+				m.lg.Error("Query gas tip cap failed", "error", err.Error())
+				suggested = common.Big0
+			}
+			tip = suggested
+			m.lg.Info("Query gas tip cap done", "gasTipGap", tip)
+		}
+		gasFeeCap = new(big.Int).Add(baseFee, tip)
+		m.lg.Info("Suggested gas fee cap", "gasFeeCap", gasFeeCap)
 	}
-	blockHeader, err := m.HeaderByNumber(ctx, nil)
-	if err != nil {
-		m.lg.Error("Failed to get block header", "error", err)
-		return nil, nil, err
-	}
-	baseFee := blockHeader.BaseFee
-	return tip, baseFee, nil
+	return baseFee, tip, gasFeeCap, useConfig, nil
 }
