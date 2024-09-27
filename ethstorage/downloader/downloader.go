@@ -370,7 +370,7 @@ func (s *Downloader) downloadRange(start int64, end int64, toCache bool) ([]blob
 			for _, blob := range elBlock.blobs {
 				hashes = append(hashes, blob.hash)
 			}
-
+			s.log.Info("Downloading blobs from DA client", "blockNumber", elBlock.number, "batchSize", len(hashes))
 			clBlobs, err = s.daClient.DownloadBlobs(hashes)
 			if err != nil {
 				s.log.Error("DA client download blob error", "err", err)
