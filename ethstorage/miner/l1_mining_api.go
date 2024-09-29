@@ -91,7 +91,7 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 		return common.Hash{}, err
 	}
 
-	baseFee, tip, gasFeeCap, useConfig, err := m.suggestGasPrices(ctx, cfg)
+	tip, gasFeeCap, useConfig, err := m.suggestGasPrices(ctx, cfg)
 	if err != nil {
 		m.lg.Error("Failed to suggest gas prices", "error", err)
 		return common.Hash{}, err
@@ -115,41 +115,16 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 		m.lg.Error("Query mining reward failed", "error", err.Error())
 		return common.Hash{}, err
 	}
-	isProfitable := func(gasPrice *big.Int) bool {
-		cost := new(big.Int).Mul(new(big.Int).SetUint64(estimatedGas), gasPrice)
-		profit := new(big.Int).Sub(reward, cost)
-		m.lg.Debug("Estimating profit", "gasPrice", gasPrice)
-		m.lg.Debug("Estimated reward and cost (in ether)", "reward", fmtEth(reward), "cost", fmtEth(cost))
-		m.lg.Debug("Estimated profit (in ether)", "profit", fmtEth(profit), "minimumProfit", fmtEth(cfg.MinimumProfit))
-		return profit.Cmp(cfg.MinimumProfit) == 1
-	}
-
-	if !isProfitable(gasFeeCap) {
-		m.lg.Warn("Will drop the tx: the profit will not meet expectation", "minimumProfit", fmtEth(cfg.MinimumProfit))
+	profitableGasFeeCap := new(big.Int).Div(new(big.Int).Sub(reward, cfg.MinimumProfit), new(big.Int).SetUint64(estimatedGas))
+	m.lg.Info("Minimum profitable gas fee cap", "gasFeeCap", profitableGasFeeCap)
+	if gasFeeCap.Cmp(profitableGasFeeCap) == 1 {
+		profit := new(big.Int).Sub(reward, new(big.Int).Mul(new(big.Int).SetUint64(estimatedGas), gasFeeCap))
+		m.lg.Warn("Mining tx dropped: the profit will not meet expectation", "estimatedProfit", fmtEth(profit), "minimumProfit", fmtEth(cfg.MinimumProfit))
 		return common.Hash{}, errDropped
 	}
-
 	if !useConfig {
-		// Max fee cap doubles the base fee to ensure the transaction will remain marketable for six consecutive 100% full blocks.
-		maxGasFeeCap := new(big.Int).Add(tip, new(big.Int).Mul(baseFee, common.Big2))
-		baseFeeVar := baseFee
-		for {
-			// increase baseFee by 12.5% until maxGasFeeCap
-			baseFeeVar = new(big.Int).Div(new(big.Int).Mul(baseFeeVar, big.NewInt(9)), big.NewInt(8))
-			gasFeeCapNext := new(big.Int).Add(tip, baseFeeVar)
-			m.lg.Debug("Increasing gasFeeCap", "gasFeeCap", gasFeeCapNext)
-			if gasFeeCapNext.Cmp(maxGasFeeCap) == 1 {
-				m.lg.Debug("Dropped the gasFeeCap that exceeds the maximum", "gasFeeCap", gasFeeCapNext, "maxGasFeeCap", maxGasFeeCap)
-				break
-			}
-			if !isProfitable(gasFeeCapNext) {
-				m.lg.Debug("Dropped the gasFeeCap that will not meet the minimum profit", "gasFeeCap", gasFeeCapNext)
-				break
-			}
-			gasFeeCap = gasFeeCapNext
-			m.lg.Debug("GasFeeCap increased", "gasFeeCap", gasFeeCap)
-		}
-		m.lg.Info("Using suggested gasFeeCap", "gasFeeCap", gasFeeCap)
+		gasFeeCap = profitableGasFeeCap
+		m.lg.Info("Using profitable gas fee cap", "gasFeeCap", gasFeeCap)
 	}
 	sign := cfg.SignerFnFactory(m.NetworkID)
 	nonce, err := m.NonceAt(ctx, cfg.SignerAddr, big.NewInt(rpc.LatestBlockNumber.Int64()))
@@ -243,8 +218,7 @@ func (m *l1MiningAPI) composeCalldata(ctx context.Context, rst result) ([]byte, 
 	return calldata, nil
 }
 
-func (m *l1MiningAPI) suggestGasPrices(ctx context.Context, cfg Config) (*big.Int, *big.Int, *big.Int, bool, error) {
-	var baseFee *big.Int
+func (m *l1MiningAPI) suggestGasPrices(ctx context.Context, cfg Config) (*big.Int, *big.Int, bool, error) {
 	gasFeeCap := cfg.GasPrice
 	tip := cfg.PriorityGasPrice
 	useConfig := true
@@ -253,10 +227,9 @@ func (m *l1MiningAPI) suggestGasPrices(ctx context.Context, cfg Config) (*big.In
 		blockHeader, err := m.HeaderByNumber(ctx, nil)
 		if err != nil {
 			m.lg.Error("Failed to get block header", "error", err)
-			return nil, nil, nil, false, err
+			return nil, nil, false, err
 		}
-		baseFee = blockHeader.BaseFee
-		m.lg.Info("Query baseFee done", "baseFee", baseFee)
+		m.lg.Info("Query baseFee done", "baseFee", blockHeader.BaseFee)
 		if tip == nil || tip.Cmp(common.Big0) == 0 {
 			suggested, err := m.SuggestGasTipCap(ctx)
 			if err != nil {
@@ -266,8 +239,8 @@ func (m *l1MiningAPI) suggestGasPrices(ctx context.Context, cfg Config) (*big.In
 			tip = suggested
 			m.lg.Info("Query gas tip cap done", "gasTipGap", tip)
 		}
-		gasFeeCap = new(big.Int).Add(baseFee, tip)
+		gasFeeCap = new(big.Int).Add(blockHeader.BaseFee, tip)
 		m.lg.Info("Suggested gas fee cap", "gasFeeCap", gasFeeCap)
 	}
-	return baseFee, tip, gasFeeCap, useConfig, nil
+	return tip, gasFeeCap, useConfig, nil
 }
