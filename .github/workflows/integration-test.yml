@@ -1,5 +1,7 @@
 name: Integration Test
-on: [push]
+on:
+  schedule:
+    - cron: '1 8 * * 0,2,4'
 
 jobs:
   es-node-integration-test:
