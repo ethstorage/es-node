@@ -1,0 +1,65 @@
+name: Integration Test
+on:
+  schedule:
+    - cron: '1 8 * * 0,2,4'
+
+jobs:
+  es-node-integration-test:
+    runs-on: self-hosted
+    timeout-minutes: 2880
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      - name: Use Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20.x'
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Deploy Contracts
+        run: |
+          cd ../storage-contracts-v1 
+          git checkout main
+          git pull
+          npm install 
+          git submodule init && git submodule update
+          npx hardhat run scripts/deployL2-it.js --network qkc_testnet >> deploy.log
+          echo ES_NODE_CONTRACT_ADDRESS=`cat .caddr` >> "$GITHUB_ENV"
+
+      - name: Build and Run Bootnode Node
+        run: |
+          cd ../es-node
+          make
+          ./run-l2-it-rpc.sh > es-node-it-bootnode.log&
+
+      - name: Set ENV Parameters
+        run: |
+          echo ES_NODE_UPLOADER_PRIVATE_KEY=`cat ../uploader.key` >> "$GITHUB_ENV"
+          echo ES_NODE_SIGNER_PRIVATE_KEY=`cat ../private.key` >> "$GITHUB_ENV"
+          echo ES_NODE_STORAGE_MINER=0x5C935469C5592Aeeac3372e922d9bCEabDF8830d >> "$GITHUB_ENV"
+
+      - name: Upload Blobs
+        run: |
+          cd ./integration_tests/scripts 
+          npm install --force
+          node ituploader.js 10800 true > upload.log
+          cp .data  ../../cmd/integration-test-server/.data
+
+      - name: Test
+        run: |
+          ./run-l2-it.sh > es-node-it.log&
+          cd ./integration_tests/scripts
+          node ituploader.js  12288 false > upload2.log&
+          cd ../../cmd/integration-test-server
+          go build
+          ./integration-test-server --contract_addr $ES_NODE_CONTRACT_ADDRESS > itserver.log 

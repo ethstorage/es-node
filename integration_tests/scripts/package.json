@@ -1,0 +1,21 @@
+{
+  "name": "integration-test",
+  "version": "1.0.0",
+  "main": "ituploader.js",
+  "scripts": {
+    "build": "rollup -c"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "ethers": "^6.13.1",
+    "ethstorage-sdk": "^2.1.1",
+    "@actions/core": "^1.10.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ethstorage/es-node.git"
+  },
+  "author": "ethsorage",
+  "license": "ISC",
+  "description": ""
+}
