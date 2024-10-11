@@ -363,7 +363,7 @@ func loadGossipOptions(conf *p2p.Config, ctx *cli.Context) error {
 // loadSyncerParams loads [protocol.SyncerParams] from the CLI context.
 func loadSyncerParams(conf *p2p.Config, ctx *cli.Context) error {
 	metaDownloadBatchSize := ctx.GlobalUint64(flags.MetaDownloadBatchSize.Name)
-	maxRequestSize := ctx.GlobalUint64(flags.MaxRequestSize.Name)
+	initRequestSize := ctx.GlobalUint64(flags.InitRequestSize.Name)
 	syncConcurrency := ctx.GlobalUint64(flags.SyncConcurrency.Name)
 	fillEmptyConcurrency := ctx.GlobalInt(flags.FillEmptyConcurrency.Name)
 	maxPeers := ctx.GlobalInt(flags.PeersHi.Name)
@@ -372,7 +372,7 @@ func loadSyncerParams(conf *p2p.Config, ctx *cli.Context) error {
 	}
 	conf.SyncParams = &protocol.SyncerParams{
 		MaxPeers:              maxPeers,
-		MaxRequestSize:        maxRequestSize,
+		InitRequestSize:       initRequestSize,
 		SyncConcurrency:       syncConcurrency,
 		FillEmptyConcurrency:  fillEmptyConcurrency,
 		MetaDownloadBatchSize: metaDownloadBatchSize,

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ethstorage/go-ethstorage/ethstorage/archiver"
 	eslog "github.com/ethstorage/go-ethstorage/ethstorage/log"
 	"github.com/ethstorage/go-ethstorage/ethstorage/miner"
 	"github.com/ethstorage/go-ethstorage/ethstorage/signer"
@@ -50,6 +51,22 @@ var (
 		Name:   "l1.beacon",
 		Usage:  "Address of L1 beacon chain endpoint to use",
 		EnvVar: prefixEnvVar("L1_BEACON_URL"),
+	}
+	L1BlockTime = cli.Uint64Flag{
+		Name:   "l1.block_time",
+		Usage:  "Block time of L1 chain",
+		Value:  12,
+		EnvVar: prefixEnvVar("L1_BLOCK_TIME"),
+	}
+	DAURL = cli.StringFlag{
+		Name:   "da.url",
+		Usage:  "URL of the custom data availability service",
+		EnvVar: prefixEnvVar("DA_URL"),
+	}
+	RandaoURL = cli.StringFlag{
+		Name:   "randao.url",
+		Usage:  "URL of JSON-RPC endpoint to query randao",
+		EnvVar: prefixEnvVar("RANDAO_URL"),
 	}
 	// TODO: @Qiang everytime devnet changed, we may need to change it
 	L1BeaconBasedTime = cli.Uint64Flag{
@@ -195,6 +212,11 @@ var (
 		EnvVar: prefixEnvVar("RPC_ESCALL_URL"),
 		Value:  "http://127.0.0.1:8545",
 	}
+	StateUploadURL = cli.StringFlag{
+		Name:   "state.upload.url",
+		Usage:  "API that update es-node state to, the node will upload state to API for statistic if it has been set correctly.",
+		EnvVar: prefixEnvVar("STATE_UPLOAD_URL"),
+	}
 )
 
 // Not use 'Required' field in order to avoid unnecessary check when use 'init' subcommand
@@ -203,9 +225,6 @@ var requiredFlags = []cli.Flag{
 	DataDir,
 	StorageFiles,
 	L1NodeAddr,
-	L1BeaconAddr,
-	L1BeaconBasedTime,
-	L1BeaconBasedSlot,
 	StorageL1Contract,
 }
 
@@ -214,7 +233,13 @@ var optionalFlags = []cli.Flag{
 	Network,
 	RollupConfig,
 	L1ChainId,
+	L1BlockTime,
 	L1BeaconSlotTime,
+	L1BeaconAddr,
+	L1BeaconBasedTime,
+	L1BeaconBasedSlot,
+	DAURL,
+	RandaoURL,
 	L1MinDurationForBlobsRequest,
 	L2ChainId,
 	MetricsEnabledFlag,
@@ -233,6 +258,7 @@ var optionalFlags = []cli.Flag{
 	RPCListenAddr,
 	RPCListenPort,
 	RPCESCallURL,
+	StateUploadURL,
 }
 
 // Flags contains the list of configuration options available to the binary.
@@ -243,6 +269,7 @@ func init() {
 	optionalFlags = append(optionalFlags, eslog.CLIFlags(envVarPrefix)...)
 	optionalFlags = append(optionalFlags, signer.CLIFlags(envVarPrefix)...)
 	optionalFlags = append(optionalFlags, miner.CLIFlags(envVarPrefix)...)
+	optionalFlags = append(optionalFlags, archiver.CLIFlags(envVarPrefix)...)
 	Flags = append(requiredFlags, optionalFlags...)
 }
 

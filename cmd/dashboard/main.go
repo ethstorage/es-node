@@ -73,7 +73,7 @@ func newDashboard(rpcURL string, l1Contract common.Address) (*dashboard, error) 
 		ctx    = context.Background()
 	)
 
-	l1, err := eth.Dial(rpcURL, l1Contract, logger)
+	l1, err := eth.Dial(rpcURL, l1Contract, 12, logger)
 	if err != nil {
 		log.Crit("Failed to create L1 source", "err", err)
 	}

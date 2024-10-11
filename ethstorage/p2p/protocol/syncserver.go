@@ -5,12 +5,15 @@ package protocol
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"math"
 	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethstorage/go-ethstorage/ethstorage"
@@ -39,8 +42,12 @@ const (
 	// Allow a peer to burst 10 requests, so it does not have to wait
 	peerServerBlocksBurst = 10
 
-	// maxMessageSize is the target maximum size of replies to data retrievals.
-	maxMessageSize = 8 * 1024 * 1024
+	// maxRequestSize is the target maximum size of replies to data retrievals.
+	maxRequestSize = 8 * 1024 * 1024
+)
+
+var (
+	ProvidedBlobsKey = []byte("ProvidedBlobsKey")
 )
 
 // peerStat maintains rate-limiting data of a peer that requests blocks from us.
@@ -59,16 +66,21 @@ type SyncServerMetrics interface {
 type SyncServer struct {
 	cfg *rollup.EsConfig
 
+	providedBlobs  map[uint64]uint64
 	storageManager StorageManagerReader
+	db             ethdb.Database
 	metrics        SyncServerMetrics
+	exitCh         chan struct{}
 
 	peerRateLimits *simplelru.LRU[peer.ID, *peerStat]
 	peerStatsLock  sync.Mutex
 
 	globalRequestsRL *rate.Limiter
+
+	lock sync.Mutex
 }
 
-func NewSyncServer(cfg *rollup.EsConfig, storageManager StorageManagerReader, m SyncServerMetrics) *SyncServer {
+func NewSyncServer(cfg *rollup.EsConfig, storageManager StorageManagerReader, db ethdb.Database, m SyncServerMetrics) *SyncServer {
 	// We should never allow over 1000 different peers to churn through quickly,
 	// so it's fine to prune rate-limit details past this.
 
@@ -79,13 +91,35 @@ func NewSyncServer(cfg *rollup.EsConfig, storageManager StorageManagerReader, m 
 	if m == nil {
 		m = metrics.NoopMetrics
 	}
-	return &SyncServer{
+	var providedBlobs map[uint64]uint64
+	if status, _ := db.Get(ProvidedBlobsKey); status != nil {
+		if err := json.Unmarshal(status, &providedBlobs); err != nil {
+			log.Error("Failed to decode provided blobs", "err", err)
+		}
+	}
+
+	server := SyncServer{
 		cfg:              cfg,
 		storageManager:   storageManager,
+		db:               db,
+		providedBlobs:    make(map[uint64]uint64),
+		exitCh:           make(chan struct{}),
 		metrics:          m,
 		peerRateLimits:   peerRateLimits,
 		globalRequestsRL: globalRequestsRL,
 	}
+
+	for _, shardId := range storageManager.Shards() {
+		if providedBlobs != nil {
+			if blobs, ok := providedBlobs[shardId]; ok {
+				server.providedBlobs[shardId] = blobs
+				continue
+			}
+		}
+		server.providedBlobs[shardId] = 0
+	}
+	go server.SaveProvidedBlobs()
+	return &server
 }
 
 // HandleGetBlobsByRangeRequest is a stream handler function to register the L2 unsafe payloads alt-sync protocol.
@@ -158,6 +192,7 @@ func (srv *SyncServer) handleGetBlobsByRangeRequest(ctx context.Context, stream 
 		ShardId:  req.ShardId,
 		Blobs:    make([]*BlobPayload, 0),
 	}
+	maxbytes := uint64(math.Min(maxRequestSize, float64(req.Bytes)))
 	read, sucRead, readBytes := uint64(0), uint64(0), uint64(0)
 	start := time.Now()
 	for id := req.Origin; id <= req.Limit; id++ {
@@ -170,11 +205,14 @@ func (srv *SyncServer) handleGetBlobsByRangeRequest(ctx context.Context, stream 
 		sucRead++
 		res.Blobs = append(res.Blobs, payload)
 		readBytes += uint64(len(payload.EncodedBlob))
-		if readBytes >= req.Bytes || readBytes >= maxMessageSize {
+		if readBytes >= maxbytes {
 			break
 		}
 	}
 	srv.metrics.ServerReadBlobs(peerID.String(), read, sucRead, time.Since(start))
+	srv.lock.Lock()
+	srv.providedBlobs[req.ShardId] += uint64(len(res.Blobs))
+	srv.lock.Unlock()
 
 	recordDur := srv.metrics.ServerRecordTimeUsed("encodeResult")
 	data, err := rlp.EncodeToBytes(&res)
@@ -210,6 +248,7 @@ func (srv *SyncServer) handleGetBlobsByListRequest(ctx context.Context, stream n
 		ShardId:  req.ShardId,
 		Blobs:    make([]*BlobPayload, 0),
 	}
+	maxbytes := uint64(math.Min(maxRequestSize, float64(req.Bytes)))
 	read, sucRead, readBytes := uint64(0), uint64(0), uint64(0)
 	start := time.Now()
 	for _, idx := range req.BlobList {
@@ -222,11 +261,14 @@ func (srv *SyncServer) handleGetBlobsByListRequest(ctx context.Context, stream n
 		sucRead++
 		res.Blobs = append(res.Blobs, payload)
 		readBytes += uint64(len(payload.EncodedBlob))
-		if readBytes >= req.Bytes || readBytes >= maxMessageSize {
+		if readBytes >= maxbytes {
 			break
 		}
 	}
 	srv.metrics.ServerReadBlobs(peerID.String(), read, sucRead, time.Since(start))
+	srv.lock.Lock()
+	srv.providedBlobs[req.ShardId] += uint64(len(res.Blobs))
+	srv.lock.Unlock()
 
 	recordDur := srv.metrics.ServerRecordTimeUsed("encodeResult")
 	data, err := rlp.EncodeToBytes(&res)
@@ -310,4 +352,39 @@ func (srv *SyncServer) HandleRequestShardList(ctx context.Context, log log.Logge
 		log.Warn("Write response failed for HandleRequestShardList", "err", err.Error())
 	}
 	log.Debug("Write response done for HandleRequestShardList")
+}
+
+func (srv *SyncServer) saveProvidedBlobs() {
+	srv.lock.Lock()
+	states, err := json.Marshal(srv.providedBlobs)
+	srv.lock.Unlock()
+	if err != nil {
+		log.Error("Failed to marshal provided blobs states", "err", err)
+		return
+	}
+
+	err = srv.db.Put(ProvidedBlobsKey, states)
+	if err != nil {
+		log.Error("Failed to store provided blobs states", "err", err)
+		return
+	}
+}
+
+func (srv *SyncServer) SaveProvidedBlobs() {
+	ticker := time.NewTicker(5 * time.Minute)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			srv.saveProvidedBlobs()
+		case <-srv.exitCh:
+			log.Info("Stopped P2P req-resp L2 block sync server")
+			return
+		}
+	}
+}
+
+func (srv *SyncServer) Close() {
+	close(srv.exitCh)
+	srv.saveProvidedBlobs()
 }

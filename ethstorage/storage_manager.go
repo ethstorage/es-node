@@ -52,6 +52,24 @@ func NewStorageManager(sm *ShardManager, l1Source Il1Source) *StorageManager {
 	}
 }
 
+func (s *StorageManager) EncodeBlob(blob []byte, blobHash common.Hash, kvIdx, size uint64) []byte {
+	encodeType, encodeKey := s.getEncodingParams(kvIdx, blobHash)
+	return EncodeChunk(size, blob, encodeType, encodeKey)
+}
+
+func (s *StorageManager) DecodeBlob(blob []byte, blobHash common.Hash, kvIdx, size uint64) []byte {
+	encodeType, encodeKey := s.getEncodingParams(kvIdx, blobHash)
+	return DecodeChunk(size, blob, encodeType, encodeKey)
+}
+
+func (s *StorageManager) getEncodingParams(kvIdx uint64, blobHash common.Hash) (uint64, common.Hash) {
+	shardIdx := kvIdx >> s.KvEntriesBits()
+	encodeType, _ := s.GetShardEncodeType(shardIdx)
+	miner, _ := s.GetShardMiner(shardIdx)
+	encodeKey := CalcEncodeKey(blobHash, kvIdx, miner)
+	return encodeType, encodeKey
+}
+
 // DownloadFinished This function will be called when the node found new block are finalized, and it will update the
 // local L1 view and commit new blobs into local storage file.
 func (s *StorageManager) DownloadFinished(newL1 int64, kvIndices []uint64, blobs [][]byte, commits []common.Hash) error {
@@ -93,8 +111,8 @@ func (s *StorageManager) DownloadFinished(newL1 int64, kvIndices []uint64, blobs
 			var err error = nil
 			for _, idx := range insertIdx {
 				c := prepareCommit(commits[idx])
-				// if return false, just ignore because we are not intersted in it
-				_, err = s.shardManager.TryWrite(kvIndices[idx], blobs[idx], c)
+				// if return false, just ignore because we are not interested in it
+				_, err = s.shardManager.TryWriteEncoded(kvIndices[idx], blobs[idx], c)
 				if err != nil {
 					break
 				}
@@ -168,7 +186,7 @@ func (s *StorageManager) CommitBlobs(kvIndices []uint64, blobs [][]byte, commits
 	for i := 0; i < len(kvIndices); i++ {
 		encodedBlob, success, err := s.shardManager.TryEncodeKV(kvIndices[i], blobs[i], commits[i])
 		if !success || err != nil {
-			log.Warn("Blob encode failed", "index", kvIndices[i], "err", err.Error())
+			log.Warn("Blob encode failed", "index", kvIndices[i], "err", err)
 			continue
 		}
 		encodedBlobs[i] = encodedBlob
@@ -212,7 +230,7 @@ func (s *StorageManager) CommitEmptyBlobs(start, limit uint64) (uint64, uint64, 
 	for i := start; i <= limit; i++ {
 		encodedBlob, success, err := s.shardManager.TryEncodeKV(i, emptyBs, hash)
 		if !success || err != nil {
-			log.Warn("Blob encode failed", "index", i, "err", err.Error())
+			log.Warn("Blob encode failed", "index", i, "err", err)
 			break
 		}
 		encodedBlobs = append(encodedBlobs, encodedBlob)
@@ -335,6 +353,13 @@ func (s *StorageManager) DownloadAllMetas(ctx context.Context, batchSize uint64)
 		if end > lastKvIdx {
 			end = lastKvIdx
 		}
+
+		// Additional check to ensure end is not less than first
+		// E.g. There are more than one shard, and lastKvIdx is even less than the first of the current shard
+		if end < first {
+			continue
+		}
+
 		log.Info("Begin to download metas", "shard", sid, "first", first, "end", end, "limit", limit, "lastKvIdx", lastKvIdx)
 		ts := time.Now()
 
@@ -562,6 +587,7 @@ func (s *StorageManager) MaxKvSize() uint64 {
 func (s *StorageManager) MaxKvSizeBits() uint64 {
 	return s.shardManager.kvSizeBits
 }
+
 func (s *StorageManager) ChunksPerKvBits() uint64 {
 	return s.shardManager.chunksPerKvBits
 }

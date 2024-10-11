@@ -11,6 +11,7 @@ import (
 	"math/big"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -27,13 +28,13 @@ var kzgContract = common.HexToAddress(os.Getenv("ES_NODE_STORAGE_L1CONTRACT_KZG"
 
 func TestKZGProver_GenerateKZGProof(t *testing.T) {
 	lg.Info("KZG prover test", "contract", kzgContract)
-	dataRaw := generateRandomContent(128)
+	dataRaw := generateRandomContent(124)
 	dataHash := uploadBlob(t, dataRaw)
 	blobs := utils.EncodeBlobs(dataRaw)
 	blob := blobs[0][:]
 	tests := []struct {
-		name     string
-		chunkIdx uint64
+		name      string
+		sampleIdx uint64
 	}{
 		{"check 0 th element",
 			0,
@@ -48,7 +49,7 @@ func TestKZGProver_GenerateKZGProof(t *testing.T) {
 	p := prover.NewKZGProver(lg)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			peInput, err := p.GenerateKZGProof(blob, tt.chunkIdx)
+			peInput, err := p.GenerateKZGProof(blob, tt.sampleIdx)
 			if err != nil {
 				t.Errorf("KZGProver.GenerateKZGProof() error = %v", err)
 				return
@@ -57,7 +58,7 @@ func TestKZGProver_GenerateKZGProof(t *testing.T) {
 				t.Errorf("dataHash not correct: off-chain %v, on-chain %v", peInput[0:24], dataHash[:24])
 				return
 			}
-			err = verifyInclusive(tt.chunkIdx, peInput)
+			err = verifyInclusive(tt.sampleIdx, peInput)
 			if err != nil {
 				t.Errorf("verifyInclusive() error = %v", err)
 				return
@@ -98,7 +99,7 @@ func uploadBlob(t *testing.T, data []byte) common.Hash {
 	if err != nil {
 		t.Fatalf("Error getting nonce: %v", err)
 	}
-	blbKey := "0x0000000000000000000000000000000000000000000000000000000000000001"
+	blbKey := crypto.Keccak256Hash(new(big.Int).SetInt64(time.Now().UnixNano()).Bytes())
 	blbIdx := common.Big0
 	length := new(big.Int).SetInt64(128 * 1024)
 
@@ -111,7 +112,7 @@ func uploadBlob(t *testing.T, data []byte) common.Hash {
 		{Type: uint256Type},
 		{Type: uint256Type},
 	}
-	values := []interface{}{common.HexToHash(blbKey), blbIdx, length}
+	values := []interface{}{blbKey, blbIdx, length}
 	dataField, err := args.Pack(values...)
 	if err != nil {
 		t.Fatalf("Error getting calldata: %v", err)
@@ -137,7 +138,7 @@ func uploadBlob(t *testing.T, data []byte) common.Hash {
 		true,
 		int64(n),
 		storageCost.String(),
-		510000,
+		150000,
 		"",
 		"",
 		"40000000000",
@@ -158,10 +159,10 @@ func uploadBlob(t *testing.T, data []byte) common.Hash {
 	return dataHash
 }
 
-func verifyInclusive(trunkIdx uint64, peInput []byte) error {
+func verifyInclusive(sampleIdx uint64, peInput []byte) error {
 	dataHash := common.Hash{}
 	copy(dataHash[:], peInput[:24])
-	index := new(big.Int).SetInt64(int64(trunkIdx))
+	index := new(big.Int).SetInt64(int64(sampleIdx))
 	decodedData := new(big.Int).SetBytes(peInput[64:96])
 	h := crypto.Keccak256Hash([]byte("checkInclusive(bytes32,uint256,uint256,bytes)"))
 	mid := h[0:4]

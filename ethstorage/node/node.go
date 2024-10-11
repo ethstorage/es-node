@@ -5,22 +5,28 @@ package node
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
-	ethRPC "github.com/ethereum/go-ethereum/rpc"
-
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
+	ethRPC "github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethstorage/go-ethstorage/ethstorage"
+	"github.com/ethstorage/go-ethstorage/ethstorage/archiver"
+	"github.com/ethstorage/go-ethstorage/ethstorage/blobs"
 	"github.com/ethstorage/go-ethstorage/ethstorage/downloader"
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
 	"github.com/ethstorage/go-ethstorage/ethstorage/metrics"
 	"github.com/ethstorage/go-ethstorage/ethstorage/miner"
 	"github.com/ethstorage/go-ethstorage/ethstorage/p2p"
+	"github.com/ethstorage/go-ethstorage/ethstorage/p2p/protocol"
 	"github.com/ethstorage/go-ethstorage/ethstorage/prover"
 	"github.com/hashicorp/go-multierror"
 )
@@ -33,10 +39,14 @@ type EsNode struct {
 	l1HeadsSub     ethereum.Subscription // Subscription to get L1 heads (automatically re-subscribes on error)
 	l1SafeSub      ethereum.Subscription // Subscription to get L1 safe blocks, a.k.a. justified data (polling)
 	l1FinalizedSub ethereum.Subscription // Subscription to get L1 Finalized blocks, a.k.a. justified data (polling)
+	randaoHeadsSub ethereum.Subscription // Subscription to get randao heads (automatically re-subscribes on error)
 
-	l1Source   *eth.PollingClient     // L1 Client to fetch data from
-	l1Beacon   *eth.BeaconClient      // L1 Beacon Chain to fetch blobs from
-	downloader *downloader.Downloader // L2 Engine to Sync
+	randaoSource *eth.RandaoClient      // RPC client to fetch randao from
+	l1Source     *eth.PollingClient     // L1 Client to fetch data from
+	l1Beacon     *eth.BeaconClient      // L1 Beacon Chain to fetch blobs from
+	daClient     *eth.DAClient          // L1 Data Availability Client
+	blobCache    downloader.BlobCache   // Cache for blobs
+	downloader   *downloader.Downloader // L2 Engine to Sync
 	// l2Source  *sources.EngineClient // L2 Execution Engine RPC bindings
 	// rpcSync   *sources.SyncClient   // Alt-sync RPC client, optional (may be nil)
 	server  *rpcServer   // RPC server hosting the rollup-node API
@@ -54,6 +64,8 @@ type EsNode struct {
 	miner          *miner.Miner
 	// feed to notify miner of the sync done event to start mining
 	feed *event.Feed
+	// long term blob provider API for rollups
+	archiverAPI *archiver.APIService
 }
 
 func New(ctx context.Context, cfg *Config, log log.Logger, appVersion string, m metrics.Metricer) (*EsNode, error) {
@@ -117,15 +129,21 @@ func (n *EsNode) init(ctx context.Context, cfg *Config) error {
 	if err := n.initMetricsServer(ctx, cfg); err != nil {
 		return err
 	}
+	if err := n.initArchiver(ctx, cfg); err != nil {
+		return err
+	}
 	return nil
 }
 
 func (n *EsNode) initL2(ctx context.Context, cfg *Config) error {
+	n.blobCache = downloader.NewBlobDiskCache(cfg.DataDir, n.log)
 	n.downloader = downloader.NewDownloader(
 		n.l1Source,
 		n.l1Beacon,
+		n.daClient,
 		n.db,
 		n.storageManager,
+		n.blobCache,
 		cfg.Downloader.DownloadStart,
 		cfg.Downloader.DownloadDump,
 		cfg.L1.L1MinDurationForBlobsRequest,
@@ -136,13 +154,29 @@ func (n *EsNode) initL2(ctx context.Context, cfg *Config) error {
 }
 
 func (n *EsNode) initL1(ctx context.Context, cfg *Config) error {
-	client, err := eth.Dial(cfg.L1.L1NodeAddr, cfg.Storage.L1Contract, n.log)
+	client, err := eth.Dial(cfg.L1.L1NodeAddr, cfg.Storage.L1Contract, cfg.L1.L1BlockTime, n.log)
 	if err != nil {
 		return fmt.Errorf("failed to create L1 source: %w", err)
 	}
 	n.l1Source = client
 
-	n.l1Beacon = eth.NewBeaconClient(cfg.L1.L1BeaconURL, cfg.L1.L1BeaconBasedTime, cfg.L1.L1BeaconBasedSlot, cfg.L1.L1BeaconSlotTime)
+	if cfg.L1.DAURL != "" {
+		n.daClient = eth.NewDAClient(cfg.L1.DAURL)
+		n.log.Info("Using DA URL", "url", cfg.L1.DAURL)
+	} else if cfg.L1.L1BeaconURL != "" {
+		n.l1Beacon = eth.NewBeaconClient(cfg.L1.L1BeaconURL, cfg.L1.L1BeaconBasedTime, cfg.L1.L1BeaconBasedSlot, cfg.L1.L1BeaconSlotTime)
+		n.log.Info("Using L1 Beacon URL", "url", cfg.L1.L1BeaconURL)
+	} else {
+		return fmt.Errorf("no L1 beacon or DA URL provided")
+	}
+	if cfg.RandaoSourceURL != "" {
+		rc, err := eth.DialRandaoSource(ctx, cfg.RandaoSourceURL, cfg.L1.L1NodeAddr, cfg.L1.L1BlockTime, n.log)
+		if err != nil {
+			return fmt.Errorf("failed to create randao source: %w", err)
+		}
+		n.randaoSource = rc
+		n.log.Info("Using randao source", "url", cfg.RandaoSourceURL)
+	}
 	return nil
 }
 
@@ -160,6 +194,25 @@ func (n *EsNode) startL1(cfg *Config) {
 			return
 		}
 		n.log.Error("L1 heads subscription error", "err", err)
+	}()
+
+	// Keep subscribed to the randao heads, which helps miner to get proper random seeds
+	n.randaoHeadsSub = event.ResubscribeErr(time.Second*10, func(ctx context.Context, err error) (event.Subscription, error) {
+		if err != nil {
+			n.log.Warn("Resubscribing after failed randao head subscription", "err", err)
+		}
+		if n.randaoSource != nil {
+			return eth.WatchHeadChanges(n.resourcesCtx, n.randaoSource, n.OnNewRandaoSourceHead)
+		} else {
+			return eth.WatchHeadChanges(n.resourcesCtx, n.l1Source, n.OnNewRandaoSourceHead)
+		}
+	})
+	go func() {
+		err, ok := <-n.randaoHeadsSub.Err()
+		if !ok {
+			return
+		}
+		n.log.Error("Randao heads subscription error", "err", err)
 	}()
 
 	// Poll for the safe L1 block and finalized block,
@@ -247,15 +300,30 @@ func (n *EsNode) initMiner(ctx context.Context, cfg *Config) error {
 		// not enabled
 		return nil
 	}
-	l1api := miner.NewL1MiningAPI(n.l1Source, n.log)
+	l1api := miner.NewL1MiningAPI(n.l1Source, n.randaoSource, n.log)
 	pvr := prover.NewKZGPoseidonProver(
 		cfg.Mining.ZKWorkingDir,
-		cfg.Mining.ZKeyFileName,
+		cfg.Mining.ZKeyFile,
 		cfg.Mining.ZKProverMode,
+		cfg.Mining.ZKProverImpl,
 		n.log,
 	)
-	n.miner = miner.New(cfg.Mining, n.storageManager, l1api, &pvr, n.feed, n.log)
-	log.Info("Initialized miner")
+	br := blobs.NewBlobReader(n.blobCache, n.storageManager, n.log)
+	n.miner = miner.New(cfg.Mining, n.db, n.storageManager, l1api, br, &pvr, n.feed, n.log)
+	n.log.Info("Initialized miner")
+	return nil
+}
+
+func (n *EsNode) initArchiver(ctx context.Context, cfg *Config) error {
+	if cfg.Archiver == nil {
+		// not enabled
+		return nil
+	}
+	n.archiverAPI = archiver.NewService(*cfg.Archiver, n.storageManager, n.l1Beacon, n.l1Source, n.log)
+	n.log.Info("Initialized blob archiver API server")
+	if err := n.archiverAPI.Start(ctx); err != nil {
+		return fmt.Errorf("unable to start blob archiver API server: %w", err)
+	}
 	return nil
 }
 
@@ -279,7 +347,97 @@ func (n *EsNode) Start(ctx context.Context, cfg *Config) error {
 		}
 	}
 
+	if cfg.StateUploadURL != "" {
+		n.log.Info("Start upload node state")
+		go n.UploadNodeState(cfg.StateUploadURL)
+	}
+
 	return nil
+}
+
+func (n *EsNode) UploadNodeState(url string) {
+	<-time.After(2 * time.Minute)
+	localNode := n.p2pNode.Dv5Local().Node()
+	id := localNode.ID().String()
+	helloUrl := fmt.Sprintf(url + "/hello")
+	stateUrl := fmt.Sprintf(url + "/reportstate")
+	_, err := sendMessage(helloUrl, id)
+	if err != nil {
+		log.Warn("Send message to resp", "err", err.Error())
+		return
+	}
+	ticker := time.NewTicker(5 * time.Minute)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			state := NodeState{
+				Id:      id,
+				Version: n.appVersion,
+				Address: fmt.Sprintf("%s:%d", localNode.IP().String(), localNode.TCP()),
+			}
+
+			var submissionStates map[uint64]*miner.SubmissionState
+			if status, _ := n.db.Get(miner.SubmissionStatusKey); status != nil {
+				if err := json.Unmarshal(status, &submissionStates); err != nil {
+					log.Error("Failed to decode submission states", "err", err)
+					continue
+				}
+			}
+			var miningStates map[uint64]*miner.MiningState
+			if status, _ := n.db.Get(miner.MiningStatusKey); status != nil {
+				if err := json.Unmarshal(status, &miningStates); err != nil {
+					log.Error("Failed to decode submission states", "err", err)
+					continue
+				}
+			}
+			var providedBlobs map[uint64]uint64
+			if status, _ := n.db.Get(protocol.ProvidedBlobsKey); status != nil {
+				if err := json.Unmarshal(status, &providedBlobs); err != nil {
+					log.Error("Failed to decode provided Blobs count", "err", err)
+					continue
+				}
+			}
+			var syncStates map[uint64]*protocol.SyncState
+			if status, _ := n.db.Get(protocol.SyncStatusKey); status != nil {
+				if err := json.Unmarshal(status, &syncStates); err != nil {
+					log.Error("Failed to decode sync states", "err", err)
+					continue
+				}
+			}
+
+			shards := make([]*ShardState, 0)
+			for _, shardId := range n.storageManager.Shards() {
+				miner, _ := n.storageManager.GetShardMiner(shardId)
+				providedBlob, _ := providedBlobs[shardId]
+				syncState, _ := syncStates[shardId]
+				miningState, _ := miningStates[shardId]
+				submissionState, _ := submissionStates[shardId]
+				s := ShardState{
+					ShardId:         shardId,
+					Miner:           miner,
+					ProvidedBlob:    providedBlob,
+					SyncState:       syncState,
+					MiningState:     miningState,
+					SubmissionState: submissionState,
+				}
+				shards = append(shards, &s)
+			}
+			state.Shards = shards
+
+			data, err := json.Marshal(state)
+			if err != nil {
+				log.Info("Fail to Marshal node state", "error", err.Error())
+				continue
+			}
+			_, err = sendMessage(stateUrl, string(data))
+			if err != nil {
+				log.Info("Fail to upload node state", "error", err.Error())
+			}
+		case <-n.resourcesCtx.Done():
+			return
+		}
+	}
 }
 
 func (n *EsNode) OnNewL1Head(ctx context.Context, sig eth.L1BlockRef) {
@@ -287,6 +445,10 @@ func (n *EsNode) OnNewL1Head(ctx context.Context, sig eth.L1BlockRef) {
 	if n.downloader != nil {
 		n.downloader.OnNewL1Head(sig)
 	}
+}
+
+func (n *EsNode) OnNewRandaoSourceHead(ctx context.Context, sig eth.L1BlockRef) {
+	log.Debug("OnNewRandaoSourceHead", "blockNumber", sig.Number)
 	if n.miner != nil {
 		select {
 		case n.miner.ChainHeadCh <- sig:
@@ -326,7 +488,6 @@ func (n *EsNode) Close() error {
 			result = multierror.Append(result, fmt.Errorf("failed to close p2p node: %w", err))
 		}
 	}
-
 	if n.downloader != nil {
 		if err := n.downloader.Close(); err != nil {
 			result = multierror.Append(result, fmt.Errorf("failed to close downloader: %w", err))
@@ -346,11 +507,21 @@ func (n *EsNode) Close() error {
 	if n.l1HeadsSub != nil {
 		n.l1HeadsSub.Unsubscribe()
 	}
-
+	if n.randaoHeadsSub != nil {
+		n.randaoHeadsSub.Unsubscribe()
+	}
 	if n.miner != nil {
 		n.miner.Close()
 	}
+	if n.blobCache != nil {
+		if err := n.blobCache.Close(); err != nil {
+			result = multierror.Append(result, fmt.Errorf("failed to close blob cache: %w", err))
+		}
+	}
 
+	if n.archiverAPI != nil {
+		n.archiverAPI.Stop(context.Background())
+	}
 	// close L2 driver
 	// if n.l2Driver != nil {
 	// 	if err := n.l2Driver.Close(); err != nil {
@@ -373,6 +544,9 @@ func (n *EsNode) Close() error {
 	// close L1 data source
 	if n.l1Source != nil {
 		n.l1Source.Close()
+	}
+	if n.randaoSource != nil {
+		n.randaoSource.Close()
 	}
 	if n.storageManager != nil {
 		n.storageManager.Close()
@@ -400,4 +574,18 @@ func (n *EsNode) initDatabase(cfg *Config) error {
 		n.db = db
 	}
 	return err
+}
+
+func sendMessage(url string, data string) (string, error) {
+	contentType := "application/json"
+	resp, err := http.Post(url, contentType, strings.NewReader(data))
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
 }
