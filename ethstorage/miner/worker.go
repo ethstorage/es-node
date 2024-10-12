@@ -487,9 +487,9 @@ func (w *worker) checkTxStatus(txHash common.Hash, miner common.Address) {
 		}
 		if reward != nil {
 			log.Info("Mining transaction accounting (in ether)",
-				"reward", weiToEther(reward),
-				"cost", weiToEther(cost),
-				"profit", weiToEther(new(big.Int).Sub(reward, cost)),
+				"reward", fmtEth(reward),
+				"cost", fmtEth(cost),
+				"profit", fmtEth(new(big.Int).Sub(reward, cost)),
 			)
 		}
 	} else if receipt.Status == 0 {
@@ -509,6 +509,11 @@ func weiToEther(wei *big.Int) *big.Float {
 	fWei.SetPrec(236) //  IEEE 754 octuple-precision binary floating-point format: binary256
 	fWei.SetMode(big.ToNearestEven)
 	return f.Quo(fWei.SetInt(wei), big.NewFloat(params.Ether))
+}
+
+func fmtEth(wei *big.Int) string {
+	f := weiToEther(wei)
+	return fmt.Sprintf("%.9f", f)
 }
 
 // mineTask actually executes a mining task

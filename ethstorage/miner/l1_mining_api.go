@@ -85,10 +85,107 @@ func (m *l1MiningAPI) GetDataHashes(ctx context.Context, contract common.Address
 
 func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Address, rst result, cfg Config) (common.Hash, error) {
 	m.lg.Debug("Submit mined result", "shard", rst.startShardId, "block", rst.blockNumber, "nonce", rst.nonce)
+	calldata, err := m.composeCalldata(ctx, rst)
+	if err != nil {
+		m.lg.Error("Failed to compose calldata", "error", err)
+		return common.Hash{}, err
+	}
+
+	tip, gasFeeCap, useConfig, err := m.suggestGasPrices(ctx, cfg)
+	if err != nil {
+		m.lg.Error("Failed to suggest gas prices", "error", err)
+		return common.Hash{}, err
+	}
+	estimatedGas, err := m.EstimateGas(ctx, ethereum.CallMsg{
+		From:      cfg.SignerAddr,
+		To:        &contract,
+		GasTipCap: tip,
+		GasFeeCap: gasFeeCap,
+		Value:     common.Big0,
+		Data:      calldata,
+	})
+	if err != nil {
+		m.lg.Error("Estimate gas failed", "error", err.Error())
+		return common.Hash{}, fmt.Errorf("failed to estimate gas: %w", err)
+	}
+	m.lg.Info("Estimated gas done", "gas", estimatedGas)
+
+	reward, err := m.GetMiningReward(rst.startShardId, rst.blockNumber.Int64())
+	if err != nil {
+		m.lg.Error("Query mining reward failed", "error", err.Error())
+		return common.Hash{}, err
+	}
+	profitableGasFeeCap := new(big.Int).Div(new(big.Int).Sub(reward, cfg.MinimumProfit), new(big.Int).SetUint64(estimatedGas))
+	m.lg.Info("Minimum profitable gas fee cap", "gasFeeCap", profitableGasFeeCap)
+	if gasFeeCap.Cmp(profitableGasFeeCap) == 1 {
+		profit := new(big.Int).Sub(reward, new(big.Int).Mul(new(big.Int).SetUint64(estimatedGas), gasFeeCap))
+		m.lg.Warn("Mining tx dropped: the profit will not meet expectation", "estimatedProfit", fmtEth(profit), "minimumProfit", fmtEth(cfg.MinimumProfit))
+		return common.Hash{}, errDropped
+	}
+	if !useConfig {
+		gasFeeCap = profitableGasFeeCap
+		m.lg.Info("Using profitable gas fee cap", "gasFeeCap", gasFeeCap)
+	}
+	sign := cfg.SignerFnFactory(m.NetworkID)
+	nonce, err := m.NonceAt(ctx, cfg.SignerAddr, big.NewInt(rpc.LatestBlockNumber.Int64()))
+	if err != nil {
+		m.lg.Error("Query nonce failed", "error", err.Error())
+		return common.Hash{}, err
+	}
+	m.lg.Debug("Query nonce done", "nonce", nonce)
+	gas := uint64(float64(estimatedGas) * gasBufferRatio)
+	rawTx := &types.DynamicFeeTx{
+		ChainID:   m.NetworkID,
+		Nonce:     nonce,
+		GasTipCap: tip,
+		GasFeeCap: gasFeeCap,
+		Gas:       gas,
+		To:        &contract,
+		Value:     common.Big0,
+		Data:      calldata,
+	}
+	signedTx, err := sign(ctx, cfg.SignerAddr, types.NewTx(rawTx))
+	if err != nil {
+		m.lg.Error("Sign tx error", "error", err)
+		return common.Hash{}, err
+	}
+	err = m.SendTransaction(ctx, signedTx)
+	if err != nil {
+		m.lg.Error("Send tx failed", "txNonce", nonce, "gasFeeCap", gasFeeCap, "error", err)
+		return common.Hash{}, err
+	}
+	m.lg.Info("Submit mined result done", "shard", rst.startShardId, "block", rst.blockNumber,
+		"nonce", rst.nonce, "txSigner", cfg.SignerAddr.Hex(), "hash", signedTx.Hash().Hex())
+	return signedTx.Hash(), nil
+}
+
+func (m *l1MiningAPI) getRandaoProof(ctx context.Context, blockNumber *big.Int) ([]byte, error) {
+	var caller interface {
+		HeaderByNumber(context.Context, *big.Int) (*types.Header, error)
+	}
+	if m.rc != nil {
+		caller = m.rc
+	} else {
+		caller = m.Client
+	}
+	blockHeader, err := caller.HeaderByNumber(ctx, blockNumber)
+	if err != nil {
+		m.lg.Error("Failed to get block header", "number", blockNumber, "error", err)
+		return nil, err
+	}
+	headerRlp, err := rlp.EncodeToBytes(blockHeader)
+	if err != nil {
+		m.lg.Error("Failed to encode block header in RLP", "error", err)
+		return nil, err
+	}
+	return headerRlp, nil
+}
+
+func (m *l1MiningAPI) composeCalldata(ctx context.Context, rst result) ([]byte, error) {
 	headerRlp, err := m.getRandaoProof(ctx, rst.blockNumber)
 	if err != nil {
 		m.lg.Error("Failed to get randao proof", "error", err)
-		return common.Hash{}, err
+		return nil, err
 	}
 	uint256Type, _ := abi.NewType("uint256", "", nil)
 	uint256Array, _ := abi.NewType("uint256[]", "", nil)
@@ -118,106 +215,32 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 		rst.decodeProof,
 	)
 	calldata := append(mineSig[0:4], dataField...)
-	m.lg.Debug("Submit mined result", "calldata", common.Bytes2Hex(calldata))
-	gasPrice := cfg.GasPrice
-	if gasPrice == nil || gasPrice.Cmp(common.Big0) == 0 {
-		suggested, err := m.SuggestGasPrice(ctx)
-		if err != nil {
-			m.lg.Error("Query gas price failed", "error", err.Error())
-			return common.Hash{}, err
-		}
-		gasPrice = suggested
-		m.lg.Info("Query gas price done", "gasPrice", gasPrice)
-	}
-	tip := cfg.PriorityGasPrice
-	if tip == nil || tip.Cmp(common.Big0) == 0 {
-		suggested, err := m.SuggestGasTipCap(ctx)
-		if err != nil {
-			m.lg.Error("Query gas tip cap failed", "error", err.Error())
-			suggested = common.Big0
-		}
-		tip = suggested
-		m.lg.Info("Query gas tip cap done", "gasTipGap", tip)
-	}
-	estimatedGas, err := m.EstimateGas(ctx, ethereum.CallMsg{
-		From:      cfg.SignerAddr,
-		To:        &contract,
-		GasTipCap: tip,
-		GasFeeCap: gasPrice,
-		Value:     common.Big0,
-		Data:      calldata,
-	})
-	if err != nil {
-		m.lg.Error("Estimate gas failed", "error", err.Error())
-		return common.Hash{}, fmt.Errorf("failed to estimate gas: %w", err)
-	}
-	m.lg.Info("Estimated gas done", "gas", estimatedGas)
-	cost := new(big.Int).Mul(new(big.Int).SetUint64(estimatedGas), gasPrice)
-	reward, err := m.GetMiningReward(rst.startShardId, rst.blockNumber.Int64())
-	if err != nil {
-		m.lg.Error("Query mining reward failed", "error", err.Error())
-		return common.Hash{}, err
-	}
-	profit := new(big.Int).Sub(reward, cost)
-	m.lg.Info("Estimated reward and cost (in ether)", "reward", weiToEther(reward), "cost", weiToEther(cost), "profit", weiToEther(profit))
-	if profit.Cmp(cfg.MinimumProfit) == -1 {
-		m.lg.Warn("Will drop the tx: the profit will not meet expectation",
-			"profitEstimated", weiToEther(profit),
-			"minimumProfit", weiToEther(cfg.MinimumProfit),
-		)
-		return common.Hash{}, errDropped
-	}
-	sign := cfg.SignerFnFactory(m.NetworkID)
-	nonce, err := m.NonceAt(ctx, cfg.SignerAddr, big.NewInt(rpc.LatestBlockNumber.Int64()))
-	if err != nil {
-		m.lg.Error("Query nonce failed", "error", err.Error())
-		return common.Hash{}, err
-	}
-	m.lg.Debug("Query nonce done", "nonce", nonce)
-	gas := uint64(float64(estimatedGas) * gasBufferRatio)
-	rawTx := &types.DynamicFeeTx{
-		ChainID:   m.NetworkID,
-		Nonce:     nonce,
-		GasTipCap: tip,
-		GasFeeCap: gasPrice,
-		Gas:       gas,
-		To:        &contract,
-		Value:     common.Big0,
-		Data:      calldata,
-	}
-	signedTx, err := sign(ctx, cfg.SignerAddr, types.NewTx(rawTx))
-	if err != nil {
-		m.lg.Error("Sign tx error", "error", err)
-		return common.Hash{}, err
-	}
-	err = m.SendTransaction(ctx, signedTx)
-	if err != nil {
-		m.lg.Error("Send tx failed", "txNonce", nonce, "gasPrice", gasPrice, "error", err)
-		return common.Hash{}, err
-	}
-	m.lg.Info("Submit mined result done", "shard", rst.startShardId, "block", rst.blockNumber,
-		"nonce", rst.nonce, "txSigner", cfg.SignerAddr.Hex(), "hash", signedTx.Hash().Hex())
-	return signedTx.Hash(), nil
+	return calldata, nil
 }
 
-func (m *l1MiningAPI) getRandaoProof(ctx context.Context, blockNumber *big.Int) ([]byte, error) {
-	var caller interface {
-		HeaderByNumber(context.Context, *big.Int) (*types.Header, error)
+func (m *l1MiningAPI) suggestGasPrices(ctx context.Context, cfg Config) (*big.Int, *big.Int, bool, error) {
+	gasFeeCap := cfg.GasPrice
+	tip := cfg.PriorityGasPrice
+	useConfig := true
+	if gasFeeCap == nil || gasFeeCap.Cmp(common.Big0) == 0 {
+		useConfig = false
+		blockHeader, err := m.HeaderByNumber(ctx, nil)
+		if err != nil {
+			m.lg.Error("Failed to get block header", "error", err)
+			return nil, nil, false, err
+		}
+		m.lg.Info("Query baseFee done", "baseFee", blockHeader.BaseFee)
+		if tip == nil || tip.Cmp(common.Big0) == 0 {
+			suggested, err := m.SuggestGasTipCap(ctx)
+			if err != nil {
+				m.lg.Error("Query gas tip cap failed", "error", err.Error())
+				suggested = common.Big0
+			}
+			tip = suggested
+			m.lg.Info("Query gas tip cap done", "gasTipGap", tip)
+		}
+		gasFeeCap = new(big.Int).Add(blockHeader.BaseFee, tip)
+		m.lg.Info("Suggested gas fee cap", "gasFeeCap", gasFeeCap)
 	}
-	if m.rc != nil {
-		caller = m.rc
-	} else {
-		caller = m.Client
-	}
-	blockHeader, err := caller.HeaderByNumber(ctx, blockNumber)
-	if err != nil {
-		m.lg.Error("Failed to get block header", "number", blockNumber, "error", err)
-		return nil, err
-	}
-	headerRlp, err := rlp.EncodeToBytes(blockHeader)
-	if err != nil {
-		m.lg.Error("Failed to encode block header in RLP", "error", err)
-		return nil, err
-	}
-	return headerRlp, nil
+	return tip, gasFeeCap, useConfig, nil
 }
