@@ -39,6 +39,8 @@ jobs:
       - name: Build and Run Bootnode Node
         run: |
           cd ../es-node
+          git checkout main
+          git pull
           make
           ./run-l2-it-rpc.sh > es-node-it-bootnode.log&
 
