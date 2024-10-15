@@ -65,3 +65,15 @@ jobs:
           cd ../../cmd/integration-test-server
           go build
           ./integration-test-server --contract_addr $ES_NODE_CONTRACT_ADDRESS > itserver.log 
+
+      - name: Upload Logs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: logs
+          path: |
+            es-node-it-bootnode.log
+            ./integration_tests/scripts/upload.log
+            ./integration_tests/scripts/upload2.log
+            es-node-it.log
+            ./cmd/integration-test-server/itserver.log
