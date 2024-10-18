@@ -88,12 +88,12 @@ jobs:
       - name: Send notification email
         uses: dawidd6/action-send-mail@v3
         with:
-          server_address: smtp.gmail.com  # 使用 Gmail SMTP
+          server_address: smtp.gmail.com
           server_port: 465
           username: ${{ secrets.SMTP_USERNAME }}
           password: ${{ secrets.SMTP_PASSWORD }}
           subject: ${{ github.repository }} GitHub Actions ${{ github.workflow }} Run ${{ needs.integration-test.outputs.test_status }} - ${{ github.sha }}
           to: molaokp@gmail.com,lundeng@quarkchain.org,qzhu@quarkchain.org
-          from: ${{ secrets.SMTP_USERNAME }}  # 发件人邮箱
+          from: ${{ secrets.SMTP_USERNAME }}
           body: |
             "GitHub Action job completed with status: ${{ needs.integration-test.outputs.test_status }}! Check the details at ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
