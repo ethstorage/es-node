@@ -4,8 +4,10 @@ on:
     - cron: '1 8 * * 0,2,4'
 
 jobs:
-  es-node-integration-test:
+  integration-test:
     runs-on: self-hosted
+    outputs:
+      test_status: ${{ job.status }}
     timeout-minutes: 2880
 
     steps:
@@ -72,23 +74,26 @@ jobs:
         with:
           name: logs
           path: |
-            es-node-it-bootnode.log
+            ./cmd/integration-test-server/itserver.log
             ./integration_tests/scripts/upload.log
             ./integration_tests/scripts/upload2.log
+            es-node-it-bootnode.log
             es-node-it.log
-            ./cmd/integration-test-server/itserver.log
 
+  notification:
+    if: ${{ always() }}
+    needs: integration-test
+    runs-on: self-hosted
+    steps:
       - name: Send notification email
-        if: always()
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com  # 使用 Gmail SMTP
           server_port: 465
           username: ${{ secrets.SMTP_USERNAME }}
           password: ${{ secrets.SMTP_PASSWORD }}
-          subject: [ethstorage/es-node] GitHub Actions ${{ github.workflow }} Run ${{ job.status }} - ${{ github.sha }}
+          subject: ${{ github.repository }} GitHub Actions ${{ github.workflow }} Run ${{ needs.integration-test.outputs.test_status }} - ${{ github.sha }}
           to: molaokp@gmail.com,lundeng@quarkchain.org,qzhu@quarkchain.org
           from: ${{ secrets.SMTP_USERNAME }}  # 发件人邮箱
           body: |
-            "GitHub Action job completed with status: ${{ job.status }}! Check the details at ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-            
+            "GitHub Action job completed with status: ${{ needs.integration-test.outputs.test_status }}! Check the details at ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
