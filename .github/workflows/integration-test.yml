@@ -77,3 +77,18 @@ jobs:
             ./integration_tests/scripts/upload2.log
             es-node-it.log
             ./cmd/integration-test-server/itserver.log
+
+      - name: Send notification email
+        if: always()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com  # 使用 Gmail SMTP
+          server_port: 465
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: [ethstorage/es-node] GitHub Actions ${{ github.workflow }} Run ${{ job.status }} - ${{ github.sha }}
+          to: molaokp@gmail.com,lundeng@quarkchain.org,qzhu@quarkchain.org
+          from: ${{ secrets.SMTP_USERNAME }}  # 发件人邮箱
+          body: |
+            "GitHub Action job completed with status: ${{ job.status }}! Check the details at ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            
