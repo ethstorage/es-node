@@ -17,7 +17,7 @@ The tests will be conducted in an environment with the following services up and
 - An Ethereum L1 Beacon URL
 - An EthStorage node (es-node) with the archive service enabled
 - A Proxy of Ethereum Beacon RPC to mock a short blob retention period
-- An OP node that uses the EthStorage archive service
+- An OP node that uses the EthStorage archive service as the backup source of blobs
 
 ### Running an EthStorage Node with the Archive Service Enabled
 
@@ -54,16 +54,10 @@ The Proxy works just like a normal Beacon API except the blobs retension period 
 
 For details and more options please refer to this [repo](https://github.com/ethstorage/beacon-api-wrapper#beacon-api-wrapper).
 
-### Running an OP Node
+### Running an OP Stack rollup
 
 Following the [OP documentation](https://docs.optimism.io/builders/node-operators/tutorials/testnet) to run an op-node from source, and use the following options to make sure that:
-- The L1 Beacon URL points to the Proxy, and 
-- The archive service points to the es-node RPC. 
-
-For example, 
-```sh
---l1.beacon http://65.108.236.27:3600 --l1.beacon-archiver http://65.108.236.27:9645
-```
+- The BatchInbox is deployed on L1 and used as batch receiver. 
 
 ## Test Cases
 
@@ -93,7 +87,21 @@ For example,
         - KZG Proof
 
 
-### Test Case 2: 
+### Test Case 2: Sync an OP node using blobs from EthStorage 
+- **Objective**: 
+- **Steps**:
+1. Following this [tutorial](https://github.com/ethstorage/pm/blob/main/L2/testnet_new_node.md) to set up an op-node, and try to sycn data from the Beacon Chain.
+
+2. Change configuation of the OP node, making sure that:
+    - The L1 Beacon URL points to the Proxy, and 
+    - The archive service points to the es-node RPC. 
+
+For example, 
+```sh
+--l1.beacon http://65.108.236.27:3600 --l1.beacon-archiver http://65.108.236.27:9645
+```
+- **Expected Result**: 
+
 
 
 ## Tools
