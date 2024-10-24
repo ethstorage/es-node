@@ -4,8 +4,10 @@ on:
     - cron: '1 8 * * 0,2,4'
 
 jobs:
-  es-node-integration-test:
+  integration-test:
     runs-on: self-hosted
+    outputs:
+      test_status: ${{ job.status }}
     timeout-minutes: 2880
 
     steps:
@@ -39,6 +41,8 @@ jobs:
       - name: Build and Run Bootnode Node
         run: |
           cd ../es-node
+          git checkout main
+          git pull
           make
           ./run-l2-it-rpc.sh > es-node-it-bootnode.log&
 
@@ -63,3 +67,33 @@ jobs:
           cd ../../cmd/integration-test-server
           go build
           ./integration-test-server --contract_addr $ES_NODE_CONTRACT_ADDRESS > itserver.log 
+
+      - name: Upload Logs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: logs
+          path: |
+            ./cmd/integration-test-server/itserver.log
+            ./integration_tests/scripts/upload.log
+            ./integration_tests/scripts/upload2.log
+            es-node-it-bootnode.log
+            es-node-it.log
+
+  notification:
+    if: ${{ always() }}
+    needs: integration-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send notification email
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: ${{ github.repository }} GitHub Actions ${{ github.workflow }} Run ${{ needs.integration-test.outputs.test_status }} - ${{ github.sha }}
+          to: molaokp@gmail.com,lundeng@quarkchain.org,qzhu@quarkchain.org
+          from: ${{ secrets.SMTP_USERNAME }}
+          body: |
+            "GitHub Action job completed with status: ${{ needs.integration-test.outputs.test_status }}! Check the details at ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
