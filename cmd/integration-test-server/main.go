@@ -14,6 +14,8 @@ import (
 	"math"
 	"net/http"
 	"os"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/crate-crypto/go-proto-danksharding-crypto/eth"
@@ -41,6 +43,7 @@ const (
 	uploadedDataFile = ".data"
 	shardFile0       = "../../es-data-it/shard-0.dat"
 	shardFile1       = "../../es-data-it/shard-1.dat"
+	logFile          = "../../es-node-it.log"
 )
 
 var (
@@ -175,7 +178,11 @@ func checkFinalState(state *node.NodeState) {
 			addErrorMessage("At lease one block should be mined successfully during the test.")
 		}
 		if shardState.SubmissionState.Failed > 0 {
-			addErrorMessage(fmt.Sprintf("%d submission failed during the test.", shardState.SubmissionState.Failed))
+			byDesignCount := checkByDesignFailure()
+			failureCount := shardState.SubmissionState.Failed - byDesignCount
+			if failureCount > 0 {
+				addErrorMessage(fmt.Sprintf("%d submission failed during the test.", failureCount))
+			}
 		}
 		log.Info("Final state", "id", state.Id, "shard", shardState.ShardId, "miner", shardState.Miner, "sync progress",
 			shardState.SyncState.SyncProgress, "fill progress", shardState.SyncState.FillEmptyProgress, "mining power",
@@ -276,6 +283,202 @@ func downloadBlobFromRPC(client *rpc.Client, kvIndex uint64, hash common.Hash) (
 	}
 
 	return result, nil
+}
+
+func checkByDesignFailure() int {
+	count0, err := checkDiffNotMatchError()
+	if err != nil {
+		addErrorMessage(fmt.Sprintf("checkDiffNotMatchError fail: err, %s", err.Error()))
+	}
+	count1, err := checkInvalidSamplesError()
+	if err != nil {
+		addErrorMessage(fmt.Sprintf("checkInvalidSamplesError fail: err, %s", err.Error()))
+	}
+
+	return count0 + count1
+}
+
+func checkDiffNotMatchError() (int, error) {
+	// Description: 1. got two mining results with the same block number and diff nonce; 2. two mining results, one successful and one failed.
+	// Sample:
+	// lvl=info msg="Set mining result"         shard=1 block=6,906,682 nonce=565,740
+	// lvl=info msg="Set mining result"         shard=1 block=6,906,682 nonce=779,947
+	// lvl=eror msg="Failed to submit mined result"         shard=1 block=6,906,682 error="failed to estimate gas: execution reverted: StorageContract: diff not match"
+
+	file, err := os.OpenFile(logFile, os.O_RDONLY, 0755)
+	if err != nil {
+		return 0, err
+	}
+	defer file.Close()
+
+	fileScanner := bufio.NewScanner(file)
+	fileScanner.Split(bufio.ScanLines)
+
+	count := 0
+	miningResults := make(map[string]string)
+	conflicts := make(map[string]bool)
+	for fileScanner.Scan() {
+		logText := fileScanner.Text()
+		if strings.Contains(logText, "Set mining result") {
+			block, nonce, err := fetchMinedBlockAndNonce(logText)
+			if err != nil {
+				log.Error("checkDiffNotMatchError error", "log", logText, "error", err.Error())
+				continue
+			}
+			if n, ok := miningResults[block]; ok && strings.Compare(n, nonce) != 0 {
+				conflicts[block] = true
+				continue
+			}
+			miningResults[block] = nonce
+		} else if regexp.MustCompile(`Failed to submit mined result[\s\S]+diff not match`).MatchString(logText) {
+			for block, _ := range conflicts {
+				if strings.Contains(logText, block) {
+					log.Warn("By design error", "block", block, "error", "diff not match")
+					count++
+					continue
+				}
+			}
+		}
+	}
+
+	return count, nil
+}
+
+func checkInvalidSamplesError() (int, error) {
+	// description: 1. sample empty blob k, 2. download blob k, 3. submit mined result fail
+	// Sample:
+	// lvl=info msg="Get data hash"                         kvIndex=11742 hash=0x0000000000000000000000000000000000000000000000000000000000000000
+	// lvl=info msg="Downloaded and encoded"                blockNumber=4,225,672 kvIdx=11742
+	// lvl=info msg="Got storage proof"                     shard=1 block=6,906,682 kvIdx="[14613 11742]" sampleIdxsInKv="[1691 1859]"
+	// lvl=info msg="Mining result loop get result"         shard=1 block=6,906,682 nonce=539,139
+	// lvl=eror msg="Failed to submit mined result"         shard=1 block=6,906,682 error="failed to estimate gas: execution reverted: EthStorageContract2: invalid samples"
+
+	file, err := os.OpenFile(logFile, os.O_RDONLY, 0755)
+	if err != nil {
+		return 0, err
+	}
+	defer file.Close()
+
+	fileScanner := bufio.NewScanner(file)
+	fileScanner.Split(bufio.ScanLines)
+
+	count := 0
+	minedEmptyKVs := make(map[string]string)
+	legacyKVs := make(map[string]string)
+	for fileScanner.Scan() {
+		logText := fileScanner.Text()
+		if regexp.MustCompile(`Get data hash[\s\S]+hash=0x0000000000000000000000000000000000000000000000000000000000000000`).MatchString(logText) {
+			kvIdx := extractWithName(logText, `kvIndex=(?P<kvIdx>[\d]+)`, "kvIdx")
+			if kvIdx != "" {
+				minedEmptyKVs[kvIdx] = ""
+			}
+		} else if strings.Contains(logText, `Downloaded and encoded`) {
+			kvIdx := extractWithName(logText, `kvIdx=(?P<kvIdx>[\d]+)`, "kvIdx")
+			if kvIdx == "" {
+				continue
+			}
+			block, ok := minedEmptyKVs[kvIdx]
+			if !ok {
+				continue
+			}
+			legacyKVs[kvIdx] = block
+		} else if strings.Contains(logText, `Got storage proof`) {
+			block, kvIdxes, err := fetchMinedBlockAndKVIdx(logText)
+			if err != nil {
+				log.Error("checkInvalidSamplesError error", "log", logText, "error", err.Error())
+			}
+			for kvIdx, _ := range minedEmptyKVs {
+				if !strings.Contains(kvIdxes, kvIdx) {
+					continue
+				}
+				minedEmptyKVs[kvIdx] = block
+				if _, ok := legacyKVs[kvIdx]; ok {
+					legacyKVs[kvIdx] = block
+				}
+			}
+		} else if regexp.MustCompile(`Failed to submit mined result[\s\S]+invalid samples`).MatchString(logText) {
+			for kvIdx, block := range legacyKVs {
+				if block != "" && strings.Contains(logText, block) {
+					log.Warn("By design error", "block", block, "kvIdx", kvIdx, "error", "invalid samples")
+					count++
+					continue
+				}
+				delete(minedEmptyKVs, kvIdx)
+			}
+		} else if strings.Contains(logText, "Mining result loop get result") {
+			for kvIdx, block := range minedEmptyKVs {
+				if block != "" && strings.Contains(logText, block) {
+					delete(minedEmptyKVs, kvIdx)
+				}
+				continue
+			}
+		}
+	}
+
+	return count, nil
+}
+
+func fetchMinedBlockAndKVIdx(text string) (block string, kvIdx string, err error) {
+	patten := `block=(?P<block>[\d{1,3}(,\d{3})*]+)[\s]+kvIdx=\"\[(?P<kvIdx>\d+ \d+)\]\"`
+
+	results := extract(text, patten)
+	if len(results) == 2 {
+		for name, value := range results {
+			if strings.Compare(name, "block") == 0 {
+				block = value
+			} else if strings.Compare(name, "kvIdx") == 0 {
+				kvIdx = value
+			}
+		}
+	}
+
+	if block == "" || kvIdx == "" {
+		err = errors.New(fmt.Sprintf("extract mined block and nonce fail, %s, error: wrong log format", patten))
+	}
+
+	return
+}
+
+func fetchMinedBlockAndNonce(text string) (block string, nonce string, err error) {
+	patten := `block=(?P<block>[\d{1,3}(,\d{3})*]+)[\s]+nonce=(?P<nonce>[\d{1,3}(,\d{3})*]+)`
+
+	results := extract(text, patten)
+	if len(results) == 2 {
+		for name, value := range results {
+			if strings.Compare(name, "block") == 0 {
+				block = value
+			} else if strings.Compare(name, "nonce") == 0 {
+				nonce = value
+			}
+		}
+	}
+
+	if block == "" || nonce == "" {
+		err = errors.New(fmt.Sprintf("extract mined block and nonce fail, %s, error: wrong log format", patten))
+	}
+
+	return
+}
+
+func extractWithName(text, patten, name string) string {
+	results := extract(text, patten)
+	return results[name]
+}
+
+func extract(text, patten string) map[string]string {
+	results := make(map[string]string)
+	re := regexp.MustCompile(patten)
+
+	matches := re.FindStringSubmatch(text)
+	if matches != nil {
+		for i, name := range re.SubexpNames() {
+			if i != 0 && name != "" { // 忽略完整匹配
+				results[name] = matches[i]
+			}
+		}
+	}
+
+	return results
 }
 
 func addErrorMessage(errMessage string) {
