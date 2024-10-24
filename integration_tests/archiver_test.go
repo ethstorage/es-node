@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -29,23 +30,35 @@ type test struct {
 	msg             string
 }
 
+func (t *test) toUrl() string {
+	if len(t.archivedIndices) == 0 {
+		return fmt.Sprintf(urlPattern, archiverAddr, t.query)
+	}
+	var strArr []string
+	for _, val := range t.archivedIndices {
+		strArr = append(strArr, strconv.FormatUint(uint64(val), 10))
+	}
+	query := fmt.Sprintf("%s?indices=%s", t.query, strings.Join(strArr, ","))
+	return fmt.Sprintf(urlPattern, archiverAddr, query)
+}
+
 func TestArchiveAPI(t *testing.T) {
 
 	tests := []test{
 		{
-			query:           "6082444", // within 4096 epoch, can be retrieved from both beacon and archiver
-			archivedIndices: []uint64{0, 1},
+			query:           "4756895",
+			archivedIndices: []uint64{3},
 		},
 		{
-			query:           "6082444?indices=0,1", // specified all the indices
-			archivedIndices: []uint64{0, 1},
+			query:           "4756895?indices=3",
+			archivedIndices: []uint64{3},
 		},
 		{
-			query:           "6082444?indices=1", // specified one of the indices
-			archivedIndices: []uint64{1},
+			query:           "4756895?indices=0,3",
+			archivedIndices: []uint64{3},
 		},
 		{
-			query:    "6082444?indices=3",
+			query:    "4756895?indices=1",
 			httpCode: 404,
 			msg:      "Blob not found in EthStorage",
 		},
