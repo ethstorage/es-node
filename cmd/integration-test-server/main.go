@@ -334,7 +334,7 @@ func checkDiffNotMatchError() (int, error) {
 			}
 			miningResults[block] = nonce
 		} else if regexp.MustCompile(`Failed to submit mined result[\s\S]+diff not match`).MatchString(logText) {
-			for block, _ := range conflicts {
+			for block := range conflicts {
 				if strings.Contains(logText, block) {
 					log.Warn("By design error", "block", block, "error", "diff not match")
 					count++
@@ -390,7 +390,7 @@ func checkInvalidSamplesError() (int, error) {
 			if err != nil {
 				log.Error("checkInvalidSamplesError error", "log", logText, "error", err.Error())
 			}
-			for kvIdx, _ := range minedEmptyKVs {
+			for kvIdx := range minedEmptyKVs {
 				if !strings.Contains(kvIdxes, kvIdx) {
 					continue
 				}
