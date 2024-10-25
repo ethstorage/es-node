@@ -179,6 +179,9 @@ func checkFinalState(state *node.NodeState) {
 		}
 		if shardState.SubmissionState.Failed > 0 {
 			byDesignCount := checkByDesignFailure()
+			if byDesignCount > 0 {
+				log.Warn("Check by design failure result", "failure", shardState.SubmissionState.Failed, "by design failure", byDesignCount)
+			}
 			failureCount := shardState.SubmissionState.Failed - byDesignCount
 			if failureCount > 0 {
 				addErrorMessage(fmt.Sprintf("%d submission failed during the test.", failureCount))
