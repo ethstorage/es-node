@@ -302,10 +302,12 @@ func checkByDesignFailure() int {
 }
 
 func checkDiffNotMatchError() (int, error) {
-	// Description: 1. got two mining results with the same block number and diff nonce; 2. two mining results, one successful and one failed.
+	// Description:
+	// 		1. "Calculated a valid hash" -> "Failed to submit mined result"; we need to check this case;
+	// 		2. "Calculated a valid hash" -> "Mining transaction details" -> "Failed to submit mined result" means required diff change; we can ignore this error.
 	// Sample:
-	// lvl=info msg="Set mining result"         shard=1 block=6,906,682 nonce=565,740
-	// lvl=info msg="Set mining result"         shard=1 block=6,906,682 nonce=779,947
+	// lvl=info msg="Calculated a valid hash"               shard=1 block=6,906,682 timestamp=1,729,376,532 randao=0x5b8ae95a36d752957f444e4a0a1255d2d628f19e372765b9494d38db5bed2935 nonce=779,947   hash0=0x4884c9ff88afacd7d3bc3ac2e4759c15d73f84609fa4080220e760265a29c044 hash1=0x0000013d2768c8d16938750af43811747d3e3174d588639fe2d1106ef96215c7 sampleIdxs="[36290628 48095391]"
+	// lvl=info msg="Mining transaction details"            txHash=0x7e57d5f996623f17fed4b7b5284b3f7cf0b73d39cf854788e877181e57d7d443 gasUsed=384,075 effectiveGasPrice=1,000,252
 	// lvl=eror msg="Failed to submit mined result"         shard=1 block=6,906,682 error="failed to estimate gas: execution reverted: StorageContract: diff not match"
 
 	file, err := os.OpenFile(logFile, os.O_RDONLY, 0755)
@@ -318,28 +320,19 @@ func checkDiffNotMatchError() (int, error) {
 	fileScanner.Split(bufio.ScanLines)
 
 	count := 0
-	miningResults := make(map[string]string)
-	conflicts := make(map[string]bool)
+	state := 0
 	for fileScanner.Scan() {
 		logText := fileScanner.Text()
-		if strings.Contains(logText, "Set mining result") {
-			block, nonce, err := fetchMinedBlockAndNonce(logText)
-			if err != nil {
-				log.Error("checkDiffNotMatchError error", "log", logText, "error", err.Error())
-				continue
-			}
-			if n, ok := miningResults[block]; ok && strings.Compare(n, nonce) != 0 {
-				conflicts[block] = true
-				continue
-			}
-			miningResults[block] = nonce
+		if strings.Contains(logText, "Calculated a valid hash") {
+			state = 0
+		} else if strings.Contains(logText, "Mining transaction details") {
+			state = 1
 		} else if regexp.MustCompile(`Failed to submit mined result[\s\S]+diff not match`).MatchString(logText) {
-			for block := range conflicts {
-				if strings.Contains(logText, block) {
-					log.Warn("By design error", "block", block, "error", "diff not match")
-					count++
-					continue
-				}
+			if state == 1 {
+				log.Warn("By design diff not match error", "logText", logText)
+				count++
+				state = 0
+				continue
 			}
 		}
 	}
