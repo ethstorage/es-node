@@ -302,13 +302,10 @@ func checkByDesignFailure() int {
 }
 
 func checkDiffNotMatchError() (int, error) {
-	// Description:
-	// 		1. "Calculated a valid hash" -> "Failed to submit mined result"; we need to check this case;
-	// 		2. "Calculated a valid hash" -> "Mining transaction details" -> "Failed to submit mined result" means required diff change; we can ignore this error.
+	// Description: "Mining info retrieved" -> "Failed to submit mined result"; shard and block equal which difficulty is not the same
 	// Sample:
-	// lvl=info msg="Calculated a valid hash"               shard=1 block=6,906,682 timestamp=1,729,376,532 randao=0x5b8ae95a36d752957f444e4a0a1255d2d628f19e372765b9494d38db5bed2935 nonce=779,947   hash0=0x4884c9ff88afacd7d3bc3ac2e4759c15d73f84609fa4080220e760265a29c044 hash1=0x0000013d2768c8d16938750af43811747d3e3174d588639fe2d1106ef96215c7 sampleIdxs="[36290628 48095391]"
-	// lvl=info msg="Mining transaction details"            txHash=0x7e57d5f996623f17fed4b7b5284b3f7cf0b73d39cf854788e877181e57d7d443 gasUsed=384,075 effectiveGasPrice=1,000,252
-	// lvl=eror msg="Failed to submit mined result"         shard=1 block=6,906,682 error="failed to estimate gas: execution reverted: StorageContract: diff not match"
+	// lvl=info msg="Mining info retrieved"                 shard=1 block=6,906,682 difficulty=13,006,115 lastMineTime=1,729,375,716 proofsSubmitted=2
+	// lvl=eror msg="Failed to submit mined result"         shard=1 block=6,906,682 difficulty=1,729,376,532 error="failed to estimate gas: execution reverted: StorageContract: diff not match"
 
 	file, err := os.OpenFile(logFile, os.O_RDONLY, 0755)
 	if err != nil {
@@ -320,18 +317,25 @@ func checkDiffNotMatchError() (int, error) {
 	fileScanner.Split(bufio.ScanLines)
 
 	count := 0
-	state := 0
+	difficultyMap := make(map[string]string)
 	for fileScanner.Scan() {
 		logText := fileScanner.Text()
-		if strings.Contains(logText, "Calculated a valid hash") {
-			state = 0
-		} else if strings.Contains(logText, "Mining transaction details") {
-			state = 1
+		if strings.Contains(logText, "Mining info retrieved") {
+			block, diff, err := fetchBlocckAndDifficulty(logText)
+			if err != nil {
+				log.Error("fetchBlocckAndDifficulty error", "log", logText, "error", err.Error())
+				continue
+			}
+			difficultyMap[block] = diff
 		} else if regexp.MustCompile(`Failed to submit mined result[\s\S]+diff not match`).MatchString(logText) {
-			if state == 1 {
-				log.Warn("By design diff not match error", "logText", logText)
+			block, diff, err := fetchBlocckAndDifficulty(logText)
+			if err != nil {
+				log.Error("fetchBlocckAndDifficulty error", "log", logText, "error", err.Error())
+				continue
+			}
+			if originalDiff, ok := difficultyMap[block]; ok && strings.Compare(diff, originalDiff) != 0 {
+				log.Warn("By design diff not match error", "block", block, "original difficulty", originalDiff, "latest difficulty", diff)
 				count++
-				state = 0
 				continue
 			}
 		}
@@ -435,25 +439,28 @@ func fetchMinedBlockAndKVIdx(text string) (block string, kvIdx string, err error
 	return
 }
 
-func fetchMinedBlockAndNonce(text string) (block string, nonce string, err error) {
-	patten := `block=(?P<block>[\d{1,3}(,\d{3})*]+)[\s]+nonce=(?P<nonce>[\d{1,3}(,\d{3})*]+)`
+func fetchBlocckAndDifficulty(text string) (string, string, error) {
+	patten := `shard=(?P<shard>[\d])[\s]+block=(?P<block>[\d{1,3}(,\d{3})*]+)[\s]+difficulty=(?P<difficulty>[\d{1,3}(,\d{3})*]+)`
+	shard, block, diff := "", "", ""
 
 	results := extract(text, patten)
-	if len(results) == 2 {
+	if len(results) == 3 {
 		for name, value := range results {
-			if strings.Compare(name, "block") == 0 {
+			if strings.Compare(name, "shard") == 0 {
+				shard = value
+			} else if strings.Compare(name, "block") == 0 {
 				block = value
-			} else if strings.Compare(name, "nonce") == 0 {
-				nonce = value
+			} else if strings.Compare(name, "difficulty") == 0 {
+				diff = value
 			}
 		}
 	}
 
-	if block == "" || nonce == "" {
-		err = errors.New(fmt.Sprintf("extract mined block and nonce fail, %s, error: wrong log format", patten))
+	if shard == "" || block == "" || diff == "" {
+		return "", "", errors.New(fmt.Sprintf("extract block and difficulty fail, patten: %s; error: wrong log format.", patten))
 	}
 
-	return
+	return fmt.Sprintf("%s-%s", shard, block), diff, nil
 }
 
 func extractWithName(text, patten, name string) string {
