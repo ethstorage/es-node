@@ -178,11 +178,11 @@ func checkFinalState(state *node.NodeState) {
 			addErrorMessage("At lease one block should be mined successfully during the test.")
 		}
 		if shardState.SubmissionState.Failed > 0 {
-			byDesignCount := checkByDesignFailure()
-			if byDesignCount > 0 {
-				log.Warn("Check by design failure result", "failure", shardState.SubmissionState.Failed, "by design failure", byDesignCount)
+			knownFailureCount := checkKnownFailure()
+			if knownFailureCount > 0 {
+				log.Warn("Check by design failure result", "failure", shardState.SubmissionState.Failed, "by design failure", knownFailureCount)
 			}
-			failureCount := shardState.SubmissionState.Failed - byDesignCount
+			failureCount := shardState.SubmissionState.Failed - knownFailureCount
 			if failureCount > 0 {
 				addErrorMessage(fmt.Sprintf("%d submission failed during the test.", failureCount))
 			}
@@ -288,7 +288,7 @@ func downloadBlobFromRPC(client *rpc.Client, kvIndex uint64, hash common.Hash) (
 	return result, nil
 }
 
-func checkByDesignFailure() int {
+func checkKnownFailure() int {
 	count0, err := checkDiffNotMatchError()
 	if err != nil {
 		addErrorMessage(fmt.Sprintf("checkDiffNotMatchError fail: err, %s", err.Error()))
@@ -475,7 +475,7 @@ func extract(text, patten string) map[string]string {
 	matches := re.FindStringSubmatch(text)
 	if matches != nil {
 		for i, name := range re.SubexpNames() {
-			if i != 0 && name != "" { // 忽略完整匹配
+			if i != 0 && name != "" {
 				results[name] = matches[i]
 			}
 		}

@@ -412,8 +412,8 @@ func (w *worker) resultLoop() {
 					} else {
 						s.Failed++
 						errorCache = append(errorCache, miningError{result.startShardId, result.blockNumber, err})
+						var diff *big.Int
 						if strings.Contains(err.Error(), "diff not match") {
-							diff := big.NewInt(0)
 							info, err := w.l1API.GetMiningInfo(
 								context.Background(),
 								w.storageMgr.ContractAddress(),
@@ -424,6 +424,8 @@ func (w *worker) resultLoop() {
 							} else {
 								diff = info.Difficulty
 							}
+						}
+						if diff != nil {
 							w.lg.Error("Failed to submit mined result", "shard", result.startShardId, "block", result.blockNumber, "difficulty", diff, "error", err.Error())
 						} else {
 							w.lg.Error("Failed to submit mined result", "shard", result.startShardId, "block", result.blockNumber, "error", err.Error())
