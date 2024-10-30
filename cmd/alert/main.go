@@ -30,7 +30,7 @@ func main() {
 
 	var (
 		contract = common.HexToAddress(*l1ContractFlag)
-		logger   = log.New("app", "Dashboard")
+		logger   = log.New("app", "alert")
 	)
 
 	client, err := eth.Dial(*rpcURLFlag, contract, 12, logger)
