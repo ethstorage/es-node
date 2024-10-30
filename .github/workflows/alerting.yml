@@ -34,4 +34,4 @@ jobs:
           subject: EthStorage Alert!
           to: molaokp@gmail.com
           from: ${{ secrets.SMTP_USERNAME }}
-          body: ./cmd/alert/body.html
+          html_body: ./cmd/alert/body.html
