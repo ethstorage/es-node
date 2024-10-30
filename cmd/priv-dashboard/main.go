@@ -105,7 +105,7 @@ func (d *dashboard) ReportStateHandler(w http.ResponseWriter, r *http.Request) {
 		d.m.SetSubmissionState(state.Id, state.Version, state.Address, shard.ShardId, shard.Miner, submission.Succeeded,
 			submission.Failed, submission.Dropped, submission.LastSucceededTime)
 	}
-	
+
 	w.Write([]byte(`{"status":"ok"}`))
 }
 
@@ -114,11 +114,11 @@ func (d *dashboard) checkState(state *node.NodeState) error {
 		return errors.New("state is nil")
 	}
 	if len(state.Shards) == 0 {
-		return errors.New("no shard exist in the node state")
+		return fmt.Errorf("no shard exist in the node state %s", state.Id)
 	}
 	for _, shard := range state.Shards {
 		if shard.SyncState == nil || shard.MiningState == nil || shard.SubmissionState == nil {
-			return errors.New("invalid shard state")
+			return fmt.Errorf("invalid shard state in the node state %s", state.Id)
 		}
 	}
 
