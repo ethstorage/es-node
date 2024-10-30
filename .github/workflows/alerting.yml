@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  notification:
+  alert:
     runs-on: ubuntu-latest
 
     steps:
@@ -21,7 +21,7 @@ jobs:
         run: |
           cd ./cmd/alert
           go build
-          ./alert --l1contract $ES_NODE_CONTRACT_ADDRESS --htmlbody ./body.html
+          ./alert --htmlbody ./body.html
 
       - name: Send notification email
         uses: dawidd6/action-send-mail@v3
