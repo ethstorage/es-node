@@ -16,6 +16,7 @@ import (
 const (
 	emailFormat              = "<html><body><div><h3>Ethstorage Alert!</h3>%s</div></body></html>"
 	noMinedBlockAlertContent = "<p>No blocks mined in last 24 hours. Last mined block %d, last mined time: %v.</p>"
+	errorContent             = "<p>Check alert fail with error: %s</p>"
 )
 
 var (
@@ -38,12 +39,11 @@ func main() {
 		log.Crit("Failed to create L1 source", "err", err)
 	}
 
-	res, content, err := checkLastMinedBlock(client, contract, logger)
+	needAlert, content, err := checkLastMinedBlock(client, contract, logger)
 	if err != nil {
-		log.Crit("Failed to create L1 source", "err", err)
-	}
-
-	if res {
+		writeHtmlFile(fmt.Sprintf(emailFormat, fmt.Sprintf(errorContent, err.Error())))
+		os.Exit(1)
+	} else if needAlert {
 		writeHtmlFile(fmt.Sprintf(emailFormat, content))
 		os.Exit(1)
 	}
