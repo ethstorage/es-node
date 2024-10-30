@@ -15,7 +15,7 @@ import (
 
 const (
 	emailFormat              = "<html><body><div><h3>Ethstorage Alert!</h3>%s</div></body></html>"
-	noMinedBlockAlertContent = "<p>No blocks mined in last 24 hours. Last mined block: %d; last mined time: %v.</p>"
+	noMinedBlockAlertContent = "<p>No blocks mined in last 24 hours. Last mined block: %d; last mined time: %v; l1 source: %s.</p>"
 	errorContent             = "<p>Check alert fail with error: %s</p>"
 )
 
@@ -64,9 +64,9 @@ func checkLastMinedBlock(client *eth.PollingClient, contract common.Address, log
 
 		lastMinedTime := time.Unix(int64(info.LastMineTime), 0)
 		logger.Info("", "last mined time", lastMinedTime, "mined block", info.BlockMined)
-		targetTime := time.Now().Add(-1 * time.Minute)
+		targetTime := time.Now().Add(-24 * time.Hour)
 		if targetTime.After(lastMinedTime) {
-			content := fmt.Sprintf(noMinedBlockAlertContent, info.BlockMined, lastMinedTime)
+			content := fmt.Sprintf(noMinedBlockAlertContent, info.BlockMined, lastMinedTime, *rpcURLFlag)
 			return true, content
 		}
 		return false, ""
