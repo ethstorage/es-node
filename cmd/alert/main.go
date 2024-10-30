@@ -64,7 +64,7 @@ func checkLastMinedBlock(client *eth.PollingClient, contract common.Address, log
 
 		lastMinedTime := time.Unix(int64(info.LastMineTime), 0)
 		logger.Info("", "last mined time", lastMinedTime, "mined block", info.BlockMined)
-		targetTime := time.Now().Add(-1 * time.Hour)
+		targetTime := time.Now().Add(-1 * time.Minute)
 		if targetTime.After(lastMinedTime) {
 			content := fmt.Sprintf(noMinedBlockAlertContent, info.BlockMined, lastMinedTime)
 			return true, content
