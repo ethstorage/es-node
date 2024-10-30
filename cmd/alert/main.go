@@ -15,7 +15,7 @@ import (
 
 const (
 	emailFormat              = "<html><body><div><h3>Ethstorage Alert!</h3>%s</div></body></html>"
-	noMinedBlockAlertContent = "<p>No blocks mined in last 24 hours. Last mined block %d, last mined time: %v.</p>"
+	noMinedBlockAlertContent = "<p>No blocks mined in last 24 hours. Last mined block: %d; last mined time: %v.</p>"
 	errorContent             = "<p>Check alert fail with error: %s</p>"
 )
 

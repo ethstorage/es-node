@@ -32,6 +32,6 @@ jobs:
           username: ${{ secrets.SMTP_USERNAME }}
           password: ${{ secrets.SMTP_PASSWORD }}
           subject: EthStorage Alert!
-          to: molaokp@gmail.com
+          to: molaokp@gmail.com,lundeng@quarkchain.org,qzhu@quarkchain.org,pingke@quarkchain.org,limingpeng@quarkchain.org
           from: ${{ secrets.SMTP_USERNAME }}
           html_body: file://./cmd/alert/body.html
