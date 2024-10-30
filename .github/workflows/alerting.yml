@@ -24,6 +24,7 @@ jobs:
           ./alert --htmlbody ./body.html
 
       - name: Send notification email
+        if: failure()
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
@@ -34,4 +35,3 @@ jobs:
           to: molaokp@gmail.com
           from: ${{ secrets.SMTP_USERNAME }}
           body: ./cmd/alert/body.html
-        if: steps.check.outcome == 'failure'
