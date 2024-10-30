@@ -39,17 +39,14 @@ func main() {
 		log.Crit("Failed to create L1 source", "err", err)
 	}
 
-	needAlert, content, err := checkLastMinedBlock(client, contract, logger)
-	if err != nil {
-		writeHtmlFile(fmt.Sprintf(emailFormat, fmt.Sprintf(errorContent, err.Error())))
-		os.Exit(1)
-	} else if needAlert {
+	needAlert, content := checkLastMinedBlock(client, contract, logger)
+	if needAlert {
 		writeHtmlFile(fmt.Sprintf(emailFormat, content))
 		os.Exit(1)
 	}
 }
 
-func checkLastMinedBlock(client *eth.PollingClient, contract common.Address, logger log.Logger) (bool, string, error) {
+func checkLastMinedBlock(client *eth.PollingClient, contract common.Address, logger log.Logger) (bool, string) {
 	var (
 		ctx = context.Background()
 		api = miner.NewL1MiningAPI(client, nil, logger)
@@ -70,12 +67,12 @@ func checkLastMinedBlock(client *eth.PollingClient, contract common.Address, log
 		targetTime := time.Now().Add(-1 * time.Hour)
 		if targetTime.After(lastMinedTime) {
 			content := fmt.Sprintf(noMinedBlockAlertContent, info.BlockMined, lastMinedTime)
-			return true, content, nil
+			return true, content
 		}
-		return false, "", nil
+		return false, ""
 	}
 
-	return false, "", err
+	return true, fmt.Sprintf(errorContent, err.Error())
 }
 
 func writeHtmlFile(content string) {
