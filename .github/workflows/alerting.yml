@@ -1,4 +1,4 @@
-name: Integration Test
+name: Alerting
 on:
   schedule:
     - cron: '1 */1 * * *'
