@@ -1,0 +1,36 @@
+name: Integration Test
+on:
+  schedule:
+    - cron: '1 */1 * * *'
+  workflow_dispatch:
+
+jobs:
+  notification:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      - name: check
+        run: |
+          cd ./cmd/alert
+          go build
+          ./alert --l1contract $ES_NODE_CONTRACT_ADDRESS --htmlbody ./body.html
+
+      - name: Send notification email
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: EthStorage Alert!
+          to: molaokp@gmail.com
+          from: ${{ secrets.SMTP_USERNAME }}
+          body: ./cmd/alert/body.html
+        if: steps.check.outcome == 'failure'
