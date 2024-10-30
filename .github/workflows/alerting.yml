@@ -1,5 +1,6 @@
 name: Alerting
 on:
+  push:
   schedule:
     - cron: '1 */1 * * *'
   workflow_dispatch:
