@@ -6,6 +6,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -85,6 +86,11 @@ func (d *dashboard) ReportStateHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(fmt.Sprintf(`{"status":"error", "err message":"%s"}`, err.Error())))
 		return
 	}
+	if err = d.checkState(&state); err != nil {
+		log.Warn("check node state failed", "error", err.Error())
+		w.Write([]byte(fmt.Sprintf(`{"status":"error", "err message":"%s"}`, err.Error())))
+		return
+	}
 
 	log.Info("Get state from peer", "peer id", state.Id, "state", string(body))
 	d.lock.Lock()
@@ -99,7 +105,24 @@ func (d *dashboard) ReportStateHandler(w http.ResponseWriter, r *http.Request) {
 		d.m.SetSubmissionState(state.Id, state.Version, state.Address, shard.ShardId, shard.Miner, submission.Succeeded,
 			submission.Failed, submission.Dropped, submission.LastSucceededTime)
 	}
+	
 	w.Write([]byte(`{"status":"ok"}`))
+}
+
+func (d *dashboard) checkState(state *node.NodeState) error {
+	if state == nil {
+		return errors.New("state is nil")
+	}
+	if len(state.Shards) == 0 {
+		return errors.New("no shard exist in the node state")
+	}
+	for _, shard := range state.Shards {
+		if shard.SyncState == nil || shard.MiningState == nil || shard.SubmissionState == nil {
+			return errors.New("invalid shard state")
+		}
+	}
+
+	return nil
 }
 
 func (d *dashboard) Report() {
