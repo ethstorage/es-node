@@ -321,16 +321,16 @@ func checkDiffNotMatchError() (int, error) {
 	for fileScanner.Scan() {
 		logText := fileScanner.Text()
 		if strings.Contains(logText, "Mining info retrieved") {
-			block, diff, err := fetchBlocckAndDifficulty(logText)
+			block, diff, err := fetchBlockAndDifficulty(logText)
 			if err != nil {
-				log.Error("fetchBlocckAndDifficulty error", "log", logText, "error", err.Error())
+				log.Error("fetchBlockAndDifficulty error", "log", logText, "error", err.Error())
 				continue
 			}
 			difficultyMap[block] = diff
 		} else if regexp.MustCompile(`Failed to submit mined result[\s\S]+diff not match`).MatchString(logText) {
-			block, diff, err := fetchBlocckAndDifficulty(logText)
+			block, diff, err := fetchBlockAndDifficulty(logText)
 			if err != nil {
-				log.Error("fetchBlocckAndDifficulty error", "log", logText, "error", err.Error())
+				log.Error("fetchBlockAndDifficulty error", "log", logText, "error", err.Error())
 				continue
 			}
 			if originalDiff, ok := difficultyMap[block]; ok && strings.Compare(diff, originalDiff) != 0 {
@@ -400,6 +400,7 @@ func checkInvalidSamplesError() (int, error) {
 			for kvIdx, block := range legacyKVs {
 				if block != "" && strings.Contains(logText, block) {
 					log.Warn("By design error", "block", block, "kvIdx", kvIdx, "error", "invalid samples")
+					delete(legacyKVs, kvIdx)
 					count++
 					continue
 				}
@@ -439,7 +440,7 @@ func fetchMinedBlockAndKVIdx(text string) (block string, kvIdx string, err error
 	return
 }
 
-func fetchBlocckAndDifficulty(text string) (string, string, error) {
+func fetchBlockAndDifficulty(text string) (string, string, error) {
 	patten := `shard=(?P<shard>[\d])[\s]+block=(?P<block>[\d{1,3}(,\d{3})*]+)[\s]+difficulty=(?P<difficulty>[\d{1,3}(,\d{3})*]+)`
 	shard, block, diff := "", "", ""
 
