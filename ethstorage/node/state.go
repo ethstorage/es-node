@@ -16,8 +16,9 @@ type ShardState struct {
 }
 
 type NodeState struct {
-	Id      string        `json:"id"`
-	Version string        `json:"version"`
-	Address string        `json:"address"`
-	Shards  []*ShardState `json:"shards"`
+	Id       string        `json:"id"`
+	Contract string        `json:"contract"`
+	Version  string        `json:"version"`
+	Address  string        `json:"address"`
+	Shards   []*ShardState `json:"shards"`
 }
