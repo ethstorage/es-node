@@ -94,7 +94,7 @@ func (d *dashboard) ReportStateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err = d.checkState(&state); err != nil {
-		log.Warn("check node state failed", "error", err.Error())
+		log.Warn("check node state failed", "state", string(body), "error", err.Error())
 		w.Write([]byte(fmt.Sprintf(`{"status":"error", "err message":"%s"}`, err.Error())))
 		return
 	}
