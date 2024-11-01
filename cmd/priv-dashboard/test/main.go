@@ -262,6 +262,5 @@ func main() {
 	flag.Parse()
 	log.Root().SetHandler(log.LvlFilterHandler(log.Lvl(3), log.StreamHandler(os.Stderr, log.TerminalFormat(true))))
 
-	//	UploadNodeState("http://88.99.30.186:8888")
-	UploadNodeState("http://localhost:8080")
+	UploadNodeState("http://65.109.63.154:8888")
 }
