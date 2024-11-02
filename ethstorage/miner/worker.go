@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -255,7 +256,7 @@ func (w *worker) newWorkLoop() {
 			// 1) a mining tx is already submitted; or
 			// 2) if the last mining time is too close (the reward is not enough).
 			for shardIdx, task := range w.shardTaskMap {
-				reqDiff, err := w.updateDifficulty(shardIdx, block.Time)
+				reqDiff, err := w.updateDifficulty(shardIdx, block)
 				if err != nil {
 					continue
 				}
@@ -311,7 +312,7 @@ func (w *worker) assignTasks(task task, block eth.L1BlockRef, reqDiff *big.Int) 
 	w.lg.Debug("Mining tasks assigned", "miner", task.miner, "shard", task.shardIdx, "threads", w.config.ThreadsPerShard, "block", block.Number, "nonces", w.config.NonceLimit)
 }
 
-func (w *worker) updateDifficulty(shardIdx, blockTime uint64) (*big.Int, error) {
+func (w *worker) updateDifficulty(shardIdx uint64, block eth.L1BlockRef) (*big.Int, error) {
 	info, err := w.l1API.GetMiningInfo(
 		context.Background(),
 		w.storageMgr.ContractAddress(),
@@ -321,13 +322,13 @@ func (w *worker) updateDifficulty(shardIdx, blockTime uint64) (*big.Int, error) 
 		w.lg.Warn("Failed to get es mining info", "error", err.Error())
 		return nil, err
 	}
-	w.lg.Info("Mining info retrieved", "shard", shardIdx, "lastMineTime", info.LastMineTime, "difficulty", info.Difficulty, "proofsSubmitted", info.BlockMined)
+	w.lg.Info("Mining info retrieved", "shard", shardIdx, "block", block.Number, "difficulty", info.Difficulty, "lastMineTime", info.LastMineTime, "proofsSubmitted", info.BlockMined)
 
-	if blockTime <= info.LastMineTime {
+	if block.Time <= info.LastMineTime {
 		return nil, errors.New("minedTs too small")
 	}
 	reqDiff := new(big.Int).Div(maxUint256, expectedDiff(
-		blockTime-info.LastMineTime,
+		block.Time-info.LastMineTime,
 		info.Difficulty,
 		w.config.Cutoff,
 		w.config.DiffAdjDivisor,
@@ -411,7 +412,24 @@ func (w *worker) resultLoop() {
 					} else {
 						s.Failed++
 						errorCache = append(errorCache, miningError{result.startShardId, result.blockNumber, err})
-						w.lg.Error("Failed to submit mined result", "shard", result.startShardId, "block", result.blockNumber, "error", err.Error())
+						var diff *big.Int
+						if strings.Contains(err.Error(), "diff not match") {
+							info, err := w.l1API.GetMiningInfo(
+								context.Background(),
+								w.storageMgr.ContractAddress(),
+								result.startShardId,
+							)
+							if err != nil {
+								w.lg.Warn("Failed to get es mining info", "error", err.Error())
+							} else {
+								diff = info.Difficulty
+							}
+						}
+						if diff != nil {
+							w.lg.Error("Failed to submit mined result", "shard", result.startShardId, "block", result.blockNumber, "difficulty", diff, "error", err.Error())
+						} else {
+							w.lg.Error("Failed to submit mined result", "shard", result.startShardId, "block", result.blockNumber, "error", err.Error())
+						}
 					}
 				} else {
 					s.Succeeded++
