@@ -112,8 +112,7 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 
 	reward, err := m.GetMiningReward(rst.startShardId, rst.blockNumber.Int64())
 	if err != nil {
-		m.lg.Error("Query mining reward failed", "error", err.Error())
-		return common.Hash{}, err
+		m.lg.Warn("Query mining reward failed", "error", err.Error())
 	}
 	profitableGasFeeCap := new(big.Int).Div(new(big.Int).Sub(reward, cfg.MinimumProfit), new(big.Int).SetUint64(estimatedGas))
 	m.lg.Info("Minimum profitable gas fee cap", "gasFeeCap", profitableGasFeeCap)
@@ -123,8 +122,14 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 		return common.Hash{}, errDropped
 	}
 	if !useConfig {
-		gasFeeCap = profitableGasFeeCap
-		m.lg.Info("Using profitable gas fee cap", "gasFeeCap", gasFeeCap)
+		if reward == nil {
+			// (tip + 2*baseFee) to ensure the tx to be marketable for six consecutive 100% full blocks.
+			gasFeeCap = new(big.Int).Add(new(big.Int).Mul(new(big.Int).Sub(gasFeeCap, tip), big.NewInt(2)), tip)
+			m.lg.Info("Using marketable gas fee cap", "gasFeeCap", gasFeeCap)
+		} else {
+			gasFeeCap = profitableGasFeeCap
+			m.lg.Info("Using profitable gas fee cap", "gasFeeCap", gasFeeCap)
+		}
 	}
 	sign := cfg.SignerFnFactory(m.NetworkID)
 	nonce, err := m.NonceAt(ctx, cfg.SignerAddr, big.NewInt(rpc.LatestBlockNumber.Int64()))
