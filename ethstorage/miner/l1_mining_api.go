@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
@@ -90,6 +91,7 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 		m.lg.Error("Failed to compose calldata", "error", err)
 		return common.Hash{}, err
 	}
+	m.lg.Info("Composed calldata", "calldata", hexutil.Encode(calldata))
 
 	tip, gasFeeCap, useConfig, err := m.suggestGasPrices(ctx, cfg)
 	if err != nil {
@@ -249,6 +251,8 @@ func (m *l1MiningAPI) suggestGasPrices(ctx context.Context, cfg Config) (*big.In
 		}
 		gasFeeCap = new(big.Int).Add(blockHeader.BaseFee, tip)
 		m.lg.Info("Suggested gas fee cap", "gasFeeCap", gasFeeCap)
+	} else {
+		m.lg.Info("Using configured gas price", "gasFeeCap", gasFeeCap, "tip", tip)
 	}
 	return tip, gasFeeCap, useConfig, nil
 }
