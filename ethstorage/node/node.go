@@ -372,9 +372,10 @@ func (n *EsNode) UploadNodeState(url string) {
 		select {
 		case <-ticker.C:
 			state := NodeState{
-				Id:      id,
-				Version: n.appVersion,
-				Address: fmt.Sprintf("%s:%d", localNode.IP().String(), localNode.TCP()),
+				Id:       id,
+				Contract: n.storageManager.ContractAddress().Hex(),
+				Version:  n.appVersion,
+				Address:  fmt.Sprintf("%s:%d", localNode.IP().String(), localNode.TCP()),
 			}
 
 			var submissionStates map[uint64]*miner.SubmissionState
