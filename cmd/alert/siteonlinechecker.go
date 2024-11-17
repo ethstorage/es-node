@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	websiteOfflineAlertContent = "<p><b>Alert %s: </b>Web site is off line. RPC: %s.</p>"
+	websiteOfflineAlertContent = "<p><b>Alert: </b>%s </p><p><b>Message: </b>Web site is off line. RPC: %s.</p>"
 )
 
 type WebsiteOnlineChecker struct {

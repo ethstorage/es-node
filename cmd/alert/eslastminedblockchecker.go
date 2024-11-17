@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	noMinedBlockAlertContent = "<p><b>Alert %s: </b>No blocks mined in last 24 hours. Last mined block: %d; last mined time: %v; source: %s.</p>"
+	noMinedBlockAlertContent = "<p><b>Alert: </b>%s </p><p><b>Message: </b>No blocks mined in last 24 hours. Last mined block: %d; last mined time: %v; source: %s.</p>"
 )
 
 type ESLastMinedBlockChecker struct {
@@ -39,7 +39,7 @@ func (c *ESLastMinedBlockChecker) Check(logger log.Logger) (bool, string) {
 
 	client, err := eth.Dial(c.RPC, c.Contract, 12, logger)
 	if err != nil {
-		log.Error("Failed to create source", "alert", c.Name, "err", err)
+		logger.Error("Failed to create source", "alert", c.Name, "err", err)
 		return true, fmt.Sprintf(errorContent, c.Name, err.Error())
 	}
 	var (
@@ -50,7 +50,7 @@ func (c *ESLastMinedBlockChecker) Check(logger log.Logger) (bool, string) {
 		info, e := api.GetMiningInfo(ctx, c.Contract, 0)
 		if e != nil {
 			time.Sleep(time.Minute)
-			log.Error("Get mining info fail", "alert", c.Name, "error", e)
+			logger.Error("Get mining info fail", "alert", c.Name, "error", e)
 			err = e
 			continue
 		}

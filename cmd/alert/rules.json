@@ -15,6 +15,13 @@
       "rpc":"http://65.109.20.29:8545"
     }
   },
+  {
+    "alert-type":"WebsiteOnlineChecker",
+    "params":{
+      "name":"grafana.ethstorage.io online Alert",
+      "url":"https://grafana.ethstorage.io/"
+    }
+  },
 
   {
     "alert-type":"LastBlockChecker",
@@ -48,8 +55,57 @@
   {
     "alert-type":"LastBlockChecker",
     "params":{
+      "name":"Quarkchain Shard 1 Last Block Alert",
+      "rpc":"https://mainnet-s1-ethapi.quarkchain.io"
+    }
+  },
+  {
+    "alert-type":"LastBlockChecker",
+    "params":{
+      "name":"Quarkchain Shard 2 Last Block Alert",
+      "rpc":"https://mainnet-s2-ethapi.quarkchain.io"
+    }
+  },
+  {
+    "alert-type":"LastBlockChecker",
+    "params":{
+      "name":"Quarkchain Shard 3 Last Block Alert",
+      "rpc":"https://mainnet-s3-ethapi.quarkchain.io"
+    }
+  },
+  {
+    "alert-type":"LastBlockChecker",
+    "params":{
+      "name":"Quarkchain Shard 4 Last Block Alert",
+      "rpc":"http://eth-jrpc.mainnet.quarkchain.io:39004"
+    }
+  },
+  {
+    "alert-type":"LastBlockChecker",
+    "params":{
+      "name":"Quarkchain Shard 5 Last Block Alert",
+      "rpc":"http://eth-jrpc.mainnet.quarkchain.io:39005"
+    }
+  },
+  {
+    "alert-type":"LastBlockChecker",
+    "params":{
+      "name":"Quarkchain Shard 6 Last Block Alert",
+      "rpc":"http://eth-jrpc.mainnet.quarkchain.io:39006"
+    }
+  },
+  {
+    "alert-type":"LastBlockChecker",
+    "params":{
       "name":"Quarkchain Shard 7 Last Block Alert",
       "rpc":"http://eth-jrpc.mainnet.quarkchain.io:39007"
+    }
+  },
+  {
+    "alert-type":"LastBlockChecker",
+    "params":{
+      "name":"Quarkchain Shard 8 Last Block Alert",
+      "rpc":"http://eth-jrpc.mainnet.quarkchain.io:39008"
     }
   },
   {
@@ -64,6 +120,13 @@
     "params":{
       "name":"quarkchain.io online Alert",
       "url":"https://quarkchain.io/"
+    }
+  },
+  {
+    "alert-type":"WebsiteOnlineChecker",
+    "params":{
+      "name":"grafana.quarkchain.io online Alert",
+      "url":"https://grafana.quarkchain.io/"
     }
   }
 ]
