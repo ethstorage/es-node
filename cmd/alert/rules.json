@@ -102,13 +102,6 @@
     }
   },
   {
-    "alert-type":"LastBlockChecker",
-    "params":{
-      "name":"Quarkchain Shard 8 Last Block Alert",
-      "rpc":"http://eth-jrpc.mainnet.quarkchain.io:39008"
-    }
-  },
-  {
     "alert-type":"WebsiteOnlineChecker",
     "params":{
       "name":"Quarkchain explorer online Alert",

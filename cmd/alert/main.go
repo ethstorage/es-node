@@ -11,7 +11,7 @@ import (
 
 const (
 	emailFormat  = "<html><body><div><h2>EthStorage Alert!</h2>%s</div></body></html>"
-	errorContent = "<p><b>Alert %s: </b>Check alert fail with error: %s</p>"
+	errorContent = "<p><b>Alert: </b>%s </p><p><b>Message: </b>Check alert fail with error: %s</p>"
 )
 
 var (
