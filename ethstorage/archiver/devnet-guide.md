@@ -171,11 +171,12 @@ Do not forget to fund the contract:
 cast send $BATCH_INBOX --private-key $PRIVATE_KEY --value 100000000000000000000
 ```
 
-Finally, go to the Optimism monorepo, and update the `batchInboxAddress` in the configuration file located at `packages/contracts-bedrock/deploy-config/devnetL1.json`:
+Finally, navigate to the Optimism monorepo and locate `batchInboxAddress` in the file `packages/contracts-bedrock/deploy-config/devnetL1.json`:
 
 ```json
-  "batchInboxAddress": "0xb860F42DAeD06Cf3dC9C3b4B8A287523BbdB2B1e",  // replace with the actual address
+  "batchInboxAddress": "0xff00000000000000000000000000000000000901",
 ```
+Update the value of `batchInboxAddress` with the address of the contract you just deployed. 
 
 Now, navigate to the parent directory in preparation for the next steps.
 
