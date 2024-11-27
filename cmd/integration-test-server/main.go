@@ -180,7 +180,7 @@ func checkFinalState(state *node.NodeState) {
 		if shardState.SubmissionState.Failed > 0 {
 			knownFailureCount := checkKnownFailure()
 			if knownFailureCount > 0 {
-				log.Warn("Check by design failure result", "failure", shardState.SubmissionState.Failed, "by design failure", knownFailureCount)
+				log.Warn("Check known failure result", "failure", shardState.SubmissionState.Failed, "known failure", knownFailureCount)
 			}
 			failureCount := shardState.SubmissionState.Failed - knownFailureCount
 			if failureCount > 0 {
@@ -334,7 +334,7 @@ func checkDiffNotMatchError() (int, error) {
 				continue
 			}
 			if originalDiff, ok := difficultyMap[block]; ok && strings.Compare(diff, originalDiff) != 0 {
-				log.Warn("By design diff not match error", "block", block, "original difficulty", originalDiff, "latest difficulty", diff)
+				log.Warn("Known diff not match error", "block", block, "original difficulty", originalDiff, "latest difficulty", diff)
 				count++
 				continue
 			}
@@ -399,7 +399,7 @@ func checkInvalidSamplesError() (int, error) {
 		} else if regexp.MustCompile(`Failed to submit mined result[\s\S]+invalid samples`).MatchString(logText) {
 			for kvIdx, block := range legacyKVs {
 				if block != "" && strings.Contains(logText, block) {
-					log.Warn("By design error", "block", block, "kvIdx", kvIdx, "error", "invalid samples")
+					log.Warn("Known error", "block", block, "kvIdx", kvIdx, "error", "invalid samples")
 					delete(legacyKVs, kvIdx)
 					count++
 					continue
