@@ -8,7 +8,7 @@ The test framework is based on the Bedrock devnet but allows for separate contro
 - Launch an EthStorage node (es-node) in archiver mode. 
 
 1. [Preparations](#preparations)
-   - [Check your dependencies](#check-your-dependencies)
+   - [Software Dependencies](#software-dependencies)
    - [Get the Correct Code Branch](#get-the-correct-code-branch)
    - [Source of Gas](#source-of-gas)
    - [Fill Out Environment Variables](#fill-out-environment-variables)
@@ -30,9 +30,7 @@ The test framework is based on the Bedrock devnet but allows for separate contro
 
 ## Preparations
 
-### Check your dependencies
-
-Software dependencies:
+### Software Dependencies
 
 | Dependency | Version | Version Check Command        |
 |------------|---------|------------------------------|
@@ -55,7 +53,7 @@ git clone https://github.com/ethstorage/optimism.git
 cd optimism
 git checkout long-term-da
 ```
-Now you can run the following command to check your dependencies:
+Now you can run the following command to check the dependencies in your system:
 
 ```bash
 ./packages/contracts-bedrock/scripts/getting-started/versions.sh
@@ -352,10 +350,11 @@ Additionally, you can verify the correctness of the expired blob data by ensurin
 
 For example:
 ```
-# query blocks from the sequancer
-cast block 3000 -r http://127.0.0.1:9545
-# query blocks from the validator
-cast block 3000 -r http://127.0.0.1:5545
+# query block from the sequancer
+cast block 3000 -f hash -r http://127.0.0.1:9545
+
+# query block from the validator
+cast block 3000 -f hash -r http://127.0.0.1:5545
 ```
 
 ## Conclusion
