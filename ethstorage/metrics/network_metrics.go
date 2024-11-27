@@ -17,13 +17,13 @@ import (
 
 const (
 	SubsystemName = "network"
-	format        = "{\"id\":\"%s\", \"version\":\"%s\", \"address\":\"%s\", \"shardid\":%d, \"miner\":\"%s\"}"
+	format        = "{\"id\":\"%s\", \"contract\":\"%s\", \"version\":\"%s\", \"address\":\"%s\", \"shardid\":%d, \"miner\":\"%s\"}"
 )
 
 // NetworkMetrics tracks all the metrics for the es-node.
 type NetworkMetrics struct {
 	// static Status
-	PeersTotal      prometheus.Gauge
+	PeersOfContract *prometheus.GaugeVec
 	PeersOfShards   *prometheus.GaugeVec
 	PeersOfVersions *prometheus.GaugeVec
 	PeersOfPhase    *prometheus.GaugeVec
@@ -45,11 +45,13 @@ func NewNetworkMetrics() *NetworkMetrics {
 	factory := metrics.With(registry)
 	return &NetworkMetrics{
 
-		PeersTotal: factory.NewGauge(prometheus.GaugeOpts{
+		PeersOfContract: factory.NewGaugeVec(prometheus.GaugeOpts{
 			Namespace: ns,
 			Subsystem: SubsystemName,
-			Name:      "peers",
-			Help:      "The number of peers existed in the last 10 minutes",
+			Name:      "peers_of_contracts",
+			Help:      "The number of peers in each contract",
+		}, []string{
+			"contract",
 		}),
 
 		PeersOfShards: factory.NewGaugeVec(prometheus.GaugeOpts{
@@ -58,6 +60,7 @@ func NewNetworkMetrics() *NetworkMetrics {
 			Name:      "peers_of_shards",
 			Help:      "The number of peers in each shard",
 		}, []string{
+			"contract",
 			"shard_id",
 		}),
 
@@ -67,6 +70,7 @@ func NewNetworkMetrics() *NetworkMetrics {
 			Name:      "peers_of_versions",
 			Help:      "The number of peers for each version",
 		}, []string{
+			"contract",
 			"version",
 		}),
 
@@ -76,6 +80,7 @@ func NewNetworkMetrics() *NetworkMetrics {
 			Name:      "peers_of_phases",
 			Help:      "The number of peers for each phase",
 		}, []string{
+			"contract",
 			"shard_id",
 			"phase",
 		}),
@@ -86,6 +91,7 @@ func NewNetworkMetrics() *NetworkMetrics {
 			Name:      "peer_state",
 			Help:      "The sync state of each peer",
 		}, []string{
+			"contract",
 			"key",
 			"type",
 		}),
@@ -95,57 +101,61 @@ func NewNetworkMetrics() *NetworkMetrics {
 	}
 }
 
-func (m *NetworkMetrics) SetPeerInfo(id, version, address string, shardId uint64, miner common.Address) {
-	m.PeerState.WithLabelValues(fmt.Sprintf(format, id, version, address, shardId, miner.Hex()), "UpdateTime").Set(float64(time.Now().UnixMilli()))
+func (m *NetworkMetrics) SetPeerInfo(id, contract, version, address string, shardId uint64, miner common.Address) {
+	m.PeerState.WithLabelValues(contract, fmt.Sprintf(format, id, contract, version, address, shardId, miner.Hex()), "UpdateTime").Set(float64(time.Now().UnixMilli()))
 }
 
-func (m *NetworkMetrics) SetSyncState(id, version, address string, shardId uint64, miner common.Address, peerCount int, syncProgress, syncedSeconds,
+func (m *NetworkMetrics) SetSyncState(id, contract, version, address string, shardId uint64, miner common.Address, peerCount int, syncProgress, syncedSeconds,
 	fillEmptyProgress, fillEmptySeconds, providedBlobs uint64) {
-	m.PeerState.WithLabelValues(fmt.Sprintf(format, id, version, address, shardId, miner.Hex()), "PeerCount").Set(float64(peerCount))
-	m.PeerState.WithLabelValues(fmt.Sprintf(format, id, version, address, shardId, miner.Hex()), "SyncProgress").Set(float64(syncProgress) / 100)
-	m.PeerState.WithLabelValues(fmt.Sprintf(format, id, version, address, shardId, miner.Hex()), "SyncedSeconds").Set(float64(syncedSeconds) / 3600)
-	m.PeerState.WithLabelValues(fmt.Sprintf(format, id, version, address, shardId, miner.Hex()), "FillEmptyProgress").Set(float64(fillEmptyProgress) / 100)
-	m.PeerState.WithLabelValues(fmt.Sprintf(format, id, version, address, shardId, miner.Hex()), "FillEmptySeconds").Set(float64(fillEmptySeconds) / 3600)
-	m.PeerState.WithLabelValues(fmt.Sprintf(format, id, version, address, shardId, miner.Hex()), "ProvidedBlobs").Set(float64(providedBlobs))
+	m.PeerState.WithLabelValues(contract, fmt.Sprintf(format, id, contract, version, address, shardId, miner.Hex()), "PeerCount").Set(float64(peerCount))
+	m.PeerState.WithLabelValues(contract, fmt.Sprintf(format, id, contract, version, address, shardId, miner.Hex()), "SyncProgress").Set(float64(syncProgress) / 100)
+	m.PeerState.WithLabelValues(contract, fmt.Sprintf(format, id, contract, version, address, shardId, miner.Hex()), "SyncedSeconds").Set(float64(syncedSeconds) / 3600)
+	m.PeerState.WithLabelValues(contract, fmt.Sprintf(format, id, contract, version, address, shardId, miner.Hex()), "FillEmptyProgress").Set(float64(fillEmptyProgress) / 100)
+	m.PeerState.WithLabelValues(contract, fmt.Sprintf(format, id, contract, version, address, shardId, miner.Hex()), "FillEmptySeconds").Set(float64(fillEmptySeconds) / 3600)
+	m.PeerState.WithLabelValues(contract, fmt.Sprintf(format, id, contract, version, address, shardId, miner.Hex()), "ProvidedBlobs").Set(float64(providedBlobs))
 }
 
-func (m *NetworkMetrics) SetMiningState(id, version, address string, shardId uint64, miner common.Address, miningPower, samplingTime uint64) {
-	m.PeerState.WithLabelValues(fmt.Sprintf(format, id, version, address, shardId, miner.Hex()), "MiningPower").Set(float64(miningPower) / 100)
-	m.PeerState.WithLabelValues(fmt.Sprintf(format, id, version, address, shardId, miner.Hex()), "SamplingTime").Set(float64(samplingTime) / 1000)
+func (m *NetworkMetrics) SetMiningState(id, contract, version, address string, shardId uint64, miner common.Address, miningPower, samplingTime uint64) {
+	m.PeerState.WithLabelValues(contract, fmt.Sprintf(format, id, contract, version, address, shardId, miner.Hex()), "MiningPower").Set(float64(miningPower) / 100)
+	m.PeerState.WithLabelValues(contract, fmt.Sprintf(format, id, contract, version, address, shardId, miner.Hex()), "SamplingTime").Set(float64(samplingTime) / 1000)
 }
 
-func (m *NetworkMetrics) SetSubmissionState(id, version, address string, shardId uint64, miner common.Address, succeeded, failed, dropped int, lastSucceededTime int64) {
-	m.PeerState.WithLabelValues(fmt.Sprintf(format, id, version, address, shardId, miner.Hex()), "Succeeded").Set(float64(succeeded))
-	m.PeerState.WithLabelValues(fmt.Sprintf(format, id, version, address, shardId, miner.Hex()), "Failed").Set(float64(failed))
-	m.PeerState.WithLabelValues(fmt.Sprintf(format, id, version, address, shardId, miner.Hex()), "Dropped").Set(float64(dropped))
-	m.PeerState.WithLabelValues(fmt.Sprintf(format, id, version, address, shardId, miner.Hex()), "LastSucceededTime").Set(float64(lastSucceededTime))
+func (m *NetworkMetrics) SetSubmissionState(id, contract, version, address string, shardId uint64, miner common.Address, succeeded, failed, dropped int, lastSucceededTime int64) {
+	m.PeerState.WithLabelValues(contract, fmt.Sprintf(format, id, contract, version, address, shardId, miner.Hex()), "Succeeded").Set(float64(succeeded))
+	m.PeerState.WithLabelValues(contract, fmt.Sprintf(format, id, contract, version, address, shardId, miner.Hex()), "Failed").Set(float64(failed))
+	m.PeerState.WithLabelValues(contract, fmt.Sprintf(format, id, contract, version, address, shardId, miner.Hex()), "Dropped").Set(float64(dropped))
+	m.PeerState.WithLabelValues(contract, fmt.Sprintf(format, id, contract, version, address, shardId, miner.Hex()), "LastSucceededTime").Set(float64(lastSucceededTime))
 }
 
-func (m *NetworkMetrics) SetStaticMetrics(peersTotal int, minerOfShards map[uint64]map[common.Address]struct{},
+func (m *NetworkMetrics) SetStaticMetrics(contract string, peersCount int,
 	versions map[string]int, shards map[uint64]int, phasesOfShard map[uint64]map[string]int) {
-	m.PeersTotal.Set(float64(peersTotal))
+	m.PeersOfContract.WithLabelValues(contract).Set(float64(peersCount))
 
-	m.PeersOfShards.Reset()
 	for shardId, count := range shards {
-		m.PeersOfShards.WithLabelValues(fmt.Sprintf("%d", shardId)).Set(float64(count))
+		m.PeersOfShards.WithLabelValues(contract, fmt.Sprintf("%d", shardId)).Set(float64(count))
 	}
-	m.PeersOfVersions.Reset()
 	for version, count := range versions {
-		m.PeersOfVersions.WithLabelValues(version).Set(float64(count))
+		m.PeersOfVersions.WithLabelValues(contract, version).Set(float64(count))
 	}
-	m.PeersOfPhase.Reset()
 	for shardId, phases := range phasesOfShard {
 		for phase, count := range phases {
-			m.PeersOfPhase.WithLabelValues(fmt.Sprintf("%d", shardId), phase).Set(float64(count))
+			m.PeersOfPhase.WithLabelValues(contract, fmt.Sprintf("%d", shardId), phase).Set(float64(count))
 		}
 	}
 }
 
-func (m *NetworkMetrics) DeletePeerInfo(id, version, address string, shardId uint64, miner common.Address) {
+func (m *NetworkMetrics) ResetStaticMetrics() {
+	m.PeersOfContract.Reset()
+	m.PeersOfShards.Reset()
+	m.PeersOfVersions.Reset()
+	m.PeersOfPhase.Reset()
+}
+
+func (m *NetworkMetrics) DeletePeerInfo(id, contract, version, address string, shardId uint64, miner common.Address) {
 	types := []string{"UpdateTime", "PeerCount", "SyncProgress", "SyncedSeconds", "FillEmptyProgress", "FillEmptySeconds",
 		"MiningPower", "SamplingTime", "Succeeded", "Failed", "Dropped", "LastSucceededTime", "ProvidedBlobs"}
 	for _, t := range types {
-		m.PeerState.DeleteLabelValues(fmt.Sprintf(format, id, version, address, shardId, miner.Hex()), t)
+		m.PeerState.DeleteLabelValues(contract, fmt.Sprintf(format, id, contract, version, address, shardId, miner.Hex()), t)
 	}
 }
 

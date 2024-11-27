@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
@@ -90,6 +91,7 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 		m.lg.Error("Failed to compose calldata", "error", err)
 		return common.Hash{}, err
 	}
+	m.lg.Info("Composed calldata", "calldata", hexutil.Encode(calldata))
 
 	tip, gasFeeCap, useConfig, err := m.suggestGasPrices(ctx, cfg)
 	if err != nil {
@@ -112,20 +114,28 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 
 	reward, err := m.GetMiningReward(rst.startShardId, rst.blockNumber.Int64())
 	if err != nil {
-		m.lg.Error("Query mining reward failed", "error", err.Error())
-		return common.Hash{}, err
+		m.lg.Warn("Query mining reward failed", "error", err.Error())
 	}
-	profitableGasFeeCap := new(big.Int).Div(new(big.Int).Sub(reward, cfg.MinimumProfit), new(big.Int).SetUint64(estimatedGas))
-	m.lg.Info("Minimum profitable gas fee cap", "gasFeeCap", profitableGasFeeCap)
-	if gasFeeCap.Cmp(profitableGasFeeCap) == 1 {
-		profit := new(big.Int).Sub(reward, new(big.Int).Mul(new(big.Int).SetUint64(estimatedGas), gasFeeCap))
-		m.lg.Warn("Mining tx dropped: the profit will not meet expectation", "estimatedProfit", fmtEth(profit), "minimumProfit", fmtEth(cfg.MinimumProfit))
-		return common.Hash{}, errDropped
+	if reward != nil {
+		profitableGasFeeCap := new(big.Int).Div(new(big.Int).Sub(reward, cfg.MinimumProfit), new(big.Int).SetUint64(estimatedGas))
+		m.lg.Info("Minimum profitable gas fee cap", "gasFeeCap", profitableGasFeeCap)
+		if gasFeeCap.Cmp(profitableGasFeeCap) == 1 {
+			profit := new(big.Int).Sub(reward, new(big.Int).Mul(new(big.Int).SetUint64(estimatedGas), gasFeeCap))
+			m.lg.Warn("Mining tx dropped: the profit will not meet expectation", "estimatedProfit", fmtEth(profit), "minimumProfit", fmtEth(cfg.MinimumProfit))
+			return common.Hash{}, errDropped
+		}
+		if !useConfig {
+			gasFeeCap = profitableGasFeeCap
+			m.lg.Info("Using profitable gas fee cap", "gasFeeCap", gasFeeCap)
+		}
+	} else {
+		if !useConfig {
+			// (tip + 2*baseFee) to ensure the tx to be marketable for six consecutive 100% full blocks.
+			gasFeeCap = new(big.Int).Add(new(big.Int).Mul(new(big.Int).Sub(gasFeeCap, tip), big.NewInt(2)), tip)
+			m.lg.Info("Using marketable gas fee cap", "gasFeeCap", gasFeeCap)
+		}
 	}
-	if !useConfig {
-		gasFeeCap = profitableGasFeeCap
-		m.lg.Info("Using profitable gas fee cap", "gasFeeCap", gasFeeCap)
-	}
+
 	sign := cfg.SignerFnFactory(m.NetworkID)
 	nonce, err := m.NonceAt(ctx, cfg.SignerAddr, big.NewInt(rpc.LatestBlockNumber.Int64()))
 	if err != nil {
@@ -241,6 +251,8 @@ func (m *l1MiningAPI) suggestGasPrices(ctx context.Context, cfg Config) (*big.In
 		}
 		gasFeeCap = new(big.Int).Add(blockHeader.BaseFee, tip)
 		m.lg.Info("Suggested gas fee cap", "gasFeeCap", gasFeeCap)
+	} else {
+		m.lg.Info("Using configured gas price", "gasFeeCap", gasFeeCap, "tip", tip)
 	}
 	return tip, gasFeeCap, useConfig, nil
 }

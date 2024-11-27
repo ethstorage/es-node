@@ -1,7 +1,8 @@
 name: Integration Test
 on:
   schedule:
-    - cron: '1 8 * * 0,2,4'
+    - cron: '0 8 * * 0,2,4'
+  workflow_dispatch:
 
 jobs:
   integration-test:
