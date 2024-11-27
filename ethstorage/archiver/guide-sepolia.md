@@ -1,59 +1,65 @@
+Here's a revised version of your document with improved formatting and language:
 
-
-# Running an OP Node to Derive Blocks From Sepolia Through EthStorage
+# Running an OP Node to Derive Blocks from Sepolia through EthStorage
 
 ## Introduction
 
-This document outlines the process of running an op-node from source code, which will use Sepolia as L1, and EthStorage as the blob archiver service. It aims to verify that the op-node will derive L2 blocks from Sepolia using the expired blobs (pruned by Sepolia Beacon chain) retrieved from the EthStorage node (es-node).
+This document outlines the process for running an OP node from source code, using Sepolia as Layer 1 (L1) and EthStorage as the blob archiver service. The goal is to verify that the OP node correctly derives Layer 2 (L2) blocks from Sepolia using expired blobs (pruned by the Sepolia Beacon Chain) retrieved from the EthStorage node (es-node).
 
-## Prerequisite
+## Prerequisites
 
-The tests will be conducted in an environment with the following conditions get ready:
-- Sepolia L1 RPC provided by an execution client running in archive mode
-- Sepolia L1 Beacon URL
-- An es-node running with the archive service enabled
+Before proceeding, ensure your environment meets the following requirements:
+
+- **Sepolia L1 RPC** provided by an execution client running in archive mode
+- **Sepolia L1 Beacon URL**
+- **An es-node** running with the archive service enabled
 - A [deployed BatchInbox contract](https://sepolia.etherscan.io/address/0x27504265a9bc4330e3fe82061a60cd8b6369b4dc) on Sepolia L1
-- An OP Stack L2 that uses EIP-4844 blobs to submit batchs to the BatchInbox
+- An OP Stack L2 that utilizes EIP-4844 blobs to submit batches to the BatchInbox
 
-It is assumed that the above services or components are functionning.
-
+It is assumed that the above services and components are functioning properly.
 
 ## Starting OP Geth
 
-### Build op-geth
-First you're going to build the `op-geth` implementation of the execution client:
+### Step 1: Build OP-Geth
+
+First, clone the `op-geth` repository and build the execution client:
+
 ```bash
 git clone https://github.com/ethereum-optimism/op-geth.git
 cd op-geth
 git checkout v1.101408.0
-
 make geth
 ```
 
-###  Create a JWT secret
-Run the following command to generate a JWT secret to secure the communication between  `op-geth` and `op-node` :
+### Step 2: Create a JWT Secret
+
+Generate a JWT secret to secure communications between `op-geth` and `op-node`:
+
 ```bash
 openssl rand -hex 32 > jwt.txt
 ```
 
+### Step 3: Set Environment Variables
 
-### Set environment variables 
+Set the data directory for `op-geth`:
 
-Set the data dir of op-geth as a environment variable:
 ```bash
 export DATADIR=./datadir
 ```
 
-### Initialize op-geth
-Then you need to download the genesis file and initialize the client with it:
+### Step 4: Initialize OP-Geth
+
+Download the genesis file and initialize the client:
+
 ```bash
 curl -o genesis.json https://raw.githubusercontent.com/ethstorage/pm/refs/heads/main/L2/assets/testnet_genesis.json
-
 ./build/bin/geth init --state.scheme=hash --datadir=$DATADIR ./genesis.json
 ```
 
-### Start op-geth
-Finally start the client with following command:
+### Step 5: Start OP-Geth
+
+Start the client with the following command:
+
 ```bash
 ./build/bin/geth \
   --datadir $DATADIR \
@@ -82,41 +88,51 @@ Finally start the client with following command:
 ```
 
 ## Starting the OP Node
-  
-### Get Code
-First clone the Optimism monorepo and check out the branch `long-term-da` if not already done so:
+
+### Step 1: Get the Code
+
+Clone the Optimism monorepo and check out the `long-term-da` branch if you haven't already:
+
 ```bash
 git clone https://github.com/ethstorage/optimism.git
 cd optimism
 git checkout long-term-da
 ```
 
-### Build op-node
-Build the  `op-node`  implementation of the Rollup Node.
+### Step 2: Build OP-Node
+
+Build the `op-node` implementation of the Rollup Node:
+
 ```bash
 make op-node
 ```
-### Copy the JWT secret
-Copy the jwt file created in `op-geth` repo into `op-node` folder:
+
+### Step 3: Copy the JWT Secret
+
+Copy the JWT file created in the `op-geth` repository to the `op-node` folder:
+
 ```bash
 cp ../op-geth/jwt.txt ./op-node
 ```
 
-### Download the configuration file
-Download the rollup file as confguration of op-node:
+### Step 4: Download the Configuration File
+
+Download the rollup configuration file for `op-node`:
+
 ```bash
 curl -o rollup.json https://raw.githubusercontent.com/ethstorage/pm/refs/heads/main/L2/assets/testnet_rollup.json
 ```
 
-### Start op-node
-To start the op-node, execute the following commands:
+### Step 5: Start OP-Node
+
+To start the OP node, execute the following command:
 
 ```bash
 ./op-node/bin/op-node \
   --l2=http://localhost:9551 \
   --l2.jwt-secret=./op-node/jwt.txt \
   --sequencer.enabled=false \
-  --p2p.disable  \
+  --p2p.disable \
   --verifier.l1-confs=4 \
   --rollup.config=./rollup.json \
   --rpc.addr=0.0.0.0 \
@@ -127,12 +143,12 @@ To start the op-node, execute the following commands:
   --l1.rpckind=basic \
   --l1.beacon-archiver=http://65.108.236.27:9645
 ```
-  
+
 **Note:**
-1. P2P is disabled so that it can only sync data from L1.
+
+1. P2P is disabled to ensure that it only syncs data from L1.
 2. The beacon archiver is configured to point to the es-node archive service.
-  
 
 ## Conclusion
 
-By following the instructions above, you will permissionlessly launch an OP Stack rollup node retrieving blobs from EthStorage that have been pruned by the Beacon chain of Sepolia. Additionally, you can verify that the op-node derives L2 blocks from those blobs correctly, which demostrates that EthStorage works effectively as a decentralized long-term data availability solution.
+By following these instructions, you'll permissionlessly launch an OP Stack rollup node that retrieves blobs from EthStorage, which have been pruned by the Sepolia Beacon Chain. Additionally, you can verify that the OP node derives L2 blocks correctly from these blobs, demonstrating that EthStorage effectively serves as a decentralized long-term data availability solution. 
