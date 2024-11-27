@@ -164,9 +164,9 @@ Make sure to save the deployed contract address for future use. For example:
 export BATCH_INBOX=0xb860F42DAeD06Cf3dC9C3b4B8A287523BbdB2B1e  # replace with the actual address
 ```
 
-Do not forget to fund the contract: 
+Do not forget to fund the batcher in the BatchInbox account, where `0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC` is the batcher address used in the devnet:
 ```bash
-cast send $BATCH_INBOX --private-key $PRIVATE_KEY --value 100000000000000000000
+cast send $BATCH_INBOX "deposit(address)" 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC --value 100ether --private-key $PRIVATE_KEY
 ```
 
 Finally, navigate to the Optimism monorepo and locate `batchInboxAddress` in the file `packages/contracts-bedrock/deploy-config/devnetL1.json`:
