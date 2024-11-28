@@ -1,27 +1,33 @@
 # Running an op-node to Derive Blocks from Sepolia through EthStorage
 
 ## Table of Contents
+1. **[Introduction](#introduction)**
 
-1. [Introduction](#introduction)
-2. [Prerequisites](#prerequisites)
-3. [Running op-geth](#running-op-geth)  
-   3.1 [Building op-geth](#building-op-geth)  
-   3.2 [Creating a JWT Secret](#creating-a-jwt-secret)  
-   3.3 [Setting Environment Variables](#setting-environment-variables)  
-   3.4 [Initializing op-geth](#initializing-op-geth)  
-   3.5 [Starting op-geth](#starting-op-geth)  
-4. [Running op-node](#running-op-node)  
-   4.1 [Getting the Code](#getting-the-code)  
-   4.2 [Building the op-node](#building-the-op-node)  
-   4.3 [Copying the JWT Secret](#copying-the-jwt-secret)  
-   4.4 [Downloading the Configuration File](#downloading-the-configuration-file)  
-   4.5 [Starting the op-node](#starting-the-op-node)  
-5. [Verifying the Derivation Process](#verifying-the-derivation-process)  
-   5.1 [op-geth Logs](#op-geth-logs)  
-   5.2 [op-node Logs](#op-node-logs)  
-   5.3 [es-node Logs](#es-node-logs)  
-   5.4 [Verification Commands](#verification-commands)  
-6. [Conclusion](#conclusion)
+2. **[Prerequisites](#prerequisites)**
+
+3. **[Running op-geth](#running-op-geth)**
+   - 3.1 [Building op-geth](#building-op-geth)
+   - 3.2 [Creating a JWT Secret](#creating-a-jwt-secret)
+   - 3.3 [Setting Environment Variables](#setting-environment-variables)
+   - 3.4 [Initializing op-geth](#initializing-op-geth)
+   - 3.5 [Starting op-geth](#starting-op-geth)
+
+4. **[Running op-node](#running-op-node)**
+   - 4.1 [Getting the Code](#getting-the-code)
+   - 4.2 [Building the op-node](#building-the-op-node)
+   - 4.3 [Copying the JWT Secret](#copying-the-jwt-secret)
+   - 4.4 [Downloading the Configuration File](#downloading-the-configuration-file)
+   - 4.5 [Starting the op-node](#starting-the-op-node)
+
+5. **[Verifying the Derivation Process](#verifying-the-derivation-process)**
+   - 5.1 [Observing the Logs](#observing-the-logs)
+     - 5.1.1 [op-geth logs](#op-geth-logs)
+     - 5.1.2 [op-node logs](#op-node-logs)
+     - 5.1.3 [es-node logs](#es-node-logs)
+   - 5.2 [Comparing Blocks](#comparing-blocks)
+
+6. **[Conclusion](#conclusion)**
+
 
 ## Introduction
 
@@ -171,6 +177,7 @@ To start the op-node, execute the following command:
 
 ## Verifying the Derivation Process
 
+### Observing the Logs
 After starting the op-node, you can observe the logs from the consoles:
 
 **op-geth logs:**
@@ -210,11 +217,12 @@ t=2024-11-28T06:22:51+0000 lvl=info msg="Blob archiver API request handled"     
 
 From the logs, we can see that the op-node keeps converting batches into payload attributes, calling the op-geth to work on the payload to convert it into block, and inserting the block as the chain head. Additionally, you may notice the age of derived blocks is over four months, and a blob archiver API request was handled by the es-node, meaning the blob was retrieved from EthStorage since it was pruned by the L1 Beacon client.
 
+### Comparing Blocks
 You can also verify the correctness of the derived rollup blocks by comparing the results of the following commands:
 
 ```bash
-cast block 451057 -f hash -r http://127.0.0.1:9515
-cast block 451057 -f hash -r http://65.109.20.29:8545
+cast block 51019 -f hash -r http://127.0.0.1:9515
+cast block 51019 -f hash -r http://65.109.20.29:8545
 ```
 
 ## Conclusion
