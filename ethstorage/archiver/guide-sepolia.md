@@ -1,10 +1,8 @@
-Here's a revised version of your document with improved formatting and language:
-
-# Running an OP Node to Derive Blocks from Sepolia through EthStorage
+# Running an op-node to Derive Blocks from Sepolia through EthStorage
 
 ## Introduction
 
-This document outlines the process for running an OP node from source code, using Sepolia as Layer 1 (L1) and EthStorage as the blob archiver service. The goal is to verify that the OP node correctly derives Layer 2 (L2) blocks from Sepolia using expired blobs (pruned by the Sepolia Beacon Chain) retrieved from the EthStorage node (es-node).
+This document outlines the process for running an op-node from source code, using Sepolia as Layer 1 (L1) and EthStorage as the blob archiver service. The goal is to verify that the op-node correctly derives Layer 2 (L2) blocks from Sepolia using expired blobs (pruned by the Sepolia Beacon Chain) retrieved from the EthStorage node (es-node).
 
 ## Prerequisites
 
@@ -18,11 +16,11 @@ Before proceeding, ensure your environment meets the following requirements:
 
 It is assumed that the above services and components are functioning properly.
 
-## Starting OP Geth
+## Running op-geth
 
-### Step 1: Build OP-Geth
+### Building op-geth
 
-First, clone the `op-geth` repository and build the execution client:
+Clone the `op-geth` repository and build the execution client:
 
 ```bash
 git clone https://github.com/ethereum-optimism/op-geth.git
@@ -31,15 +29,15 @@ git checkout v1.101408.0
 make geth
 ```
 
-### Step 2: Create a JWT Secret
+### Creating a JWT Secret
 
-Generate a JWT secret to secure communications between `op-geth` and `op-node`:
+Generate a JWT secret to secure communications between the op-geth and the op-node:
 
 ```bash
 openssl rand -hex 32 > jwt.txt
 ```
 
-### Step 3: Set Environment Variables
+### Setting Environment Variables
 
 Set the data directory for `op-geth`:
 
@@ -47,7 +45,7 @@ Set the data directory for `op-geth`:
 export DATADIR=./datadir
 ```
 
-### Step 4: Initialize OP-Geth
+### Initializing op-geth
 
 Download the genesis file and initialize the client:
 
@@ -56,7 +54,7 @@ curl -o genesis.json https://raw.githubusercontent.com/ethstorage/pm/refs/heads/
 ./build/bin/geth init --state.scheme=hash --datadir=$DATADIR ./genesis.json
 ```
 
-### Step 5: Start OP-Geth
+### Starting op-geth
 
 Start the client with the following command:
 
@@ -87,11 +85,10 @@ Start the client with the following command:
   --rollup.disabletxpoolgossip=true
 ```
 
-## Starting the OP Node
+## Running op-node
 
-### Step 1: Get the Code
-
-Clone the Optimism monorepo and check out the `long-term-da` branch if you haven't already:
+### Getting the Code
+Clone the Optimism monorepo and check out the `long-term-da` branch:
 
 ```bash
 git clone https://github.com/ethstorage/optimism.git
@@ -99,15 +96,15 @@ cd optimism
 git checkout long-term-da
 ```
 
-### Step 2: Build OP-Node
+### Building the op-node
 
-Build the `op-node` implementation of the Rollup Node:
+Build the `op-node` component:
 
 ```bash
 make op-node
 ```
 
-### Step 3: Copy the JWT Secret
+### Copying the JWT Secret
 
 Copy the JWT file created in the `op-geth` repository to the `op-node` folder:
 
@@ -115,17 +112,17 @@ Copy the JWT file created in the `op-geth` repository to the `op-node` folder:
 cp ../op-geth/jwt.txt ./op-node
 ```
 
-### Step 4: Download the Configuration File
+### Downloading the Configuration File
 
-Download the rollup configuration file for `op-node`:
+Download the rollup configuration file for the op-node:
 
 ```bash
 curl -o rollup.json https://raw.githubusercontent.com/ethstorage/pm/refs/heads/main/L2/assets/testnet_rollup.json
 ```
 
-### Step 5: Start OP-Node
+### Starting the op-node
 
-To start the OP node, execute the following command:
+To start the op-node, execute the following command:
 
 ```bash
 ./op-node/bin/op-node \
@@ -146,15 +143,14 @@ To start the OP node, execute the following command:
 
 **Note:**
 
-1. P2P is disabled to ensure that it only syncs data from L1.
-2. The beacon archiver is configured to point to the es-node archive service.
+- P2P is disabled to ensure that it only syncs data from L1.
+- The beacon archiver is configured to point to the es-node archive service.
 
+## Verifying the Derivation Process
 
-## Verifing the derivition process
+After starting the op-node, you can observe the logs from the consoles:
 
-After the OP node started, you can observe the logs from the consoles, something like this:
-
-**op-geth**
+**op-geth Logs:**
 ```log
 INFO [11-28|03:32:04.066] Starting work on payload                 id=0x032b2419eae77a19
 INFO [11-28|03:32:04.068] Imported new potential chain segment     number=451,055 hash=f8e51d..27bf83 blocks=1 txs=1 mgas=0.046 elapsed=1.147ms      mgasps=40.300   age=4mo6d14h snapdiffs=2.52MiB    triedirty=0.00B
@@ -178,7 +174,8 @@ INFO [11-28|03:32:06.141] Starting work on payload                 id=0x0320593f
 INFO [11-28|03:32:06.142] Imported new potential chain segment     number=451,061 hash=34a268..8e575a blocks=1 txs=1 mgas=0.046 elapsed="673.483µs"  mgasps=68.639   age=4mo6d14h snapdiffs=2.52MiB    triedirty=0.00B
 INFO [11-28|03:32:06.143] Chain head was updated                   number=451,061 hash=34a268..8e575a root=a2ffe7..c39c96 elapsed="146.495µs"  age=4mo6d14h
 ```
-**op-node**
+
+**op-node Logs:**
 ```log
 INFO [11-28|03:32:04.064] Generating next batch                    epoch=c6e371..583306:6367781 timestamp=1,721,827,390
 INFO [11-28|03:32:04.065] generated attributes in payload queue    txs=1 timestamp=1,721,827,390
@@ -204,9 +201,10 @@ INFO [11-28|03:32:06.140] generated attributes in payload queue    txs=1 timesta
 INFO [11-28|03:32:06.142] Inserted block                           hash=34a268..8e575a number=451,061 state_root=a2ffe7..c39c96 timestamp=1,721,827,402 parent=d950bf..8940bc prev_randao=f99bdd..62ef4c fee_recipient=0x4200000000000000000000000000000000000011 txs=1 last_in_span=true  derived_from=1768f8..177a85:6374982
 INFO [11-28|03:32:07.078] Advancing bq origin                      origin=7383e1..3b1940:6374983 originBehind=false
 INFO [11-28|03:32:07.078] Generating next batch                    epoch=75c275..69e44e:6367783 timestamp=1,721,827,404
+```
 
-**es-node**
-```log
+**es-node Logs:**
+```log=
 t=2024-11-28T03:28:34+0000 lvl=info msg="Blob archiver API request"             url="/eth/v1/beacon/blob_sidecars/5516563?indices=3"
 t=2024-11-28T03:28:35+0000 lvl=info msg="Query el block number and kzg"         took(s)=0.335
 t=2024-11-28T03:28:35+0000 lvl=info msg="BeaconID to execution block number"    beaconID=5516563 elBlock=6,374,791
@@ -219,15 +217,15 @@ t=2024-11-28T03:28:35+0000 lvl=info msg="Blob archiver API request handled"     
 t=2024-11-28T03:28:45+0000 lvl=info msg="Connected to peer"                     peer=16Uiu2HAmHi99uh2tmoPBZ9fmgPkgkssHwNQBsXyVuKtjyaJWDo9T Direction=Outbound addr=/ip4/172.17.0.2/tcp/9222
 ```
 
-From the logs we can see the op-node keeps converting the batches into payload attributes, calling op-geth to work on the payload to convert it into block, then insert the block as the chain head. Additionally you may notice the age of derived blocks are about more than 4 month, so once for a while a blob archiver API request is handled by es-node, which means the blob is retrieved from EthStorage since it was pruned by the L1 Beacon client.
+From the logs, we can see that the op-node keeps converting batches into payload attributes, calling the op-geth to work on the payload to convert it into block, and inserting the block as the chain head. Additionally, you may notice the age of derived blocks is over four months, and a blob archiver API request is handled by the es-node occasionally, meaning the blob is retrieved from EthStorage since it was pruned by the L1 Beacon client.
 
-You can also verify the correctness of the derived rollup blocks by compare the results of the following queries:
+You can also verify the correctness of the derived rollup blocks by comparing the results of the following commands:
 
-```
+```bash
 cast block 451057 -f hash -r http://127.0.0.1:9515
 cast block 451057 -f hash -r http://65.109.20.29:8545
 ```
 
 ## Conclusion
 
-By following these instructions, you'll permissionlessly launch an OP Stack rollup node that retrieves blobs from EthStorage, which have been pruned by the Sepolia Beacon Chain. Additionally, you can verify that the OP node derives L2 blocks correctly from these blobs, demonstrating that EthStorage effectively serves as a decentralized long-term data availability solution. 
+By following these instructions, you'll permissionlessly launch an OP Stack rollup node that retrieves blobs from EthStorage, which have been pruned by the Sepolia Beacon Chain. Additionally, you can verify that the op-node derives L2 blocks correctly from these blobs, demonstrating that EthStorage effectively serves as a decentralized long-term data availability solution.
