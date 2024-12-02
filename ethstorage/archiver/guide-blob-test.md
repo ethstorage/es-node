@@ -1,5 +1,19 @@
 # Testing EthStorage Archive Service 
 
+## Table of Contents
+
+1. [Introduction](#introduction)  
+2. [Environment Setup](#environment-setup)  
+   2.1. [Running an es-node with the Archive Service Enabled](#running-an-es-node-with-the-archive-service-enabled)  
+   2.2. [Running a Proxy for the Ethereum Beacon API](#running-a-proxy-for-the-ethereum-beacon-api)  
+   2.3. [Set Environment Variables](#set-environment-variables)  
+3. [Testing EthStorage Archive Service](#testing-ethstorage-archive-service)  
+   3.1. [Upload a Blob](#upload-a-blob)  
+   3.2. [Query the Blob Info](#query-the-blob-info)  
+   3.3. [Load the Expired Blob from EthStorage](#load-the-expired-blob-from-ethstorage)  
+   3.4. [Verify the Blob](#verify-the-blob)  
+4. [Conclusion](#conclusion)  
+
 ## Introduction
 
 This document outlines the testing strategy and details for the blob archiver service of EthStorage. Its main objective is to verify that the EIP-4844 blobs can be effectively downloaded, stored, and retrieved from EthStorage, even after they have expired and been pruned from the L1 Beacon client.
@@ -27,7 +41,7 @@ make
 ./run-rpc.sh --archiver.enabled
 ```
 
-Note: The default port for the Archive Service RPC is 9645.
+Note: The default port for the Archive service is 9645.
 
 For additional details and options for running an es-node, please refer to the [EthStorage documentation](https://docs.ethstorage.io/storage-provider-guide/tutorials).
 
@@ -94,7 +108,9 @@ Options explained:
 
 ### Query the Blob Info
 
-To find the slot value to be used in the Beacon API, use the following script. Be sure to replace `$TX_HASH` with the transaction hash obtained in the previous step:
+To find the slot value to be used in the Beacon API, use the following script. It also help to log the KZG commitments of the blobs for verification purpose.
+
+Be sure to replace `$TX_HASH` with the transaction hash obtained in the previous step:
 
 ```bash
 #!/bin/bash
@@ -128,11 +144,27 @@ echo "KZG Commitments of blobs in the slot:"
 curl -s "$BEACON_API/eth/v1/beacon/blob_sidecars/$SLOT" | jq -r '.data[].kzg_commitment'
 ```
 
-Make sure to record the KZG commitments for verification later.
+The output may look like this:
 
-### Load the Expired Blob from EthStorage
+```log
+Slot: 6448199
+KZG Commitments of blobs in the slot:
+0x8893c579b22c64b81700a3d781cb78327e16ae687afa276c9cac4b7d9921c78577c0461e223ad3ca6663f6898fdf8e96
+0x8e43d61888613865f5b54a5345b997c830237e116426c7eb779da4bf33ff0e2240fd56a54291607d5c52212f53842f23
+0x8f7dfdaf4565296c533592c7293af91bd6544e5c2e2d011c402c945d4718950ea15ae1c0fc4f241416e5a9ade9ea748e
+0xad7d15db45e493072105f0297fcf4226b1cc54bc4da2fcb491bce31535f5a04d55fd1ed1e728a732189d3dc7cffc8014
+```
 
-To check for blobs using the Beacon Chain URL, replace `$SLOT` with the slot number obtained in the last step:
+Now set `$SLOT` as environment variable for blob queries later:
+```bash
+export SLOT=6448199 # replace the value with yours
+```
+
+Also record the KZG commitments for verification later, for one of the KZG Commitments is associated with the blob we just uploaded.
+
+### Waiting for the Blob Expires on the Beacon
+
+To check for blobs' availability on the Beacon Chain, using the command:
 
 ```bash
 curl -s "$BEACON_API_MOCK/eth/v1/beacon/blob_sidecars/$SLOT"
@@ -140,22 +172,26 @@ curl -s "$BEACON_API_MOCK/eth/v1/beacon/blob_sidecars/$SLOT"
 
 After waiting 30 minutes for the blob to expire, the above query should return `{"data":[]}`.
 
-Next, query the blobs from the EthStorage archive service:
+
+### Load the Expired Blob from EthStorage
+
+Next, query the blob from the EthStorage archive service:
 
 ```bash
 curl -s "$ARCHIVE_SERVICE/eth/v1/beacon/blob_sidecars/$SLOT"
 ```
 
-This will return the blob, including the index, blob data, KZG commitment, and KZG proofs.
+This will return the expired blob, including the index, blob data, KZG commitment, and KZG proofs.
 
 ### Verify the Blob
+
+Finally, verify that the retrieved KZG commitment matches one of the KZG commitments previously obtained from the Beacon Chain. This confirms that the blob was correctly stored and retrieved from EthStorage after being pruned by L1.
+
 To specifically query the KZG commitment, execute:
 
 ```bash
 curl -s "$ARCHIVE_SERVICE/eth/v1/beacon/blob_sidecars/$SLOT" | jq -r '.data[].kzg_commitment'
 ```
-
-Finally, verify that the retrieved KZG commitment matches one of the KZG commitments previously obtained from the Beacon Chain. This confirms that the blob was correctly stored and retrieved from EthStorage after being pruned by L1.
 
 ## Conclusion
 
