@@ -1,11 +1,6 @@
 # Testing OP Stack with EthStorage as Archive Service: A Step-by-Step Guide
 
-This guide provides detailed steps for setting up a self-contained test environment for the OP Stack rollup, utilizing EthStorage as an archive service. 
-The test framework is based on the Bedrock devnet but allows for separate control of Layer 1 (L1) and Layer 2 (L2). The document explains how to configure and start all necessary components, including:
-- L1 that serves as RPC endpoint and Beacon API, 
-- Rollup services such as op-geth, sequencer, batcher,  proposer, etc., plus an extra rollup node in validator mode on L2, 
-- The deployment of EthStorage contracts and BatchInbox contract that help to store batch data into EthStorage. 
-- Launch an EthStorage node (es-node) in archiver mode. 
+[Introduction](#introduction)
 
 1. [Preparations](#preparations)
    - [Software Dependencies](#software-dependencies)
@@ -27,6 +22,15 @@ The test framework is based on the Bedrock devnet but allows for separate contro
    - [Starting the OP Node](#starting-the-op-node)
 5. [Verifying Sync Status](#verifying-sync-status)
 6. [Conclusion](#conclusion)
+
+## Introduction
+
+This guide provides detailed steps for setting up a self-contained test environment for the OP Stack rollup, utilizing EthStorage as an archive service. 
+The test framework is based on the Bedrock devnet but allows for separate control of Layer 1 (L1) and Layer 2 (L2). The document explains how to configure and start all necessary components, including:
+- L1 that serves as RPC endpoint and Beacon API, 
+- Rollup services such as op-geth, sequencer, batcher,  proposer, etc., plus an extra rollup node in validator mode on L2, 
+- The deployment of EthStorage contracts and BatchInbox contract that help to store batch data into EthStorage. 
+- Launch an EthStorage node (es-node) in archiver mode. 
 
 ## Preparations
 
