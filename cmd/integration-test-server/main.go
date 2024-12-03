@@ -180,7 +180,7 @@ func checkFinalState(state *node.NodeState) {
 		if shardState.SubmissionState.Failed > 0 {
 			knownFailureCount := checkKnownFailure()
 			if knownFailureCount > 0 {
-				log.Warn("Check by design failure result", "failure", shardState.SubmissionState.Failed, "by design failure", knownFailureCount)
+				log.Warn("Check known failure result", "failure", shardState.SubmissionState.Failed, "known failure", knownFailureCount)
 			}
 			failureCount := shardState.SubmissionState.Failed - knownFailureCount
 			if failureCount > 0 {
@@ -334,7 +334,7 @@ func checkDiffNotMatchError() (int, error) {
 				continue
 			}
 			if originalDiff, ok := difficultyMap[block]; ok && strings.Compare(diff, originalDiff) != 0 {
-				log.Warn("By design diff not match error", "block", block, "original difficulty", originalDiff, "latest difficulty", diff)
+				log.Warn("Known diff not match error", "block", block, "original difficulty", originalDiff, "latest difficulty", diff)
 				count++
 				continue
 			}
@@ -350,7 +350,7 @@ func checkInvalidSamplesError() (int, error) {
 	// lvl=info msg="Get data hash"                         kvIndex=11742 hash=0x0000000000000000000000000000000000000000000000000000000000000000
 	// lvl=info msg="Downloaded and encoded"                blockNumber=4,225,672 kvIdx=11742
 	// lvl=info msg="Got storage proof"                     shard=1 block=6,906,682 kvIdx="[14613 11742]" sampleIdxsInKv="[1691 1859]"
-	// lvl=info msg="Mining result loop get result"         shard=1 block=6,906,682 nonce=539,139
+	// lvl=info msg="Submit mined result done"              shard=1 block=6,906,682 nonce=739,669   txSigner=0x8be2c9379eb69877F25aBa61a853eC4FCb0b273a hash=0x4f212aa8f5b8867b6478f4cde9dc09609590ff4fc14997f7048ff32f2c96af0c
 	// lvl=eror msg="Failed to submit mined result"         shard=1 block=6,906,682 error="failed to estimate gas: execution reverted: EthStorageContract2: invalid samples"
 
 	file, err := os.OpenFile(logFile, os.O_RDONLY, 0755)
@@ -399,14 +399,14 @@ func checkInvalidSamplesError() (int, error) {
 		} else if regexp.MustCompile(`Failed to submit mined result[\s\S]+invalid samples`).MatchString(logText) {
 			for kvIdx, block := range legacyKVs {
 				if block != "" && strings.Contains(logText, block) {
-					log.Warn("By design error", "block", block, "kvIdx", kvIdx, "error", "invalid samples")
+					log.Warn("Known error", "block", block, "kvIdx", kvIdx, "error", "invalid samples")
 					delete(legacyKVs, kvIdx)
 					count++
 					continue
 				}
 				delete(minedEmptyKVs, kvIdx)
 			}
-		} else if strings.Contains(logText, "Mining result loop get result") {
+		} else if strings.Contains(logText, "Submit mined result done") {
 			for kvIdx, block := range minedEmptyKVs {
 				if block != "" && strings.Contains(logText, block) {
 					delete(minedEmptyKVs, kvIdx)
