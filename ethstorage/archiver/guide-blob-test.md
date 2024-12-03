@@ -4,8 +4,8 @@
 
 1. [Introduction](#introduction)  
 2. [Environment Setup](#environment-setup)  
-   2.1. [Running an es-node with the Archive Service Enabled](#running-an-es-node-with-the-archive-service-enabled)  
-   2.2. [Running a Proxy for the Ethereum Beacon API](#running-a-proxy-for-the-ethereum-beacon-api)  
+   2.1. [Running a Proxy for the Ethereum Beacon API](#running-a-proxy-for-the-ethereum-beacon-api)  
+   2.2. [Running an es-node with the Archive Service Enabled](#running-an-es-node-with-the-archive-service-enabled)  
    2.3. [Set Environment Variables](#set-environment-variables)  
 3. [Testing EthStorage Archive Service](#testing-ethstorage-archive-service)  
    3.1. [Upload a Blob](#upload-a-blob)  
@@ -24,26 +24,10 @@ The tests will be conducted in an environment with the following services operat
 
 - An Ethereum L1 (Sepolia) RPC from an Execution Client running in archive mode.
 - An Ethereum L1 (Sepolia) Beacon API URL.
-- An EthStorage node (es-node) with the archive service enabled.
 - A proxy for the Ethereum Beacon API to simulate a short blob retention period.
+- An EthStorage node (es-node) with the archive service enabled.
 
-The following sections detail the setup of the es-node and the Beacon proxy.
-
-### Running an es-node with the Archive Service Enabled
-
-Follow these steps to download the source code for es-node, build it, initialize it, and run it with the archive service enabled:
-
-```bash
-git clone https://github.com/ethstorage/es-node.git
-cd es-node 
-make
-./init-rpc.sh
-./run-rpc.sh --archiver.enabled
-```
-
-Note: The default port for the Archive service is 9645.
-
-For additional details and options for running an es-node, please refer to the [EthStorage documentation](https://docs.ethstorage.io/storage-provider-guide/tutorials).
+The following sections detail the setup of the Beacon proxy and the es-node.
 
 ### Running a Proxy for the Ethereum Beacon API
 
@@ -58,6 +42,22 @@ go run cmd/main.go -r 1800
 This proxy functions like a standard Beacon API, except that it has a much shorter blob retention period—30 minutes in this case. Consequently, when a `blob_sidecars` request is made for blobs older than 150 slots, it will return an empty list: `{"data":[]}`.
 
 Note: The default RPC port for the mocked Beacon API is 3600.
+
+### Running an es-node with the Archive Service Enabled
+
+Follow these steps to download the source code for es-node, build it, initialize it, and run it with the archive service enabled:
+
+```bash
+git clone https://github.com/ethstorage/es-node.git
+cd es-node 
+make
+./init-rpc.sh
+./run-rpc.sh  --l1.beacon http://88.99.30.186:3600 --archiver.enabled
+```
+
+Note: The default port for the Archive service is 9645.
+
+For additional details and options for running an es-node, please refer to the [EthStorage documentation](https://docs.ethstorage.io/storage-provider-guide/tutorials).
 
 ### Set Environment Variables
 
