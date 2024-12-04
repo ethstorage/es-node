@@ -202,7 +202,7 @@ cd beacon-api-wrapper
 go run cmd/main.go -b http://localhost:5052 -p 3602 -g $GENESIS_TIME -r 1200
 ```
 This setup allows you to test archive service effectively. 
-For blob requests, if the request is within the latest 100 slots, the proxy will retrieve blobs from `http://localhost:5052`. For requests older than that, it will return an empty list.
+For blob requests, if the request is within the latest 1200 seconds or 100 slots, the proxy will retrieve blobs from `http://localhost:5052`. For requests older than that, it will return an empty list.
 
 ## Running EthStorage Node
 
@@ -244,6 +244,10 @@ Finally, run the es-node:
 --archiver.enabled 
 ```
 
+Shortly after the es-node starts, it will listen for the storage contract, download all blobs managed by the contract, and store them locally. In this instance, it collects all the blobs received by the BatchInbox contract. The es-node also serve blob queries in the format `/eth/v1/beacon/blob_sidecars/{slot}` on port 6678, similar to the Beacon API.
+
+Please note that this is a simplified version of the es-node designed solely for data access. In a standard EthStorage network, a p2p network is formed by storage providers who secure the data using a sophisticated proof-of-storage algorithm. For detailed information, please refer to [the documentation](docs.ethstorage.io).
+
 Now, navigate to the parent directory in preparation for the next steps.
 
 ## L2 Setup
@@ -265,7 +269,9 @@ This command will start the following services:
 
 Now, navigate to the parent directory in preparation for the next steps.
 
-The following steps will add an additional OP node in validator mode, configured to sync expired blob data from the es-node. This aims to verify that the functions of the derivation pipeline are working correctly with the BatchInbox contract and the EthStorage archive service. 
+The following steps will add an additional OP Stack instance in validator mode, configured to sync expired blob data from the es-node. This aims to verify that the functions of the derivation pipeline are working correctly with the BatchInbox contract and the EthStorage archive service. 
+
+Note: To ensure that the new OP Stack instance is genuinely derived from the "expired" blobs stored by EthStorage, you may need to wait for at least 100 slots before starting the next steps.
 
 ### Starting OP Geth
 
