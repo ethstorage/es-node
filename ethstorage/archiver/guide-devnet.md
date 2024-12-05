@@ -216,9 +216,7 @@ This command will start the following services:
 
 Now, navigate to the parent directory in preparation for the next steps.
 
-The following steps will add an additional OP Stack instance in validator mode, configured to sync expired blob data from the es-node. This aims to verify that the functions of the derivation pipeline are working correctly with the BatchInbox contract and the EthStorage archive service. 
-
-Note: To ensure that the new OP Stack instance is genuinely derived from the "expired" blobs stored by EthStorage, you may need to wait for at least 100 slots before starting the next steps.
+The following steps will add an additional OP Stack instance in validator mode only download blobs from the Beacon API proxy at first. 
 
 ### Starting OP Geth
 
@@ -272,6 +270,8 @@ Now, navigate to the parent directory in preparation for the next steps.
 
 ### Starting OP Node
 
+Note: To ensure that the new OP Stack instance is trying to derived from the "expired" blobs, you may need to wait for at least 64 slots before starting the next steps, according to the setting of the Beacon proxy.
+
 Enter the Optimism monorepo and execute the following commands to start op-node as a validator:
 
 ```bash
@@ -296,7 +296,7 @@ make op-node
 1. P2P is disabled so that it can only sync data from L1.
 2. The L1 beacon URL is directed to the beacon proxy, where blobs expire quickly.
 
-You can observe that the validator node is unable to sync properly because it cannot retrieve expired blobs. The next steps are to set up an EthStorage node to store the expired blobs for the rollup.
+You can observe that the validator node is unable to sync properly with "derivation failed" error due to "failed to fetch blobs". 
 
 Now, navigate to the parent directory in preparation for the next steps.
 
