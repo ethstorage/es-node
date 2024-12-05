@@ -153,10 +153,14 @@ cd es-op-batchinbox
 Deploy the BatchInbox contract:
 ```bash
 forge create src/BatchInbox.sol:BatchInbox  \
---constructor-args $ES_CONTRACT \
+--broadcast \
 --private-key $PRIVATE_KEY \
---rpc-url http://localhost:8545
+--rpc-url http://localhost:8545 \
+--constructor-args $ES_CONTRACT
+```
 
+It should output like 
+```bash
 Deployer: 0xDe3829A23DF1479438622a08a116E8Eb3f620BB5
 Deployed to: 0xb860F42DAeD06Cf3dC9C3b4B8A287523BbdB2B1e
 Transaction hash: 0x99f6788e90004a68e67fa2848e47f7592ffb38aaff31b1738bcc163d806a00a5
@@ -186,13 +190,13 @@ Now, navigate to the parent directory in preparation for the next steps.
 
 For the convenience of testing, you will start a proxy for the Beacon API with a shorter blob retention period.
 
-First retrieve the beacon genesis time for later use:
+First, retrieve the beacon genesis time for later use:
 ```bash
 curl -s http://localhost:5052/eth/v1/beacon/genesis | jq -r '.data.genesis_time'
 
 1732529739
 
-export GENESIS_TIME=1732529739 // replace with the actual timestamp
+export GENESIS_TIME=1732529739 # replace with the actual timestamp
 ```
 
 The following commands start a proxy to Beacon API with a shorter blobs retention period:
