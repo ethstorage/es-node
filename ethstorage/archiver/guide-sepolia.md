@@ -52,9 +52,9 @@ It is assumed that the above services and components are functioning properly.
 Clone the `op-geth` repository and build the execution client:
 
 ```bash
-git clone https://github.com/ethereum-optimism/op-geth.git
+git clone https://github.com/ethstorage/op-geth.git
 cd op-geth
-git checkout v1.101408.0
+git checkout testnet
 make geth
 ```
 
@@ -117,12 +117,12 @@ Start the client with the following command:
 ## Running op-node
 
 ### Getting the Code
-Clone the Optimism monorepo and check out the `long-term-da` branch:
+Clone the Optimism monorepo and check out the `testnet` branch:
 
 ```bash
 git clone https://github.com/ethstorage/optimism.git
 cd optimism
-git checkout long-term-da
+git checkout testnet
 ```
 
 ### Building the op-node
