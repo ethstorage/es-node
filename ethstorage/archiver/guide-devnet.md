@@ -122,7 +122,7 @@ Begin by cloning the EthStorage contract repository and install the dependencies
 git clone https://github.com/ethstorage/storage-contracts-v1.git
 cd storage-contracts-v1
 git checkout op-devnet
-npm install
+npm run install:all
 ``` 
 
 Create a `.env` file and populate it with the following content:
