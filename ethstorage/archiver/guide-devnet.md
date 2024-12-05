@@ -9,9 +9,10 @@
    - [Fill Out Environment Variables](#fill-out-environment-variables)
 2. [L1 Setup](#l1-setup)
    - [Starting L1](#starting-l1)
+   - [Running a Proxy of L1 Beacon to Mock Short Retention Period of Blobs](#running-a-proxy-of-l1-beacon-to-mock-short-retention-period-of-blobs)
+3. [Deploying Contracts](#deploying-contracts)
    - [Deploying EthStorage Contracts](#deploying-ethstorage-contracts)
-   - [Deploy BatchInbox](#deploy-batchinbox)
-   - [Running a Proxy of L1 Beacon](#running-a-proxy-of-l1-beacon)
+   - [Deploying BatchInbox Contract](#deploying-batchinbox-contract)
 3. [Running EthStorage Node](#running-ethstorage-node)
    - [Installation](#installation)
    - [Initialization](#initialization)
@@ -115,6 +116,19 @@ This command will start the following services:
 
 Now, navigate to the parent directory in preparation for the next steps.
 
+### Running a Proxy of L1 Beacon to Mock Short Retention Period of Blobs
+
+The following commands start a proxy to Beacon API with a shorter blobs retension period:
+```bash
+git clone https://github.com/ethstorage/beacon-api-wrapper.git
+cd beacon-api-wrapper
+go run cmd/main.go -b http://localhost:5052 -p 3602 -g $GENESIS_TIME -r 2
+```
+If a blob request is within the latest 2 epochs or 64 slots, the proxy will retrieve blobs from `http://localhost:5052`. For requests older than that, it will return an empty list.
+This setup allows you to test archive service effectively. 
+
+## Deploying Contracts
+
 ### Deploying EthStorage Contracts
 
 Begin by cloning the EthStorage contract repository and install the dependencies:
@@ -122,7 +136,7 @@ Begin by cloning the EthStorage contract repository and install the dependencies
 git clone https://github.com/ethstorage/storage-contracts-v1.git
 cd storage-contracts-v1
 git checkout op-devnet
-npm install
+npm run install:all
 ``` 
 
 Create a `.env` file and populate it with the following content:
@@ -142,7 +156,7 @@ export ES_CONTRACT=0x9B75f686F348d18AF9A4b98e0290D24350d742c4  # replace with th
 ```
 Now, navigate to the parent directory in preparation for the next steps.
 
-### Deploy BatchInbox
+### Deploying BatchInbox Contract
 
 Clone and build the BatchInbox contract:
 ```bash
@@ -182,28 +196,6 @@ Update the value of `batchInboxAddress` with the address of the contract you jus
 
 Now, navigate to the parent directory in preparation for the next steps.
 
-### Running a Proxy of L1 Beacon
-
-For the convenience of testing, you will start a proxy for the Beacon API with a shorter blob retention period.
-
-First retrieve the beacon genesis time for later use:
-```bash
-curl -s http://localhost:5052/eth/v1/beacon/genesis | jq -r '.data.genesis_time'
-
-1732529739
-
-export GENESIS_TIME=1732529739 // replace with the actual timestamp
-```
-
-The following commands start a proxy to Beacon API with a shorter blobs retension period:
-```bash
-git clone https://github.com/ethstorage/beacon-api-wrapper.git
-cd beacon-api-wrapper
-go run cmd/main.go -b http://localhost:5052 -p 3602 -g $GENESIS_TIME -r 1200
-```
-This setup allows you to test archive service effectively. 
-For blob requests, if the request is within the latest 1200 seconds or 100 slots, the proxy will retrieve blobs from `http://localhost:5052`. For requests older than that, it will return an empty list.
-
 ## Running EthStorage Node
 
 
@@ -227,6 +219,15 @@ Initialize es-node:
 ```
 
 ### Running ES Node in Archiver Mode
+
+Retrieve the beacon genesis time for later use:
+```bash
+curl -s http://localhost:5052/eth/v1/beacon/genesis | jq -r '.data.genesis_time'
+
+1732529739
+
+export GENESIS_TIME=1732529739 // replace with the actual timestamp
+```
 
 Finally, run the es-node:
 
