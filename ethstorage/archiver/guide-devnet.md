@@ -13,16 +13,17 @@
 3. [Deploying Contracts](#deploying-contracts)
    - [Deploying EthStorage Contracts](#deploying-ethstorage-contracts)
    - [Deploying BatchInbox Contract](#deploying-batchinbox-contract)
-3. [Running EthStorage Node](#running-ethstorage-node)
-   - [Installation](#installation)
-   - [Initialization](#initialization)
-   - [Running ES Node in Archiver Mode](#running-es-node-in-archiver-mode)
 4. [L2 Setup](#l2-setup)
    - [Running L2](#running-l2)
    - [Starting OP Geth](#starting-op-geth)
-   - [Starting the OP Node](#starting-the-op-node)
-5. [Verifying Sync Status](#verifying-sync-status)
-6. [Conclusion](#conclusion)
+   - [Starting OP Node](#starting-op-node)
+5. [Running EthStorage Node](#running-ethstorage-node)
+   - [Installation](#installation)
+   - [Initialization](#initialization)
+   - [Running ES Node in Archiver Mode](#running-es-node-in-archiver-mode)
+6. [Restarting OP Node With the Archiver Configured](#restarting-op-node-with-the-archiver-configured)
+7. [Verifying Sync Status](#verifying-sync-status)
+8. [Conclusion](#conclusion)
 
 ## Introduction
 
@@ -196,61 +197,6 @@ Update the value of `batchInboxAddress` with the address of the contract you jus
 
 Now, navigate to the parent directory in preparation for the next steps.
 
-## Running EthStorage Node
-
-
-### Installation
-
-To set up the es-node, first clone the repository and build it:
-```bash
-git clone https://github.com/ethstorage/es-node.git
-cd es-node
-git checkout v0.1.16
-make
-```
-
-### Initialization
-
-Initialize es-node:
-```bash
-./init-rpc.sh \
---l1.rpc http://localhost:8545 \
---storage.l1contract $ES_CONTRACT
-```
-
-### Running ES Node in Archiver Mode
-
-Retrieve the beacon genesis time for later use:
-```bash
-curl -s http://localhost:5052/eth/v1/beacon/genesis | jq -r '.data.genesis_time'
-
-1732529739
-
-export GENESIS_TIME=1732529739 // replace with the actual timestamp
-```
-
-Finally, run the es-node:
-
-```bash
-./run-rpc.sh \
---storage.l1contract $ES_CONTRACT \
---l1.rpc http://localhost:8545 \
---l1.beacon http://localhost:5052 \
---l1.beacon-based-time $GENESIS_TIME \
---l1.beacon-based-slot 0 \
---p2p.listen.udp 30375 \
---p2p.listen.tcp 9733 \
---rpc.port 9745 \
---archiver.port 6678 \
---archiver.enabled 
-```
-
-Shortly after the es-node starts, it will listen for the storage contract, download all blobs managed by the contract, and store them locally. In this instance, it collects all the blobs received by the BatchInbox contract. The es-node also serve blob queries in the format `/eth/v1/beacon/blob_sidecars/{slot}` on port 6678, similar to the Beacon API.
-
-Please note that this is a simplified version of the es-node designed solely for data access. In a standard EthStorage network, a p2p network is formed by storage providers who secure the data using a sophisticated proof-of-storage algorithm. For detailed information, please refer to [the documentation](docs.ethstorage.io).
-
-Now, navigate to the parent directory in preparation for the next steps.
-
 ## L2 Setup
 
 ### Running L2
@@ -324,7 +270,7 @@ Start the OP Geth process:
 
 Now, navigate to the parent directory in preparation for the next steps.
 
-### Starting the OP Node
+### Starting OP Node
 
 Enter the Optimism monorepo and execute the following commands to start op-node as a validator:
 
@@ -343,17 +289,80 @@ make op-node
   --rpc.enable-admin \
   --l1=$L1_RPC_URL \
   --l1.rpckind=$L1_RPC_KIND \
-  --l1.beacon=http://localhost:3602 \
-  --l1.beacon-archiver http://localhost:6678
+  --l1.beacon=http://localhost:3602 
 ```
 
 **Note:**
 1. P2P is disabled so that it can only sync data from L1.
 2. The L1 beacon URL is directed to the beacon proxy, where blobs expire quickly.
-3. The beacon archiver is configured to point to the es-node archive service. 
+
+You can observe that the validator node is unable to sync properly because it cannot retrieve expired blobs. The next steps are to set up an EthStorage node to store the expired blobs for the rollup.
+
+Now, navigate to the parent directory in preparation for the next steps.
+
+## Running EthStorage Node
+
+### Installation
+
+To set up the es-node, first clone the repository and build it:
+```bash
+git clone https://github.com/ethstorage/es-node.git
+cd es-node
+git checkout v0.1.16
+make
+```
+
+### Initialization
+
+Initialize es-node:
+```bash
+./init-rpc.sh \
+--l1.rpc http://localhost:8545 \
+--storage.l1contract $ES_CONTRACT
+```
+
+### Running ES Node in Archiver Mode
+
+Retrieve the beacon genesis time for later use:
+```bash
+curl -s http://localhost:5052/eth/v1/beacon/genesis | jq -r '.data.genesis_time'
+
+1732529739
+
+export GENESIS_TIME=1732529739 // replace with the actual timestamp
+```
+
+Finally, run the es-node:
+
+```bash
+./run-rpc.sh \
+--storage.l1contract $ES_CONTRACT \
+--l1.rpc http://localhost:8545 \
+--l1.beacon http://localhost:5052 \
+--l1.beacon-based-time $GENESIS_TIME \
+--l1.beacon-based-slot 0 \
+--p2p.listen.udp 30375 \
+--p2p.listen.tcp 9733 \
+--rpc.port 9745 \
+--archiver.port 6678 \
+--archiver.enabled 
+```
+
+Shortly after the es-node starts, it will listen for the storage contract, download all blobs managed by the contract, and store them locally. In this instance, it collects all the blobs received by the BatchInbox contract. The es-node also serve blob queries in the format `/eth/v1/beacon/blob_sidecars/{slot}` on port 6678, similar to the Beacon API.
+
+Please note that this is a simplified version of the es-node designed solely for data access. In a standard EthStorage network, a p2p network is formed by storage providers who secure the data using a sophisticated proof-of-storage algorithm. For detailed information, please refer to [the documentation](docs.ethstorage.io).
+
+
+## Restarting OP Node With the Archiver Configured
+
+Enter the Optimism monorepo, stop the running op-node, and re-start op-node with the same command in [this section](#starting-op-node) but with an extra option:
+
+```bash
+--l1.beacon-archiver http://localhost:6678
+```
+Note that the beacon archiver is configured to point to the es-node archive service.  
 
 ## Verifying Sync Status
-
 
 During the synchronization process, you can check that the validator node queries expired blobs from the es-node archive service. You may need to temporarily stop the validator node to allow the blobs to expire.
 
