@@ -34,6 +34,8 @@ The test framework is based on the Bedrock devnet but allows for separate contro
 - The deployment of EthStorage contracts and BatchInbox contract that help to store batch data into EthStorage. 
 - Launch an EthStorage node (es-node) in archiver mode. 
 
+You will have an intuitive experience and clear understanding of the difference made by EthStorage archive service as a long-term data availability solution.
+
 ## Preparations
 
 ### Software Dependencies
@@ -123,9 +125,9 @@ The following commands start a proxy to Beacon API with a shorter blobs retensio
 ```bash
 git clone https://github.com/ethstorage/beacon-api-wrapper.git
 cd beacon-api-wrapper
-go run cmd/main.go -b http://localhost:5052 -p 3602 -g $GENESIS_TIME -r 2
+go run cmd/main.go -b http://localhost:5052 -p 3602 -r 3
 ```
-If a blob request is within the latest 2 epochs or 64 slots, the proxy will retrieve blobs from `http://localhost:5052`. For requests older than that, it will return an empty list.
+If a blob request is within the latest 3 epochs or 96 slots, the proxy will retrieve blobs from the Beacon URL (`http://localhost:5052`). For requests older than that, it will return an empty list.
 This setup allows you to test archive service effectively. 
 
 ## Deploying Contracts
@@ -331,6 +333,7 @@ curl -s http://localhost:5052/eth/v1/beacon/genesis | jq -r '.data.genesis_time'
 
 export GENESIS_TIME=1732529739 // replace with the actual timestamp
 ```
+Note: Before proceeding to the next step of launching the es-node, ensure that at least 2 epochs (approximately 13 minutes) have passed since the EthStorage contracts were deployed in [this step](#deploying-ethstorage-contracts), as the es-node needs to read the finalized states of the contract.
 
 Finally, run the es-node:
 
