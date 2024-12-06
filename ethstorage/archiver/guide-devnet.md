@@ -29,7 +29,7 @@ This guide provides detailed steps for setting up a self-contained test environm
 The test framework is based on the Bedrock devnet but allows for separate control of Layer 1 (L1) and Layer 2 (L2). The document explains how to configure and start all necessary components, including:
 - L1 that serves as RPC endpoint and Beacon API, 
 - Rollup services such as op-geth, sequencer, batcher,  proposer, etc., plus an extra rollup node in validator mode on L2, 
-- The deployment of EthStorage contracts and BatchInbox contract that help to store batch data into EthStorage. 
+- The deployment of EthStorage contracts and the BatchInbox contract that help to store batch data into EthStorage. 
 - Launch an EthStorage node (es-node) in archiver mode. 
 
 ## Preparations
@@ -50,7 +50,7 @@ The test framework is based on the Bedrock devnet but allows for separate contro
 
 ### Get the Correct Code Branch
 
-First clone the Optimism monorepo and check out the branch `long-term-da`:
+First, clone the Optimism monorepo and check out the branch `long-term-da`:
 
 ```bash
 git clone https://github.com/ethstorage/optimism.git
@@ -122,7 +122,7 @@ Begin by cloning the EthStorage contract repository and install the dependencies
 git clone https://github.com/ethstorage/storage-contracts-v1.git
 cd storage-contracts-v1
 git checkout op-devnet
-npm install
+npm run install:all
 ``` 
 
 Create a `.env` file and populate it with the following content:
@@ -153,10 +153,14 @@ cd es-op-batchinbox
 Deploy the BatchInbox contract:
 ```bash
 forge create src/BatchInbox.sol:BatchInbox  \
---constructor-args $ES_CONTRACT \
+--broadcast \
 --private-key $PRIVATE_KEY \
---rpc-url http://localhost:8545
+--rpc-url http://localhost:8545 \
+--constructor-args $ES_CONTRACT
+```
 
+It should output like 
+```bash
 Deployer: 0xDe3829A23DF1479438622a08a116E8Eb3f620BB5
 Deployed to: 0xb860F42DAeD06Cf3dC9C3b4B8A287523BbdB2B1e
 Transaction hash: 0x99f6788e90004a68e67fa2848e47f7592ffb38aaff31b1738bcc163d806a00a5
@@ -186,22 +190,22 @@ Now, navigate to the parent directory in preparation for the next steps.
 
 For the convenience of testing, you will start a proxy for the Beacon API with a shorter blob retention period.
 
-First retrieve the beacon genesis time for later use:
+First, retrieve the beacon genesis time for later use:
 ```bash
 curl -s http://localhost:5052/eth/v1/beacon/genesis | jq -r '.data.genesis_time'
 
 1732529739
 
-export GENESIS_TIME=1732529739 // replace with the actual timestamp
+export GENESIS_TIME=1732529739 # replace with the actual timestamp
 ```
 
-The following commands start a proxy to Beacon API with a shorter blobs retension period:
+The following commands start a proxy to Beacon API with a shorter blobs retention period:
 ```bash
 git clone https://github.com/ethstorage/beacon-api-wrapper.git
 cd beacon-api-wrapper
 go run cmd/main.go -b http://localhost:5052 -p 3602 -g $GENESIS_TIME -r 1200
 ```
-This setup allows you to test archive service effectively. 
+This setup allows you to test the archive service effectively. 
 For blob requests, if the request is within the latest 1200 seconds or 100 slots, the proxy will retrieve blobs from `http://localhost:5052`. For requests older than that, it will return an empty list.
 
 ## Running EthStorage Node
@@ -209,7 +213,7 @@ For blob requests, if the request is within the latest 1200 seconds or 100 slots
 
 ### Installation
 
-To set up the es-node, first clone the repository and build it:
+To set up the es-node, first, clone the repository and build it:
 ```bash
 git clone https://github.com/ethstorage/es-node.git
 cd es-node
@@ -244,7 +248,7 @@ Finally, run the es-node:
 --archiver.enabled 
 ```
 
-Shortly after the es-node starts, it will listen for the storage contract, download all blobs managed by the contract, and store them locally. In this instance, it collects all the blobs received by the BatchInbox contract. The es-node also serve blob queries in the format `/eth/v1/beacon/blob_sidecars/{slot}` on port 6678, similar to the Beacon API.
+Shortly after the es-node starts, it will listen for the storage contract, download all blobs managed by the contract, and store them locally. In this instance, it collects all the blobs received by the BatchInbox contract. The es-node also serves blob queries in the format `/eth/v1/beacon/blob_sidecars/{slot}` on port 6678, similar to the Beacon API.
 
 Please note that this is a simplified version of the es-node designed solely for data access. In a standard EthStorage network, a p2p network is formed by storage providers who secure the data using a sophisticated proof-of-storage algorithm. For detailed information, please refer to [the documentation](docs.ethstorage.io).
 
@@ -360,7 +364,7 @@ Additionally, you can verify the correctness of the expired blob data by ensurin
 
 For example:
 ```
-# query block from the sequancer
+# query block from the sequencer
 cast block 3000 -f hash -r http://127.0.0.1:9545
 
 # query block from the validator
