@@ -131,6 +131,8 @@ go run cmd/main.go -b http://localhost:5052 -p 3602 -r 3
 If a blob request is within the latest 3 epochs or 96 slots, the proxy will retrieve blobs from the Beacon URL (`http://localhost:5052`). For requests older than that, it will return an empty list.
 This setup allows you to test the archive service effectively. 
 
+Now, navigate to the parent directory in preparation for the next steps.
+
 ## EthStorage Setup
 
 ### Deploying EthStorage Contracts
@@ -213,6 +215,7 @@ Shortly after the es-node starts, it will listen for the storage contract, downl
 
 Please note that this is a simplified version of the es-node designed solely for data access. In a standard EthStorage network, a p2p network is formed by storage providers who secure the data using a sophisticated proof-of-storage algorithm. For detailed information, please refer to [the documentation](docs.ethstorage.io).
 
+Now, navigate to the parent directory in preparation for the next steps.
 
 ## L2 Setup
 
@@ -258,11 +261,9 @@ Finally, navigate to the Optimism monorepo and locate `batchInboxAddress` in the
 ```
 Update the value of `batchInboxAddress` with the address of the contract you just deployed. 
 
-Now, navigate to the parent directory in preparation for the next steps.
-
 ### Running L2
 
-Enter the Optimism monorepo and start the Layer 2 environment by executing the following command:
+In the Optimism monorepo, start the Layer 2 environment by executing the following command:
 ```bash
 make devnet-up-l2
 ```
@@ -331,7 +332,7 @@ Now, navigate to the parent directory in preparation for the next steps.
 
 ### Starting OP Node
 
-Note: To ensure that the new OP Stack instance is trying to derived from the "expired" blobs, you may need to wait for at least 64 slots before starting the next steps, according to the setting of the Beacon proxy.
+Note: To ensure that the new OP Stack instance is trying to derived from the "expired" blobs, you may need to wait for at least 96 slots before starting the next steps, according to the setting of the Beacon proxy.
 
 Enter the Optimism monorepo and execute the following commands to start op-node as a validator:
 
@@ -357,13 +358,11 @@ make op-node
 1. P2P is disabled so that it can only sync data from L1.
 2. The L1 beacon URL is directed to the beacon proxy, where blobs expire quickly.
 
-You can observe that the validator node is unable to sync properly with "derivation failed" error due to "failed to fetch blobs". 
-
-Now, navigate to the parent directory in preparation for the next steps.
+You can observe that the validator node is unable to sync properly with "derivation failed" error due to "failed to fetch blobs", which is a expected result because there is no way to retreive the expired blobs.
 
 ### Restarting OP Node With the Archiver Configured
 
-Enter the Optimism monorepo, stop the running op-node, and re-start op-node with the same command in [this section](#starting-op-node) but with an extra option:
+Now, stop the running op-node, and re-start op-node with the same command in [the last step](#starting-op-node) but with an extra option:
 
 ```bash
 --l1.beacon-archiver http://localhost:6678
