@@ -1,27 +1,30 @@
 # Testing OP Stack with EthStorage as Archive Service: A Step-by-Step Guide
 
-[Introduction](#introduction)
+## Table of Contents
 
-1. [Preparations](#preparations)
-   - [Software Dependencies](#software-dependencies)
-   - [Get the Correct Code Branch](#get-the-correct-code-branch)
-   - [Source of Gas](#source-of-gas)
-   - [Fill Out Environment Variables](#fill-out-environment-variables)
-2. [L1 Setup](#l1-setup)
-   - [Starting L1](#starting-l1)
-   - [Deploying EthStorage Contracts](#deploying-ethstorage-contracts)
-   - [Deploy BatchInbox](#deploy-batchinbox)
-   - [Running a Proxy of L1 Beacon](#running-a-proxy-of-l1-beacon)
-3. [Running EthStorage Node](#running-ethstorage-node)
-   - [Installation](#installation)
-   - [Initialization](#initialization)
-   - [Running ES Node in Archiver Mode](#running-es-node-in-archiver-mode)
-4. [L2 Setup](#l2-setup)
-   - [Running L2](#running-l2)
-   - [Starting OP Geth](#starting-op-geth)
-   - [Starting the OP Node](#starting-the-op-node)
-5. [Verifying Sync Status](#verifying-sync-status)
-6. [Conclusion](#conclusion)
+1. [Introduction](#introduction)
+2. [Preparations](#preparations)
+   - 2.1 [Software Dependencies](#software-dependencies)
+   - 2.2 [Getting the Correct Code Branch](#getting-the-correct-code-branch)
+   - 2.3 [Source of Gas](#source-of-gas)
+   - 2.4 [Filling Out Environment Variables](#filling-out-environment-variables)
+3. [L1 Setup](#l1-setup)
+   - 3.1 [Starting L1](#starting-l1)
+   - 3.2 [Running a Proxy of L1 Beacon to Mock Short Retention Period of Blobs](#running-a-proxy-of-l1-beacon-to-mock-short-retention-period-of-blobs)
+4. [EthStorage Setup](#ethstorage-setup)
+   - 4.1 [Deploying EthStorage Contracts](#deploying-ethstorage-contracts)
+   - 4.2 [Building EthStorage Node](#building-ethstorage-node)
+   - 4.3 [Initializing EthStorage Node](#initializing-ethstorage-node)
+   - 4.4 [Running ES Node in Archiver Mode](#running-es-node-in-archiver-mode)
+5. [L2 Setup](#l2-setup)
+   - 5.1 [Deploying BatchInbox Contract](#deploying-batchinbox-contract)
+   - 5.2 [Running L2](#running-l2)
+   - 5.3 [Starting OP Geth](#starting-op-geth)
+   - 5.4 [Starting OP Node](#starting-op-node)
+   - 5.5 [Restarting OP Node with the Archiver Configured](#restarting-op-node-with-the-archiver-configured)
+6. [Verifying Sync Status](#verifying-sync-status)
+7. [Conclusion](#conclusion)
+
 
 ## Introduction
 
@@ -31,6 +34,8 @@ The test framework is based on the Bedrock devnet but allows for separate contro
 - Rollup services such as op-geth, sequencer, batcher,  proposer, etc., plus an extra rollup node in validator mode on L2, 
 - The deployment of EthStorage contracts and the BatchInbox contract that help to store batch data into EthStorage. 
 - Launch an EthStorage node (es-node) in archiver mode. 
+
+You will have an intuitive experience and clear understanding of the difference made by EthStorage archive service as a long-term data availability solution.
 
 ## Preparations
 
@@ -48,7 +53,7 @@ The test framework is based on the Bedrock devnet but allows for separate contro
 | docker     | ^27     | `docker --version`			  |
 
 
-### Get the Correct Code Branch
+### Getting the Correct Code Branch
 
 First, clone the Optimism monorepo and check out the branch `long-term-da`:
 
@@ -77,7 +82,7 @@ and store the private key in your environment:
 export PRIVATE_KEY=bf7604d9d3a1c7748642b1b7b05c2bd219c9faa91458b370f85e5a40f3b03af7
 ```
 
-### Fill Out Environment Variables
+### Filling Out Environment Variables
 
 To configure the environment variables, begin by copying the example configuration file:
 ```
@@ -115,6 +120,21 @@ This command will start the following services:
 
 Now, navigate to the parent directory in preparation for the next steps.
 
+### Running a Proxy of L1 Beacon to Mock Short Retention Period of Blobs
+
+The following commands start a proxy to Beacon API with a shorter blob retention period:
+```bash
+git clone https://github.com/ethstorage/beacon-api-wrapper.git
+cd beacon-api-wrapper
+go run cmd/main.go -b http://localhost:5052 -p 3602 -r 3
+```
+If a blob request is within the latest 3 epochs or 96 slots, the proxy will retrieve blobs from the Beacon URL (`http://localhost:5052`). For requests older than that, it will return an empty list.
+This setup allows you to test the archive service effectively. 
+
+Now, navigate to the parent directory in preparation for the next steps.
+
+## EthStorage Setup
+
 ### Deploying EthStorage Contracts
 
 Begin by cloning the EthStorage contract repository and install the dependencies:
@@ -142,76 +162,8 @@ export ES_CONTRACT=0x9B75f686F348d18AF9A4b98e0290D24350d742c4  # replace with th
 ```
 Now, navigate to the parent directory in preparation for the next steps.
 
-### Deploy BatchInbox
 
-Clone and build the BatchInbox contract:
-```bash
-git clone https://github.com/ethstorage/es-op-batchinbox.git
-cd es-op-batchinbox
-```
-
-Deploy the BatchInbox contract:
-```bash
-forge create src/BatchInbox.sol:BatchInbox  \
---broadcast \
---private-key $PRIVATE_KEY \
---rpc-url http://localhost:8545 \
---constructor-args $ES_CONTRACT
-```
-
-It should output like 
-```bash
-Deployer: 0xDe3829A23DF1479438622a08a116E8Eb3f620BB5
-Deployed to: 0xb860F42DAeD06Cf3dC9C3b4B8A287523BbdB2B1e
-Transaction hash: 0x99f6788e90004a68e67fa2848e47f7592ffb38aaff31b1738bcc163d806a00a5
-```
-
-Make sure to save the deployed contract address for future use. For example:
-
-```hash
-export BATCH_INBOX=0xb860F42DAeD06Cf3dC9C3b4B8A287523BbdB2B1e  # replace with the actual address
-```
-
-Do not forget to fund the batcher in the BatchInbox account, where `0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC` is the batcher address used in the devnet:
-```bash
-cast send $BATCH_INBOX "deposit(address)" 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC --value 100ether --private-key $PRIVATE_KEY
-```
-
-Finally, navigate to the Optimism monorepo and locate `batchInboxAddress` in the file `packages/contracts-bedrock/deploy-config/devnetL1.json`:
-
-```json
-  "batchInboxAddress": "0xff00000000000000000000000000000000000901",
-```
-Update the value of `batchInboxAddress` with the address of the contract you just deployed. 
-
-Now, navigate to the parent directory in preparation for the next steps.
-
-### Running a Proxy of L1 Beacon
-
-For the convenience of testing, you will start a proxy for the Beacon API with a shorter blob retention period.
-
-First, retrieve the beacon genesis time for later use:
-```bash
-curl -s http://localhost:5052/eth/v1/beacon/genesis | jq -r '.data.genesis_time'
-
-1732529739
-
-export GENESIS_TIME=1732529739 # replace with the actual timestamp
-```
-
-The following commands start a proxy to Beacon API with a shorter blobs retention period:
-```bash
-git clone https://github.com/ethstorage/beacon-api-wrapper.git
-cd beacon-api-wrapper
-go run cmd/main.go -b http://localhost:5052 -p 3602 -g $GENESIS_TIME -r 1200
-```
-This setup allows you to test the archive service effectively. 
-For blob requests, if the request is within the latest 1200 seconds or 100 slots, the proxy will retrieve blobs from `http://localhost:5052`. For requests older than that, it will return an empty list.
-
-## Running EthStorage Node
-
-
-### Installation
+### Building EthStorage Node
 
 To set up the es-node, first, clone the repository and build it:
 ```bash
@@ -221,7 +173,7 @@ git checkout v0.1.16
 make
 ```
 
-### Initialization
+### Initializing EthStorage Node
 
 Initialize es-node:
 ```bash
@@ -231,6 +183,17 @@ Initialize es-node:
 ```
 
 ### Running ES Node in Archiver Mode
+
+Retrieve the beacon genesis time for later use:
+```bash
+curl -s http://localhost:5052/eth/v1/beacon/genesis | jq -r '.data.genesis_time'
+
+1732529739
+
+export GENESIS_TIME=1732529739 # replace with the actual timestamp
+```
+
+Note: Before proceeding to the next step of launching the es-node, ensure that at least 2 epochs (approximately 13 minutes) have passed since the EthStorage contracts were deployed in [this step](#deploying-ethstorage-contracts), as the es-node needs to read the finalized states of the contract.
 
 Finally, run the es-node:
 
@@ -256,9 +219,51 @@ Now, navigate to the parent directory in preparation for the next steps.
 
 ## L2 Setup
 
+### Deploying BatchInbox Contract
+
+Clone and build the BatchInbox contract:
+```bash
+git clone https://github.com/ethstorage/es-op-batchinbox.git
+cd es-op-batchinbox
+```
+
+Deploy the BatchInbox contract:
+```bash
+forge create src/BatchInbox.sol:BatchInbox  \
+--broadcast \
+--private-key $PRIVATE_KEY \
+--rpc-url http://localhost:8545 \
+--constructor-args $ES_CONTRACT
+```
+
+It should output like 
+```bash
+Deployer: 0xDe3829A23DF1479438622a08a116E8Eb3f620BB5
+Deployed to: 0xb860F42DAeD06Cf3dC9C3b4B8A287523BbdB2B1e
+Transaction hash: 0x99f6788e90004a68e67fa2848e47f7592ffb38aaff31b1738bcc163d806a00a5
+```
+
+Make sure to save the deployed contract address for future use. For example:
+
+```bash
+export BATCH_INBOX=0xb860F42DAeD06Cf3dC9C3b4B8A287523BbdB2B1e  # replace with the actual address
+```
+
+Do not forget to fund the batcher in the BatchInbox account, where `0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC` is the batcher address used in the devnet:
+```bash
+cast send $BATCH_INBOX "deposit(address)" 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC --value 100ether --private-key $PRIVATE_KEY
+```
+
+Finally, navigate to the Optimism monorepo and locate `batchInboxAddress` in the file `packages/contracts-bedrock/deploy-config/devnetL1.json`:
+
+```json
+  "batchInboxAddress": "0xff00000000000000000000000000000000000901",
+```
+Update the value of `batchInboxAddress` with the address of the contract you just deployed. 
+
 ### Running L2
 
-Once again, enter the Optimism monorepo and start the Layer 2 environment by executing the following command:
+In the Optimism monorepo, start the Layer 2 environment by executing the following command:
 ```bash
 make devnet-up-l2
 ```
@@ -273,9 +278,7 @@ This command will start the following services:
 
 Now, navigate to the parent directory in preparation for the next steps.
 
-The following steps will add an additional OP Stack instance in validator mode, configured to sync expired blob data from the es-node. This aims to verify that the functions of the derivation pipeline are working correctly with the BatchInbox contract and the EthStorage archive service. 
-
-Note: To ensure that the new OP Stack instance is genuinely derived from the "expired" blobs stored by EthStorage, you may need to wait for at least 100 slots before starting the next steps.
+The following steps will add an additional OP Stack instance in validator mode only download blobs from the Beacon API proxy at first. 
 
 ### Starting OP Geth
 
@@ -327,7 +330,9 @@ Start the OP Geth process:
 
 Now, navigate to the parent directory in preparation for the next steps.
 
-### Starting the OP Node
+### Starting OP Node
+
+Note: To ensure that the new OP Stack instance is trying to derived from the "expired" blobs, you may need to wait for at least 96 slots before starting the next steps, according to the setting of the Beacon proxy.
 
 Enter the Optimism monorepo and execute the following commands to start op-node as a validator:
 
@@ -346,24 +351,32 @@ make op-node
   --rpc.enable-admin \
   --l1=$L1_RPC_URL \
   --l1.rpckind=$L1_RPC_KIND \
-  --l1.beacon=http://localhost:3602 \
-  --l1.beacon-archiver http://localhost:6678
+  --l1.beacon=http://localhost:3602 
 ```
 
 **Note:**
 1. P2P is disabled so that it can only sync data from L1.
 2. The L1 beacon URL is directed to the beacon proxy, where blobs expire quickly.
-3. The beacon archiver is configured to point to the es-node archive service. 
+
+You can observe that the validator node is unable to sync properly with "derivation failed" error due to "failed to fetch blobs", which is an expected result because there is no way to retreive the expired blobs.
+
+### Restarting OP Node With the Archiver Configured
+
+Now, stop the running op-node, and re-start op-node with the same command in [the last step](#starting-op-node) but with an extra option:
+
+```bash
+--l1.beacon-archiver http://localhost:6678
+```
+Note that the beacon archiver is configured to point to the es-node archive service.  
 
 ## Verifying Sync Status
-
 
 During the synchronization process, you can check that the validator node queries expired blobs from the es-node archive service. You may need to temporarily stop the validator node to allow the blobs to expire.
 
 Additionally, you can verify the correctness of the expired blob data by ensuring that the synced L2 blocks are identical across both nodes.
 
 For example:
-```
+```bash
 # query block from the sequencer
 cast block 3000 -f hash -r http://127.0.0.1:9545
 
