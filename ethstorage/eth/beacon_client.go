@@ -9,16 +9,16 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 
 	"github.com/crate-crypto/go-proto-danksharding-crypto/eth"
 	"github.com/ethereum/go-ethereum/common"
 )
 
 type BeaconClient struct {
-	beaconURL string
-	basedTime uint64
-	basedSlot uint64
-	slotTime  uint64
+	beaconURL       string
+	genesisSlotTime uint64
+	slotTime        uint64
 }
 
 type Blob struct {
@@ -41,18 +41,48 @@ type beaconBlobData struct {
 	KZGProof        string `json:"kzg_proof"`
 }
 
-func NewBeaconClient(url string, basedTime uint64, basedSlot uint64, slotTime uint64) *BeaconClient {
-	res := &BeaconClient{
-		beaconURL: url,
-		basedTime: basedTime,
-		basedSlot: basedSlot,
-		slotTime:  slotTime,
+func NewBeaconClient(url string, slotTime uint64) (*BeaconClient, error) {
+	genesisSlotTime, err := queryGenesisTime(url)
+	if err != nil {
+		return nil, err
 	}
-	return res
+	res := &BeaconClient{
+		beaconURL:       url,
+		genesisSlotTime: genesisSlotTime,
+		slotTime:        slotTime,
+	}
+	return res, nil
+}
+
+func queryGenesisTime(beaconUrl string) (uint64, error) {
+	queryUrl, err := url.JoinPath(beaconUrl, "/eth/v1/beacon/genesis")
+	if err != nil {
+		return 0, err
+	}
+	resp, err := http.Get(queryUrl)
+	if err != nil {
+		return 0, err
+	}
+	defer resp.Body.Close()
+
+	genesisResponse := &struct {
+		Data struct {
+			GenesisTime string `json:"genesis_time"`
+		} `json:"data"`
+	}{}
+	err = json.NewDecoder(resp.Body).Decode(&genesisResponse)
+	if err != nil {
+		return 0, err
+	}
+	gt, err := strconv.ParseUint(genesisResponse.Data.GenesisTime, 10, 64)
+	if err != nil {
+		return 0, err
+	}
+	return gt, nil
 }
 
 func (c *BeaconClient) Timestamp2Slot(time uint64) uint64 {
-	return (time-c.basedTime)/c.slotTime + c.basedSlot
+	return (time - c.genesisSlotTime) / c.slotTime
 }
 
 func (c *BeaconClient) DownloadBlobs(slot uint64) (map[common.Hash]Blob, error) {
