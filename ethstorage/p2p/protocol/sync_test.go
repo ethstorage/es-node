@@ -575,7 +575,7 @@ func TestSync_RequestL2Range(t *testing.T) {
 	verifyKVs(data, excludedList, t)
 }
 
-// TestSync_RequestL2Range test peer RequestBlobsByList func and verify result
+// TestSync_RequestL2List test peer RequestBlobsByList func and verify result
 func TestSync_RequestL2List(t *testing.T) {
 	var (
 		kvSize       = defaultChunkSize
