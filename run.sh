@@ -31,8 +31,6 @@ start_flags=" --network devnet \
   --storage.l1contract 0x804C520d3c084C805E37A35E90057Ac32831F96f \
   --l1.rpc http://88.99.30.186:8545 \
   --l1.beacon http://88.99.30.186:3500 \
-  --l1.beacon-based-time 1706684472 \
-  --l1.beacon-based-slot 4245906 \
   --miner.enabled \
   --miner.zkey $zkey_file \
   --download.thread 32 \

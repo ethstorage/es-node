@@ -68,18 +68,6 @@ var (
 		Usage:  "URL of JSON-RPC endpoint to query randao",
 		EnvVar: prefixEnvVar("RANDAO_URL"),
 	}
-	// TODO: @Qiang everytime devnet changed, we may need to change it
-	L1BeaconBasedTime = cli.Uint64Flag{
-		Name:   "l1.beacon-based-time",
-		Usage:  "Timestamp of a slot specified by l1.beacon-based-slot",
-		EnvVar: prefixEnvVar("L1_BEACON_BASED_TIME"),
-	}
-	// TODO: @Qiang everytime devnet changed, we may need to change it
-	L1BeaconBasedSlot = cli.Uint64Flag{
-		Name:   "l1.beacon-based-slot",
-		Usage:  "A slot number in the past time specified by l1.beacon-based-time",
-		EnvVar: prefixEnvVar("L1_BEACON_BASED_SLOT"),
-	}
 	// TODO: @Qiang everytime devnet changed, we may need to change it if the slot time changed
 	L1BeaconSlotTime = cli.Uint64Flag{
 		Name:   "l1.beacon-slot-time",
@@ -236,8 +224,6 @@ var optionalFlags = []cli.Flag{
 	L1BlockTime,
 	L1BeaconSlotTime,
 	L1BeaconAddr,
-	L1BeaconBasedTime,
-	L1BeaconBasedSlot,
 	DAURL,
 	RandaoURL,
 	L1MinDurationForBlobsRequest,
