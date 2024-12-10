@@ -36,10 +36,10 @@ To download and run a proxy for the Beacon client, execute the following command
 ```bash
 git clone https://github.com/ethstorage/beacon-api-wrapper.git
 cd beacon-api-wrapper
-go run cmd/main.go -r 1800
+go run cmd/main.go -r 3 -b http://88.99.30.186:3500
 ```
 
-This proxy functions like a standard Beacon API, except that it has a much shorter blob retention period—1800 seconds or 150 slots in this case. Consequently, when a `blob_sidecars` request is made for blobs older than this time frame, it will return an empty list: `{"data":[]}`.
+This proxy functions like a standard Beacon API, except that it has a much shorter blob retention period - 3 epochs or 96 slots in this case. Consequently, when a `blob_sidecars` request is made for blobs older than this time frame, it will return an empty list: `{"data":[]}`.
 
 Note: The default RPC port for the mocked Beacon API is 3600.
 
