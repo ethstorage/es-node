@@ -247,7 +247,7 @@ func calcEncodeKey(commit common.Hash, chunkIdx uint64, miner common.Address) co
 	return crypto.Keccak256Hash(bb)
 }
 
-// EncodeChunks encodes bs and returned a chunk-sized encoded one
+// EncodeChunk encodes bs and returned a chunk-sized encoded one
 func EncodeChunk(chunkSize uint64, bs []byte, encodeType uint64, encodeKey common.Hash) []byte {
 	return encodeChunk(chunkSize, bs, encodeType, encodeKey)
 }

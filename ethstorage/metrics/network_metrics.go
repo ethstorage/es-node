@@ -35,7 +35,7 @@ type NetworkMetrics struct {
 	factory  metrics.Factory
 }
 
-// NewMetrics creates a new [NetworkMetrics] instance with the given process name.
+// NewNetworkMetrics creates a new [NetworkMetrics] instance with the given process name.
 func NewNetworkMetrics() *NetworkMetrics {
 	ns := Namespace
 
