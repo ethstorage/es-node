@@ -13,6 +13,12 @@ If you are interested in earning rewards by storing data, you may want to consid
 
 For prerequisites and detailed instructions to run es-node please read [the Storage Providers' guide](https://docs.ethstorage.io/storage-provider-guide).
 
+# Documentation
+
+Detailed specifications and testing tutorials are available in the [docs](./docs/) directory.
+
+If you want to know more about EthStorage, refer to the [EthStorage Documentation](https://docs.ethstorage.io).
+
 # Contact
 
 Please join our [Discord](https://discord.com/invite/xhCwaMp7ps) for any technical questions, and stay informed about news of EthStorage by following our [Twitter](https://twitter.com/EthStorage) account.
