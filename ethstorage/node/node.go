@@ -164,7 +164,10 @@ func (n *EsNode) initL1(ctx context.Context, cfg *Config) error {
 		n.daClient = eth.NewDAClient(cfg.L1.DAURL)
 		n.log.Info("Using DA URL", "url", cfg.L1.DAURL)
 	} else if cfg.L1.L1BeaconURL != "" {
-		n.l1Beacon = eth.NewBeaconClient(cfg.L1.L1BeaconURL, cfg.L1.L1BeaconBasedTime, cfg.L1.L1BeaconBasedSlot, cfg.L1.L1BeaconSlotTime)
+		n.l1Beacon, err = eth.NewBeaconClient(cfg.L1.L1BeaconURL, cfg.L1.L1BeaconSlotTime)
+		if err != nil {
+			return fmt.Errorf("failed to create L1 beacon source: %w", err)
+		}
 		n.log.Info("Using L1 Beacon URL", "url", cfg.L1.L1BeaconURL)
 	} else {
 		return fmt.Errorf("no L1 beacon or DA URL provided")
