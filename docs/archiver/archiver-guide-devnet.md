@@ -358,7 +358,7 @@ make op-node
 1. P2P is disabled so that it can only sync data from L1.
 2. The L1 beacon URL is directed to the beacon proxy, where blobs expire quickly.
 
-You can observe that the validator node is unable to sync properly with "derivation failed" error due to "failed to fetch blobs", which is an expected result because there is no way to retreive the expired blobs.
+You can observe that the validator node is unable to sync properly with "derivation failed" error due to "failed to fetch blobs", which is an expected result because there is no way to retrieve the expired blobs.
 
 ### Restarting OP Node With the Archiver Configured
 
