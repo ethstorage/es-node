@@ -5,6 +5,6 @@
 
 
 ./init.sh \
-  --l1.rpc http://65.109.20.29:8545 \
+  --l1.rpc http://5.9.87.214:8545 \
   --storage.l1contract 0x64003adbdf3014f7E38FC6BE752EB047b95da89A \
 $@
