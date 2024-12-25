@@ -8,7 +8,7 @@ const dotenv = require("dotenv")
 dotenv.config()
 const privateKey = process.env.ES_NODE_UPLOADER_PRIVATE_KEY;
 const contractAddr = process.env.ES_NODE_CONTRACT_ADDRESS;
-const RPC = 'http://65.109.20.29:8545';
+const RPC = 'http://5.9.87.214:8545';
 const contractABI = [
     "function lastKvIdx() public view returns (uint40)"
 ]

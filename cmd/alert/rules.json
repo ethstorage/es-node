@@ -12,7 +12,7 @@
     "params":{
       "name":"L2 Last Mined Block Alert",
       "contract":"0x64003adbdf3014f7E38FC6BE752EB047b95da89A",
-      "rpc":"http://65.109.20.29:8545"
+      "rpc":"http://5.9.87.214:8545"
     }
   },
   {
