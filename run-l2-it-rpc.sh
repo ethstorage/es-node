@@ -28,8 +28,8 @@ exec ./build/bin/es-node \
   --miner.enabled=false \
   --miner.zkey $zkey_file \
   --l1.block_time 2 \
-  --l1.rpc http://65.109.20.29:8545 \
-  --da.url http://65.109.20.29:8888 \
+  --l1.rpc http://5.9.87.214:8545 \
+  --da.url http://5.9.87.214:8888 \
   --randao.url http://88.99.30.186:8545 \
   --rpc.port 9595 \
   --p2p.listen.udp 30395 \
