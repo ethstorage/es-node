@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/big"
 	"net"
 	"strconv"
 	"time"
@@ -101,7 +102,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 					// for node which is new to the ethstorage network, and it dial the nodes which do not contain
 					// the new node's enr, so the nodes do not know its shard list from enr, so it needs to call
 					// n.RequestShardList to fetch the shard list of the new node.
-					remoteShardList, e := n.RequestShardList(remotePeerId)
+					remoteShardList, e := n.RequestShardList(remotePeerId, rollupCfg.L2ChainID)
 					if e != nil && len(n.host.Peerstore().Addrs(remotePeerId)) == 0 {
 						// As the remote node host may enable NATService, which will create a new connection with another
 						// peer id and its Addrs will not be set to local host's Peerstore. So if len of peer Addrs is 0 and
@@ -160,7 +161,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 		blobByListHandler := protocol.MakeStreamHandler(resourcesCtx, log.New("serve", "blobs_by_list"), n.syncSrv.HandleGetBlobsByListRequest)
 		n.host.SetStreamHandler(protocol.GetProtocolID(protocol.RequestBlobsByListProtocolID, rollupCfg.L2ChainID), blobByListHandler)
 		requestShardListHandler := protocol.MakeStreamHandler(resourcesCtx, log.New("serve", "get_shard_list"), n.syncSrv.HandleRequestShardList)
-		n.host.SetStreamHandler(protocol.RequestShardList, requestShardListHandler)
+		n.host.SetStreamHandler(protocol.GetProtocolID(protocol.RequestShardList, rollupCfg.L2ChainID), requestShardListHandler)
 
 		// notify of any new connections/streams/etc.
 		// TODO: use metric
@@ -223,12 +224,12 @@ func (n *NodeP2P) RequestL2Range(ctx context.Context, start, end uint64) (uint64
 }
 
 // RequestShardList fetches shard list from remote peer
-func (n *NodeP2P) RequestShardList(remotePeer peer.ID) ([]*protocol.ContractShards, error) {
+func (n *NodeP2P) RequestShardList(remotePeer peer.ID, l2ChainId *big.Int) ([]*protocol.ContractShards, error) {
 	remoteShardList := make([]*protocol.ContractShards, 0)
 	ctx, cancel := context.WithTimeout(context.Background(), protocol.NewStreamTimeout)
 	defer cancel()
 
-	s, err := n.Host().NewStream(ctx, remotePeer, protocol.RequestShardList)
+	s, err := n.Host().NewStream(ctx, remotePeer, protocol.GetProtocolID(protocol.RequestShardList, l2ChainId))
 	if err != nil {
 		return remoteShardList, err
 	}

@@ -80,9 +80,9 @@ func (conf *Config) Discovery(log log.Logger, l1ChainID uint64, tcpPort uint16, 
 		return nil, nil, isIPSet, fmt.Errorf("no TCP port to put in discovery record")
 	}
 	dat := protocol.EthStorageENRData{
-		ChainID: l1ChainID,
-		Version: p2pVersion,
-		Shards:  protocol.ConvertToContractShards(ethstorage.Shards()),
+		L1ChainID: l1ChainID,
+		Version:   p2pVersion,
+		Shards:    protocol.ConvertToContractShards(ethstorage.Shards()),
 	}
 	localNode.Set(&dat)
 	// put shards info to Peerstore PeerMetadata, shards struct ([]*ContractShards) need to
@@ -208,8 +208,8 @@ func FilterEnodes(log log.Logger, l1ChainID uint64) func(node *enode.Node) bool 
 			return false
 		}
 		// check chain ID matches
-		if l1ChainID != dat.ChainID {
-			log.Trace("Discovered node record has no matching chain ID", "node", node.ID(), "got", dat.ChainID, "expected", l1ChainID)
+		if l1ChainID != dat.L1ChainID {
+			log.Trace("Discovered node record has no matching chain ID", "node", node.ID(), "got", dat.L1ChainID, "expected", l1ChainID)
 			return false
 		}
 		// check Version matches
@@ -384,6 +384,9 @@ func (n *NodeP2P) DiscoveryProcess(ctx context.Context, log log.Logger, l1ChainI
 			if err != nil {
 				continue
 			}
+			if dat.L1ChainID != l1ChainID {
+				continue
+			}
 			// We add the addresses to the peerstore, and update the address TTL.
 			// After that we stop using the address, assuming it may not be valid anymore (until we rediscover the node)
 			pstore.AddAddrs(info.ID, info.Addrs, discoveredAddrTTL)
@@ -396,7 +399,7 @@ func (n *NodeP2P) DiscoveryProcess(ctx context.Context, log log.Logger, l1ChainI
 			// Tag the peer, we'd rather have the connection manager prune away old peers,
 			// or peers on different chains, or anyone we have not seen via discovery.
 			// There is no tag score decay yet, so just set it to 42.
-			n.ConnectionManager().TagPeer(info.ID, fmt.Sprintf("ethstorage-%d-%d", dat.ChainID, dat.Version), 42)
+			n.ConnectionManager().TagPeer(info.ID, fmt.Sprintf("ethstorage-%d-%d", dat.L1ChainID, dat.Version), 42)
 			log.Debug("Discovered peer", "peer", info.ID, "nodeID", node.ID(), "addr", info.Addrs[0])
 		case <-connectTicker.C:
 			connected := n.Host().Network().Peers()
