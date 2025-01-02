@@ -57,7 +57,7 @@ type Metricer interface {
 
 // Metrics tracks all the metrics for the es-node.
 type Metrics struct {
-	lastSubmissionTimes map[uint64]uint64
+	lastSubmissionTimes map[string]uint64
 
 	// Contract Status
 	LastL1Block             *prometheus.GaugeVec
@@ -119,7 +119,7 @@ func NewMetrics(procName string) *Metrics {
 	registry.MustRegister(collectors.NewGoCollector())
 	factory := metrics.With(registry)
 	return &Metrics{
-		lastSubmissionTimes: make(map[uint64]uint64),
+		lastSubmissionTimes: make(map[string]uint64),
 
 		LastL1Block: factory.NewGaugeVec(prometheus.GaugeOpts{
 			Namespace: ns,
@@ -476,7 +476,7 @@ func (m *Metrics) SetLastKVIndexAndMaxShardId(contract common.Address, lastL1Blo
 }
 
 func (m *Metrics) SetMiningInfo(contract common.Address, shardId uint64, difficulty, minedTime, blockMined uint64, miner common.Address, gasFee, reward uint64) {
-	if t, ok := m.lastSubmissionTimes[shardId]; ok && t <= minedTime {
+	if t, ok := m.lastSubmissionTimes[fmt.Sprintf("%s-%d", contract.Hex(), shardId)]; ok && t <= minedTime {
 		m.Difficulties.WithLabelValues(contract.Hex(), fmt.Sprintf("%d", shardId)).Set(float64(difficulty))
 		m.LastSubmissionTime.WithLabelValues(contract.Hex(), fmt.Sprintf("%d", shardId)).Set(float64(minedTime))
 		m.BlockMined.WithLabelValues(contract.Hex(), fmt.Sprintf("%d", shardId)).Set(float64(blockMined))
@@ -487,7 +487,7 @@ func (m *Metrics) SetMiningInfo(contract common.Address, shardId uint64, difficu
 
 		m.MinedTime.WithLabelValues(contract.Hex(), fmt.Sprintf("%d", shardId), fmt.Sprintf("%d", blockMined)).Set(float64(minedTime - t))
 	}
-	m.lastSubmissionTimes[shardId] = minedTime
+	m.lastSubmissionTimes[fmt.Sprintf("%s-%d", contract.Hex(), shardId)] = minedTime
 }
 
 func (m *Metrics) RecordGossipEvent(evType int32) {
