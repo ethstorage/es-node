@@ -307,6 +307,8 @@ func main() {
 		if err != nil {
 			log.Crit("Init metrics value fail", "err", err.Error())
 		}
+
+		d.RefreshMiningMetrics()
 		l1LatestBlockSub := eth.PollBlockChanges(d.ctx, d.logger, d.source, d.RefreshMetrics, ethRPC.LatestBlockNumber, epoch, epoch)
 		defer l1LatestBlockSub.Unsubscribe()
 	}
