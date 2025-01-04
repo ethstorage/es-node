@@ -29,8 +29,8 @@ const (
 )
 
 type Metricer interface {
-	SetLastKVIndexAndMaxShardId(lastL1Block, lastKVIndex uint64, maxShardId uint64)
-	SetMiningInfo(shardId uint64, difficulty, minedTime, blockMined uint64, miner common.Address, gasFee, reward uint64)
+	SetLastKVIndexAndMaxShardId(contract common.Address, lastL1Block, lastKVIndex uint64, maxShardId uint64)
+	SetMiningInfo(contract common.Address, shardId uint64, difficulty, minedTime, blockMined uint64, miner common.Address, gasFee, reward uint64)
 
 	ClientGetBlobsByRangeEvent(peerID string, resultCode byte, duration time.Duration)
 	ClientGetBlobsByListEvent(peerID string, resultCode byte, duration time.Duration)
@@ -57,12 +57,12 @@ type Metricer interface {
 
 // Metrics tracks all the metrics for the es-node.
 type Metrics struct {
-	lastSubmissionTimes map[uint64]uint64
+	lastSubmissionTimes map[string]uint64
 
 	// Contract Status
-	LastL1Block             prometheus.Gauge
-	LastKVIndex             prometheus.Gauge
-	Shards                  prometheus.Gauge
+	LastL1Block             *prometheus.GaugeVec
+	LastKVIndex             *prometheus.GaugeVec
+	Shards                  *prometheus.GaugeVec
 	Difficulties            *prometheus.GaugeVec
 	LastSubmissionTime      *prometheus.GaugeVec
 	MinedTime               *prometheus.GaugeVec
@@ -119,27 +119,33 @@ func NewMetrics(procName string) *Metrics {
 	registry.MustRegister(collectors.NewGoCollector())
 	factory := metrics.With(registry)
 	return &Metrics{
-		lastSubmissionTimes: make(map[uint64]uint64),
+		lastSubmissionTimes: make(map[string]uint64),
 
-		LastL1Block: factory.NewGauge(prometheus.GaugeOpts{
+		LastL1Block: factory.NewGaugeVec(prometheus.GaugeOpts{
 			Namespace: ns,
 			Subsystem: ContractMetrics,
 			Name:      "last_l1_block",
 			Help:      "the last l1 block monitored",
+		}, []string{
+			"contract",
 		}),
 
-		LastKVIndex: factory.NewGauge(prometheus.GaugeOpts{
+		LastKVIndex: factory.NewGaugeVec(prometheus.GaugeOpts{
 			Namespace: ns,
 			Subsystem: ContractMetrics,
 			Name:      "last_kv_index",
 			Help:      "the last kv index in the l1 miner contract",
+		}, []string{
+			"contract",
 		}),
 
-		Shards: factory.NewGauge(prometheus.GaugeOpts{
+		Shards: factory.NewGaugeVec(prometheus.GaugeOpts{
 			Namespace: ns,
 			Subsystem: ContractMetrics,
 			Name:      "max_shard_id",
 			Help:      "the max shard id support by the l1 miner contract",
+		}, []string{
+			"contract",
 		}),
 
 		Difficulties: factory.NewGaugeVec(prometheus.GaugeOpts{
@@ -148,6 +154,7 @@ func NewMetrics(procName string) *Metrics {
 			Name:      "difficulty_of_shards",
 			Help:      "The difficulty of shards in the l1 miner contract",
 		}, []string{
+			"contract",
 			"shard_id",
 		}),
 
@@ -157,6 +164,7 @@ func NewMetrics(procName string) *Metrics {
 			Name:      "last_submission_time_of_shards",
 			Help:      "The last time of shards in the l1 miner contract",
 		}, []string{
+			"contract",
 			"shard_id",
 		}),
 
@@ -166,6 +174,7 @@ func NewMetrics(procName string) *Metrics {
 			Name:      "last_mined_time_of_shards",
 			Help:      "The time used by mining of shards in the l1 miner contract",
 		}, []string{
+			"contract",
 			"shard_id",
 			"block_mined",
 		}),
@@ -176,6 +185,7 @@ func NewMetrics(procName string) *Metrics {
 			Name:      "block_mined_of_shards",
 			Help:      "The block mined of shards in the l1 miner contract",
 		}, []string{
+			"contract",
 			"shard_id",
 		}),
 
@@ -185,6 +195,7 @@ func NewMetrics(procName string) *Metrics {
 			Name:      "last_miner_submission_time_of_shards",
 			Help:      "The last submission time of shards for miners in the l1 miner contract",
 		}, []string{
+			"contract",
 			"shard_id",
 			"miner",
 			"block_mined",
@@ -196,6 +207,7 @@ func NewMetrics(procName string) *Metrics {
 			Name:      "mining_reward_of_submission",
 			Help:      "The mining reward of a submission in the l1 miner contract",
 		}, []string{
+			"contract",
 			"shard_id",
 			"miner",
 			"block_mined",
@@ -207,6 +219,7 @@ func NewMetrics(procName string) *Metrics {
 			Name:      "gas_fee_of_submission",
 			Help:      "The gas fee of a submission in the l1 miner contract",
 		}, []string{
+			"contract",
 			"shard_id",
 			"miner",
 			"block_mined",
@@ -456,25 +469,25 @@ func (m *Metrics) Serve(ctx context.Context, hostname string, port int) error {
 	return server.ListenAndServe()
 }
 
-func (m *Metrics) SetLastKVIndexAndMaxShardId(lastL1Block, lastKVIndex uint64, maxShardId uint64) {
-	m.LastL1Block.Set(float64(lastL1Block))
-	m.LastKVIndex.Set(float64(lastKVIndex))
-	m.Shards.Set(float64(maxShardId))
+func (m *Metrics) SetLastKVIndexAndMaxShardId(contract common.Address, lastL1Block, lastKVIndex uint64, maxShardId uint64) {
+	m.LastL1Block.WithLabelValues(contract.Hex()).Set(float64(lastL1Block))
+	m.LastKVIndex.WithLabelValues(contract.Hex()).Set(float64(lastKVIndex))
+	m.Shards.WithLabelValues(contract.Hex()).Set(float64(maxShardId))
 }
 
-func (m *Metrics) SetMiningInfo(shardId uint64, difficulty, minedTime, blockMined uint64, miner common.Address, gasFee, reward uint64) {
-	if t, ok := m.lastSubmissionTimes[shardId]; ok && t <= minedTime {
-		m.Difficulties.WithLabelValues(fmt.Sprintf("%d", shardId)).Set(float64(difficulty))
-		m.LastSubmissionTime.WithLabelValues(fmt.Sprintf("%d", shardId)).Set(float64(minedTime))
-		m.BlockMined.WithLabelValues(fmt.Sprintf("%d", shardId)).Set(float64(blockMined))
+func (m *Metrics) SetMiningInfo(contract common.Address, shardId uint64, difficulty, minedTime, blockMined uint64, miner common.Address, gasFee, reward uint64) {
+	if t, ok := m.lastSubmissionTimes[fmt.Sprintf("%s-%d", contract.Hex(), shardId)]; ok && t <= minedTime {
+		m.Difficulties.WithLabelValues(contract.Hex(), fmt.Sprintf("%d", shardId)).Set(float64(difficulty))
+		m.LastSubmissionTime.WithLabelValues(contract.Hex(), fmt.Sprintf("%d", shardId)).Set(float64(minedTime))
+		m.BlockMined.WithLabelValues(contract.Hex(), fmt.Sprintf("%d", shardId)).Set(float64(blockMined))
 
-		m.LastMinerSubmissionTime.WithLabelValues(fmt.Sprintf("%d", shardId), miner.Hex(), fmt.Sprintf("%d", blockMined)).Set(float64(minedTime))
-		m.GasFee.WithLabelValues(fmt.Sprintf("%d", shardId), miner.Hex(), fmt.Sprintf("%d", blockMined)).Set(float64(gasFee))
-		m.MiningReward.WithLabelValues(fmt.Sprintf("%d", shardId), miner.Hex(), fmt.Sprintf("%d", blockMined)).Set(float64(reward))
+		m.LastMinerSubmissionTime.WithLabelValues(contract.Hex(), fmt.Sprintf("%d", shardId), miner.Hex(), fmt.Sprintf("%d", blockMined)).Set(float64(minedTime))
+		m.GasFee.WithLabelValues(contract.Hex(), fmt.Sprintf("%d", shardId), miner.Hex(), fmt.Sprintf("%d", blockMined)).Set(float64(gasFee))
+		m.MiningReward.WithLabelValues(contract.Hex(), fmt.Sprintf("%d", shardId), miner.Hex(), fmt.Sprintf("%d", blockMined)).Set(float64(reward))
 
-		m.MinedTime.WithLabelValues(fmt.Sprintf("%d", shardId), fmt.Sprintf("%d", blockMined)).Set(float64(minedTime - t))
+		m.MinedTime.WithLabelValues(contract.Hex(), fmt.Sprintf("%d", shardId), fmt.Sprintf("%d", blockMined)).Set(float64(minedTime - t))
 	}
-	m.lastSubmissionTimes[shardId] = minedTime
+	m.lastSubmissionTimes[fmt.Sprintf("%s-%d", contract.Hex(), shardId)] = minedTime
 }
 
 func (m *Metrics) RecordGossipEvent(evType int32) {
@@ -636,10 +649,10 @@ func (m *noopMetricer) Serve(ctx context.Context, hostname string, port int) err
 	return nil
 }
 
-func (m *noopMetricer) SetLastKVIndexAndMaxShardId(lastL1Block, lastKVIndex uint64, maxShardId uint64) {
+func (m *noopMetricer) SetLastKVIndexAndMaxShardId(contract common.Address, lastL1Block, lastKVIndex uint64, maxShardId uint64) {
 }
 
-func (m *noopMetricer) SetMiningInfo(shardId uint64, difficulty, minedTime, blockMined uint64, miner common.Address, gasFee, reward uint64) {
+func (m *noopMetricer) SetMiningInfo(contract common.Address, shardId uint64, difficulty, minedTime, blockMined uint64, miner common.Address, gasFee, reward uint64) {
 }
 
 func (n *noopMetricer) ClientGetBlobsByRangeEvent(peerID string, resultCode byte, duration time.Duration) {
