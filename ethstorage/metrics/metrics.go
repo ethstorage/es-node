@@ -29,8 +29,8 @@ const (
 )
 
 type Metricer interface {
-	SetLastKVIndexAndMaxShardId(contract common.Address, lastL1Block, lastKVIndex uint64, maxShardId uint64)
-	SetMiningInfo(contract common.Address, shardId uint64, difficulty, minedTime, blockMined uint64, miner common.Address, gasFee, reward uint64)
+	SetLastKVIndexAndMaxShardId(chainID uint64, contract common.Address, lastL1Block, lastKVIndex uint64, maxShardId uint64)
+	SetMiningInfo(chainID uint64, contract common.Address, shardId uint64, difficulty, minedTime, blockMined uint64, miner common.Address, gasFee, reward uint64)
 
 	ClientGetBlobsByRangeEvent(peerID string, resultCode byte, duration time.Duration)
 	ClientGetBlobsByListEvent(peerID string, resultCode byte, duration time.Duration)
@@ -469,25 +469,27 @@ func (m *Metrics) Serve(ctx context.Context, hostname string, port int) error {
 	return server.ListenAndServe()
 }
 
-func (m *Metrics) SetLastKVIndexAndMaxShardId(contract common.Address, lastL1Block, lastKVIndex uint64, maxShardId uint64) {
-	m.LastL1Block.WithLabelValues(contract.Hex()).Set(float64(lastL1Block))
-	m.LastKVIndex.WithLabelValues(contract.Hex()).Set(float64(lastKVIndex))
-	m.Shards.WithLabelValues(contract.Hex()).Set(float64(maxShardId))
+func (m *Metrics) SetLastKVIndexAndMaxShardId(chainID uint64, contract common.Address, lastL1Block, lastKVIndex uint64, maxShardId uint64) {
+	contractStr := fmt.Sprintf("%d:%s", chainID, contract.Hex())
+	m.LastL1Block.WithLabelValues(contractStr).Set(float64(lastL1Block))
+	m.LastKVIndex.WithLabelValues(contractStr).Set(float64(lastKVIndex))
+	m.Shards.WithLabelValues(contractStr).Set(float64(maxShardId))
 }
 
-func (m *Metrics) SetMiningInfo(contract common.Address, shardId uint64, difficulty, minedTime, blockMined uint64, miner common.Address, gasFee, reward uint64) {
-	if t, ok := m.lastSubmissionTimes[fmt.Sprintf("%s-%d", contract.Hex(), shardId)]; ok && t <= minedTime {
-		m.Difficulties.WithLabelValues(contract.Hex(), fmt.Sprintf("%d", shardId)).Set(float64(difficulty))
-		m.LastSubmissionTime.WithLabelValues(contract.Hex(), fmt.Sprintf("%d", shardId)).Set(float64(minedTime))
-		m.BlockMined.WithLabelValues(contract.Hex(), fmt.Sprintf("%d", shardId)).Set(float64(blockMined))
+func (m *Metrics) SetMiningInfo(chainID uint64, contract common.Address, shardId uint64, difficulty, minedTime, blockMined uint64, miner common.Address, gasFee, reward uint64) {
+	contractStr := fmt.Sprintf("%d:%s", chainID, contract.Hex())
+	if t, ok := m.lastSubmissionTimes[fmt.Sprintf("%s-%d", contractStr, shardId)]; ok && t <= minedTime {
+		m.Difficulties.WithLabelValues(contractStr, fmt.Sprintf("%d", shardId)).Set(float64(difficulty))
+		m.LastSubmissionTime.WithLabelValues(contractStr, fmt.Sprintf("%d", shardId)).Set(float64(minedTime))
+		m.BlockMined.WithLabelValues(contractStr, fmt.Sprintf("%d", shardId)).Set(float64(blockMined))
 
-		m.LastMinerSubmissionTime.WithLabelValues(contract.Hex(), fmt.Sprintf("%d", shardId), miner.Hex(), fmt.Sprintf("%d", blockMined)).Set(float64(minedTime))
-		m.GasFee.WithLabelValues(contract.Hex(), fmt.Sprintf("%d", shardId), miner.Hex(), fmt.Sprintf("%d", blockMined)).Set(float64(gasFee))
-		m.MiningReward.WithLabelValues(contract.Hex(), fmt.Sprintf("%d", shardId), miner.Hex(), fmt.Sprintf("%d", blockMined)).Set(float64(reward))
+		m.LastMinerSubmissionTime.WithLabelValues(contractStr, fmt.Sprintf("%d", shardId), miner.Hex(), fmt.Sprintf("%d", blockMined)).Set(float64(minedTime))
+		m.GasFee.WithLabelValues(contractStr, fmt.Sprintf("%d", shardId), miner.Hex(), fmt.Sprintf("%d", blockMined)).Set(float64(gasFee))
+		m.MiningReward.WithLabelValues(contractStr, fmt.Sprintf("%d", shardId), miner.Hex(), fmt.Sprintf("%d", blockMined)).Set(float64(reward))
 
-		m.MinedTime.WithLabelValues(contract.Hex(), fmt.Sprintf("%d", shardId), fmt.Sprintf("%d", blockMined)).Set(float64(minedTime - t))
+		m.MinedTime.WithLabelValues(contractStr, fmt.Sprintf("%d", shardId), fmt.Sprintf("%d", blockMined)).Set(float64(minedTime - t))
 	}
-	m.lastSubmissionTimes[fmt.Sprintf("%s-%d", contract.Hex(), shardId)] = minedTime
+	m.lastSubmissionTimes[fmt.Sprintf("%s-%d", contractStr, shardId)] = minedTime
 }
 
 func (m *Metrics) RecordGossipEvent(evType int32) {
@@ -649,10 +651,10 @@ func (m *noopMetricer) Serve(ctx context.Context, hostname string, port int) err
 	return nil
 }
 
-func (m *noopMetricer) SetLastKVIndexAndMaxShardId(contract common.Address, lastL1Block, lastKVIndex uint64, maxShardId uint64) {
+func (m *noopMetricer) SetLastKVIndexAndMaxShardId(chainID uint64, contract common.Address, lastL1Block, lastKVIndex uint64, maxShardId uint64) {
 }
 
-func (m *noopMetricer) SetMiningInfo(contract common.Address, shardId uint64, difficulty, minedTime, blockMined uint64, miner common.Address, gasFee, reward uint64) {
+func (m *noopMetricer) SetMiningInfo(chainID uint64, contract common.Address, shardId uint64, difficulty, minedTime, blockMined uint64, miner common.Address, gasFee, reward uint64) {
 }
 
 func (n *noopMetricer) ClientGetBlobsByRangeEvent(peerID string, resultCode byte, duration time.Duration) {
