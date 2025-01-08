@@ -58,6 +58,7 @@ type Param struct {
 	Name        string `json:"name"`
 	Type        string `json:"type"`
 	Rpc         string `json:"rpc"`
+	ChainID     uint64 `json:"chainID"`
 	Contract    string `json:"contract"`
 	StartNumber uint64 `json:"startNumber"`
 }
@@ -67,6 +68,7 @@ type dashboard struct {
 	sourceType  string
 	source      *eth.PollingClient
 	m           metrics.Metricer
+	chainID     uint64
 	contract    common.Address
 	kvEntries   uint64
 	maxShardIdx uint64
@@ -119,6 +121,7 @@ func newDashboard(param *Param, db ethdb.Database, m metrics.Metricer) (*dashboa
 		sourceType: param.Type,
 		source:     source,
 		m:          m,
+		chainID:    param.ChainID,
 		contract:   contract,
 		kvEntries:  1 << shardEntryBits,
 		db:         db,
@@ -140,7 +143,7 @@ func (d *dashboard) RefreshBlobsMetrics(sig eth.L1BlockRef) {
 		return
 	}
 	maxShardIdx := lastKVIndex / d.kvEntries
-	d.m.SetLastKVIndexAndMaxShardId(d.contract, sig.Number, lastKVIndex, maxShardIdx)
+	d.m.SetLastKVIndexAndMaxShardId(d.chainID, d.contract, sig.Number, lastKVIndex, maxShardIdx)
 	d.logger.Info("RefreshBlobMetrics", "contract", d.contract, "blockNumber", sig.Number, "lastKvIndex", lastKVIndex, "maxShardIdx", maxShardIdx)
 	d.maxShardIdx = maxShardIdx
 	if sig.Number > d.endBlock {
@@ -162,7 +165,7 @@ func (d *dashboard) RefreshMiningMetrics() {
 		}
 
 		for _, event := range events {
-			d.m.SetMiningInfo(d.contract, event.ShardId, event.Difficulty.Uint64(), event.LastMineTime,
+			d.m.SetMiningInfo(d.chainID, d.contract, event.ShardId, event.Difficulty.Uint64(), event.LastMineTime,
 				event.BlockMined.Uint64(), event.Miner, event.GasFee.Uint64(), event.Reward.Uint64())
 			d.logger.Info("Refresh mining info", "contract", d.contract, "txHash", event.TxHash.Hex(),
 				"blockMined", event.BlockMined, "lastMineTime", event.LastMineTime, "difficulty", event.Difficulty,
@@ -253,7 +256,7 @@ func (d *dashboard) InitMetrics() error {
 	if err != nil {
 		return err
 	}
-	d.m.SetMiningInfo(d.contract, 0, new(big.Int).SetBytes(minDiffVal).Uint64(),
+	d.m.SetMiningInfo(d.chainID, d.contract, 0, new(big.Int).SetBytes(minDiffVal).Uint64(),
 		new(big.Int).SetBytes(lastMineTimeVal).Uint64(), 0, common.Address{}, 0, 0)
 	return nil
 }
