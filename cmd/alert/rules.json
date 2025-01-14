@@ -24,14 +24,6 @@
   },
 
   {
-    "alert-type":"WebsiteOnlineChecker",
-    "params":{
-      "name":"web3q.io online Alert",
-      "url":"https://web3q.io/home.w3q/"
-    }
-  },
-
-  {
     "alert-type":"LastBlockChecker",
     "params":{
       "name":"Quarkchain Shard 0 Last Block Alert",
