@@ -385,6 +385,8 @@ func (n *NodeP2P) DiscoveryProcess(ctx context.Context, log log.Logger, l1ChainI
 				continue
 			}
 			if dat.L1ChainID != l1ChainID {
+				log.Debug("ignore ENR as l1 chain ID is not match", "node ID", node.ID(), "remote address", node.IP().String()+string(node.TCP()),
+					"local l1 chain ID", l1ChainID, "remote l1 chain ID", dat.L1ChainID)
 				continue
 			}
 			// We add the addresses to the peerstore, and update the address TTL.
