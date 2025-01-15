@@ -1,0 +1,18 @@
+[
+  {
+    "name":"Sepolia",
+    "type": "l1",
+    "rpc":"http://88.99.30.186:8545",
+    "chainID": 3333,
+    "contract":"0x804C520d3c084C805E37A35E90057Ac32831F96f",
+    "startNumber": 5528000
+  },
+  {
+    "name":"QKC L2 ",
+    "type": "l2",
+    "rpc":"http://5.9.87.214:8545",
+    "chainID": 3337,
+    "contract":"0x64003adbdf3014f7E38FC6BE752EB047b95da89A",
+    "startNumber": 133640
+  }
+]

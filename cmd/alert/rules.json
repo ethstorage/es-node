@@ -26,28 +26,6 @@
   {
     "alert-type":"LastBlockChecker",
     "params":{
-      "name":"Galileo Last Block Alert",
-      "rpc":"https://galileo.web3q.io:8545"
-    }
-  },
-  {
-    "alert-type":"WebsiteOnlineChecker",
-    "params":{
-      "name":"Galileo explorer online Alert",
-      "url":"https://explorer.galileo.web3q.io/"
-    }
-  },
-  {
-    "alert-type":"WebsiteOnlineChecker",
-    "params":{
-      "name":"web3q.io online Alert",
-      "url":"https://web3q.io/home.w3q/"
-    }
-  },
-
-  {
-    "alert-type":"LastBlockChecker",
-    "params":{
       "name":"Quarkchain Shard 0 Last Block Alert",
       "rpc":"https://mainnet-s0-ethapi.quarkchain.io"
     }
