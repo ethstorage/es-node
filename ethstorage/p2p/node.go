@@ -125,8 +125,10 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 				}
 				added := n.syncCl.AddPeer(remotePeerId, shards, conn.Stat().Direction)
 				if !added {
-					log.Debug("Close connection as AddPeer fail", "peer", remotePeerId)
+					log.Info("Close connection as AddPeer fail", "peer", remotePeerId)
 					conn.Close()
+				} else {
+					log.Info("Connected to peer", "peer", remotePeerId, "Direction", conn.Stat().Direction, "addr", conn.RemoteMultiaddr().String())
 				}
 			},
 			DisconnectedF: func(nw network.Network, conn network.Conn) {
@@ -135,6 +137,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 					return
 				}
 				n.syncCl.RemovePeer(conn.RemotePeer())
+				log.Info("Disconnected from peer", "peer", conn.RemotePeer(), "Direction", conn.Stat().Direction, "addr", conn.RemoteMultiaddr())
 			},
 		})
 
