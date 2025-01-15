@@ -365,7 +365,9 @@ func (n *NodeP2P) DiscoveryProcess(ctx context.Context, log log.Logger, l1ChainI
 	}()
 
 	pstore := n.Host().Peerstore()
-	// clear pstore if the version is not match
+
+	// clear pstore from DB if the version is not match
+	// the DB path is set by p2p.peerstore.path flag, and the default value is esnode_peerstore_db
 	go func() {
 		peersWithAddrs := n.Host().Peerstore().PeersWithAddrs()
 		for _, id := range peersWithAddrs {
@@ -379,6 +381,7 @@ func (n *NodeP2P) DiscoveryProcess(ctx context.Context, log log.Logger, l1ChainI
 			}
 
 			pstore.RemovePeer(id)
+			pstore.ClearAddrs(id)
 			log.Info("clear pstore", "id", id, "old version", version, "new version", p2pVersion)
 		}
 	}()
@@ -400,11 +403,6 @@ func (n *NodeP2P) DiscoveryProcess(ctx context.Context, log log.Logger, l1ChainI
 			}
 			info, pub, err := enrToAddrInfo(node)
 			if err != nil {
-				continue
-			}
-			if dat.L1ChainID != l1ChainID {
-				log.Debug("ignore ENR as l1 chain ID is not match", "node ID", node.ID(), "remote address", fmt.Sprintf("%s:%d", node.IP().String(), node.TCP()),
-					"local l1 chain ID", l1ChainID, "remote l1 chain ID", dat.L1ChainID)
 				continue
 			}
 			// We add the addresses to the peerstore, and update the address TTL.
