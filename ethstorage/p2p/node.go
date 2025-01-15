@@ -136,8 +136,10 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 					log.Debug("No addresses in peer store, return without remove peer", "peer", conn.RemotePeer())
 					return
 				}
-				n.syncCl.RemovePeer(conn.RemotePeer())
-				log.Info("Disconnected from peer", "peer", conn.RemotePeer(), "Direction", conn.Stat().Direction, "addr", conn.RemoteMultiaddr())
+				removedExist := n.syncCl.RemovePeer(conn.RemotePeer())
+				if removedExist {
+					log.Info("Disconnected from peer", "peer", conn.RemotePeer(), "Direction", conn.Stat().Direction, "addr", conn.RemoteMultiaddr())
+				}
 			},
 		})
 
