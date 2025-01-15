@@ -369,13 +369,17 @@ func (n *NodeP2P) DiscoveryProcess(ctx context.Context, log log.Logger, l1ChainI
 	go func() {
 		peersWithAddrs := n.Host().Peerstore().PeersWithAddrs()
 		for _, id := range peersWithAddrs {
-			if dat, err := pstore.Get(id, protocol.VersionKey); err == nil {
-				version, ok := dat.(int)
-				log.Info("clear pstore", "old version", version, "new version", p2pVersion)
-				if !ok && version != p2pVersion {
-					pstore.RemovePeer(id)
+			version, ok := -1, false
+			dat, err := pstore.Get(id, protocol.VersionKey)
+			if err == nil {
+				version, ok = dat.(int)
+				if ok && version == p2pVersion {
+					continue
 				}
 			}
+
+			pstore.RemovePeer(id)
+			log.Info("clear pstore", "id", id, "old version", version, "new version", p2pVersion)
 		}
 	}()
 
