@@ -51,7 +51,7 @@ const (
 const (
 	RequestBlobsByRangeProtocolID = "/ethstorage/dev/requestblobsbyrange/%d/1.0.0"
 	RequestBlobsByListProtocolID  = "/ethstorage/dev/requestblobsbylist/%d/1.0.0"
-	RequestShardList              = "/ethstorage/dev/shardlist/1.0.0"
+	RequestShardList              = "/ethstorage/dev/shardlist/%d/1.0.0"
 )
 
 var (
@@ -555,13 +555,13 @@ func (s *SyncClient) AddPeer(id peer.ID, shards map[common.Address][]uint64, dir
 	return true
 }
 
-func (s *SyncClient) RemovePeer(id peer.ID) {
+func (s *SyncClient) RemovePeer(id peer.ID) bool {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	pr, ok := s.peers[id]
 	if !ok {
 		s.log.Debug("Cannot remove peer from sync duties, peer was not registered", "peer", id)
-		return
+		return false
 	}
 	pr.resCancel() // once loop exits
 	delete(s.peers, id)
@@ -571,6 +571,7 @@ func (s *SyncClient) RemovePeer(id peer.ID) {
 	for _, t := range s.tasks {
 		delete(t.statelessPeers, id)
 	}
+	return true
 }
 
 // Close will shut down the sync client and all attached work, and block until shutdown is complete.
