@@ -13,6 +13,7 @@ import (
 
 const (
 	EthStorageENRKey = "ethstorage"
+	VersionKey       = "version"
 
 	AllShardDone = iota
 	SingleShardDone
