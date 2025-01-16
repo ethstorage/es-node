@@ -129,7 +129,7 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 		txFeeCapDefault = txFeeCapDefaultL2
 	}
 	txFee := new(big.Int).Mul(new(big.Int).SetUint64(safeGas), gasFeeCap)
-	m.lg.Debug("Estimated tx fee on the safe side", "txFee", fmtEth(txFee))
+	m.lg.Debug("Estimated tx fee on the safe side", "safeGas", safeGas, "txFee", txFee)
 	if txFee.Cmp(txFeeCapDefault) == 1 {
 		m.lg.Error("Mining tx dropped: tx fee exceeds the configured cap", "txFee", fmtEth(txFee), "cap", fmtEth(txFeeCapDefault))
 		return common.Hash{}, errDropped
@@ -164,7 +164,7 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 		m.lg.Warn("Query mining reward failed", "error", err.Error())
 	}
 	if reward != nil {
-		m.lg.Info("Query mining reward done", "reward", fmtEth(reward))
+		m.lg.Info("Query mining reward done", "reward", reward)
 		costCap := new(big.Int).Sub(reward, cfg.MinimumProfit)
 		costCap = new(big.Int).Add(costCap, extraCost)
 		profitableGasFeeCap := new(big.Int).Div(costCap, new(big.Int).SetUint64(estimatedGas))
