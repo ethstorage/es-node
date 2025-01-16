@@ -38,7 +38,7 @@ func LoadConfig(ruleFile string) []IChecker {
 	var alerts []*AlertConfig
 	decoder := json.NewDecoder(file)
 	if err := decoder.Decode(&alerts); err != nil {
-		log.Crit("Failed to decode rule file", "rule file", *ruleFileFlag, "err", err)
+		log.Crit("Failed to decode rule file", "rule file", ruleFile, "err", err)
 	}
 
 	checkers := make([]IChecker, 0)
