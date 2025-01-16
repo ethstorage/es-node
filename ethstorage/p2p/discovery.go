@@ -382,7 +382,7 @@ func (n *NodeP2P) DiscoveryProcess(ctx context.Context, log log.Logger, l1ChainI
 
 			pstore.RemovePeer(id)
 			pstore.ClearAddrs(id)
-			log.Info("clear pstore", "id", id, "old version", version, "new version", p2pVersion)
+			log.Debug("clear pstore", "id", id, "old version", version, "new version", p2pVersion)
 		}
 	}()
 
