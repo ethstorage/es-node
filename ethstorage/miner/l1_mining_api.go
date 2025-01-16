@@ -26,10 +26,10 @@ const (
 )
 
 var (
-	mineSig        = crypto.Keccak256Hash([]byte(`mine(uint256,uint256,address,uint256,bytes32[],uint256[],bytes,bytes[],bytes[])`))
-	ether          = new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)
-	txFeeCapL2     = new(big.Int).Mul(big.NewInt(1000), ether)
-	gasPriceOracle = common.HexToAddress("0x420000000000000000000000000000000000000F")
+	mineSig           = crypto.Keccak256Hash([]byte(`mine(uint256,uint256,address,uint256,bytes32[],uint256[],bytes,bytes[],bytes[])`))
+	ether             = new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)
+	txFeeCapDefaultL2 = new(big.Int).Mul(big.NewInt(1000), ether)
+	gasPriceOracleL2  = common.HexToAddress("0x420000000000000000000000000000000000000F")
 )
 
 func NewL1MiningAPI(l1 *eth.PollingClient, rc *eth.RandaoClient, lg log.Logger) *l1MiningAPI {
@@ -121,17 +121,17 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 		return common.Hash{}, err
 	}
 	m.lg.Debug("Query nonce done", "nonce", nonce)
-	gas := uint64(float64(estimatedGas) * gasBufferRatio)
+	safeGas := uint64(float64(estimatedGas) * gasBufferRatio)
 
-	// check gas fee against tx fee cap (e.g., --rpc.txfeecap as in geth) early to avoid tx fail)
-	txFeeCap := ether
+	// Check gas fee against tx fee cap (e.g., --rpc.txfeecap as in geth) early to avoid tx fail)
+	txFeeCapDefault := ether
 	if m.rc != nil {
-		txFeeCap = txFeeCapL2
+		txFeeCapDefault = txFeeCapDefaultL2
 	}
-	estimatedTxFee := new(big.Int).Mul(new(big.Int).SetUint64(gas), gasFeeCap)
-	if estimatedTxFee.Cmp(txFeeCap) == 1 {
-		m.lg.Error(fmt.Sprintf("Mining tx dropped: tx fee (%d) exceeds the configured cap (%d)",
-			estimatedTxFee, txFeeCap))
+	txFee := new(big.Int).Mul(new(big.Int).SetUint64(safeGas), gasFeeCap)
+	m.lg.Debug("Estimated tx fee on the safe side", "txFee", fmtEth(txFee))
+	if txFee.Cmp(txFeeCapDefault) == 1 {
+		m.lg.Error("Mining tx dropped: tx fee exceeds the configured cap", "txFee", fmtEth(txFee), "cap", fmtEth(txFeeCapDefault))
 		return common.Hash{}, errDropped
 	}
 
@@ -140,7 +140,7 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 		Nonce:     nonce,
 		GasTipCap: tip,
 		GasFeeCap: gasFeeCap,
-		Gas:       gas,
+		Gas:       safeGas,
 		To:        &contract,
 		Value:     common.Big0,
 		Data:      calldata,
@@ -150,19 +150,13 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 	extraCost := new(big.Int)
 	// Add L1 data fee as tx cost when es-node is deployed as an L3
 	if m.rc != nil {
-		unsignedBin, err := unsignedTx.MarshalBinary()
+		l1fee, err := m.getL1Fee(ctx, unsignedTx)
 		if err != nil {
-			//TODO do not abort tx only because estimation failure
-			m.lg.Error("Failed to marshal unsigned tx", "error", err)
-			return common.Hash{}, err
+			m.lg.Warn("Failed to get L1 fee", "error", err)
+		} else {
+			m.lg.Info("Get L1 fee done", "l1Fee", l1fee)
+			extraCost = l1fee
 		}
-		l1fee, err := m.getL1Fee(ctx, unsignedBin)
-		if err != nil {
-			m.lg.Error("Failed to get L1 fee", "error", err)
-			return common.Hash{}, fmt.Errorf("getL1Fee failed: %w", err)
-		}
-		m.lg.Info("Get L1 fee done", "l1Fee", l1fee)
-		extraCost = l1fee
 	}
 
 	reward, err := m.GetMiningReward(rst.startShardId, rst.blockNumber.Int64())
@@ -170,6 +164,7 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 		m.lg.Warn("Query mining reward failed", "error", err.Error())
 	}
 	if reward != nil {
+		m.lg.Info("Query mining reward done", "reward", fmtEth(reward))
 		costCap := new(big.Int).Sub(reward, cfg.MinimumProfit)
 		costCap = new(big.Int).Add(costCap, extraCost)
 		profitableGasFeeCap := new(big.Int).Div(costCap, new(big.Int).SetUint64(estimatedGas))
@@ -207,24 +202,23 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 	return signedTx.Hash(), nil
 }
 
-func (m *l1MiningAPI) getL1Fee(ctx context.Context, _data []byte) (*big.Int, error) {
-	bytesType, _ := abi.NewType("bytes", "", nil)
-	uint256Type, _ := abi.NewType("uint256", "", nil)
-
-	dataField, _ := abi.Arguments{{Type: bytesType}}.Pack(_data)
-	h := crypto.Keccak256Hash([]byte(`getL1Fee(bytes)`))
-	calldata := append(h[0:4], dataField...)
-	msg := ethereum.CallMsg{
-		To:   &gasPriceOracle,
-		Data: calldata,
-	}
-	bs, err := m.CallContract(ctx, msg, nil)
+func (m *l1MiningAPI) getL1Fee(ctx context.Context, unsignedTx *types.Transaction) (*big.Int, error) {
+	unsignedBin, err := unsignedTx.MarshalBinary()
 	if err != nil {
 		return nil, err
 	}
-	res, err := abi.Arguments{
-		{Type: uint256Type},
-	}.UnpackValues(bs)
+	bytesType, _ := abi.NewType("bytes", "", nil)
+	uint256Type, _ := abi.NewType("uint256", "", nil)
+	dataField, _ := abi.Arguments{{Type: bytesType}}.Pack(unsignedBin)
+	h := crypto.Keccak256Hash([]byte(`getL1Fee(bytes)`))
+	bs, err := m.CallContract(ctx, ethereum.CallMsg{
+		To:   &gasPriceOracleL2,
+		Data: append(h[0:4], dataField...),
+	}, nil)
+	if err != nil {
+		return nil, err
+	}
+	res, err := abi.Arguments{{Type: uint256Type}}.UnpackValues(bs)
 	if err != nil {
 		return nil, err
 	}
