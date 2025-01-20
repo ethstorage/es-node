@@ -166,8 +166,8 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 	if reward != nil {
 		m.lg.Info("Query mining reward done", "reward", reward)
 		costCap := new(big.Int).Sub(reward, cfg.MinimumProfit)
-		costCap = new(big.Int).Add(costCap, extraCost)
-		profitableGasFeeCap := new(big.Int).Div(costCap, new(big.Int).SetUint64(estimatedGas))
+		txCost := new(big.Int).Sub(costCap, extraCost)
+		profitableGasFeeCap := new(big.Int).Div(txCost, new(big.Int).SetUint64(estimatedGas))
 		m.lg.Info("Minimum profitable gas fee cap", "gasFeeCap", profitableGasFeeCap)
 		if gasFeeCap.Cmp(profitableGasFeeCap) == 1 {
 			profit := new(big.Int).Sub(reward, new(big.Int).Mul(new(big.Int).SetUint64(estimatedGas), gasFeeCap))
