@@ -137,7 +137,7 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 		Value:     common.Big0,
 		Data:      calldata,
 	})
-	gasFeeCapChecked, err := m.profitCheck(ctx, unsignedTx, rst, cfg, gasFeeCap, tip, estimatedGas, useConfig)
+	gasFeeCapChecked, err := m.profitCheck(ctx, unsignedTx, rst, cfg.MinimumProfit, gasFeeCap, tip, estimatedGas, useConfig)
 	if err != nil {
 		return common.Hash{}, err
 	}
@@ -177,8 +177,7 @@ func (m *l1MiningAPI) profitCheck(
 	ctx context.Context,
 	unsignedTx *types.Transaction,
 	rst result,
-	cfg Config,
-	gasFeeCap, tip *big.Int,
+	minProfit, gasFeeCap, tip *big.Int,
 	estimatedGas uint64,
 	useConfig bool,
 ) (*big.Int, error) {
@@ -201,13 +200,14 @@ func (m *l1MiningAPI) profitCheck(
 	gasFeeCapChecked := gasFeeCap
 	if reward != nil {
 		m.lg.Info("Query mining reward done", "reward", reward)
-		costCap := new(big.Int).Sub(reward, cfg.MinimumProfit)
+		costCap := new(big.Int).Sub(reward, minProfit)
 		txCost := new(big.Int).Sub(costCap, extraCost)
 		profitableGasFeeCap := new(big.Int).Div(txCost, new(big.Int).SetUint64(estimatedGas))
 		m.lg.Info("Minimum profitable gas fee cap", "gasFeeCap", profitableGasFeeCap)
 		if gasFeeCap.Cmp(profitableGasFeeCap) == 1 {
 			profit := new(big.Int).Sub(reward, new(big.Int).Mul(new(big.Int).SetUint64(estimatedGas), gasFeeCap))
-			m.lg.Warn("Mining tx dropped: the profit will not meet expectation", "estimatedProfit", fmtEth(profit), "minimumProfit", fmtEth(cfg.MinimumProfit))
+			profit = new(big.Int).Sub(profit, extraCost)
+			m.lg.Warn("Mining tx dropped: the profit will not meet expectation", "estimatedProfit", fmtEth(profit), "minimumProfit", fmtEth(minProfit))
 			return nil, errDropped
 		}
 		if !useConfig {
