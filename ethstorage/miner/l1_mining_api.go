@@ -137,7 +137,7 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 		Value:     common.Big0,
 		Data:      calldata,
 	})
-	gasFeeCapChecked, err := m.profitCheck(ctx, unsignedTx, rst, cfg.MinimumProfit, gasFeeCap, tip, estimatedGas, useConfig)
+	gasFeeCapChecked, err := checkProfit(ctx, m, unsignedTx, rst, cfg.MinimumProfit, gasFeeCap, tip, estimatedGas, m.rc != nil, useConfig, m.lg)
 	if err != nil {
 		return common.Hash{}, err
 	}
@@ -173,58 +173,7 @@ func (m *l1MiningAPI) txFeeCapCheck(safeGas uint64, gasFeeCap *big.Int) error {
 	return nil
 }
 
-func (m *l1MiningAPI) profitCheck(
-	ctx context.Context,
-	unsignedTx *types.Transaction,
-	rst result,
-	minProfit, gasFeeCap, tip *big.Int,
-	estimatedGas uint64,
-	useConfig bool,
-) (*big.Int, error) {
-	extraCost := new(big.Int)
-	// Add L1 data fee as tx cost when es-node is deployed as an L3
-	if m.rc != nil {
-		l1fee, err := m.getL1Fee(ctx, unsignedTx)
-		if err != nil {
-			m.lg.Warn("Failed to get L1 fee", "error", err)
-		} else {
-			m.lg.Info("Get L1 fee done", "l1Fee", l1fee)
-			extraCost = l1fee
-		}
-	}
-	reward, err := m.GetMiningReward(rst.startShardId, rst.blockNumber.Int64())
-	if err != nil {
-		m.lg.Warn("Query mining reward failed", "error", err.Error())
-		return gasFeeCap, nil
-	}
-	gasFeeCapChecked := gasFeeCap
-	if reward != nil {
-		m.lg.Info("Query mining reward done", "reward", reward)
-		costCap := new(big.Int).Sub(reward, minProfit)
-		txCost := new(big.Int).Sub(costCap, extraCost)
-		profitableGasFeeCap := new(big.Int).Div(txCost, new(big.Int).SetUint64(estimatedGas))
-		m.lg.Info("Minimum profitable gas fee cap", "gasFeeCap", profitableGasFeeCap)
-		if gasFeeCap.Cmp(profitableGasFeeCap) == 1 {
-			profit := new(big.Int).Sub(reward, new(big.Int).Mul(new(big.Int).SetUint64(estimatedGas), gasFeeCap))
-			profit = new(big.Int).Sub(profit, extraCost)
-			m.lg.Warn("Mining tx dropped: the profit will not meet expectation", "estimatedProfit", fmtEth(profit), "minimumProfit", fmtEth(minProfit))
-			return nil, errDropped
-		}
-		if !useConfig {
-			gasFeeCapChecked = profitableGasFeeCap
-			m.lg.Info("Using profitable gas fee cap", "gasFeeCap", gasFeeCap)
-		}
-	} else {
-		if !useConfig {
-			// (tip + 2*baseFee) to ensure the tx to be marketable for six consecutive 100% full blocks.
-			gasFeeCapChecked = new(big.Int).Add(new(big.Int).Mul(new(big.Int).Sub(gasFeeCap, tip), big.NewInt(2)), tip)
-			m.lg.Info("Using marketable gas fee cap", "gasFeeCap", gasFeeCapChecked)
-		}
-	}
-	return gasFeeCapChecked, nil
-}
-
-func (m *l1MiningAPI) getL1Fee(ctx context.Context, unsignedTx *types.Transaction) (*big.Int, error) {
+func (m *l1MiningAPI) GetL1Fee(ctx context.Context, unsignedTx *types.Transaction) (*big.Int, error) {
 	unsignedBin, err := unsignedTx.MarshalBinary()
 	if err != nil {
 		return nil, err
@@ -333,4 +282,63 @@ func (m *l1MiningAPI) suggestGasPrices(ctx context.Context, cfg Config) (*big.In
 		m.lg.Info("Using configured gas price", "gasFeeCap", gasFeeCap, "tip", tip)
 	}
 	return tip, gasFeeCap, useConfig, nil
+}
+
+type ProfitChecker interface {
+	GetL1Fee(ctx context.Context, tx *types.Transaction) (*big.Int, error)
+	GetMiningReward(shardID uint64, blockNumber int64) (*big.Int, error)
+}
+
+// Adjust the gas price based on the estimated rewards and costs.
+func checkProfit(
+	ctx context.Context,
+	checker ProfitChecker,
+	unsignedTx *types.Transaction,
+	rst result,
+	minProfit, gasFeeCap, tip *big.Int,
+	estimatedGas uint64,
+	useL2, useConfig bool,
+	lg log.Logger,
+) (*big.Int, error) {
+	extraCost := new(big.Int)
+	// Add L1 data fee as tx cost when es-node is deployed as an L3
+	if useL2 {
+		l1fee, err := checker.GetL1Fee(ctx, unsignedTx)
+		if err != nil {
+			lg.Warn("Failed to get L1 fee", "error", err)
+		} else {
+			lg.Info("Get L1 fee done", "l1Fee", l1fee)
+			extraCost = l1fee
+		}
+	}
+	reward, err := checker.GetMiningReward(rst.startShardId, rst.blockNumber.Int64())
+	if err != nil {
+		lg.Warn("Query mining reward failed", "error", err.Error())
+		return gasFeeCap, nil
+	}
+	gasFeeCapChecked := gasFeeCap
+	if reward != nil {
+		lg.Info("Query mining reward done", "reward", reward)
+		costCap := new(big.Int).Sub(reward, minProfit)
+		txCost := new(big.Int).Sub(costCap, extraCost)
+		profitableGasFeeCap := new(big.Int).Div(txCost, new(big.Int).SetUint64(estimatedGas))
+		lg.Info("Minimum profitable gas fee cap", "gasFeeCap", profitableGasFeeCap)
+		if gasFeeCap.Cmp(profitableGasFeeCap) == 1 {
+			profit := new(big.Int).Sub(reward, new(big.Int).Mul(new(big.Int).SetUint64(estimatedGas), gasFeeCap))
+			profit = new(big.Int).Sub(profit, extraCost)
+			lg.Warn("Mining tx dropped: the profit will not meet expectation", "estimatedProfit", fmtEth(profit), "minimumProfit", fmtEth(minProfit))
+			return nil, errDropped
+		}
+		if !useConfig {
+			gasFeeCapChecked = profitableGasFeeCap
+			lg.Info("Using profitable gas fee cap", "gasFeeCap", gasFeeCapChecked)
+		}
+	} else {
+		if !useConfig {
+			// (tip + 2*baseFee) to ensure the tx to be marketable for six consecutive 100% full blocks.
+			gasFeeCapChecked = new(big.Int).Add(new(big.Int).Mul(new(big.Int).Sub(gasFeeCap, tip), big.NewInt(2)), tip)
+			lg.Info("Using marketable gas fee cap", "gasFeeCap", gasFeeCapChecked)
+		}
+	}
+	return gasFeeCapChecked, nil
 }
