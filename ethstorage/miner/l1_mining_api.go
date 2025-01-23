@@ -123,10 +123,6 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 	m.lg.Debug("Query nonce done", "nonce", nonce)
 	safeGas := uint64(float64(estimatedGas) * gasBufferRatio)
 
-	if err := m.txFeeCapCheck(safeGas, gasFeeCap); err != nil {
-		return common.Hash{}, err
-	}
-
 	unsignedTx := types.NewTx(&types.DynamicFeeTx{
 		ChainID:   m.NetworkID,
 		Nonce:     nonce,
@@ -137,7 +133,7 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 		Value:     common.Big0,
 		Data:      calldata,
 	})
-	gasFeeCapChecked, err := checkProfit(ctx, m, unsignedTx, rst, cfg.MinimumProfit, gasFeeCap, tip, estimatedGas, m.rc != nil, useConfig, m.lg)
+	gasFeeCapChecked, err := checkGasPrice(ctx, m, unsignedTx, rst, cfg.MinimumProfit, gasFeeCap, tip, estimatedGas, safeGas, m.rc != nil, useConfig, m.lg)
 	if err != nil {
 		return common.Hash{}, err
 	}
@@ -156,21 +152,6 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 	m.lg.Info("Submit mined result done", "shard", rst.startShardId, "block", rst.blockNumber,
 		"nonce", rst.nonce, "txSigner", cfg.SignerAddr.Hex(), "hash", signedTx.Hash().Hex())
 	return signedTx.Hash(), nil
-}
-
-// Check gas fee against tx fee cap (e.g., --rpc.txfeecap as in geth) early to avoid tx fail)
-func (m *l1MiningAPI) txFeeCapCheck(safeGas uint64, gasFeeCap *big.Int) error {
-	txFeeCapDefault := ether
-	if m.rc != nil {
-		txFeeCapDefault = txFeeCapDefaultL2
-	}
-	txFee := new(big.Int).Mul(new(big.Int).SetUint64(safeGas), gasFeeCap)
-	m.lg.Debug("Estimated tx fee on the safe side", "safeGas", safeGas, "txFee", txFee)
-	if txFee.Cmp(txFeeCapDefault) == 1 {
-		m.lg.Error("Mining tx dropped: tx fee exceeds the configured cap", "txFee", fmtEth(txFee), "cap", fmtEth(txFeeCapDefault))
-		return errDropped
-	}
-	return nil
 }
 
 func (m *l1MiningAPI) GetL1Fee(ctx context.Context, unsignedTx *types.Transaction) (*big.Int, error) {
@@ -284,19 +265,19 @@ func (m *l1MiningAPI) suggestGasPrices(ctx context.Context, cfg Config) (*big.In
 	return tip, gasFeeCap, useConfig, nil
 }
 
-type ProfitChecker interface {
+type GasPriceChecker interface {
 	GetL1Fee(ctx context.Context, tx *types.Transaction) (*big.Int, error)
 	GetMiningReward(shardID uint64, blockNumber int64) (*big.Int, error)
 }
 
-// Adjust the gas price based on the estimated rewards and costs.
-func checkProfit(
+// Adjust the gas price based on the estimated rewards, costs, and default tx fee cap.
+func checkGasPrice(
 	ctx context.Context,
-	checker ProfitChecker,
+	checker GasPriceChecker,
 	unsignedTx *types.Transaction,
 	rst result,
 	minProfit, gasFeeCap, tip *big.Int,
-	estimatedGas uint64,
+	estimatedGas, safeGas uint64,
 	useL2, useConfig bool,
 	lg log.Logger,
 ) (*big.Int, error) {
@@ -314,7 +295,6 @@ func checkProfit(
 	reward, err := checker.GetMiningReward(rst.startShardId, rst.blockNumber.Int64())
 	if err != nil {
 		lg.Warn("Query mining reward failed", "error", err.Error())
-		return gasFeeCap, nil
 	}
 	gasFeeCapChecked := gasFeeCap
 	if reward != nil {
@@ -339,6 +319,18 @@ func checkProfit(
 			gasFeeCapChecked = new(big.Int).Add(new(big.Int).Mul(new(big.Int).Sub(gasFeeCap, tip), big.NewInt(2)), tip)
 			lg.Info("Using marketable gas fee cap", "gasFeeCap", gasFeeCapChecked)
 		}
+	}
+
+	// Check gas fee against tx fee cap (e.g., --rpc.txfeecap as in geth) early to avoid tx fail
+	txFeeCapDefault := ether
+	if useL2 {
+		txFeeCapDefault = txFeeCapDefaultL2
+	}
+	txFee := new(big.Int).Mul(new(big.Int).SetUint64(safeGas), gasFeeCapChecked)
+	lg.Debug("Estimated tx fee on the safe side", "safeGas", safeGas, "txFee", txFee)
+	if txFee.Cmp(txFeeCapDefault) == 1 {
+		gasFeeCapChecked = new(big.Int).Div(txFeeCapDefault, new(big.Int).SetUint64(safeGas))
+		lg.Warn("Tx fee exceeds the configured cap, lower the gasFeeCap", "txFee", fmtEth(txFee), "gasFeeCapUpdated", fmtEth(gasFeeCapChecked))
 	}
 	return gasFeeCapChecked, nil
 }
