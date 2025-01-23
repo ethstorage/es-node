@@ -17,7 +17,7 @@ import (
 
 var gwei = new(big.Int).Exp(big.NewInt(10), big.NewInt(9), nil)
 
-func Test_l1MiningAPI_checkProfit(t *testing.T) {
+func Test_l1MiningAPI_checkGasPrice(t *testing.T) {
 	unsignedTx := &types.Transaction{}
 	mockResult := result{
 		startShardId: 0,
