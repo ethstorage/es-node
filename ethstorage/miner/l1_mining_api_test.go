@@ -206,7 +206,21 @@ func Test_l1MiningAPI_checkGasPrice(t *testing.T) {
 			reward:        new(big.Int).Exp(big.NewInt(10), big.NewInt(17), nil), // 0.1 eth
 			rewardErr:     nil,
 			wantDropped:   false,
-			wantGasFeeCap: new(big.Int).SetInt64(200000000000),
+			wantGasFeeCap: new(big.Int).Mul(big.NewInt(200), gwei),
+		},
+		{
+			name:          "Sepolia: relax the gas price until minimal profit remains, but cut by tx fee cap",
+			minProfit:     big.NewInt(0),
+			gasFeeCap:     new(big.Int).Mul(big.NewInt(5), gwei),
+			tip:           new(big.Int).Mul(big.NewInt(1), gwei),
+			useL2:         false,
+			useConfig:     false,
+			l1Fee:         nil,
+			l1FeeErr:      nil,
+			reward:        new(big.Int).Mul(big.NewInt(1), ether),
+			rewardErr:     nil,
+			wantDropped:   false,
+			wantGasFeeCap: new(big.Int).SetInt64(1666666666666),
 		},
 	}
 
