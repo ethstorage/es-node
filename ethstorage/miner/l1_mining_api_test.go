@@ -4,6 +4,7 @@ package miner
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"os"
 	"testing"
@@ -29,37 +30,183 @@ func Test_l1MiningAPI_checkGasPrice(t *testing.T) {
 		Color:  term.IsTerminal(int(os.Stdout.Fd())),
 	})
 
+	estimatedGas := uint64(500000)
+	safeGas := uint64(600000)
+
 	testCases := []struct {
-		name          string
-		l1Fee         *big.Int
-		l1FeeErr      error
-		reward        *big.Int
-		rewardErr     error
-		minProfit     *big.Int
-		gasFeeCap     *big.Int
-		tip           *big.Int
-		estimatedGas  uint64
-		safeGas       uint64
-		useL2         bool
-		useConfig     bool
-		wantError     bool
+		name string
+
+		// params
+		minProfit *big.Int
+		gasFeeCap *big.Int
+		tip       *big.Int
+		useL2     bool
+		useConfig bool
+
+		// mocked results
+		l1Fee     *big.Int
+		l1FeeErr  error
+		reward    *big.Int
+		rewardErr error
+
+		// test results
+		wantDropped   bool
 		wantGasFeeCap *big.Int
 	}{
 		{
-			name:          "Case1 - SWC Beta: relax the gas price until minimal profit remains",
+			name:          "SWC Beta: relax the gas price until minimal profit remains",
+			minProfit:     big.NewInt(0),
+			gasFeeCap:     big.NewInt(1000251),
+			tip:           big.NewInt(1000000),
+			useL2:         true,
+			useConfig:     false,
 			l1Fee:         new(big.Int).Mul(big.NewInt(25), gwei),
 			l1FeeErr:      nil,
 			reward:        new(big.Int).Mul(big.NewInt(25), ether),
 			rewardErr:     nil,
+			wantDropped:   false,
+			wantGasFeeCap: new(big.Int).SetInt64(49999999950000),
+		},
+		{
+			name:          "SWC Beta: relax the gas price until minimal profit remains, but cut by tx fee cap",
 			minProfit:     big.NewInt(0),
 			gasFeeCap:     big.NewInt(1000251),
 			tip:           big.NewInt(1000000),
-			estimatedGas:  uint64(500000),
-			safeGas:       uint64(600000),
 			useL2:         true,
 			useConfig:     false,
-			wantError:     false,
-			wantGasFeeCap: new(big.Int).SetInt64(49999999950000),
+			l1Fee:         new(big.Int).Mul(big.NewInt(25), gwei),
+			l1FeeErr:      nil,
+			reward:        new(big.Int).Mul(big.NewInt(1000), ether),
+			rewardErr:     nil,
+			wantDropped:   false,
+			wantGasFeeCap: new(big.Int).SetInt64(1666666666666666),
+		},
+		{
+			name:          "SWC Beta: tx dropped due to low reward",
+			minProfit:     big.NewInt(0),
+			gasFeeCap:     big.NewInt(1000251),
+			tip:           big.NewInt(1000000),
+			useL2:         true,
+			useConfig:     false,
+			l1Fee:         new(big.Int).Mul(big.NewInt(25), gwei),
+			l1FeeErr:      nil,
+			reward:        new(big.Int).Mul(big.NewInt(250), gwei),
+			rewardErr:     nil,
+			wantDropped:   true,
+			wantGasFeeCap: nil,
+		},
+		{
+			name:          "SWC Beta: tx dropped due to high minimum profit expected",
+			minProfit:     new(big.Int).Mul(big.NewInt(25), ether),
+			gasFeeCap:     big.NewInt(1000251),
+			tip:           big.NewInt(1000000),
+			useL2:         true,
+			useConfig:     false,
+			l1Fee:         new(big.Int).Mul(big.NewInt(25), gwei),
+			l1FeeErr:      nil,
+			reward:        new(big.Int).Mul(big.NewInt(25), ether),
+			rewardErr:     nil,
+			wantDropped:   true,
+			wantGasFeeCap: nil,
+		},
+		{
+			name:          "SWC Beta: tx dropped due to high gas price",
+			minProfit:     big.NewInt(0),
+			gasFeeCap:     new(big.Int).Mul(big.NewInt(250000), gwei),
+			tip:           big.NewInt(1000000),
+			useL2:         true,
+			useConfig:     false,
+			l1Fee:         new(big.Int).Mul(big.NewInt(25), gwei),
+			l1FeeErr:      nil,
+			reward:        new(big.Int).Mul(big.NewInt(25), ether),
+			rewardErr:     nil,
+			wantDropped:   true,
+			wantGasFeeCap: nil,
+		},
+		{
+			name:          "SWC Beta: tx dropped due to high l1 data fee",
+			minProfit:     big.NewInt(0),
+			gasFeeCap:     big.NewInt(1000251),
+			tip:           big.NewInt(1000000),
+			useL2:         true,
+			useConfig:     false,
+			l1Fee:         new(big.Int).Mul(big.NewInt(25), ether),
+			l1FeeErr:      nil,
+			reward:        new(big.Int).Mul(big.NewInt(25), ether),
+			rewardErr:     nil,
+			wantDropped:   true,
+			wantGasFeeCap: nil,
+		},
+		{
+			name:          "SWC Beta: failed to get l1 data fee",
+			minProfit:     big.NewInt(0),
+			gasFeeCap:     big.NewInt(1000251),
+			tip:           big.NewInt(1000000),
+			useL2:         true,
+			useConfig:     false,
+			l1Fee:         nil,
+			l1FeeErr:      fmt.Errorf("l1fee error"),
+			reward:        new(big.Int).Mul(big.NewInt(25), ether),
+			rewardErr:     nil,
+			wantDropped:   false,
+			wantGasFeeCap: big.NewInt(50000000000000),
+		},
+
+		{
+			name:          "SWC Beta: unable to get reward; use marketable gas price",
+			minProfit:     big.NewInt(0),
+			gasFeeCap:     big.NewInt(1000251),
+			tip:           big.NewInt(1000000),
+			useL2:         true,
+			useConfig:     false,
+			l1Fee:         new(big.Int).Mul(big.NewInt(25), gwei),
+			l1FeeErr:      nil,
+			reward:        nil,
+			rewardErr:     fmt.Errorf("reward error"),
+			wantDropped:   false,
+			wantGasFeeCap: big.NewInt(1000502),
+		},
+		{
+			name:          "SWC Beta: use configured gas price",
+			minProfit:     big.NewInt(0),
+			gasFeeCap:     big.NewInt(10002510),
+			tip:           big.NewInt(1000000),
+			useL2:         true,
+			useConfig:     true,
+			l1Fee:         new(big.Int).Mul(big.NewInt(25), gwei),
+			l1FeeErr:      nil,
+			reward:        new(big.Int).Mul(big.NewInt(25), ether),
+			rewardErr:     nil,
+			wantDropped:   false,
+			wantGasFeeCap: new(big.Int).SetInt64(10002510),
+		},
+		{
+			name:          "SWC Beta: use configured gas price, but dropped",
+			minProfit:     big.NewInt(0),
+			gasFeeCap:     new(big.Int).Mul(big.NewInt(1), ether),
+			tip:           big.NewInt(1000000),
+			useL2:         true,
+			useConfig:     true,
+			l1Fee:         new(big.Int).Mul(big.NewInt(25), gwei),
+			l1FeeErr:      nil,
+			reward:        new(big.Int).Mul(big.NewInt(25), ether),
+			rewardErr:     nil,
+			wantDropped:   true,
+			wantGasFeeCap: nil,
+		},
+		{
+			name:          "Sepolia: relax the gas price until minimal profit remains",
+			minProfit:     big.NewInt(0),
+			gasFeeCap:     new(big.Int).Mul(big.NewInt(5), gwei),
+			tip:           new(big.Int).Mul(big.NewInt(1), gwei),
+			useL2:         false,
+			useConfig:     false,
+			l1Fee:         nil,
+			l1FeeErr:      nil,
+			reward:        new(big.Int).Exp(big.NewInt(10), big.NewInt(17), nil), // 0.1 eth
+			rewardErr:     nil,
+			wantDropped:   false,
+			wantGasFeeCap: new(big.Int).SetInt64(200000000000),
 		},
 	}
 
@@ -78,20 +225,18 @@ func Test_l1MiningAPI_checkGasPrice(t *testing.T) {
 				tc.minProfit,
 				tc.gasFeeCap,
 				tc.tip,
-				tc.estimatedGas,
-				tc.safeGas,
+				estimatedGas,
+				safeGas,
 				tc.useL2,
 				tc.useConfig,
 				lgr,
 			)
-
-			if tc.wantError {
-				assert.Error(t, gotErr, "expected an error but did not get one")
-				assert.Nil(t, gotGasFeeCap, "gasFeeCap should be nil if error occurs")
+			if tc.wantDropped {
+				assert.ErrorIs(t, gotErr, errDropped, "expected an dropped error, but got none")
 			} else {
-				assert.NoError(t, gotErr, "did not expect an error, but got one")
-				assert.Equal(t, tc.wantGasFeeCap, gotGasFeeCap, "unexpected final gasFeeCap")
+				assert.NoError(t, gotErr, "unexpected error")
 			}
+			assert.Equal(t, tc.wantGasFeeCap, gotGasFeeCap, "unexpected final gasFeeCap")
 		})
 	}
 }

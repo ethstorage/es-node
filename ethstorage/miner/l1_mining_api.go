@@ -300,8 +300,9 @@ func checkGasPrice(
 	if reward != nil {
 		lg.Info("Query mining reward done", "reward", reward)
 		costCap := new(big.Int).Sub(reward, minProfit)
-		txCost := new(big.Int).Sub(costCap, extraCost)
-		profitableGasFeeCap := new(big.Int).Div(txCost, new(big.Int).SetUint64(estimatedGas))
+		txCostCap := new(big.Int).Sub(costCap, extraCost)
+		lg.Debug("Tx cost cap", "txCostCap", txCostCap)
+		profitableGasFeeCap := new(big.Int).Div(txCostCap, new(big.Int).SetUint64(estimatedGas))
 		lg.Info("Minimum profitable gas fee cap", "gasFeeCap", profitableGasFeeCap)
 		if gasFeeCap.Cmp(profitableGasFeeCap) == 1 {
 			profit := new(big.Int).Sub(reward, new(big.Int).Mul(new(big.Int).SetUint64(estimatedGas), gasFeeCap))
@@ -330,7 +331,7 @@ func checkGasPrice(
 	lg.Debug("Estimated tx fee on the safe side", "safeGas", safeGas, "txFee", txFee)
 	if txFee.Cmp(txFeeCapDefault) == 1 {
 		gasFeeCapChecked = new(big.Int).Div(txFeeCapDefault, new(big.Int).SetUint64(safeGas))
-		lg.Warn("Tx fee exceeds the configured cap, lower the gasFeeCap", "txFee", fmtEth(txFee), "gasFeeCapUpdated", fmtEth(gasFeeCapChecked))
+		lg.Warn("Tx fee exceeds the configured cap, lower the gasFeeCap", "txFee", fmtEth(txFee), "gasFeeCapUpdated", gasFeeCapChecked)
 	}
 	return gasFeeCapChecked, nil
 }
