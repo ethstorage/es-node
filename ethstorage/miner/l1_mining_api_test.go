@@ -18,33 +18,82 @@ import (
 var gwei = new(big.Int).Exp(big.NewInt(10), big.NewInt(9), nil)
 
 func Test_l1MiningAPI_checkProfit(t *testing.T) {
-	ctx := context.Background()
 	unsignedTx := &types.Transaction{}
-	rst := result{startShardId: 0, blockNumber: big.NewInt(100)}
-	minProfit := new(big.Int)
-	tip := gwei
-	gasFeeCap := new(big.Int).Mul(big.NewInt(5), gwei)
-	l1Fee := new(big.Int).Mul(big.NewInt(25), gwei)
-	// rewardL1 := new(big.Int).Mul(big.NewInt(5000000), gwei) // 0.05 eth
-	rewardL2 := new(big.Int).Mul(big.NewInt(25), ether) // 25 qkc
-	estimatedGas := uint64(500000)
-	useL2 := true
-	useConfig := false
+	mockResult := result{
+		startShardId: 0,
+		blockNumber:  big.NewInt(100),
+	}
 	lgr := esLog.NewLogger(esLog.CLIConfig{
 		Level:  "debug",
 		Format: "text",
 		Color:  term.IsTerminal(int(os.Stdout.Fd())),
 	})
-	mockAPI := &MockMiningAPI{l1MiningAPI: l1MiningAPI{lg: lgr}}
 
-	// Test Case 1: L2 | Using a flexible gas price until only minimal profit remains
-	targetGasFeeCap := new(big.Int).SetInt64(49999999950000)
-	mockAPI.On("GetL1Fee", ctx, unsignedTx).Return(l1Fee, nil)
-	mockAPI.On("GetMiningReward", rst.startShardId, rst.blockNumber.Int64()).Return(rewardL2, nil)
-	resultGasFeeCap, err := checkProfit(ctx, mockAPI, unsignedTx, rst, minProfit, gasFeeCap, tip, estimatedGas, useL2, useConfig, mockAPI.lg)
-	assert.NoError(t, err)
-	assert.Equal(t, targetGasFeeCap, resultGasFeeCap)
+	testCases := []struct {
+		name          string
+		l1Fee         *big.Int
+		l1FeeErr      error
+		reward        *big.Int
+		rewardErr     error
+		minProfit     *big.Int
+		gasFeeCap     *big.Int
+		tip           *big.Int
+		estimatedGas  uint64
+		safeGas       uint64
+		useL2         bool
+		useConfig     bool
+		wantError     bool
+		wantGasFeeCap *big.Int
+	}{
+		{
+			name:          "Case1 - SWC Beta: relax the gas price until minimal profit remains",
+			l1Fee:         new(big.Int).Mul(big.NewInt(25), gwei),
+			l1FeeErr:      nil,
+			reward:        new(big.Int).Mul(big.NewInt(25), ether),
+			rewardErr:     nil,
+			minProfit:     big.NewInt(0),
+			gasFeeCap:     big.NewInt(1000251),
+			tip:           big.NewInt(1000000),
+			estimatedGas:  uint64(500000),
+			safeGas:       uint64(600000),
+			useL2:         true,
+			useConfig:     false,
+			wantError:     false,
+			wantGasFeeCap: new(big.Int).SetInt64(49999999950000),
+		},
+	}
 
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+			mockAPI := &MockMiningAPI{l1MiningAPI: l1MiningAPI{lg: lgr}}
+			mockAPI.On("GetL1Fee", ctx, unsignedTx).Return(tc.l1Fee, tc.l1FeeErr)
+			mockAPI.On("GetMiningReward", mockResult.startShardId, mockResult.blockNumber.Int64()).Return(tc.reward, tc.rewardErr)
+
+			gotGasFeeCap, gotErr := checkGasPrice(
+				ctx,
+				mockAPI,
+				unsignedTx,
+				mockResult,
+				tc.minProfit,
+				tc.gasFeeCap,
+				tc.tip,
+				tc.estimatedGas,
+				tc.safeGas,
+				tc.useL2,
+				tc.useConfig,
+				lgr,
+			)
+
+			if tc.wantError {
+				assert.Error(t, gotErr, "expected an error but did not get one")
+				assert.Nil(t, gotGasFeeCap, "gasFeeCap should be nil if error occurs")
+			} else {
+				assert.NoError(t, gotErr, "did not expect an error, but got one")
+				assert.Equal(t, tc.wantGasFeeCap, gotGasFeeCap, "unexpected final gasFeeCap")
+			}
+		})
+	}
 }
 
 type MockMiningAPI struct {
