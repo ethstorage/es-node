@@ -450,7 +450,7 @@ func (s *SyncClient) saveSyncStatus() {
 	}
 }
 
-// saveSyncStatus marshals the remaining sync tasks into leveldb.
+// saveStatusLoop marshals the remaining sync tasks into leveldb.
 func (s *SyncClient) saveStatusLoop() {
 	defer s.wg.Done()
 
