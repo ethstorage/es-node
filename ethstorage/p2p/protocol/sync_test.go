@@ -934,7 +934,7 @@ func TestSyncWithPeerShardsOverlay(t *testing.T) {
 	testSync(t, defaultChunkSize, kvSize, kvEntries, []uint64{0, 1, 2, 3}, lastKvIndex, defaultEncodeType, 6, remotePeers, true)
 }
 
-// TestSyncWithExcludedDataOverlay test sync process with local node support multi shards and sync from multi remote peers,
+// TestSyncWithExcludedListNotOverlay test sync process with local node support multi shards and sync from multi remote peers,
 // and shards supported by peers have overlaid and their excluded list do not have overlaid, it should be sync done.
 func TestSyncWithExcludedListNotOverlay(t *testing.T) {
 	var (
