@@ -67,14 +67,14 @@ func (conf *Config) Discovery(log log.Logger, l1ChainID uint64, tcpPort uint16, 
 	}
 	if conf.AdvertiseUDPPort != 0 { // explicitly advertised port gets priority
 		localNode.SetFallbackUDP(int(conf.AdvertiseUDPPort))
-	} else if conf.ListenUDPPort != 0 { // otherwise default to the port we configured it to listen on
+	} else if conf.ListenUDPPort != 0 { // otherwise, default to the port we configured it to listen on
 		localNode.SetFallbackUDP(int(conf.ListenUDPPort))
 	}
 	if conf.AdvertiseTCPPort != 0 { // explicitly advertised port gets priority
 		localNode.Set(enr.TCP(conf.AdvertiseTCPPort))
-	} else if tcpPort != 0 { // otherwise try to pick up whatever port LibP2P binded to (listen port, or dynamically picked)
+	} else if tcpPort != 0 { // otherwise, try to pick up whatever port LibP2P binded to (listen port, or dynamically picked)
 		localNode.Set(enr.TCP(tcpPort))
-	} else if conf.ListenTCPPort != 0 { // otherwise default to the port we configured it to listen on
+	} else if conf.ListenTCPPort != 0 { // otherwise, default to the port we configured it to listen on
 		localNode.Set(enr.TCP(conf.ListenTCPPort))
 	} else {
 		return nil, nil, isIPSet, fmt.Errorf("no TCP port to put in discovery record")
@@ -85,7 +85,7 @@ func (conf *Config) Discovery(log log.Logger, l1ChainID uint64, tcpPort uint16, 
 		Shards:    protocol.ConvertToContractShards(ethstorage.Shards()),
 	}
 	localNode.Set(&dat)
-	// put shards info to Peerstore PeerMetadata, shards struct ([]*ContractShards) need to
+	// put shards' info to Peerstore PeerMetadata, shards struct ([]*ContractShards) need to
 	// register like gob.Register(dat.Shards)
 	gob.Register(dat.Shards)
 
@@ -366,8 +366,12 @@ func (n *NodeP2P) DiscoveryProcess(ctx context.Context, log log.Logger, l1ChainI
 
 	pstore := n.Host().Peerstore()
 
-	// clear pstore from DB if the version is not match
-	// the DB path is set by p2p.peerstore.path flag, and the default value is esnode_peerstore_db
+	// Clear pstore from DB if the version is not match
+	// The DB path is set by p2p.peerstore.path flag, and the default value is esnode_peerstore_db
+	// pstore DB saves the IP/port/shard and other information of the connected nodes. This information allows
+	// the node to directly connect to the previously connected nodes without discovery action again after restarting.
+	// If we have p2p breaking change and want to clear this info for the same network after restart,
+	// we can update p2pVersion to do that.
 	go func() {
 		peersWithAddrs := n.Host().Peerstore().PeersWithAddrs()
 		for _, id := range peersWithAddrs {
@@ -395,7 +399,7 @@ func (n *NodeP2P) DiscoveryProcess(ctx context.Context, log log.Logger, l1ChainI
 			log.Info("Stopped peer discovery")
 			return // no ctx error, expected close
 		case found := <-randomNodesCh:
-			// get the most recent version of the node record in case it change deal to the remote node TCP or UDP port change.
+			// get the most recent version of the node record in case it changes due to the remote node TCP or UDP port change.
 			node := n.dv5Udp.Resolve(found)
 			if node.Seq() != found.Seq() {
 				log.Debug("Remote node ENR changed", "ID", node.ID(), "remote IP", node.IP(), "ENR", node.String())
