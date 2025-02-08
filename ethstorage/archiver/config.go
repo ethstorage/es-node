@@ -9,15 +9,17 @@ import (
 )
 
 const (
-	EnabledFlagName    = "archiver.enabled"
-	ListenAddrFlagName = "archiver.addr"
-	ListenPortFlagName = "archiver.port"
+	EnabledFlagName      = "archiver.enabled"
+	ListenAddrFlagName   = "archiver.addr"
+	ListenPortFlagName   = "archiver.port"
+	MaxBlobsPerBlockName = "archiver.maxBlobsPerBlock"
 )
 
 type Config struct {
-	Enabled    bool
-	ListenAddr string
-	ListenPort int
+	Enabled          bool
+	ListenAddr       string
+	ListenPort       int
+	MaxBlobsPerBlock int
 }
 
 func CLIFlags(envPrefix string) []cli.Flag {
@@ -40,15 +42,22 @@ func CLIFlags(envPrefix string) []cli.Flag {
 			EnvVar: rollup.PrefixEnvVar(envPrefix, "PORT"),
 			Value:  9645,
 		},
+		cli.IntFlag{
+			Name:   MaxBlobsPerBlockName,
+			Usage:  "Max blobs per block",
+			EnvVar: rollup.PrefixEnvVar(envPrefix, "MAX_BLOBS_PER_BLOCK"),
+			Value:  6,
+		},
 	}
 	return flags
 }
 
 func NewConfig(ctx *cli.Context) *Config {
 	cfg := Config{
-		Enabled:    ctx.GlobalBool(EnabledFlagName),
-		ListenAddr: ctx.GlobalString(ListenAddrFlagName),
-		ListenPort: ctx.GlobalInt(ListenPortFlagName),
+		Enabled:          ctx.GlobalBool(EnabledFlagName),
+		ListenAddr:       ctx.GlobalString(ListenAddrFlagName),
+		ListenPort:       ctx.GlobalInt(ListenPortFlagName),
+		MaxBlobsPerBlock: ctx.GlobalInt(MaxBlobsPerBlockName),
 	}
 	if cfg.Enabled {
 		return &cfg

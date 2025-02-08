@@ -10,7 +10,6 @@ import (
 	"net"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/ethereum-optimism/optimism/op-service/httputil"
@@ -47,23 +46,17 @@ func (a *APIService) blobSidecarHandler(w http.ResponseWriter, r *http.Request) 
 
 	a.logger.Info("Blob archiver API request", "url", r.RequestURI)
 	id := mux.Vars(r)["id"]
-	var indices []uint64
-	indicesStr := r.URL.Query().Get("indices")
-	if indicesStr != "" {
-		splits := strings.Split(indicesStr, ",")
-		for _, index := range splits {
-			parsedInt, err := strconv.ParseUint(index, 10, 64)
-			if err != nil {
-				// beacon API will ignore invalid indices and return all blobs
-				break
-			}
-			indices = append(indices, parsedInt)
-		}
-	}
 	if hErr := validateBlockID(id); hErr != nil {
 		hErr.write(w)
 		return
 	}
+
+	indices, hErr := parseIndices(r, a.cfg.MaxBlobsPerBlock)
+	if hErr != nil {
+		hErr.write(w)
+		return
+	}
+
 	result, hErr := a.api.queryBlobSidecars(id, indices)
 	if hErr != nil {
 		hErr.write(w)
