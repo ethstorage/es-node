@@ -67,25 +67,25 @@ func (conf *Config) Discovery(log log.Logger, l1ChainID uint64, tcpPort uint16, 
 	}
 	if conf.AdvertiseUDPPort != 0 { // explicitly advertised port gets priority
 		localNode.SetFallbackUDP(int(conf.AdvertiseUDPPort))
-	} else if conf.ListenUDPPort != 0 { // otherwise default to the port we configured it to listen on
+	} else if conf.ListenUDPPort != 0 { // otherwise, default to the port we configured it to listen on
 		localNode.SetFallbackUDP(int(conf.ListenUDPPort))
 	}
 	if conf.AdvertiseTCPPort != 0 { // explicitly advertised port gets priority
 		localNode.Set(enr.TCP(conf.AdvertiseTCPPort))
-	} else if tcpPort != 0 { // otherwise try to pick up whatever port LibP2P binded to (listen port, or dynamically picked)
+	} else if tcpPort != 0 { // otherwise, try to pick up whatever port LibP2P binded to (listen port, or dynamically picked)
 		localNode.Set(enr.TCP(tcpPort))
-	} else if conf.ListenTCPPort != 0 { // otherwise default to the port we configured it to listen on
+	} else if conf.ListenTCPPort != 0 { // otherwise, default to the port we configured it to listen on
 		localNode.Set(enr.TCP(conf.ListenTCPPort))
 	} else {
 		return nil, nil, isIPSet, fmt.Errorf("no TCP port to put in discovery record")
 	}
 	dat := protocol.EthStorageENRData{
-		ChainID: l1ChainID,
-		Version: p2pVersion,
-		Shards:  protocol.ConvertToContractShards(ethstorage.Shards()),
+		L1ChainID: l1ChainID,
+		Version:   p2pVersion,
+		Shards:    protocol.ConvertToContractShards(ethstorage.Shards()),
 	}
 	localNode.Set(&dat)
-	// put shards info to Peerstore PeerMetadata, shards struct ([]*ContractShards) need to
+	// put shards' info to Peerstore PeerMetadata, shards struct ([]*ContractShards) need to
 	// register like gob.Register(dat.Shards)
 	gob.Register(dat.Shards)
 
@@ -208,8 +208,8 @@ func FilterEnodes(log log.Logger, l1ChainID uint64) func(node *enode.Node) bool 
 			return false
 		}
 		// check chain ID matches
-		if l1ChainID != dat.ChainID {
-			log.Trace("Discovered node record has no matching chain ID", "node", node.ID(), "got", dat.ChainID, "expected", l1ChainID)
+		if l1ChainID != dat.L1ChainID {
+			log.Trace("Discovered node record has no matching chain ID", "node", node.ID(), "got", dat.L1ChainID, "expected", l1ChainID)
 			return false
 		}
 		// check Version matches
@@ -365,13 +365,41 @@ func (n *NodeP2P) DiscoveryProcess(ctx context.Context, log log.Logger, l1ChainI
 	}()
 
 	pstore := n.Host().Peerstore()
+
+	// Clear pstore from DB if the version is not match
+	// The DB path is set by p2p.peerstore.path flag, and the default value is esnode_peerstore_db
+	// pstore DB saves the IP/port/shard and other information of the connected nodes. This information allows
+	// the node to directly connect to the previously connected nodes without discovery action again after restarting.
+	// If we have p2p breaking change and want to clear this info for the same network after restart,
+	// we can update p2pVersion to do that.
+	go func() {
+		peersWithAddrs := n.Host().Peerstore().PeersWithAddrs()
+		for _, id := range peersWithAddrs {
+			if id == n.Host().ID() {
+				continue
+			}
+			version, ok := -1, false
+			dat, err := pstore.Get(id, protocol.VersionKey)
+			if err == nil {
+				version, ok = dat.(int)
+				if ok && version == p2pVersion {
+					continue
+				}
+			}
+
+			pstore.RemovePeer(id)
+			pstore.ClearAddrs(id)
+			log.Debug("clear pstore", "id", id, "old version", version, "new version", p2pVersion)
+		}
+	}()
+
 	for {
 		select {
 		case <-ctx.Done():
 			log.Info("Stopped peer discovery")
 			return // no ctx error, expected close
 		case found := <-randomNodesCh:
-			// get the most recent version of the node record in case it change deal to the remote node TCP or UDP port change.
+			// get the most recent version of the node record in case it changes due to the remote node TCP or UDP port change.
 			node := n.dv5Udp.Resolve(found)
 			if node.Seq() != found.Seq() {
 				log.Debug("Remote node ENR changed", "ID", node.ID(), "remote IP", node.IP(), "ENR", node.String())
@@ -393,10 +421,11 @@ func (n *NodeP2P) DiscoveryProcess(ctx context.Context, log log.Logger, l1ChainI
 				continue
 			}
 			_ = pstore.AddPubKey(info.ID, pub)
+			_ = pstore.Put(info.ID, protocol.VersionKey, p2pVersion)
 			// Tag the peer, we'd rather have the connection manager prune away old peers,
 			// or peers on different chains, or anyone we have not seen via discovery.
 			// There is no tag score decay yet, so just set it to 42.
-			n.ConnectionManager().TagPeer(info.ID, fmt.Sprintf("ethstorage-%d-%d", dat.ChainID, dat.Version), 42)
+			n.ConnectionManager().TagPeer(info.ID, fmt.Sprintf("ethstorage-%d-%d", dat.L1ChainID, dat.Version), 42)
 			log.Debug("Discovered peer", "peer", info.ID, "nodeID", node.ID(), "addr", info.Addrs[0])
 		case <-connectTicker.C:
 			connected := n.Host().Network().Peers()
