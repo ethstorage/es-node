@@ -36,12 +36,6 @@ var (
 		Usage:  "Rollup chain parameters",
 		EnvVar: prefixEnvVar("ROLLUP_CONFIG"),
 	}
-	L1ChainId = cli.Uint64Flag{
-		Name:   "l1.chain_id",
-		Usage:  "Chain id of L1 chain endpoint to use",
-		Value:  1,
-		EnvVar: prefixEnvVar("L1_CHAIN_ID"),
-	}
 	L1NodeAddr = cli.StringFlag{
 		Name:   "l1.rpc",
 		Usage:  "Address of L1 User JSON-RPC endpoint to use (eth namespace required)",
@@ -220,7 +214,6 @@ var optionalFlags = []cli.Flag{
 	StorageMiner,
 	Network,
 	RollupConfig,
-	L1ChainId,
 	L1BlockTime,
 	L1BeaconSlotTime,
 	L1BeaconAddr,
