@@ -26,7 +26,7 @@ if [ -z "$ES_NODE_STORAGE_L1CONTRACT_CLEF" ]; then
 fi
 # A newly deployed contract is required for each run for miner test, with zkp verifier of mode 2
 if [ -z "$ES_NODE_STORAGE_L1CONTRACT" ]; then
-  export ES_NODE_STORAGE_L1CONTRACT=0xe8F0898cbA701E677970DB33404A817Ff42D4499
+  export ES_NODE_STORAGE_L1CONTRACT=0x517ad0ba959f3556930c9Bc483B454584F7e11df
 fi
 # A contract with zkp verifier of mode 1 (one proof per sample)
 if [ -z "$ES_NODE_STORAGE_L1CONTRACT_ZKP1" ]; then
@@ -34,7 +34,7 @@ if [ -z "$ES_NODE_STORAGE_L1CONTRACT_ZKP1" ]; then
 fi
 # The commonly used l1 eth rpc endpoint
 if [ -z "$ES_NODE_L1_ETH_RPC" ]; then
-  export ES_NODE_L1_ETH_RPC="http://65.109.20.29:8545"  # L2
+  export ES_NODE_L1_ETH_RPC="http://5.9.87.214:8545"  # L2
 fi
 # The clef endpoint that the miner will use to sign the transaction
 if [ -z "$ES_NODE_CLEF_RPC" ]; then
