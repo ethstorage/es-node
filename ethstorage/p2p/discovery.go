@@ -365,34 +365,6 @@ func (n *NodeP2P) DiscoveryProcess(ctx context.Context, log log.Logger, chainID 
 	}()
 
 	pstore := n.Host().Peerstore()
-
-	// Clear pstore from DB if the version is not match
-	// The DB path is set by p2p.peerstore.path flag, and the default value is esnode_peerstore_db
-	// pstore DB saves the IP/port/shard and other information of the connected nodes. This information allows
-	// the node to directly connect to the previously connected nodes without discovery action again after restarting.
-	// If we have p2p breaking change and want to clear this info for the same network after restart,
-	// we can update p2pVersion to do that.
-	go func() {
-		peersWithAddrs := n.Host().Peerstore().PeersWithAddrs()
-		for _, id := range peersWithAddrs {
-			if id == n.Host().ID() {
-				continue
-			}
-			version, ok := -1, false
-			dat, err := pstore.Get(id, protocol.VersionKey)
-			if err == nil {
-				version, ok = dat.(int)
-				if ok && version == p2pVersion {
-					continue
-				}
-			}
-
-			pstore.RemovePeer(id)
-			pstore.ClearAddrs(id)
-			log.Debug("clear pstore", "id", id, "old version", version, "new version", p2pVersion)
-		}
-	}()
-
 	for {
 		select {
 		case <-ctx.Done():
