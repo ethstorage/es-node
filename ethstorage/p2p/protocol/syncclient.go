@@ -51,7 +51,7 @@ const (
 const (
 	RequestBlobsByRangeProtocolID = "/ethstorage/dev/requestblobsbyrange/%d/1.0.0"
 	RequestBlobsByListProtocolID  = "/ethstorage/dev/requestblobsbylist/%d/1.0.0"
-	RequestShardList              = "/ethstorage/dev/shardlist/%d/1.0.0"
+	RequestShardList              = "/ethstorage/dev/shardlist/1.0.0"
 )
 
 var (

@@ -121,9 +121,9 @@ type ContractShards struct {
 // EthStorageENRData The discovery ENRs are just key-value lists, and we filter them by records tagged with the "ethstorage" key,
 // and then check the chain ID and Version.
 type EthStorageENRData struct {
-	L1ChainID uint64
-	Version   uint64
-	Shards    []*ContractShards
+	ChainID uint64
+	Version uint64
+	Shards  []*ContractShards
 }
 
 func (e *EthStorageENRData) ENRKey() string {

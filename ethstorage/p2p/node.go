@@ -47,13 +47,13 @@ type NodeP2P struct {
 
 // NewNodeP2P creates a new p2p node, and returns a reference to it. If the p2p is disabled, it returns nil.
 // If metrics are configured, a bandwidth monitor will be spawned in a goroutine.
-func NewNodeP2P(resourcesCtx context.Context, rollupCfg *rollup.EsConfig, l1ChainID uint64, log log.Logger, setup SetupP2P,
+func NewNodeP2P(resourcesCtx context.Context, rollupCfg *rollup.EsConfig, log log.Logger, setup SetupP2P,
 	storageManager *ethstorage.StorageManager, db ethdb.Database, m metrics.Metricer, feed *event.Feed) (*NodeP2P, error) {
 	if setup == nil {
 		return nil, errors.New("p2p node cannot be created without setup")
 	}
 	var n NodeP2P
-	if err := n.init(resourcesCtx, rollupCfg, l1ChainID, log, setup, storageManager, db, m, feed); err != nil {
+	if err := n.init(resourcesCtx, rollupCfg, log, setup, storageManager, db, m, feed); err != nil {
 		closeErr := n.Close()
 		if closeErr != nil {
 			log.Error("Failed to close p2p after starting with err", "closeErr", closeErr, "err", err)
@@ -66,7 +66,7 @@ func NewNodeP2P(resourcesCtx context.Context, rollupCfg *rollup.EsConfig, l1Chai
 	return &n, nil
 }
 
-func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig, l1ChainID uint64, log log.Logger, setup SetupP2P,
+func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig, log log.Logger, setup SetupP2P,
 	storageManager *ethstorage.StorageManager, db ethdb.Database, m metrics.Metricer, feed *event.Feed) error {
 	bwc := p2pmetrics.NewBandwidthCounter()
 	n.storageManager = storageManager
@@ -166,7 +166,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 		blobByListHandler := protocol.MakeStreamHandler(resourcesCtx, log.New("serve", "blobs_by_list"), n.syncSrv.HandleGetBlobsByListRequest)
 		n.host.SetStreamHandler(protocol.GetProtocolID(protocol.RequestBlobsByListProtocolID, rollupCfg.L2ChainID), blobByListHandler)
 		requestShardListHandler := protocol.MakeStreamHandler(resourcesCtx, log.New("serve", "get_shard_list"), n.syncSrv.HandleRequestShardList)
-		n.host.SetStreamHandler(protocol.GetProtocolID(protocol.RequestShardList, rollupCfg.L2ChainID), requestShardListHandler)
+		n.host.SetStreamHandler(protocol.RequestShardList, requestShardListHandler)
 
 		// notify of any new connections/streams/etc.
 		// TODO: use metric
@@ -185,7 +185,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 		}
 
 		// All nil if disabled.
-		n.dv5Local, n.dv5Udp, n.isIPSet, err = setup.Discovery(log.New("p2p", "discv5"), l1ChainID, tcpPort, getLocalPublicIPv4())
+		n.dv5Local, n.dv5Udp, n.isIPSet, err = setup.Discovery(log.New("p2p", "discv5"), rollupCfg.L2ChainID.Uint64(), tcpPort, getLocalPublicIPv4())
 		if err != nil {
 			return fmt.Errorf("failed to start discv5: %w", err)
 		}
@@ -234,7 +234,7 @@ func (n *NodeP2P) RequestShardList(remotePeer peer.ID, l2ChainId *big.Int) ([]*p
 	ctx, cancel := context.WithTimeout(context.Background(), protocol.NewStreamTimeout)
 	defer cancel()
 
-	s, err := n.Host().NewStream(ctx, remotePeer, protocol.GetProtocolID(protocol.RequestShardList, l2ChainId))
+	s, err := n.Host().NewStream(ctx, remotePeer, protocol.RequestShardList)
 	if err != nil {
 		return remoteShardList, err
 	}

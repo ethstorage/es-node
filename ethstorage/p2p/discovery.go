@@ -48,7 +48,7 @@ const (
 	p2pVersion                   = 0
 )
 
-func (conf *Config) Discovery(log log.Logger, l1ChainID uint64, tcpPort uint16, fallbackIP net.IP) (*enode.LocalNode, *discover.UDPv5, bool, error) {
+func (conf *Config) Discovery(log log.Logger, chainID uint64, tcpPort uint16, fallbackIP net.IP) (*enode.LocalNode, *discover.UDPv5, bool, error) {
 	isIPSet := false
 	if conf.NoDiscovery {
 		return nil, nil, isIPSet, nil
@@ -80,9 +80,9 @@ func (conf *Config) Discovery(log log.Logger, l1ChainID uint64, tcpPort uint16, 
 		return nil, nil, isIPSet, fmt.Errorf("no TCP port to put in discovery record")
 	}
 	dat := protocol.EthStorageENRData{
-		L1ChainID: l1ChainID,
-		Version:   p2pVersion,
-		Shards:    protocol.ConvertToContractShards(ethstorage.Shards()),
+		ChainID: chainID,
+		Version: p2pVersion,
+		Shards:  protocol.ConvertToContractShards(ethstorage.Shards()),
 	}
 	localNode.Set(&dat)
 	// put shards' info to Peerstore PeerMetadata, shards struct ([]*ContractShards) need to
@@ -198,7 +198,7 @@ func enrToAddrInfo(r *enode.Node) (*peer.AddrInfo, *crypto.Secp256k1PublicKey, e
 	}, pub, nil
 }
 
-func FilterEnodes(log log.Logger, l1ChainID uint64) func(node *enode.Node) bool {
+func FilterEnodes(log log.Logger, chainID uint64) func(node *enode.Node) bool {
 	return func(node *enode.Node) bool {
 		var dat protocol.EthStorageENRData
 		err := node.Load(&dat)
@@ -208,8 +208,8 @@ func FilterEnodes(log log.Logger, l1ChainID uint64) func(node *enode.Node) bool 
 			return false
 		}
 		// check chain ID matches
-		if l1ChainID != dat.L1ChainID {
-			log.Trace("Discovered node record has no matching chain ID", "node", node.ID(), "got", dat.L1ChainID, "expected", l1ChainID)
+		if chainID != dat.ChainID {
+			log.Trace("Discovered node record has no matching chain ID", "node", node.ID(), "got", dat.ChainID, "expected", chainID)
 			return false
 		}
 		// check Version matches
@@ -239,12 +239,12 @@ func FilterEnodes(log log.Logger, l1ChainID uint64) func(node *enode.Node) bool 
 // and connects to nodes in the peerstore that we are not already connected to.
 // Nodes from the peerstore will be shuffled, unsuccessful connection attempts will cause peers to be avoided,
 // and only nodes with addresses (under TTL) will be connected to.
-func (n *NodeP2P) DiscoveryProcess(ctx context.Context, log log.Logger, l1ChainID uint64, connectGoal uint) {
+func (n *NodeP2P) DiscoveryProcess(ctx context.Context, log log.Logger, chainID uint64, connectGoal uint) {
 	if n.dv5Udp == nil {
 		log.Warn("Peer discovery is disabled")
 		return
 	}
-	filter := FilterEnodes(log, l1ChainID)
+	filter := FilterEnodes(log, chainID)
 	// We pull nodes from discv5 DHT in random order to find new peers.
 	// Eventually we'll find a peer record that matches our filter.
 	randomNodeIter := n.dv5Udp.RandomNodes()
@@ -425,7 +425,7 @@ func (n *NodeP2P) DiscoveryProcess(ctx context.Context, log log.Logger, l1ChainI
 			// Tag the peer, we'd rather have the connection manager prune away old peers,
 			// or peers on different chains, or anyone we have not seen via discovery.
 			// There is no tag score decay yet, so just set it to 42.
-			n.ConnectionManager().TagPeer(info.ID, fmt.Sprintf("ethstorage-%d-%d", dat.L1ChainID, dat.Version), 42)
+			n.ConnectionManager().TagPeer(info.ID, fmt.Sprintf("ethstorage-%d-%d", dat.ChainID, dat.Version), 42)
 			log.Debug("Discovered peer", "peer", info.ID, "nodeID", node.ID(), "addr", info.Addrs[0])
 		case <-connectTicker.C:
 			connected := n.Host().Network().Peers()
