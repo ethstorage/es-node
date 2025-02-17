@@ -2,12 +2,13 @@ package utils
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/log"
 	"os"
 	"regexp"
 	"strings"
+	"time"
+
+	"github.com/ethereum/go-ethereum/log"
 )
 
 func CheckKnowFailure(logFile string) (int, error) {
@@ -72,12 +73,29 @@ func checkDiffNotMatchError(logFile string) (int, error) {
 
 func checkInvalidSamplesError(logFile string) (int, error) {
 	// description: 1. sample empty blob k, 2. download blob k, 3. submit mined result fail
-	// Sample:
+	// Success Sample:
 	// lvl=info msg="Get data hash"                         kvIndex=11742 hash=0x0000000000000000000000000000000000000000000000000000000000000000
 	// lvl=info msg="Downloaded and encoded"                blockNumber=4,225,672 kvIdx=11742
 	// lvl=info msg="Got storage proof"                     shard=1 block=6,906,682 kvIdx="[14613 11742]" sampleIdxsInKv="[1691 1859]"
 	// lvl=info msg="Submit mined result done"              shard=1 block=6,906,682 nonce=739,669   txSigner=0x8be2c9379eb69877F25aBa61a853eC4FCb0b273a hash=0x4f212aa8f5b8867b6478f4cde9dc09609590ff4fc14997f7048ff32f2c96af0c
+
+	// Invalid Sample 0:
+	// lvl=info msg="Get data hash"                         kvIndex=11742 hash=0x0000000000000000000000000000000000000000000000000000000000000000
+	// lvl=info msg="Downloaded and encoded"                blockNumber=4,225,672 kvIdx=11742
+	// lvl=info msg="Got storage proof"                     shard=1 block=6,906,682 kvIdx="[14613 11742]" sampleIdxsInKv="[1691 1859]"
 	// lvl=eror msg="Failed to submit mined result"         shard=1 block=6,906,682 error="failed to estimate gas: execution reverted: EthStorageContract2: invalid samples"
+
+	// Invalid Sample 1:
+	// lvl=info msg="Get data hash"                         kvIndex=11742 hash=0x0000000000000000000000000000000000000000000000000000000000000000
+	// lvl=info msg="Got storage proof"                     shard=1 block=6,906,682 kvIdx="[14613 11742]" sampleIdxsInKv="[1691 1859]"
+	// lvl=info msg="Downloaded and encoded"                blockNumber=4,225,672 kvIdx=11742
+	// lvl=eror msg="Failed to submit mined result"         shard=1 block=6,906,682 error="failed to estimate gas: execution reverted: EthStorageContract2: invalid samples"
+
+	// Invalid Sample 2:
+	// t=2025-02-07T12:10:54+0000 lvl=info msg="Get data hash"                         kvIndex=11594 hash=0x0000000000000000000000000000000000000000000000000000000000000000
+	// t=2025-02-07T12:11:34+0000 lvl=info msg="Got storage proof"                     shard=1 block=7,658,343 kvIdx="[11594 14173]" sampleIdxsInKv="[2817 2677]"
+	// t=2025-02-07T12:11:34+0000 lvl=eror msg="Failed to submit mined result"         shard=1 block=7,658,343 error="failed to estimate gas: execution reverted: EthStorageContract2: invalid samples"
+	// t=2025-02-07T12:11:35+0000 lvl=info msg="Downloaded and encoded"                blockNumber=2,036,896 kvIdx=11594
 
 	file, err := os.OpenFile(logFile, os.O_RDONLY, 0755)
 	if err != nil {
@@ -91,6 +109,7 @@ func checkInvalidSamplesError(logFile string) (int, error) {
 	count := 0
 	minedEmptyKVs := make(map[string]string)
 	legacyKVs := make(map[string]string)
+	suspiciousKVs := make(map[string]time.Time)
 	for fileScanner.Scan() {
 		logText := fileScanner.Text()
 		if regexp.MustCompile(`Get data hash[\s\S]+hash=0x0000000000000000000000000000000000000000000000000000000000000000`).MatchString(logText) {
@@ -106,6 +125,15 @@ func checkInvalidSamplesError(logFile string) (int, error) {
 			block, ok := minedEmptyKVs[kvIdx]
 			if !ok {
 				continue
+			}
+			if ft, e := suspiciousKVs[kvIdx]; e {
+				t, got := fetchLogTime(logText)
+				if got && t.Sub(ft).Seconds() < 2 {
+					count++
+					delete(minedEmptyKVs, kvIdx)
+					delete(suspiciousKVs, kvIdx)
+					continue
+				}
 			}
 			legacyKVs[kvIdx] = block
 		} else if strings.Contains(logText, `Got storage proof`) {
@@ -132,6 +160,13 @@ func checkInvalidSamplesError(logFile string) (int, error) {
 				}
 				delete(minedEmptyKVs, kvIdx)
 			}
+			for kvIdx, block := range minedEmptyKVs {
+				if block != "" && strings.Contains(logText, block) {
+					if t, ok := fetchLogTime(logText); ok {
+						suspiciousKVs[kvIdx] = t
+					}
+				}
+			}
 		} else if strings.Contains(logText, "Submit mined result done") {
 			for kvIdx, block := range minedEmptyKVs {
 				if block != "" && strings.Contains(logText, block) {
@@ -143,6 +178,16 @@ func checkInvalidSamplesError(logFile string) (int, error) {
 	}
 
 	return count, nil
+}
+
+func fetchLogTime(text string) (time.Time, bool) {
+	timeStr := extractWithName(text, `t=(?P<timeStr>[\s\S]+)\+0000`, "timeStr")
+	t, err := time.Parse("2006-01-02T15:04:05", timeStr)
+	if err != nil {
+		log.Warn("Parse time string fail", "timeStr", timeStr)
+		return time.Now(), false
+	}
+	return t, true
 }
 
 func fetchMinedBlockAndKVIdx(text string) (block string, kvIdx string, err error) {
@@ -160,7 +205,7 @@ func fetchMinedBlockAndKVIdx(text string) (block string, kvIdx string, err error
 	}
 
 	if block == "" || kvIdx == "" {
-		err = errors.New(fmt.Sprintf("extract mined block and nonce fail, %s, error: wrong log format", patten))
+		err = fmt.Errorf("extract mined block and nonce fail, patten: %s, error: wrong log format", patten)
 	}
 
 	return
@@ -184,7 +229,7 @@ func fetchBlockAndDifficulty(text string) (string, string, error) {
 	}
 
 	if shard == "" || block == "" || diff == "" {
-		return "", "", errors.New(fmt.Sprintf("extract block and difficulty fail, patten: %s; error: wrong log format.", patten))
+		return "", "", fmt.Errorf("extract block and difficulty fail, patten: %s， error: wrong log format", patten)
 	}
 
 	return fmt.Sprintf("%s-%s", shard, block), diff, nil
