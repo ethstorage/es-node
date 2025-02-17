@@ -393,7 +393,6 @@ func (n *NodeP2P) DiscoveryProcess(ctx context.Context, log log.Logger, chainID 
 				continue
 			}
 			_ = pstore.AddPubKey(info.ID, pub)
-			_ = pstore.Put(info.ID, protocol.VersionKey, p2pVersion)
 			// Tag the peer, we'd rather have the connection manager prune away old peers,
 			// or peers on different chains, or anyone we have not seen via discovery.
 			// There is no tag score decay yet, so just set it to 42.
