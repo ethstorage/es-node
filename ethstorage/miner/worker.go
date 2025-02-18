@@ -504,6 +504,7 @@ func (w *worker) checkTxStatus(txHash common.Hash, miner common.Address) {
 			}
 		}
 		if reward != nil {
+			// TODO: the cost should include receipt.L1Fee for op-geth
 			log.Info("Mining transaction accounting (in ether)",
 				"reward", fmtEth(reward),
 				"cost", fmtEth(cost),
