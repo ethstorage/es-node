@@ -264,8 +264,13 @@ func NewL1EndpointConfig(ctx *cli.Context) (*eth.L1EndpointConfig, *ethclient.Cl
 		log.Error("Failed to connect to the L1 RPC", "error", err, "l1Rpc", l1NodeAddr)
 		return nil, nil, err
 	}
+	chainid, err := client.ChainID(context.Background())
+	if err != nil {
+		log.Error("Failed to fetch chain id from the L1 RPC", "error", err, "l1Rpc", l1NodeAddr)
+		return nil, nil, err
+	}
 	return &eth.L1EndpointConfig{
-		L1ChainID:                    ctx.GlobalUint64(flags.L1ChainId.Name),
+		L1ChainID:                    chainid.Uint64(),
 		L1NodeAddr:                   l1NodeAddr,
 		L1BlockTime:                  ctx.GlobalUint64(flags.L1BlockTime.Name),
 		L1BeaconURL:                  ctx.GlobalString(flags.L1BeaconAddr.Name),
