@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -24,8 +25,55 @@ func checkKnownFailure(logFile string) (int, error) {
 	if err != nil {
 		return count0, fmt.Errorf("checkInvalidSamplesError fail: err, %s", err.Error())
 	}
+	count2, err := checkMinedTsTooSmallError(logFile)
+	if err != nil {
+		return count0, fmt.Errorf("checkMinedTsTooSmallError fail: err, %s", err.Error())
+	}
 
-	return count0 + count1, nil
+	return count0 + count1 + count2, nil
+}
+
+func checkMinedTsTooSmallError(logFile string) (int, error) {
+	// t=2025-02-21T03:31:56+0000 lvl=info msg="Submit mined result done"              shard=1 block=7,752,131 nonce=909,742 txSigner=0x8be2c9379eb69877F25aBa61a853eC4FCb0b273a hash=0xb4226d1baa9d92d1e289333a9c3a089632d3b460e5b63828de115d82fb63ca72
+	// t=2025-02-21T03:32:00+0000 lvl=eror msg="Failed to submit mined result"         shard=1 block=7,752,130 error="failed to estimate gas: execution reverted: StorageContract: minedTs too small"
+
+	file, err := os.OpenFile(logFile, os.O_RDONLY, 0755)
+	if err != nil {
+		return 0, err
+	}
+	defer file.Close()
+
+	fileScanner := bufio.NewScanner(file)
+	fileScanner.Split(bufio.ScanLines)
+
+	count := 0
+	lastMinedBlocks := make(map[string]uint64)
+	for fileScanner.Scan() {
+		logText := fileScanner.Text()
+		if strings.Contains(logText, "Submit mined result done") {
+			shard, block, err := fetchShardAndBlock(logText)
+			if err != nil {
+				log.Error("fetchShardAndBlock error", "log", logText, "error", err.Error())
+				continue
+			}
+
+			if b, ok := lastMinedBlocks[shard]; ok && b > block {
+				continue
+			}
+			lastMinedBlocks[shard] = block
+		} else if regexp.MustCompile(`Failed to submit mined result[\s\S]+minedTs too small`).MatchString(logText) {
+			shard, block, err := fetchShardAndBlock(logText)
+			if err != nil {
+				log.Error("fetchShardAndBlock error", "log", logText, "error", err.Error())
+				continue
+			}
+			if b, ok := lastMinedBlocks[shard]; ok && b > block {
+				count++
+			}
+		}
+	}
+
+	return count, nil
 }
 
 func checkDiffNotMatchError(logFile string) (int, error) {
@@ -178,6 +226,29 @@ func checkInvalidSamplesError(logFile string) (int, error) {
 	}
 
 	return count, nil
+}
+
+func fetchShardAndBlock(text string) (shard string, block uint64, err error) {
+	patten := `shard=(?P<shard>[\d])[\s]+block=(?P<block>[\d{1,3}(,\d{3})*]+)[\s]+`
+	shard, block, err = "", uint64(0), nil
+
+	results := extract(text, patten)
+	if len(results) == 2 {
+		for name, value := range results {
+			if strings.Compare(name, "shard") == 0 {
+				shard = value
+			} else if strings.Compare(name, "block") == 0 {
+				block, err = strconv.ParseUint(strings.Replace(value, ",", "", 5), 10, 64)
+				if err != nil {
+					return "", 0, fmt.Errorf("convert string to block fail, string %s; error: %s", value, err.Error())
+				}
+			}
+		}
+	} else {
+		err = fmt.Errorf("extract shard and block fail, patten: %s, results %v， error: wrong log format", patten, results)
+	}
+
+	return
 }
 
 func fetchLogTime(text string) (time.Time, bool) {
