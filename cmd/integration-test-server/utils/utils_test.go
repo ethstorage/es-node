@@ -30,6 +30,16 @@ func Test_CheckKnownFailure(t *testing.T) {
 			filePath:    "./testdata/invalidsamples1.log",
 			expectCount: 1,
 		},
+		{
+			name:        "invalidsamples2",
+			filePath:    "./testdata/invalidsamples2.log",
+			expectCount: 1,
+		},
+		{
+			name:        "minedtstoosmall",
+			filePath:    "./testdata/minedtstoosmall.log",
+			expectCount: 1,
+		},
 	}
 	for _, test := range tests {
 		count, err := CheckKnowFailure(test.filePath)
