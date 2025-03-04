@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -14,7 +15,7 @@ import (
 var knownIds = []string{"genesis", "finalized", "head"}
 
 func validateBlockID(id string) *httpError {
-	if isHash(id) || isSlot(id) || isKnownIdentifier(id) {
+	if isHash(id) || isSlot(id) || slices.Contains(knownIds, id) {
 		return nil
 	}
 	return newBadRequestError(fmt.Sprintf("Invalid block ID: %s", id))
@@ -33,25 +34,11 @@ func isSlot(id string) bool {
 	return err == nil
 }
 
-func isKnownIdentifier(id string) bool {
-	for _, element := range knownIds {
-		if element == id {
-			return true
-		}
-	}
-	return false
-}
-
 func indexIncluded(index uint64, indices []uint64) bool {
 	if len(indices) == 0 {
 		return true
 	}
-	for _, element := range indices {
-		if element == index {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(indices, index)
 }
 
 type httpError struct {
