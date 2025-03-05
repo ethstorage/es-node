@@ -48,7 +48,7 @@ const (
 	p2pVersion                   = 0
 )
 
-func (conf *Config) Discovery(log log.Logger, chainID uint64, tcpPort uint16, fallbackIP net.IP) (*enode.LocalNode, *discover.UDPv5, bool, error) {
+func (conf *Config) Discovery(log log.Logger, l2ChainID uint64, tcpPort uint16, fallbackIP net.IP) (*enode.LocalNode, *discover.UDPv5, bool, error) {
 	isIPSet := false
 	if conf.NoDiscovery {
 		return nil, nil, isIPSet, nil
@@ -80,7 +80,7 @@ func (conf *Config) Discovery(log log.Logger, chainID uint64, tcpPort uint16, fa
 		return nil, nil, isIPSet, fmt.Errorf("no TCP port to put in discovery record")
 	}
 	dat := protocol.EthStorageENRData{
-		ChainID: chainID,
+		ChainID: l2ChainID,
 		Version: p2pVersion,
 		Shards:  protocol.ConvertToContractShards(ethstorage.Shards()),
 	}
@@ -239,12 +239,12 @@ func FilterEnodes(log log.Logger, chainID uint64) func(node *enode.Node) bool {
 // and connects to nodes in the peerstore that we are not already connected to.
 // Nodes from the peerstore will be shuffled, unsuccessful connection attempts will cause peers to be avoided,
 // and only nodes with addresses (under TTL) will be connected to.
-func (n *NodeP2P) DiscoveryProcess(ctx context.Context, log log.Logger, chainID uint64, connectGoal uint) {
+func (n *NodeP2P) DiscoveryProcess(ctx context.Context, log log.Logger, l2ChainID uint64, connectGoal uint) {
 	if n.dv5Udp == nil {
 		log.Warn("Peer discovery is disabled")
 		return
 	}
-	filter := FilterEnodes(log, chainID)
+	filter := FilterEnodes(log, l2ChainID)
 	// We pull nodes from discv5 DHT in random order to find new peers.
 	// Eventually we'll find a peer record that matches our filter.
 	randomNodeIter := n.dv5Udp.RandomNodes()
