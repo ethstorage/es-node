@@ -228,13 +228,13 @@ func (n *EsNode) startL1(cfg *Config) {
 
 func (n *EsNode) initP2P(ctx context.Context, cfg *Config) error {
 	if cfg.P2P != nil {
-		p2pNode, err := p2p.NewNodeP2P(n.resourcesCtx, &cfg.Rollup, cfg.L1.L1ChainID, n.log, cfg.P2P, n.storageManager, n.db, n.metrics, n.feed)
+		p2pNode, err := p2p.NewNodeP2P(n.resourcesCtx, &cfg.Rollup, n.log, cfg.P2P, n.storageManager, n.db, n.metrics, n.feed)
 		if err != nil || p2pNode == nil {
 			return err
 		}
 		n.p2pNode = p2pNode
 		if n.p2pNode.Dv5Udp() != nil {
-			go n.p2pNode.DiscoveryProcess(n.resourcesCtx, n.log, cfg.L1.L1ChainID, cfg.P2P.TargetPeers())
+			go n.p2pNode.DiscoveryProcess(n.resourcesCtx, n.log, cfg.Rollup.L2ChainID.Uint64(), cfg.P2P.TargetPeers())
 		}
 	}
 	return nil

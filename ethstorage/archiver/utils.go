@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -13,10 +15,10 @@ import (
 var knownIds = []string{"genesis", "finalized", "head"}
 
 func validateBlockID(id string) *httpError {
-	if isHash(id) || isSlot(id) || isKnownIdentifier(id) {
+	if isHash(id) || isSlot(id) || slices.Contains(knownIds, id) {
 		return nil
 	}
-	return newBlockIdError(id)
+	return newBadRequestError(fmt.Sprintf("Invalid block ID: %s", id))
 }
 
 func isHash(s string) bool {
@@ -32,25 +34,11 @@ func isSlot(id string) bool {
 	return err == nil
 }
 
-func isKnownIdentifier(id string) bool {
-	for _, element := range knownIds {
-		if element == id {
-			return true
-		}
-	}
-	return false
-}
-
 func indexIncluded(index uint64, indices []uint64) bool {
 	if len(indices) == 0 {
 		return true
 	}
-	for _, element := range indices {
-		if element == index {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(indices, index)
 }
 
 type httpError struct {
@@ -82,9 +70,53 @@ var (
 	}
 )
 
-func newBlockIdError(input string) *httpError {
+func newBadRequestError(input string) *httpError {
 	return &httpError{
 		Code:    http.StatusBadRequest,
-		Message: fmt.Sprintf("Invalid block ID: %s", input),
+		Message: input,
+	}
+}
+
+// parseIndices filters out invalid and duplicate blob indices
+func parseIndices(r *http.Request, max int) ([]uint64, *httpError) {
+	query := r.URL.Query()
+	normalizeQueryValues(query)
+	r.URL.RawQuery = query.Encode()
+	rawIndices := r.URL.Query()["indices"]
+	indices := make([]uint64, 0, max)
+	invalidIndices := make([]string, 0)
+loop:
+	for _, raw := range rawIndices {
+		ix, err := strconv.ParseUint(raw, 10, 64)
+		if err != nil {
+			invalidIndices = append(invalidIndices, raw)
+			continue
+		}
+		if ix >= uint64(max) {
+			invalidIndices = append(invalidIndices, raw)
+			continue
+		}
+		for i := range indices {
+			if ix == indices[i] {
+				continue loop
+			}
+		}
+		indices = append(indices, ix)
+	}
+
+	if len(invalidIndices) > 0 {
+		return nil, newBadRequestError(fmt.Sprintf("requested blob indices %v are invalid", invalidIndices))
+	}
+	return indices, nil
+}
+
+// normalizeQueryValues replaces comma-separated values with individual values
+func normalizeQueryValues(queryParams url.Values) {
+	for key, vals := range queryParams {
+		splitVals := make([]string, 0)
+		for _, v := range vals {
+			splitVals = append(splitVals, strings.Split(v, ",")...)
+		}
+		queryParams[key] = splitVals
 	}
 }
