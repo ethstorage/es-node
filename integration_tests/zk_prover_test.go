@@ -9,13 +9,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
-	"math/big"
-	"os"
-	"path/filepath"
-	"reflect"
-	"testing"
-	"github.com/protolambda/go-kzg/eth"
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -23,6 +16,13 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethstorage/go-ethstorage/ethstorage/encoder"
 	"github.com/ethstorage/go-ethstorage/ethstorage/prover"
+	"github.com/protolambda/go-kzg/eth"
+	"log"
+	"math/big"
+	"os"
+	"path/filepath"
+	"reflect"
+	"testing"
 )
 
 var zkp1Contract = common.HexToAddress(os.Getenv("ES_NODE_STORAGE_L1CONTRACT_ZKP1"))

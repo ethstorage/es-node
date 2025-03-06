@@ -5,11 +5,11 @@ package prover
 
 import (
 	"fmt"
+	"github.com/protolambda/go-kzg/eth"
 	"math/big"
 	"os"
 	"path/filepath"
 	"time"
-	"github.com/protolambda/go-kzg/eth"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"

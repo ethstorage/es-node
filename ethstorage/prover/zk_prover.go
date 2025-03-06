@@ -5,15 +5,15 @@ package prover
 
 import (
 	"fmt"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/log"
+	"github.com/protolambda/go-kzg/eth"
 	"math/big"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"time"
-	"github.com/protolambda/go-kzg/eth"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/log"
 )
 
 const (

@@ -10,9 +10,9 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
-	
-	"github.com/protolambda/go-kzg/eth"
+
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/protolambda/go-kzg/eth"
 )
 
 type BeaconClient struct {

@@ -6,14 +6,14 @@ package prover
 import (
 	"encoding/json"
 	"fmt"
-	"math/big"
-	"os"
-	"github.com/protolambda/go-kzg/eth"
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/iden3/go-rapidsnark/types"
+	"github.com/protolambda/go-kzg/eth"
+	"math/big"
+	"os"
 )
 
 type ZKProof struct {
