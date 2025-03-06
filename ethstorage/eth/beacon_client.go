@@ -4,6 +4,7 @@
 package eth
 
 import (
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -12,7 +13,7 @@ import (
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/protolambda/go-kzg/eth"
+	"github.com/ethereum/go-ethereum/crypto/kzg4844"
 )
 
 type BeaconClient struct {
@@ -130,7 +131,8 @@ func kzgToVersionedHash(commit string) (common.Hash, error) {
 
 	c := [48]byte{}
 	copy(c[:], b[:])
-	return common.Hash(eth.KZGToVersionedHash(c)), nil
+	cmt := kzg4844.Commitment(c)
+	return common.Hash(kzg4844.CalcBlobHashV1(sha256.New(), &cmt)), nil
 }
 
 func (c *BeaconClient) QueryUrlForV2BeaconBlock(clBlock string) (string, error) {
