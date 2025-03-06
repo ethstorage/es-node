@@ -5,7 +5,6 @@ package prover
 
 import (
 	"fmt"
-	"github.com/protolambda/go-kzg/eth"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -16,6 +15,7 @@ import (
 	"github.com/iden3/go-rapidsnark/prover"
 	"github.com/iden3/go-rapidsnark/witness/v2"
 	"github.com/iden3/go-rapidsnark/witness/wazero"
+	"github.com/protolambda/go-kzg/eth"
 )
 
 type ZKProverGo struct {
