@@ -86,7 +86,7 @@ func NewLogger(cfg CLIConfig) log.Logger {
 	if err != nil {
 		panic(err)
 	}
-	h := log.NewTerminalHandlerWithLevel(os.Stdout, l, true)
+	h := log.NewTerminalHandlerWithLevel(os.Stdout, l, cfg.Color)
 	logger := log.NewLogger(h)
 	return logger
 }
