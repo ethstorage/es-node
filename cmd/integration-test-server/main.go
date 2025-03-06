@@ -6,6 +6,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -16,7 +17,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/crate-crypto/go-proto-danksharding-crypto/eth"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto/kzg4844"
@@ -278,11 +278,11 @@ func downloadBlobFromRPC(client *rpc.Client, kvIndex uint64, hash common.Hash) (
 
 	var blob kzg4844.Blob
 	copy(blob[:], result)
-	commit, err := kzg4844.BlobToCommitment(blob)
+	commit, err := kzg4844.BlobToCommitment(&blob)
 	if err != nil {
 		return nil, fmt.Errorf("blobToCommitment failed: %w", err)
 	}
-	cmt := common.Hash(eth.KZGToVersionedHash(commit))
+	cmt := common.Hash(kzg4844.CalcBlobHashV1(sha256.New(), &commit))
 	if bytes.Compare(cmt[:es.HashSizeInContract], hash[:es.HashSizeInContract]) != 0 {
 		return nil, fmt.Errorf("invalid blob for %d hash: %s, commit: %s", kvIndex, hash, cmt)
 	}
@@ -304,7 +304,7 @@ func listenAndServe(port int) error {
 func main() {
 	// Parse the flags and set up the logger to print everything requested
 	flag.Parse()
-	log.Root().SetHandler(log.LvlFilterHandler(log.Lvl(3), log.StreamHandler(os.Stderr, log.TerminalFormat(true))))
+	log.SetDefault(log.NewLogger(log.NewTerminalHandlerWithLevel(os.Stderr, log.LevelInfo, true)))
 
 	if *portFlag < 0 || *portFlag > math.MaxUint16 {
 		log.Crit("Invalid port")

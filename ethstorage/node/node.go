@@ -15,6 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/ethereum/go-ethereum/ethdb/leveldb"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
 	ethRPC "github.com/ethereum/go-ethereum/rpc"
@@ -560,24 +561,23 @@ func (n *EsNode) Close() error {
 
 func (n *EsNode) initDatabase(cfg *Config) error {
 	var db ethdb.Database
-	var err error
 	if cfg.DataDir == "" {
 		db = rawdb.NewMemoryDatabase()
 	} else {
-		db, err = rawdb.Open(rawdb.OpenOptions{
-			Type:              "leveldb",
-			Directory:         cfg.ResolvePath(cfg.DBConfig.Name),
-			AncientsDirectory: cfg.ResolveAncient(cfg.DBConfig.Name, cfg.DBConfig.DatabaseFreezer),
-			Namespace:         cfg.DBConfig.NameSpace,
-			Cache:             cfg.DBConfig.DatabaseCache,
-			Handles:           cfg.DBConfig.DatabaseHandles,
-			ReadOnly:          false,
-		})
+		rdb, err := leveldb.New(
+			cfg.ResolvePath(cfg.DBConfig.Name),
+			cfg.DBConfig.DatabaseCache,
+			cfg.DBConfig.DatabaseHandles,
+			cfg.DBConfig.NameSpace,
+			false,
+		)
+		if err != nil {
+			return err
+		}
+		db = rawdb.NewDatabase(rdb)
 	}
-	if err == nil {
-		n.db = db
-	}
-	return err
+	n.db = db
+	return nil
 }
 
 func sendMessage(url string, data string) (string, error) {

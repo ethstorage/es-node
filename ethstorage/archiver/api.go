@@ -150,8 +150,8 @@ func (a *API) buildSidecar(kvIndex uint64, kzgCommitment []byte, blobHash common
 		a.logger.Info("Blob not found by storage manager", "kvIndex", kvIndex, "blobHash", blobHash)
 		return nil, errBlobNotInES
 	}
-
-	kzgProof, err := kzg4844.ComputeBlobProof(kzg4844.Blob(blobData), kzg4844.Commitment(kzgCommitment))
+	blob := kzg4844.Blob(blobData)
+	kzgProof, err := kzg4844.ComputeBlobProof(&blob, kzg4844.Commitment(kzgCommitment))
 	if err != nil {
 		a.logger.Error("Failed to get kzg proof", "err", err)
 		return nil, errServerError

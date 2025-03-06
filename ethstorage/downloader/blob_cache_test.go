@@ -167,7 +167,7 @@ func TestBlobDiskCache_GetSampleData(t *testing.T) {
 			}
 			kzgBlob := kzg4844.Blob{}
 			copy(kzgBlob[:], blob.data)
-			commitment, err := kzg4844.BlobToCommitment(kzgBlob)
+			commitment, err := kzg4844.BlobToCommitment(&kzgBlob)
 			if err != nil {
 				return nil, fmt.Errorf(
 					"failed to create commitment for blob %d: %w", kvIndex, err)
@@ -231,7 +231,7 @@ func newBlockBlobs(blockNumber, blobLen uint64) (*blockBlobs, error) {
 		}
 		kzgBlob := kzg4844.Blob{}
 		copy(kzgBlob[:], blob.data)
-		commitment, err := kzg4844.BlobToCommitment(kzgBlob)
+		commitment, err := kzg4844.BlobToCommitment(&kzgBlob)
 		if err != nil {
 			return nil, fmt.Errorf(
 				"failed to create commitment for blob %d: %w", kvIndex, err)
