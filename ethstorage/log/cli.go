@@ -2,6 +2,7 @@ package log
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"strings"
 
@@ -53,22 +54,36 @@ func (cfg CLIConfig) Check() error {
 	}
 
 	level := strings.ToLower(cfg.Level)
-	_, err := log.LvlFromString(level)
+	_, err := LevelFromString(level)
 	if err != nil {
 		return fmt.Errorf("unrecognized log level: %w", err)
 	}
 	return nil
 }
 
+func LevelFromString(lvlString string) (slog.Level, error) {
+	lvlString = strings.ToLower(lvlString) // ignore case
+	switch lvlString {
+	case "trace", "trce":
+		return log.LevelTrace, nil
+	case "debug", "dbug":
+		return log.LevelDebug, nil
+	case "info":
+		return log.LevelInfo, nil
+	case "warn":
+		return log.LevelWarn, nil
+	case "error", "eror":
+		return log.LevelError, nil
+	case "crit":
+		return log.LevelCrit, nil
+	default:
+		return log.LevelDebug, fmt.Errorf("unknown level: %v", lvlString)
+	}
+}
+
 func NewLogger(cfg CLIConfig) log.Logger {
-	handler := log.StreamHandler(os.Stdout, Format(cfg.Format, cfg.Color))
-	handler = log.SyncHandler(handler)
-	handler = log.LvlFilterHandler(Level(cfg.Level), handler)
-	// Set the root handle to what we have configured. Some components like go-ethereum's RPC
-	// server use log.Root() instead of being able to pass in a log.
-	log.Root().SetHandler(handler)
-	logger := log.New()
-	logger.SetHandler(handler)
+	h := log.NewTerminalHandlerWithLevel(os.Stdout, log.LevelInfo, true)
+	logger := log.NewLogger(h)
 	return logger
 }
 
@@ -100,43 +115,6 @@ func ReadCLIConfig(ctx *cli.Context) CLIConfig {
 	return cfg
 }
 
-// Format turns a string and color into a structured Format object
-func Format(lf string, color bool) log.Format {
-	switch lf {
-	case "json":
-		return log.JSONFormat()
-	case "json-pretty":
-		return log.JSONFormatEx(true, true)
-	case "text":
-		if term.IsTerminal(int(os.Stdout.Fd())) {
-			return log.TerminalFormat(color)
-		} else {
-			return log.LogfmtFormat()
-		}
-	case "terminal":
-		return log.TerminalFormat(color)
-	case "logfmt":
-		return log.LogfmtFormat()
-	default:
-		panic("Failed to create `log.Format` from options")
-	}
-}
-
-// Level parses the level string into an appropriate object
-func Level(s string) log.Lvl {
-	s = strings.ToLower(s) // ignore case
-	l, err := log.LvlFromString(s)
-	if err != nil {
-		panic(fmt.Sprintf("Could not parse log level: %v", err))
-	}
-	return l
-}
-
 func SetupDefaults() {
-	log.Root().SetHandler(
-		log.LvlFilterHandler(
-			log.LvlInfo,
-			log.StreamHandler(os.Stdout, log.LogfmtFormat()),
-		),
-	)
+	log.SetDefault(log.NewLogger(log.NewTerminalHandlerWithLevel(os.Stdout, log.LevelInfo, true)))
 }

@@ -260,7 +260,7 @@ func sendMessage(url string, data string) (string, error) {
 
 func main() {
 	flag.Parse()
-	log.Root().SetHandler(log.LvlFilterHandler(log.Lvl(3), log.StreamHandler(os.Stderr, log.TerminalFormat(true))))
+	log.SetDefault(log.NewLogger(log.NewTerminalHandlerWithLevel(os.Stderr, log.LevelInfo, true)))
 
 	UploadNodeState("http://65.109.63.154:8888")
 }

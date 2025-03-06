@@ -10,8 +10,8 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
-
-	"github.com/crate-crypto/go-proto-danksharding-crypto/eth"
+	
+	"github.com/protolambda/go-kzg/eth"
 	"github.com/ethereum/go-ethereum/common"
 )
 

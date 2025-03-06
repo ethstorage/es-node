@@ -9,8 +9,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+	"github.com/protolambda/go-kzg/eth"
 
-	"github.com/crate-crypto/go-proto-danksharding-crypto/eth"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/iden3/go-rapidsnark/prover"

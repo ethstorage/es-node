@@ -15,9 +15,8 @@ import (
 	"path/filepath"
 	"reflect"
 	"testing"
-
+	"github.com/protolambda/go-kzg/eth"
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
-	"github.com/crate-crypto/go-proto-danksharding-crypto/eth"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"

@@ -10,8 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"time"
-
-	"github.com/crate-crypto/go-proto-danksharding-crypto/eth"
+	"github.com/protolambda/go-kzg/eth"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
