@@ -82,7 +82,11 @@ func LevelFromString(lvlString string) (slog.Level, error) {
 }
 
 func NewLogger(cfg CLIConfig) log.Logger {
-	h := log.NewTerminalHandlerWithLevel(os.Stdout, log.LevelInfo, true)
+	l, err := LevelFromString(cfg.Level)
+	if err != nil {
+		panic(err)
+	}
+	h := log.NewTerminalHandlerWithLevel(os.Stdout, l, true)
 	logger := log.NewLogger(h)
 	return logger
 }
