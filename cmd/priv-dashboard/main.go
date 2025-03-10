@@ -112,9 +112,13 @@ func (d *dashboard) ReportStateHandler(w http.ResponseWriter, r *http.Request) {
 		sync, mining, submission := shard.SyncState, shard.MiningState, shard.SubmissionState
 		d.m.SetSyncState(state.Id, state.Contract, state.Version, state.Address, shard.ShardId, shard.Miner, sync.PeerCount, sync.SyncProgress,
 			sync.SyncedSeconds, sync.FillEmptyProgress, sync.FillEmptySeconds, shard.ProvidedBlob)
-		d.m.SetMiningState(state.Id, state.Contract, state.Version, state.Address, shard.ShardId, shard.Miner, mining.MiningPower, mining.SamplingTime)
-		d.m.SetSubmissionState(state.Id, state.Contract, state.Version, state.Address, shard.ShardId, shard.Miner, submission.Succeeded,
-			submission.Failed, submission.Dropped, submission.LastSucceededTime)
+		if mining != nil {
+			d.m.SetMiningState(state.Id, state.Contract, state.Version, state.Address, shard.ShardId, shard.Miner, mining.MiningPower, mining.SamplingTime)
+		}
+		if submission != nil {
+			d.m.SetSubmissionState(state.Id, state.Contract, state.Version, state.Address, shard.ShardId, shard.Miner, submission.Succeeded,
+				submission.Failed, submission.Dropped, submission.LastSucceededTime)
+		}
 	}
 
 	w.Write([]byte(`{"status":"ok"}`))
@@ -128,7 +132,7 @@ func (d *dashboard) checkState(state *node.NodeState) error {
 		return fmt.Errorf("no shard exist in the node state %s", state.Id)
 	}
 	for _, shard := range state.Shards {
-		if shard.SyncState == nil || shard.MiningState == nil || shard.SubmissionState == nil {
+		if shard.SyncState == nil {
 			return fmt.Errorf("invalid shard state in the node state %s", state.Id)
 		}
 	}
@@ -182,9 +186,9 @@ func (d *dashboard) Report() {
 			}
 			if s.SyncState.SyncProgress < 10000 || s.SyncState.FillEmptyProgress < 10000 {
 				sd.phasesOfShard[shard]["syncing"] = sd.phasesOfShard[shard]["syncing"] + 1
-			} else if s.SubmissionState.Succeeded > 0 {
+			} else if s.SubmissionState != nil && s.SubmissionState.Succeeded > 0 {
 				sd.phasesOfShard[shard]["mined"] = sd.phasesOfShard[shard]["mined"] + 1
-			} else {
+			} else if s.SubmissionState != nil {
 				sd.phasesOfShard[shard]["mining"] = sd.phasesOfShard[shard]["mining"] + 1
 			}
 		}
