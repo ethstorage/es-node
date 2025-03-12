@@ -18,7 +18,9 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethstorage/go-ethstorage/ethstorage"
+	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
 	"github.com/ethstorage/go-ethstorage/ethstorage/flags"
 	eslog "github.com/ethstorage/go-ethstorage/ethstorage/log"
 	"github.com/ethstorage/go-ethstorage/ethstorage/metrics"
@@ -95,6 +97,28 @@ func main() {
 				flags.StorageMiner,
 			},
 			Action: EsNodeInit,
+		},
+		{
+			Name:      "sync",
+			Aliases:   []string{"s"},
+			Usage:     fmt.Sprintf("Sync data specified by `%s` from RPC", kvIndexFlagName),
+			UsageText: fmt.Sprintf("Sync data specified by `%s` from RPC", kvIndexFlagName),
+			Flags: []cli.Flag{
+				cli.Uint64Flag{
+					Name:  kvIndexFlagName,
+					Usage: "KV index to update",
+				},
+				cli.StringFlag{
+					Name:  esRpcFlagName,
+					Usage: "EthStorage RPC endpoint",
+				},
+				flags.DataDir,
+				flags.L1NodeAddr,
+				flags.StorageL1Contract,
+				flags.StorageMiner,
+				flags.StorageFiles,
+			},
+			Action: EsNodeSync,
 		},
 	}
 
@@ -263,5 +287,63 @@ func EsNodeInit(ctx *cli.Context) error {
 	} else {
 		log.Warn("No data files created")
 	}
+	return nil
+}
+
+func EsNodeSync(ctx *cli.Context) error {
+	logCfg := eslog.ReadCLIConfig(ctx)
+	if err := logCfg.Check(); err != nil {
+		return err
+	}
+	lg := eslog.NewLogger(logCfg)
+	lg.Info("Sync data for specified kv")
+	if !ctx.IsSet(kvIndexFlagName) {
+		return fmt.Errorf("kv_index must be specified")
+	}
+	kvIndex := ctx.Int(kvIndexFlagName)
+	log.Info("Read flag", "name", kvIndexFlagName, "value", kvIndex)
+	if !ctx.IsSet(esRpcFlagName) {
+		return fmt.Errorf("es_rpc must be specified")
+	}
+	esRpc := ctx.String(esRpcFlagName)
+	log.Info("Read flag", "name", esRpcFlagName, "value", esRpc)
+	// query meta
+	contract := readRequiredFlag(ctx, flags.StorageL1Contract)
+	if !common.IsHexAddress(contract) {
+		return fmt.Errorf("invalid contract address %s", contract)
+	}
+	l1contract := common.HexToAddress(contract)
+	l1Rpc := readRequiredFlag(ctx, flags.L1NodeAddr)
+	pClient, err := eth.Dial(l1Rpc, l1contract, 2, lg)
+	if err != nil {
+		return fmt.Errorf("failed to dial eth client: %w", err)
+	}
+	meta, err := pClient.GetKvMetas([]uint64{uint64(kvIndex)}, rpc.LatestBlockNumber.Int64())
+	if err != nil {
+		return fmt.Errorf("failed to get meta: %w", err)
+	}
+	var commit common.Hash
+	copy(commit[:], meta[0][32-ethstorage.HashSizeInContract:32])
+	lg.Info("Query meta from contract done", "kvIndex", kvIndex, "commit", commit.Hex())
+	// query blob
+	blob, err := downloadBlobFromRPC(esRpc, uint64(kvIndex), commit)
+	if err != nil {
+		return fmt.Errorf("failed to download blob from RPC: %w", err)
+	}
+	lg.Info("Download blob from RPC done", "kvIndex", kvIndex, "commit", commit.Hex())
+	// write blob and meta
+	shardManager, err := initShardManager(ctx, l1Rpc, l1contract)
+	if err != nil {
+		return fmt.Errorf("failed to init shard manager: %w", err)
+	}
+	commit = ethstorage.PrepareCommit(commit)
+	ok, err := shardManager.TryWrite(uint64(kvIndex), blob, commit)
+	if err != nil {
+		return fmt.Errorf("failed to write kv: %w", err)
+	}
+	if !ok {
+		return fmt.Errorf("failed to write kv: kv index not in the shard")
+	}
+	lg.Info("Sync data finished", "kvIndex", kvIndex, "commit", commit.Hex())
 	return nil
 }
