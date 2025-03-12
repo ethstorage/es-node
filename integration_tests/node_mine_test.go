@@ -72,7 +72,7 @@ func TestMining(t *testing.T) {
 	}
 	storConfig.Filenames = files
 	miningConfig := initMiningConfig(t, pClient)
-	lg.Info("Initialzed mining config", "miningConfig", fmt.Sprintf("%+v", miningConfig))
+	lg.Info("Initialized mining config", "miningConfig", fmt.Sprintf("%+v", miningConfig))
 	shardManager, err := initShardManager(*storConfig)
 	if err != nil {
 		t.Fatalf("init shard manager error: %v", err)
