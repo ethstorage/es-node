@@ -101,8 +101,8 @@ func main() {
 		{
 			Name:      "sync",
 			Aliases:   []string{"s"},
-			Usage:     fmt.Sprintf("Sync data specified by `%s` from RPC", kvIndexFlagName),
-			UsageText: fmt.Sprintf("Sync data specified by `%s` from RPC", kvIndexFlagName),
+			Usage:     fmt.Sprintf("Download a blob from an RPC node and update it in local storage. Type 'es-node sync --help' for more information."),
+			UsageText: fmt.Sprintf("Sync local data specified by `%s` from RPC specified by `%s`", kvIndexFlagName, esRpcFlagName),
 			Flags: []cli.Flag{
 				cli.Uint64Flag{
 					Name:  kvIndexFlagName,
@@ -322,10 +322,10 @@ func EsNodeSync(ctx *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to get meta: %w", err)
 	}
+	lg.Info("Query meta from contract done", "kvIndex", kvIndex, "meta", common.Hash(meta[0]).Hex())
+	// query blob
 	var commit common.Hash
 	copy(commit[:], meta[0][32-ethstorage.HashSizeInContract:32])
-	lg.Info("Query meta from contract done", "kvIndex", kvIndex, "commit", commit.Hex())
-	// query blob
 	blob, err := downloadBlobFromRPC(esRpc, uint64(kvIndex), commit)
 	if err != nil {
 		return fmt.Errorf("failed to download blob from RPC: %w", err)

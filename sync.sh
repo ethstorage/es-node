@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# Sync local data specified by `--kv_index` from RPC
 # usage:
 # env ES_NODE_STORAGE_MINER=<miner> ./sync.sh --kv_index <index>
 

@@ -225,6 +225,7 @@ func downloadBlobFromRPC(endpoint string, kvIndex uint64, hash common.Hash) ([]b
 	}
 
 	var result hexutil.Bytes
+	// kvIndex, blobHash, encodeType, offset, length
 	if err := rpcClient.Call(&result, "es_getBlob", kvIndex, hash, 0, 0, 4096*32); err != nil {
 		return nil, err
 	}
@@ -236,6 +237,7 @@ func downloadBlobFromRPC(endpoint string, kvIndex uint64, hash common.Hash) ([]b
 		return nil, fmt.Errorf("blobToCommitment failed: %w", err)
 	}
 	blobhash := common.Hash(kzg4844.CalcBlobHashV1(sha256.New(), &commitment))
+	fmt.Printf("blobhash from blob: %x\n", blobhash)
 	if bytes.Compare(blobhash[:es.HashSizeInContract], hash[:es.HashSizeInContract]) != 0 {
 		return nil, fmt.Errorf("invalid blobhash for %d want: %x, got: %x", kvIndex, hash, blobhash)
 	}
