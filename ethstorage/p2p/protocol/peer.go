@@ -53,7 +53,7 @@ func (p *Peer) ID() peer.ID {
 	return p.id
 }
 
-// Version retrieves the peer's negoatiated `storage` protocol version.
+// Version retrieves the peer's negotiated `storage` protocol version.
 func (p *Peer) Version() uint {
 	return p.version
 }
