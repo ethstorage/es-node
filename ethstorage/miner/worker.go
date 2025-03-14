@@ -628,7 +628,7 @@ func (w *worker) computeHash(shardIdx uint64, hash0 common.Hash) (common.Hash, [
 	)
 }
 
-// getMiningData retrieves data needed to generte proof and verify against the contract.
+// getMiningData retrieves data needed to generate proof and verify against the contract.
 func (w *worker) getMiningData(t *task, sampleIdx []uint64) ([][]byte, []uint64, []uint64, []common.Hash, []common.Hash, error) {
 	checksLen := w.config.RandomChecks
 	dataSet := make([][]byte, checksLen)

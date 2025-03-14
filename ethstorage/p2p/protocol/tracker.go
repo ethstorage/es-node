@@ -60,7 +60,7 @@ func NewTracker(peerID string, cap float64) *Tracker {
 }
 
 // Capacity calculates the number of items the peer is estimated to be able to
-// retrieve within the alloted time slot. The method will round up any division
+// retrieve within the allotted time slot. The method will round up any division
 // errors and will add an additional overestimation ratio on top. The reason for
 // overshooting the capacity is because certain message types might not increase
 // the load proportionally to the requested items, so fetching a bit more might
