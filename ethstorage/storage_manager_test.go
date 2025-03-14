@@ -203,7 +203,7 @@ func TestStorageManager_DownloadFinished(t *testing.T) {
 
 	meta := common.Hash{}
 	copy(meta[:], bs)
-	if meta != prepareCommit(h) {
+	if meta != PrepareCommit(h) {
 		t.Fatal("failed to write meta", err)
 	}
 }
@@ -229,7 +229,7 @@ func TestStorageManager_CommitBlobs(t *testing.T) {
 
 	meta := common.Hash{}
 	copy(meta[:], bs)
-	if meta != prepareCommit(h) {
+	if meta != PrepareCommit(h) {
 		t.Fatal("failed to write meta", err)
 	}
 }
@@ -250,7 +250,7 @@ func TestStorageManager_DownloadAllMeta(t *testing.T) {
 
 	meta := common.Hash{}
 	copy(meta[:], bs)
-	if meta != prepareCommit(h) {
+	if meta != PrepareCommit(h) {
 		t.Fatal("failed to compare meta", err)
 	}
 }

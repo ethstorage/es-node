@@ -110,7 +110,7 @@ func (s *StorageManager) DownloadFinished(newL1 int64, kvIndices []uint64, blobs
 
 			var err error = nil
 			for _, idx := range insertIdx {
-				c := prepareCommit(commits[idx])
+				c := PrepareCommit(commits[idx])
 				// if return false, just ignore because we are not interested in it
 				_, err = s.shardManager.TryWriteEncoded(kvIndices[idx], blobs[idx], c)
 				if err != nil {
@@ -145,7 +145,7 @@ func (s *StorageManager) DownloadFinished(newL1 int64, kvIndices []uint64, blobs
 	return nil
 }
 
-func prepareCommit(commit common.Hash) common.Hash {
+func PrepareCommit(commit common.Hash) common.Hash {
 	c := common.Hash{}
 	copy(c[0:HashSizeInContract], commit[0:HashSizeInContract])
 
@@ -309,7 +309,7 @@ func (s *StorageManager) commitEncodedBlob(kvIndex uint64, encodedBlob []byte, c
 		return nil
 	}
 
-	c := prepareCommit(commit)
+	c := PrepareCommit(commit)
 
 	success, err = s.shardManager.TryWriteEncoded(kvIndex, encodedBlob, c)
 	if !success || err != nil {
