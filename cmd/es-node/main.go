@@ -31,7 +31,7 @@ import (
 var (
 	GitCommit     = ""
 	GitDate       = ""
-	Version       = "v0.2.0"
+	Version       = "v0.2.1"
 	Meta          = "dev"
 	BuildTime     = ""
 	systemVersion = fmt.Sprintf("%s/%s", runtime.GOARCH, runtime.GOOS)
