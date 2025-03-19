@@ -31,7 +31,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
+          go-version: '1.23'
 
       - name: Set up build environment
         if: matrix.os == 'ubuntu-latest'
@@ -45,8 +45,8 @@ jobs:
           mkdir -p ${{ env.BIN_DIR }}/snarkbuild
           mkdir -p ${{ env.BIN_DIR }}/snark_lib/zkey
           cp -r ethstorage/prover/snark_lib ${{ env.BIN_DIR }}
-          cp init.sh ${{ env.BUILD_DIR }}
-          cp run.sh ${{ env.BUILD_DIR }}
+          cp init.sh init-l2.sh ${{ env.BUILD_DIR }}
+          cp run.sh run-l2.sh ${{ env.BUILD_DIR }}
 
       - name: Build
         run: |
