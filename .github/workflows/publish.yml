@@ -45,8 +45,7 @@ jobs:
           mkdir -p ${{ env.BIN_DIR }}/snarkbuild
           mkdir -p ${{ env.BIN_DIR }}/snark_lib/zkey
           cp -r ethstorage/prover/snark_lib ${{ env.BIN_DIR }}
-          cp init.sh init-l2.sh ${{ env.BUILD_DIR }}
-          cp run.sh run-l2.sh ${{ env.BUILD_DIR }}
+          cp *.sh ${{ env.BUILD_DIR }}
 
       - name: Build
         run: |
