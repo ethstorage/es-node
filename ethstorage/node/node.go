@@ -29,6 +29,7 @@ import (
 	"github.com/ethstorage/go-ethstorage/ethstorage/p2p"
 	"github.com/ethstorage/go-ethstorage/ethstorage/p2p/protocol"
 	"github.com/ethstorage/go-ethstorage/ethstorage/prover"
+	"github.com/ethstorage/go-ethstorage/ethstorage/scanner"
 	"github.com/hashicorp/go-multierror"
 )
 
@@ -67,6 +68,7 @@ type EsNode struct {
 	feed *event.Feed
 	// long term blob provider API for rollups
 	archiverAPI *archiver.APIService
+	scanner     *scanner.Scanner
 }
 
 func New(ctx context.Context, cfg *Config, log log.Logger, appVersion string, m metrics.Metricer) (*EsNode, error) {
@@ -133,6 +135,7 @@ func (n *EsNode) init(ctx context.Context, cfg *Config) error {
 	if err := n.initArchiver(ctx, cfg); err != nil {
 		return err
 	}
+	n.initScanner(ctx, cfg)
 	return nil
 }
 
@@ -331,6 +334,14 @@ func (n *EsNode) initArchiver(ctx context.Context, cfg *Config) error {
 	return nil
 }
 
+func (n *EsNode) initScanner(ctx context.Context, cfg *Config) {
+	if cfg.Scanner == nil {
+		// not enabled
+		return
+	}
+	n.scanner = scanner.New(ctx, *cfg.Scanner, n.storageManager, n.l1Source, n.log)
+}
+
 func (n *EsNode) Start(ctx context.Context, cfg *Config) error {
 	n.startL1(cfg)
 
@@ -354,6 +365,10 @@ func (n *EsNode) Start(ctx context.Context, cfg *Config) error {
 	if cfg.StateUploadURL != "" {
 		n.log.Info("Start upload node state")
 		go n.UploadNodeState(cfg.StateUploadURL)
+	}
+
+	if n.scanner != nil {
+		n.scanner.Start()
 	}
 
 	return nil
@@ -526,6 +541,10 @@ func (n *EsNode) Close() error {
 
 	if n.archiverAPI != nil {
 		n.archiverAPI.Stop(context.Background())
+	}
+
+	if n.scanner != nil {
+		n.scanner.Close()
 	}
 	// close L2 driver
 	// if n.l2Driver != nil {
