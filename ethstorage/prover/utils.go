@@ -14,7 +14,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/iden3/go-rapidsnark/types"
 )
 
 type ZKProof struct {
@@ -166,8 +165,15 @@ func readPublics(publicInputs []byte) ([]*big.Int, error) {
 	return publics, nil
 }
 
+type ProofData struct {
+	A        []string   `json:"pi_a"`
+	B        [][]string `json:"pi_b"`
+	C        []string   `json:"pi_c"`
+	Protocol string     `json:"protocol"`
+}
+
 func readProof(proofRaw []byte) ([]byte, error) {
-	var piOut = types.ProofData{}
+	var piOut = ProofData{}
 	if err := json.Unmarshal(proofRaw, &piOut); err != nil {
 		return nil, err
 	}

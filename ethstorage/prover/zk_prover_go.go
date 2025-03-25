@@ -13,9 +13,6 @@ import (
 	"github.com/crate-crypto/go-proto-danksharding-crypto/eth"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/iden3/go-rapidsnark/prover"
-	"github.com/iden3/go-rapidsnark/witness/v2"
-	"github.com/iden3/go-rapidsnark/witness/wazero"
 )
 
 type ZKProverGo struct {
@@ -110,31 +107,5 @@ func (p *ZKProverGo) GenerateZKProofPerSample(encodingKey common.Hash, sampleIdx
 }
 
 func (p *ZKProverGo) prove(inputBytes []byte) ([]byte, string, error) {
-	parsedInputs, err := witness.ParseInputs(inputBytes)
-	if err != nil {
-		p.lg.Error("Parse input failed", "error", err)
-		return nil, "", err
-	}
-	calc, err := witness.NewCalculator(p.wasm, witness.WithWasmEngine(wazero.NewCircom2WZWitnessCalculator))
-	if err != nil {
-		p.lg.Error("Create witness calculator failed", "error", err)
-		return nil, "", err
-	}
-	wtnsBytes, err := calc.CalculateWTNSBin(parsedInputs, true)
-	if err != nil {
-		p.lg.Error("Calculate witness failed", "error", err)
-		return nil, "", err
-	}
-	proofRaw, publicInputs, err := prover.Groth16ProverRaw(p.zkey, wtnsBytes)
-	if err != nil {
-		p.lg.Error("Prove failed", "error", err)
-		return nil, "", err
-	}
-	p.lg.Debug("Generate zk proof", "publicInputs", publicInputs)
-	proof, err := readProof([]byte(proofRaw))
-	if err != nil {
-		p.lg.Error("Read proof failed", "error", err)
-		return nil, "", err
-	}
-	return proof, publicInputs, nil
+	return nil, "", nil
 }
