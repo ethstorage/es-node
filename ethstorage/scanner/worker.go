@@ -4,6 +4,7 @@
 package scanner
 
 import (
+	"fmt"
 	"sort"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -29,11 +30,14 @@ func NewWorker(sr StorageReader, cr es.Il1Source, lg log.Logger) *Worker {
 }
 
 func (s *Worker) ScanBatch() error {
-	kvIndexRange, nextKvIndex := s.getBatchIndexRange()
+	kvIndexRange, nextKvIndex, err := s.getBatchIndexRange()
+	if err != nil {
+		return fmt.Errorf("failed to get batch index range: %w", err)
+	}
 	metas, err := s.contractReader.GetKvMetas(kvIndexRange, rpc.LatestBlockNumber.Int64())
 	if err != nil {
 		s.lg.Error("Error getting meta range", "kvIndexRange", kvIndexRange)
-		return err
+		return fmt.Errorf("failed to query kv metas %w", err)
 	}
 	s.lg.Info("Query KV meta done", "kvIndexRange", kvIndexRange, "metaLen", len(metas))
 	for k, meta := range metas {
@@ -54,8 +58,11 @@ func (s *Worker) ScanBatch() error {
 	return nil
 }
 
-func (s *Worker) getBatchIndexRange() ([]uint64, uint64) {
-	localKvs := s.getLocalKvs()
+func (s *Worker) getBatchIndexRange() ([]uint64, uint64, error) {
+	localKvs, err := s.getLocalKvs()
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get local kv indices: %w", err)
+	}
 	s.lg.Info("Query local kv done", "localKVs", localKvs)
 	localKvTotal := uint64(len(localKvs))
 
@@ -68,15 +75,15 @@ func (s *Worker) getBatchIndexRange() ([]uint64, uint64) {
 	if batchEnd > localKvTotal {
 		batchEnd = localKvTotal
 	}
-	return localKvs[batchStart:batchEnd], batchEnd
+	return localKvs[batchStart:batchEnd], batchEnd, nil
 }
 
-func (s *Worker) getLocalKvs() []uint64 {
+func (s *Worker) getLocalKvs() ([]uint64, error) {
 	total, err := s.contractReader.GetStorageLastBlobIdx(rpc.LatestBlockNumber.Int64())
 	if err != nil {
-		s.lg.Error("Error total kv entries")
+		return nil, fmt.Errorf("failed to query total kv entries: %w", err)
 	}
-	s.lg.Info("Query total kv done", "total", total)
+	s.lg.Info("Query total kv entries done", "total", total)
 	var localKvs []uint64
 	kvEntries := s.storageReader.KvEntries()
 	localShards := s.storageReader.Shards()
@@ -92,5 +99,5 @@ func (s *Worker) getLocalKvs() []uint64 {
 			}
 		}
 	}
-	return localKvs
+	return localKvs, nil
 }

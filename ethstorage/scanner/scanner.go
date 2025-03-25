@@ -96,6 +96,6 @@ func (s *Scanner) doWork() {
 	}(start)
 
 	if err := s.worker.ScanBatch(); err != nil {
-		s.lg.Error("scan batch", "err", err)
+		s.lg.Error("Scan batch", "err", err)
 	}
 }
