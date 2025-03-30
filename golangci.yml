@@ -189,7 +189,6 @@ linters:
 #    - goconst
 #    - gocritic
 #    - gocyclo
-    - gofmt
 #    - goimports
 #    - gosec
 #    - gosimple
