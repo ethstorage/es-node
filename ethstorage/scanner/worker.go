@@ -4,6 +4,7 @@
 package scanner
 
 import (
+	"context"
 	"fmt"
 	"sort"
 
@@ -29,7 +30,7 @@ func NewWorker(sr StorageReader, cr es.Il1Source, lg log.Logger) *Worker {
 	}
 }
 
-func (s *Worker) ScanBatch() error {
+func (s *Worker) ScanBatch(ctx context.Context) error {
 	kvIndexRange, nextKvIndex, err := s.getBatchIndexRange()
 	if err != nil {
 		return fmt.Errorf("failed to get batch index range: %w", err)
@@ -41,6 +42,13 @@ func (s *Worker) ScanBatch() error {
 	}
 	s.lg.Info("Query KV meta done", "kvIndexRange", kvIndexRange, "metaLen", len(metas))
 	for k, meta := range metas {
+		select {
+		case <-ctx.Done():
+			s.lg.Info("Scanner canceled, stopping scan", "ctx.Err", ctx.Err())
+			return ctx.Err()
+		default:
+		}
+
 		var commit common.Hash
 		copy(commit[:], meta[32-es.HashSizeInContract:32])
 		// query blob and check commit

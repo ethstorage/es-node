@@ -95,7 +95,7 @@ func (s *Scanner) doWork() {
 		s.lg.Info("Scan batch done", "took(s)", dur.Seconds())
 	}(start)
 
-	if err := s.worker.ScanBatch(); err != nil {
+	if err := s.worker.ScanBatch(s.ctx); err != nil {
 		s.lg.Error("Scan batch", "err", err)
 	}
 }
