@@ -339,7 +339,7 @@ func (n *EsNode) initScanner(ctx context.Context, cfg *Config) {
 		// not enabled
 		return
 	}
-	n.scanner = scanner.New(ctx, *cfg.Scanner, n.storageManager, n.l1Source, n.log)
+	n.scanner = scanner.New(ctx, *cfg.Scanner, n.storageManager, n.l1Source, n.feed, n.log)
 }
 
 func (n *EsNode) Start(ctx context.Context, cfg *Config) error {
@@ -365,10 +365,6 @@ func (n *EsNode) Start(ctx context.Context, cfg *Config) error {
 	if cfg.StateUploadURL != "" {
 		n.log.Info("Start upload node state")
 		go n.UploadNodeState(cfg.StateUploadURL)
-	}
-
-	if n.scanner != nil {
-		n.scanner.Start()
 	}
 
 	return nil

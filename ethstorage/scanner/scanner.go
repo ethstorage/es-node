@@ -9,8 +9,10 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
 	es "github.com/ethstorage/go-ethstorage/ethstorage"
+	"github.com/ethstorage/go-ethstorage/ethstorage/p2p/protocol"
 )
 
 const (
@@ -19,6 +21,7 @@ const (
 
 type Scanner struct {
 	worker   *Worker
+	feed     *event.Feed
 	interval time.Duration
 	ctx      context.Context
 	cancel   context.CancelFunc
@@ -35,18 +38,49 @@ type StorageReader interface {
 	Shards() []uint64
 }
 
-func New(ctx context.Context, cfg Config, sr StorageReader, l1 es.Il1Source, lg log.Logger) *Scanner {
+func New(ctx context.Context, cfg Config, sr StorageReader, l1 es.Il1Source, feed *event.Feed, lg log.Logger) *Scanner {
 	cctx, cancel := context.WithCancel(ctx)
-	return &Scanner{
+	scanner := &Scanner{
 		worker:   NewWorker(sr, l1, lg),
+		feed:     feed,
 		interval: time.Second * time.Duration(cfg.Interval),
 		ctx:      cctx,
 		cancel:   cancel,
 		lg:       lg,
 	}
+	go scanner.update()
+	return scanner
 }
 
-func (s *Scanner) Start() {
+func (s *Scanner) update() {
+	syncEventCh := make(chan protocol.EthStorageSyncDone)
+	sub := s.feed.Subscribe(syncEventCh)
+	var closeOnce sync.Once
+	safeClose := func() {
+		closeOnce.Do(func() {
+			sub.Unsubscribe()
+			close(syncEventCh)
+			s.lg.Info("Scanner event subscription closed")
+		})
+	}
+	defer safeClose()
+
+	for {
+		s.lg.Debug("Scanner update loop")
+		select {
+		case syncDone := <-syncEventCh:
+			if syncDone.DoneType == protocol.AllShardDone {
+				s.lg.Info("Scanner update loop received event - all shards done.")
+				s.start()
+				safeClose()
+			}
+		case <-s.ctx.Done():
+			return
+		}
+	}
+}
+
+func (s *Scanner) start() {
 	s.mu.Lock()
 	if s.running {
 		s.mu.Unlock()
