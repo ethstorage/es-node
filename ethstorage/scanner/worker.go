@@ -92,7 +92,6 @@ func (s *Worker) queryLocalKvs() ([]uint64, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to query total kv entries: %w", err)
 	}
-	total = 100
 	s.lg.Info("Scanner: query total kv entries done", "kvEntryCount", total)
 	var localKvs []uint64
 	kvEntries := s.storageReader.KvEntries()
