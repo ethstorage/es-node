@@ -92,6 +92,7 @@ func (s *Worker) queryLocalKvs() ([]uint64, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to query total kv entries: %w", err)
 	}
+	total = 100
 	s.lg.Info("Scanner: query total kv entries done", "kvEntryCount", total)
 	var localKvs []uint64
 	kvEntries := s.storageReader.KvEntries()
@@ -115,5 +116,5 @@ func shortPrt(arr []uint64) string {
 	if len(arr) <= 6 {
 		return fmt.Sprintf("%v", arr)
 	}
-	return fmt.Sprintf("%v ... %v\n", arr[:3], arr[len(arr)-3:])
+	return fmt.Sprintf("[%d %d %d... %d %d %d]", arr[0], arr[1], arr[2], arr[len(arr)-3], arr[len(arr)-2], arr[len(arr)-1])
 }
