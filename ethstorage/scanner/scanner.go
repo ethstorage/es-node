@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	MetaDownloadBatchSize = 10
+	MetaDownloadBatchSize = 8192
 )
 
 type Scanner struct {
