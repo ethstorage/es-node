@@ -38,10 +38,18 @@ type StorageReader interface {
 	Shards() []uint64
 }
 
-func New(ctx context.Context, cfg Config, sr StorageReader, l1 es.Il1Source, feed *event.Feed, lg log.Logger) *Scanner {
+func New(
+	ctx context.Context,
+	cfg Config,
+	sr StorageReader,
+	loadKvFromCache func(uint64, common.Hash) []byte,
+	l1 es.Il1Source,
+	feed *event.Feed,
+	lg log.Logger,
+) *Scanner {
 	cctx, cancel := context.WithCancel(ctx)
 	scanner := &Scanner{
-		worker:   NewWorker(sr, l1, lg),
+		worker:   NewWorker(sr, loadKvFromCache, l1, lg),
 		feed:     feed,
 		interval: time.Second * time.Duration(cfg.Interval),
 		ctx:      cctx,
@@ -55,15 +63,11 @@ func New(ctx context.Context, cfg Config, sr StorageReader, l1 es.Il1Source, fee
 func (s *Scanner) update() {
 	syncEventCh := make(chan protocol.EthStorageSyncDone)
 	sub := s.feed.Subscribe(syncEventCh)
-	var closeOnce sync.Once
-	safeClose := func() {
-		closeOnce.Do(func() {
-			sub.Unsubscribe()
-			close(syncEventCh)
-			s.lg.Info("Scanner event subscription closed")
-		})
-	}
-	defer safeClose()
+	defer func() {
+		sub.Unsubscribe()
+		close(syncEventCh)
+		s.lg.Info("Scanner event subscription closed")
+	}()
 
 	for {
 		s.lg.Debug("Scanner update loop")
@@ -72,7 +76,7 @@ func (s *Scanner) update() {
 			if syncDone.DoneType == protocol.AllShardDone {
 				s.lg.Info("Scanner update loop received event - all shards done.")
 				s.start()
-				safeClose()
+				return
 			}
 		case <-s.ctx.Done():
 			return

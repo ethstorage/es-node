@@ -16,17 +16,19 @@ import (
 )
 
 type Worker struct {
-	storageReader  StorageReader
-	contractReader es.Il1Source
-	nextKvIndex    uint64
-	lg             log.Logger
+	storageReader   StorageReader
+	loadKvFromCache func(uint64, common.Hash) []byte
+	l1              es.Il1Source
+	nextKvIndex     uint64
+	lg              log.Logger
 }
 
-func NewWorker(sr StorageReader, cr es.Il1Source, lg log.Logger) *Worker {
+func NewWorker(sr StorageReader, f func(uint64, common.Hash) []byte, l1 es.Il1Source, lg log.Logger) *Worker {
 	return &Worker{
-		storageReader:  sr,
-		contractReader: cr,
-		lg:             lg,
+		storageReader:   sr,
+		loadKvFromCache: f,
+		l1:              l1,
+		lg:              lg,
 	}
 }
 
@@ -35,13 +37,13 @@ func (s *Worker) ScanBatch(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to get batch index range: %w", err)
 	}
-	metas, err := s.contractReader.GetKvMetas(kvsInBatch, rpc.LatestBlockNumber.Int64())
+	metas, err := s.l1.GetKvMetas(kvsInBatch, rpc.LatestBlockNumber.Int64())
 	if err != nil {
 		s.lg.Error("Scanner: error getting meta range", "kvsInBatch", shortPrt(kvsInBatch))
 		return fmt.Errorf("failed to query kv metas %w", err)
 	}
 	s.lg.Info("Scanner: query KV meta done", "kvsInBatch", shortPrt(kvsInBatch), "metaLen", len(metas))
-	for k, meta := range metas {
+	for i, meta := range metas {
 		select {
 		case <-ctx.Done():
 			s.lg.Info("Scanner canceled, stopping scan", "ctx.Err", ctx.Err())
@@ -49,18 +51,24 @@ func (s *Worker) ScanBatch(ctx context.Context) error {
 		default:
 		}
 
+		kvIndex := kvsInBatch[i]
 		var commit common.Hash
 		copy(commit[:], meta[32-es.HashSizeInContract:32])
-		// query blob and check commit
-		_, found, err := s.storageReader.TryRead(kvsInBatch[k], int(s.storageReader.MaxKvSize()), commit)
 
+		// query blob and check commit from downloader cache
+		if blob := s.loadKvFromCache(kvIndex, commit); blob != nil {
+			s.lg.Debug("Scanner: loaded blob from downloader cache", "kvIndex", kvIndex)
+			continue
+		}
+		// query blob and check commit from storage
+		_, found, err := s.storageReader.TryRead(kvIndex, int(s.storageReader.MaxKvSize()), commit)
 		if !found {
-			s.lg.Warn("Scanner: blob not found", "kvIndex", kvsInBatch[k], "blobHash", commit)
+			s.lg.Warn("Scanner: blob not found", "kvIndex", kvIndex, "blobHash", commit)
 		} else if err != nil {
-			s.lg.Error("Scanner: read blob error", "kvIndex", kvsInBatch[k], "blobHash", fmt.Sprintf("0x%x", commit), "err", err)
+			s.lg.Error("Scanner: read blob error", "kvIndex", kvIndex, "blobHash", fmt.Sprintf("0x%x", commit), "err", err)
 			// TODO fix invalid kv
 		} else {
-			s.lg.Debug("Scanner: check KV done", "kvIndex", kvsInBatch[k], "blobHash", commit)
+			s.lg.Debug("Scanner: check KV done", "kvIndex", kvIndex, "blobHash", commit)
 		}
 	}
 	s.nextKvIndex = nextKvIndex
@@ -72,7 +80,7 @@ func (s *Worker) determineBatchIndexRange() ([]uint64, uint64, error) {
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to get local kv indices: %w", err)
 	}
-	s.lg.Info("Scanner: query local kv done", "localKVs", shortPrt(localKvs))
+	s.lg.Info("Scanner: query local kv entries done", "localKVs", shortPrt(localKvs))
 	localKvTotal := uint64(len(localKvs))
 
 	batchStart := s.nextKvIndex
@@ -88,11 +96,11 @@ func (s *Worker) determineBatchIndexRange() ([]uint64, uint64, error) {
 }
 
 func (s *Worker) queryLocalKvs() ([]uint64, error) {
-	total, err := s.contractReader.GetStorageLastBlobIdx(rpc.LatestBlockNumber.Int64())
+	kvEntryCount, err := s.l1.GetStorageLastBlobIdx(rpc.LatestBlockNumber.Int64())
 	if err != nil {
 		return nil, fmt.Errorf("failed to query total kv entries: %w", err)
 	}
-	s.lg.Info("Scanner: query total kv entries done", "kvEntryCount", total)
+	s.lg.Info("Scanner: query kv entry count done", "kvEntryCount", kvEntryCount)
 	var localKvs []uint64
 	kvEntries := s.storageReader.KvEntries()
 	localShards := s.storageReader.Shards()
@@ -102,7 +110,7 @@ func (s *Worker) queryLocalKvs() ([]uint64, error) {
 	for _, shardId := range localShards {
 		for k := range kvEntries {
 			kvIdx := shardId*kvEntries + k
-			if kvIdx < total {
+			if kvIdx < kvEntryCount {
 				// only check non-empty data
 				localKvs = append(localKvs, kvIdx)
 			}
