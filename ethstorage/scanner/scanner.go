@@ -100,13 +100,18 @@ func (s *Scanner) start() {
 		defer ticker.Stop()
 
 		s.doWork()
-
+		var isWorking sync.Mutex
 		for {
 			select {
 			case <-s.ctx.Done():
 				return
 			case <-ticker.C:
-				s.doWork()
+				if isWorking.TryLock() {
+					go func() {
+						defer isWorking.Unlock()
+						s.doWork()
+					}()
+				}
 			}
 		}
 	}()
@@ -127,16 +132,12 @@ func (s *Scanner) Close() {
 }
 
 func (s *Scanner) doWork() {
-	s.lg.Info("Scan batch start")
+	s.lg.Info("Scan batch started")
 	start := time.Now()
-	count := 0
-	defer func(stt time.Time, cnt int) {
-		s.lg.Info("Scan batch done", "checked", cnt, "took(s)", time.Since(stt).Seconds())
-	}(start, count)
-
-	var err error
-	count, err = s.worker.ScanBatch(s.ctx)
-	if err != nil {
+	defer func(stt time.Time) {
+		s.lg.Info("Scan batch done", "took(s)", time.Since(stt).Seconds())
+	}(start)
+	if err := s.worker.ScanBatch(s.ctx); err != nil {
 		s.lg.Error("Scan batch failed", "err", err)
 	}
 }

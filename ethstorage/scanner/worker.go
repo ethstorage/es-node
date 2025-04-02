@@ -32,15 +32,15 @@ func NewWorker(sr StorageReader, f func(uint64, common.Hash) []byte, l1 es.Il1So
 	}
 }
 
-func (s *Worker) ScanBatch(ctx context.Context) (int, error) {
+func (s *Worker) ScanBatch(ctx context.Context) error {
 	kvsInBatch, nextKvIndex, err := s.determineBatchIndexRange()
 	if err != nil {
-		return 0, fmt.Errorf("failed to get batch index range: %w", err)
+		return fmt.Errorf("failed to get batch index range: %w", err)
 	}
 	metas, err := s.l1.GetKvMetas(kvsInBatch, rpc.LatestBlockNumber.Int64())
 	if err != nil {
 		s.lg.Error("Scanner: error getting meta range", "kvsInBatch", shortPrt(kvsInBatch))
-		return 0, fmt.Errorf("failed to query kv metas %w", err)
+		return fmt.Errorf("failed to query kv metas %w", err)
 	}
 	s.lg.Info("Scanner: query KV meta done", "kvsInBatch", shortPrt(kvsInBatch), "metaLen", len(metas))
 	count := 0
@@ -48,7 +48,7 @@ func (s *Worker) ScanBatch(ctx context.Context) (int, error) {
 		select {
 		case <-ctx.Done():
 			s.lg.Info("Scanner canceled, stopping scan", "ctx.Err", ctx.Err())
-			return count, ctx.Err()
+			return ctx.Err()
 		default:
 		}
 
@@ -56,26 +56,26 @@ func (s *Worker) ScanBatch(ctx context.Context) (int, error) {
 		var commit common.Hash
 		copy(commit[:], meta[32-es.HashSizeInContract:32])
 
-		// query blob and check commit from downloader cache
-		if blob := s.loadKvFromCache(kvIndex, commit); blob != nil {
-			s.lg.Debug("Scanner: loaded blob from downloader cache", "kvIndex", kvIndex)
-			count++
-			continue
-		}
 		// query blob and check commit from storage
 		_, found, err := s.storageReader.TryRead(kvIndex, int(s.storageReader.MaxKvSize()), commit)
 		if !found {
 			s.lg.Warn("Scanner: blob not found", "kvIndex", kvIndex, "blobHash", commit)
 		} else if err != nil {
-			s.lg.Error("Scanner: read blob error", "kvIndex", kvIndex, "blobHash", fmt.Sprintf("0x%x", commit), "err", err)
-			// TODO fix invalid kv
+			// query blob and check commit from downloader cache
+			if blob := s.loadKvFromCache(kvIndex, commit); blob != nil {
+				s.lg.Debug("Scanner: check KV done from cache", "kvIndex", kvIndex, "blobHash", commit)
+			} else {
+				s.lg.Error("Scanner: read blob error", "kvIndex", kvIndex, "blobHash", fmt.Sprintf("0x%x", commit), "err", err)
+				// TODO fix invalid kv
+			}
 		} else {
 			s.lg.Debug("Scanner: check KV done", "kvIndex", kvIndex, "blobHash", commit)
 		}
 		count++
 	}
 	s.nextKvIndex = nextKvIndex
-	return count, nil
+	s.lg.Info("Scanner: scan batch done", "count", count, "nextKvIndex", nextKvIndex)
+	return nil
 }
 
 func (s *Worker) determineBatchIndexRange() ([]uint64, uint64, error) {

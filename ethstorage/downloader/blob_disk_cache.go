@@ -128,6 +128,7 @@ func (c *BlobDiskCache) GetKeyValueByIndex(idx uint64, hash common.Hash) []byte 
 				data, err := c.store.Get(b.dataId)
 				if err != nil {
 					c.lg.Error("Failed to get kv from downloader cache", "kvIndex", idx, "id", b.dataId, "err", err)
+					c.lg.Error("Failed to get kv from downloader cache", "kvIndex", idx, "hash", b.hash, "expected", hash)
 					return nil
 				}
 				return data
