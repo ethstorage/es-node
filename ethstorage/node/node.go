@@ -68,7 +68,8 @@ type EsNode struct {
 	feed *event.Feed
 	// long term blob provider API for rollups
 	archiverAPI *archiver.APIService
-	scanner     *scanner.Scanner
+	// data integrity check on a regular basis
+	scanner *scanner.Scanner
 }
 
 func New(ctx context.Context, cfg *Config, log log.Logger, appVersion string, m metrics.Metricer) (*EsNode, error) {

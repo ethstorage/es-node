@@ -127,13 +127,16 @@ func (s *Scanner) Close() {
 }
 
 func (s *Scanner) doWork() {
+	s.lg.Info("Scan batch start")
 	start := time.Now()
-	defer func(start time.Time) {
-		dur := time.Since(start)
-		s.lg.Info("Scan batch done", "took(s)", dur.Seconds())
-	}(start)
+	count := 0
+	defer func(stt time.Time, cnt int) {
+		s.lg.Info("Scan batch done", "checked", cnt, "took(s)", time.Since(stt).Seconds())
+	}(start, count)
 
-	if err := s.worker.ScanBatch(s.ctx); err != nil {
-		s.lg.Error("Scan batch", "err", err)
+	var err error
+	count, err = s.worker.ScanBatch(s.ctx)
+	if err != nil {
+		s.lg.Error("Scan batch failed", "err", err)
 	}
 }
