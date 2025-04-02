@@ -10,7 +10,7 @@ import (
 
 const (
 	EnabledFlagName = "scanner.enabled"
-	IntervalName    = "scanner.Interval"
+	IntervalName    = "scanner.interval"
 )
 
 type Config struct {
