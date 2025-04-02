@@ -97,6 +97,7 @@ func (s *Scanner) start() {
 	go func() {
 		defer s.wg.Done()
 		ticker := time.NewTicker(s.interval)
+		s.lg.Info("Scanner started", "interval", s.interval.String())
 		defer ticker.Stop()
 
 		s.doWork()
