@@ -30,7 +30,7 @@ func CLIFlags(envPrefix string) []cli.Flag {
 			Name:   IntervalName,
 			Usage:  "Data scan interval in seconds",
 			EnvVar: rollup.PrefixEnvVar(envPrefix, "INTERVAL"),
-			Value:  20,
+			Value:  180,
 		},
 	}
 	return flags
