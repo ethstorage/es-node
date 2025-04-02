@@ -136,7 +136,7 @@ func (s *Scanner) doWork() {
 	s.lg.Info("Scan batch started")
 	start := time.Now()
 	defer func(stt time.Time) {
-		s.lg.Info("Scan batch done", "took(s)", time.Since(stt).Seconds())
+		s.lg.Info("Scan batch done", "duration", time.Since(stt).String())
 	}(start)
 	if err := s.worker.ScanBatch(s.ctx); err != nil {
 		s.lg.Error("Scan batch failed", "err", err)
