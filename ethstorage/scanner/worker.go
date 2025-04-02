@@ -42,8 +42,7 @@ func (s *Worker) ScanBatch(ctx context.Context) error {
 		s.lg.Error("Scanner: error getting meta range", "kvsInBatch", shortPrt(kvsInBatch))
 		return fmt.Errorf("failed to query kv metas %w", err)
 	}
-	s.lg.Info("Scanner: query KV meta done", "kvsInBatch", shortPrt(kvsInBatch), "metaLen", len(metas))
-	count := 0
+	s.lg.Info("Scanner: query KV meta done", "kvsInBatch", shortPrt(kvsInBatch))
 	for i, meta := range metas {
 		select {
 		case <-ctx.Done():
@@ -71,10 +70,9 @@ func (s *Worker) ScanBatch(ctx context.Context) error {
 		} else {
 			s.lg.Debug("Scanner: check KV done", "kvIndex", kvIndex, "blobHash", commit)
 		}
-		count++
 	}
 	s.nextKvIndex = nextKvIndex
-	s.lg.Info("Scanner: scan batch done", "count", count, "nextKvIndex", nextKvIndex)
+	s.lg.Info("Scanner: scan batch done", "from", kvsInBatch[0], "to", kvsInBatch[len(kvsInBatch)-1], "count", len(kvsInBatch), "nextKvIndex", nextKvIndex)
 	return nil
 }
 

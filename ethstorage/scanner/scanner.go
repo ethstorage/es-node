@@ -51,7 +51,7 @@ func New(
 	scanner := &Scanner{
 		worker:   NewWorker(sr, loadKvFromCache, l1, lg),
 		feed:     feed,
-		interval: time.Second * time.Duration(cfg.Interval),
+		interval: time.Minute * time.Duration(cfg.Interval),
 		ctx:      cctx,
 		cancel:   cancel,
 		lg:       lg,

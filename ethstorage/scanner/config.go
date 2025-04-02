@@ -28,7 +28,7 @@ func CLIFlags(envPrefix string) []cli.Flag {
 		},
 		cli.IntFlag{
 			Name:   IntervalName,
-			Usage:  "Data scan interval in seconds",
+			Usage:  "Data scan interval in minutes",
 			EnvVar: rollup.PrefixEnvVar(envPrefix, "INTERVAL"),
 			Value:  180,
 		},
