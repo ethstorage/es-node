@@ -57,20 +57,25 @@ func (s *Worker) ScanBatch(ctx context.Context) error {
 
 		// query blob and check commit from storage
 		_, found, err := s.storageReader.TryRead(kvIndex, int(s.storageReader.MaxKvSize()), commit)
+		if found && err == nil {
+			s.lg.Debug("Scanner: check KV done", "kvIndex", kvIndex, "blobHash", commit)
+			continue
+		}
 		if !found {
+			// the shard does not exist locally
 			s.lg.Warn("Scanner: blob not found", "kvIndex", kvIndex, "blobHash", commit)
-		} else if err != nil {
+			continue
+		}
+		if err != nil {
 			// query blob and check commit from downloader cache
 			if blob := s.loadKvFromCache(kvIndex, commit); blob != nil {
 				s.lg.Debug("Scanner: check KV done from cache", "kvIndex", kvIndex, "blobHash", commit)
-			} else {
-				s.lg.Error("Scanner: read blob error", "kvIndex", kvIndex, "blobHash", fmt.Sprintf("0x%x", commit), "err", err)
-				if err == es.ErrCommitMismatch {
-					// TODO fix invalid kv
-				}
+				continue
 			}
-		} else {
-			s.lg.Debug("Scanner: check KV done", "kvIndex", kvIndex, "blobHash", commit)
+			s.lg.Error("Scanner: read blob error", "kvIndex", kvIndex, "blobHash", fmt.Sprintf("0x%x", commit), "err", err)
+			if err == es.ErrCommitMismatch {
+				s.lg.Error("Scanner: commit mismatch, trying to fix the data", "kvIndex", kvIndex, "blobHash", fmt.Sprintf("0x%x", commit))
+			}
 		}
 	}
 	s.nextKvIndex = nextKvIndex
