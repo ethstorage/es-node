@@ -101,18 +101,18 @@ func (s *Scanner) start() {
 		defer ticker.Stop()
 
 		s.doWork()
-		var isWorking sync.Mutex
+		// var isWorking sync.Mutex
 		for {
 			select {
 			case <-s.ctx.Done():
 				return
 			case <-ticker.C:
-				if isWorking.TryLock() {
-					go func() {
-						defer isWorking.Unlock()
-						s.doWork()
-					}()
-				}
+				// if isWorking.TryLock() {
+				// 	go func() {
+				// 		defer isWorking.Unlock()
+				s.doWork()
+				// 	}()
+				// }
 			}
 		}
 	}()
