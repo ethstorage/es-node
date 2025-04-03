@@ -23,7 +23,7 @@ const (
 )
 
 var (
-	errCommitMismatch = errors.New("commit from contract and input is not matched")
+	ErrCommitMismatch = errors.New("mismatched commit")
 )
 
 type Il1Source interface {
@@ -249,7 +249,7 @@ func (s *StorageManager) CommitEmptyBlobs(start, limit uint64) (uint64, uint64, 
 		err := s.commitEncodedBlob(index, encodedBlobs[i], hash, metas[i])
 		if err == nil {
 			inserted++
-		} else if err != errCommitMismatch {
+		} else if err != ErrCommitMismatch {
 			log.Info("Commit blobs fail", "kvIndex", kvIndices[i], "err", err.Error())
 			break
 		}
@@ -287,7 +287,7 @@ func (s *StorageManager) CommitBlob(kvIndex uint64, blob []byte, commit common.H
 func (s *StorageManager) commitEncodedBlob(kvIndex uint64, encodedBlob []byte, commit common.Hash, contractMeta [32]byte) error {
 	// the commit is different with what we got from the contract, so should not commit
 	if !bytes.Equal(contractMeta[32-HashSizeInContract:32], commit[0:HashSizeInContract]) {
-		return errCommitMismatch
+		return ErrCommitMismatch
 	}
 
 	m, success, err := s.shardManager.TryReadMeta(kvIndex)

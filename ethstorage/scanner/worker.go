@@ -65,7 +65,9 @@ func (s *Worker) ScanBatch(ctx context.Context) error {
 				s.lg.Debug("Scanner: check KV done from cache", "kvIndex", kvIndex, "blobHash", commit)
 			} else {
 				s.lg.Error("Scanner: read blob error", "kvIndex", kvIndex, "blobHash", fmt.Sprintf("0x%x", commit), "err", err)
-				// TODO fix invalid kv
+				if err == es.ErrCommitMismatch {
+					// TODO fix invalid kv
+				}
 			}
 		} else {
 			s.lg.Debug("Scanner: check KV done", "kvIndex", kvIndex, "blobHash", commit)
