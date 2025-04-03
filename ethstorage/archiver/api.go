@@ -15,6 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto/kzg4844"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethstorage/go-ethstorage/ethstorage"
+	"github.com/ethstorage/go-ethstorage/ethstorage/blobs"
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
 	gkzg "github.com/protolambda/go-kzg/eth"
 )
@@ -157,7 +158,7 @@ func (a *API) buildSidecar(kvIndex uint64, kzgCommitment []byte, blobHash common
 		return nil, errServerError
 	}
 	return &BlobSidecar{
-		Blob:          [BlobLength]byte(blobData),
+		Blob:          [blobs.BlobLength]byte(blobData),
 		KZGCommitment: [48]byte(kzgCommitment),
 		KZGProof:      [48]byte(kzgProof),
 	}, nil

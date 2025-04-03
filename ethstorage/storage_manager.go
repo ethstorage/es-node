@@ -512,6 +512,17 @@ func (s *StorageManager) getKvMetas(kvIndices []uint64) ([][32]byte, error) {
 	return metas, nil
 }
 
+func (s *StorageManager) TryWrite(kvIdx uint64, b []byte, commit common.Hash) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	success, err := s.shardManager.TryWrite(kvIdx, b, commit)
+	if !success || err != nil {
+		return errors.New("blob write failed")
+	}
+	return nil
+}
+
 // TryReadEncoded This function will read the encoded data from the local storage file. It also check whether the blob is empty or not synced,
 // if they are these two cases, it will return err.
 func (s *StorageManager) TryReadEncoded(kvIdx uint64, readLen int) ([]byte, bool, error) {

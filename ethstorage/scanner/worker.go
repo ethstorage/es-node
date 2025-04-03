@@ -16,18 +16,20 @@ import (
 )
 
 type Worker struct {
-	storageReader   StorageReader
+	sm              *es.StorageManager
 	loadKvFromCache func(uint64, common.Hash) []byte
 	l1              es.Il1Source
+	rpcEndpoint     string
 	nextKvIndex     uint64
 	lg              log.Logger
 }
 
-func NewWorker(sr StorageReader, f func(uint64, common.Hash) []byte, l1 es.Il1Source, lg log.Logger) *Worker {
+func NewWorker(sm *es.StorageManager, f func(uint64, common.Hash) []byte, l1 es.Il1Source, rpc string, lg log.Logger) *Worker {
 	return &Worker{
-		storageReader:   sr,
+		sm:              sm,
 		loadKvFromCache: f,
 		l1:              l1,
+		rpcEndpoint:     rpc,
 		lg:              lg,
 	}
 }
@@ -40,7 +42,7 @@ func (s *Worker) ScanBatch(ctx context.Context) error {
 	metas, err := s.l1.GetKvMetas(kvsInBatch, rpc.LatestBlockNumber.Int64())
 	if err != nil {
 		s.lg.Error("Scanner: error getting meta range", "kvsInBatch", shortPrt(kvsInBatch))
-		return fmt.Errorf("failed to query kv metas %w", err)
+		return fmt.Errorf("failed to query KV metas %w", err)
 	}
 	s.lg.Info("Scanner: query KV meta done", "kvsInBatch", shortPrt(kvsInBatch))
 	for i, meta := range metas {
@@ -56,25 +58,27 @@ func (s *Worker) ScanBatch(ctx context.Context) error {
 		copy(commit[:], meta[32-es.HashSizeInContract:32])
 
 		// query blob and check commit from storage
-		_, found, err := s.storageReader.TryRead(kvIndex, int(s.storageReader.MaxKvSize()), commit)
+		_, found, err := s.sm.TryRead(kvIndex, int(s.sm.MaxKvSize()), commit)
 		if found && err == nil {
-			s.lg.Debug("Scanner: check KV done", "kvIndex", kvIndex, "blobHash", commit)
+			s.lg.Debug("Scanner: check KV done", "kvIndex", kvIndex, "commit", commit)
 			continue
 		}
 		if !found {
 			// the shard does not exist locally
-			s.lg.Warn("Scanner: blob not found", "kvIndex", kvIndex, "blobHash", commit)
+			s.lg.Warn("Scanner: blob not found", "kvIndex", kvIndex, "commit", commit)
 			continue
 		}
 		if err != nil {
 			// query blob and check commit from downloader cache
 			if blob := s.loadKvFromCache(kvIndex, commit); blob != nil {
-				s.lg.Debug("Scanner: check KV done from cache", "kvIndex", kvIndex, "blobHash", commit)
+				s.lg.Debug("Scanner: check KV done from cache", "kvIndex", kvIndex, "commit", commit)
 				continue
 			}
-			s.lg.Error("Scanner: read blob error", "kvIndex", kvIndex, "blobHash", fmt.Sprintf("0x%x", commit), "err", err)
+			s.lg.Error("Scanner: read blob error", "kvIndex", kvIndex, "commit", commit.Hex(), "err", err)
 			if err == es.ErrCommitMismatch {
-				s.lg.Error("Scanner: commit mismatch, trying to fix the data", "kvIndex", kvIndex, "blobHash", fmt.Sprintf("0x%x", commit))
+				if err := s.fixKv(kvIndex, commit); err != nil {
+					s.lg.Error("Scanner: fix KV error", "kvIndex", kvIndex, "commit", commit.Hex(), "err", err)
+				}
 			}
 		}
 	}
@@ -86,9 +90,9 @@ func (s *Worker) ScanBatch(ctx context.Context) error {
 func (s *Worker) determineBatchIndexRange() ([]uint64, uint64, error) {
 	localKvs, err := s.queryLocalKvs()
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to get local kv indices: %w", err)
+		return nil, 0, fmt.Errorf("failed to get local KV indices: %w", err)
 	}
-	s.lg.Info("Scanner: query local kv entries done", "localKVs", shortPrt(localKvs))
+	s.lg.Info("Scanner: query local KV entries done", "localKVs", shortPrt(localKvs))
 	localKvTotal := uint64(len(localKvs))
 
 	batchStart := s.nextKvIndex
@@ -96,7 +100,7 @@ func (s *Worker) determineBatchIndexRange() ([]uint64, uint64, error) {
 		batchStart = 0
 		s.lg.Info("Scanner: scan batch start over")
 	}
-	batchEnd := batchStart + MetaDownloadBatchSize
+	batchEnd := batchStart + ScanBatchSize
 	if batchEnd > localKvTotal {
 		batchEnd = localKvTotal
 	}
@@ -106,12 +110,12 @@ func (s *Worker) determineBatchIndexRange() ([]uint64, uint64, error) {
 func (s *Worker) queryLocalKvs() ([]uint64, error) {
 	kvEntryCount, err := s.l1.GetStorageLastBlobIdx(rpc.LatestBlockNumber.Int64())
 	if err != nil {
-		return nil, fmt.Errorf("failed to query total kv entries: %w", err)
+		return nil, fmt.Errorf("failed to query total KV entries: %w", err)
 	}
-	s.lg.Info("Scanner: query kv entry count done", "kvEntryCount", kvEntryCount)
+	s.lg.Info("Scanner: query KV entry count done", "kvEntryCount", kvEntryCount)
 	var localKvs []uint64
-	kvEntries := s.storageReader.KvEntries()
-	localShards := s.storageReader.Shards()
+	kvEntries := s.sm.KvEntries()
+	localShards := s.sm.Shards()
 	sort.Slice(localShards, func(i, j int) bool {
 		return localShards[i] < localShards[j]
 	})
@@ -127,9 +131,16 @@ func (s *Worker) queryLocalKvs() ([]uint64, error) {
 	return localKvs, nil
 }
 
-func shortPrt(arr []uint64) string {
-	if len(arr) <= 6 {
-		return fmt.Sprintf("%v", arr)
+func (s *Worker) fixKv(kvIndex uint64, commit common.Hash) error {
+	blob, err := DownloadBlobFromRPC(s.rpcEndpoint, kvIndex, commit)
+	if err != nil {
+		return fmt.Errorf("failed to download blob from RPC: %w", err)
 	}
-	return fmt.Sprintf("[%d %d %d... %d %d %d]", arr[0], arr[1], arr[2], arr[len(arr)-3], arr[len(arr)-2], arr[len(arr)-1])
+	s.lg.Info("Download blob from RPC done", "kvIndex", kvIndex, "commit", commit.Hex())
+	commit = es.PrepareCommit(commit)
+	if err := s.sm.TryWrite(kvIndex, blob, commit); err != nil {
+		return fmt.Errorf("failed to write KV: %w", err)
+	}
+	s.lg.Info("Fix data finished", "kvIndex", kvIndex, "commit", commit.Hex())
+	return nil
 }

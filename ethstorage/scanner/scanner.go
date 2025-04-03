@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	MetaDownloadBatchSize = 4096
+	ScanBatchSize = 4096
 )
 
 type Scanner struct {
@@ -31,17 +31,10 @@ type Scanner struct {
 	lg       log.Logger
 }
 
-type StorageReader interface {
-	TryRead(kvIdx uint64, readLen int, commit common.Hash) ([]byte, bool, error)
-	MaxKvSize() uint64
-	KvEntries() uint64
-	Shards() []uint64
-}
-
 func New(
 	ctx context.Context,
 	cfg Config,
-	sr StorageReader,
+	sm *es.StorageManager,
 	loadKvFromCache func(uint64, common.Hash) []byte,
 	l1 es.Il1Source,
 	feed *event.Feed,
@@ -49,7 +42,7 @@ func New(
 ) *Scanner {
 	cctx, cancel := context.WithCancel(ctx)
 	scanner := &Scanner{
-		worker:   NewWorker(sr, loadKvFromCache, l1, lg),
+		worker:   NewWorker(sm, loadKvFromCache, l1, cfg.EsRpc, lg),
 		feed:     feed,
 		interval: time.Minute * time.Duration(cfg.Interval),
 		ctx:      cctx,
@@ -101,18 +94,12 @@ func (s *Scanner) start() {
 		defer ticker.Stop()
 
 		s.doWork()
-		// var isWorking sync.Mutex
 		for {
 			select {
 			case <-s.ctx.Done():
 				return
 			case <-ticker.C:
-				// if isWorking.TryLock() {
-				// 	go func() {
-				// 		defer isWorking.Unlock()
 				s.doWork()
-				// 	}()
-				// }
 			}
 		}
 	}()

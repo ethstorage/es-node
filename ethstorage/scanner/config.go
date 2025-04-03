@@ -9,13 +9,15 @@ import (
 )
 
 const (
-	EnabledFlagName = "scanner.enabled"
-	IntervalName    = "scanner.interval"
+	EnabledFlagName  = "scanner.enabled"
+	IntervalFlagName = "scanner.interval"
+	EsRpcFlagName    = "scanner.es_rpc"
 )
 
 type Config struct {
 	Enabled  bool
 	Interval int
+	EsRpc    string
 }
 
 func CLIFlags(envPrefix string) []cli.Flag {
@@ -27,10 +29,15 @@ func CLIFlags(envPrefix string) []cli.Flag {
 			EnvVar: rollup.PrefixEnvVar(envPrefix, "ENABLED"),
 		},
 		cli.IntFlag{
-			Name:   IntervalName,
+			Name:   IntervalFlagName,
 			Usage:  "Data scan interval in minutes",
 			EnvVar: rollup.PrefixEnvVar(envPrefix, "INTERVAL"),
 			Value:  3,
+		},
+		cli.StringFlag{
+			Name:   EsRpcFlagName,
+			Usage:  "EthStorage RPC endpoint",
+			EnvVar: rollup.PrefixEnvVar(envPrefix, "ES_RPC"),
 		},
 	}
 	return flags
@@ -46,6 +53,7 @@ func NewConfig(ctx *cli.Context) *Config {
 	}
 	return &Config{
 		Enabled:  true,
-		Interval: ctx.GlobalInt(IntervalName),
+		Interval: ctx.GlobalInt(IntervalFlagName),
+		EsRpc:    ctx.GlobalString(EsRpcFlagName),
 	}
 }
