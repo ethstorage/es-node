@@ -15,10 +15,6 @@ import (
 	"github.com/ethstorage/go-ethstorage/ethstorage/p2p/protocol"
 )
 
-const (
-	ScanBatchSize = 4096
-)
-
 type Scanner struct {
 	worker   *Worker
 	feed     *event.Feed
@@ -42,7 +38,7 @@ func New(
 ) *Scanner {
 	cctx, cancel := context.WithCancel(ctx)
 	scanner := &Scanner{
-		worker:   NewWorker(sm, loadKvFromCache, l1, cfg.EsRpc, lg),
+		worker:   NewWorker(sm, loadKvFromCache, l1, cfg.EsRpc, uint64(cfg.BatchSize), lg),
 		feed:     feed,
 		interval: time.Minute * time.Duration(cfg.Interval),
 		ctx:      cctx,

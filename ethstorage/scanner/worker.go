@@ -20,16 +20,18 @@ type Worker struct {
 	loadKvFromCache func(uint64, common.Hash) []byte
 	l1              es.Il1Source
 	rpcEndpoint     string
+	batchSize       uint64
 	nextKvIndex     uint64
 	lg              log.Logger
 }
 
-func NewWorker(sm *es.StorageManager, f func(uint64, common.Hash) []byte, l1 es.Il1Source, rpc string, lg log.Logger) *Worker {
+func NewWorker(sm *es.StorageManager, f func(uint64, common.Hash) []byte, l1 es.Il1Source, rpc string, batchSize uint64, lg log.Logger) *Worker {
 	return &Worker{
 		sm:              sm,
 		loadKvFromCache: f,
 		l1:              l1,
 		rpcEndpoint:     rpc,
+		batchSize:       batchSize,
 		lg:              lg,
 	}
 }
@@ -76,6 +78,10 @@ func (s *Worker) ScanBatch(ctx context.Context) error {
 			}
 			s.lg.Error("Scanner: read blob error", "kvIndex", kvIndex, "commit", commit.Hex(), "err", err)
 			if err == es.ErrCommitMismatch {
+				if s.rpcEndpoint == "" {
+					s.lg.Warn("Scanner: unable to fix blob: no RPC endpoint provided")
+					continue
+				}
 				if err := s.fixKv(kvIndex, commit); err != nil {
 					s.lg.Error("Scanner: fix blob error", "kvIndex", kvIndex, "commit", commit.Hex(), "err", err)
 				}
@@ -102,7 +108,7 @@ func (s *Worker) determineBatchIndexRange() ([]uint64, uint64, error) {
 		batchStart = 0
 		s.lg.Info("Scanner: scan batch start over")
 	}
-	batchEnd := batchStart + ScanBatchSize
+	batchEnd := batchStart + s.batchSize
 	if batchEnd > localKvTotal {
 		batchEnd = localKvTotal
 	}

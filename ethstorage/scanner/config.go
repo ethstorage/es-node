@@ -9,15 +9,17 @@ import (
 )
 
 const (
-	EnabledFlagName  = "scanner.enabled"
-	IntervalFlagName = "scanner.interval"
-	EsRpcFlagName    = "scanner.es-rpc"
+	EnabledFlagName   = "scanner.enabled"
+	BatchSizeFlagName = "scanner.batch-size"
+	IntervalFlagName  = "scanner.interval"
+	EsRpcFlagName     = "scanner.es-rpc"
 )
 
 type Config struct {
-	Enabled  bool
-	Interval int
-	EsRpc    string
+	Enabled   bool
+	BatchSize int
+	Interval  int
+	EsRpc     string
 }
 
 func CLIFlags(envPrefix string) []cli.Flag {
@@ -29,14 +31,20 @@ func CLIFlags(envPrefix string) []cli.Flag {
 			EnvVar: rollup.PrefixEnvVar(envPrefix, "ENABLED"),
 		},
 		cli.IntFlag{
+			Name:   BatchSizeFlagName,
+			Usage:  "Data scan batch size",
+			EnvVar: rollup.PrefixEnvVar(envPrefix, "BATCH_SIZE"),
+			Value:  4096,
+		},
+		cli.IntFlag{
 			Name:   IntervalFlagName,
 			Usage:  "Data scan interval in minutes",
 			EnvVar: rollup.PrefixEnvVar(envPrefix, "INTERVAL"),
-			Value:  3,
+			Value:  4,
 		},
 		cli.StringFlag{
 			Name:   EsRpcFlagName,
-			Usage:  "EthStorage RPC endpoint",
+			Usage:  "EthStorage RPC endpoint to query blobs",
 			EnvVar: rollup.PrefixEnvVar(envPrefix, "ES_RPC"),
 		},
 	}
@@ -52,8 +60,9 @@ func NewConfig(ctx *cli.Context) *Config {
 		}
 	}
 	return &Config{
-		Enabled:  true,
-		Interval: ctx.GlobalInt(IntervalFlagName),
-		EsRpc:    ctx.GlobalString(EsRpcFlagName),
+		Enabled:   true,
+		BatchSize: ctx.GlobalInt(BatchSizeFlagName),
+		Interval:  ctx.GlobalInt(IntervalFlagName),
+		EsRpc:     ctx.GlobalString(EsRpcFlagName),
 	}
 }
