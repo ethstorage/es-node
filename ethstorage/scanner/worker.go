@@ -139,10 +139,10 @@ func (s *Worker) fixKv(kvIndex uint64, commit common.Hash) error {
 		return fmt.Errorf("failed to download blob from RPC: %w", err)
 	}
 	s.lg.Info("Download blob from RPC done", "kvIndex", kvIndex, "commit", commit.Hex())
-	commit = es.PrepareCommit(commit)
-	if err := s.sm.TryWrite(kvIndex, blob, commit); err != nil {
+	preparedCommit := es.PrepareCommit(commit)
+	if err := s.sm.TryWrite(kvIndex, blob, preparedCommit); err != nil {
 		return fmt.Errorf("failed to write KV: %w", err)
 	}
-	s.lg.Info("Fix blob done", "kvIndex", kvIndex, "commit", commit.Hex())
+	s.lg.Info("Fix blob successfully!", "kvIndex", kvIndex, "commit", preparedCommit.Hex())
 	return nil
 }

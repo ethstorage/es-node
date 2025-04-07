@@ -19,7 +19,7 @@ import (
 func DownloadBlobFromRPC(rpcEndpoint string, kvIndex uint64, hash common.Hash) ([]byte, error) {
 	client, err := rpc.DialHTTP(rpcEndpoint)
 	if err != nil {
-		return nil, fmt.Errorf("failed to dial RPC", "error", err, "rpc", rpcEndpoint)
+		return nil, fmt.Errorf("failed to dial RPC: error=%v, rpc=%s", err, rpcEndpoint)
 	}
 	var result hexutil.Bytes
 	// kvIndex, blobHash, encodeType, offset, length

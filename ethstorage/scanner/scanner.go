@@ -49,11 +49,13 @@ func New(
 		cancel:   cancel,
 		lg:       lg,
 	}
+	scanner.wg.Add(1)
 	go scanner.update()
 	return scanner
 }
 
 func (s *Scanner) update() {
+	defer s.wg.Done()
 	syncEventCh := make(chan protocol.EthStorageSyncDone)
 	sub := s.feed.Subscribe(syncEventCh)
 	defer func() {
@@ -65,7 +67,11 @@ func (s *Scanner) update() {
 	for {
 		s.lg.Debug("Scanner update loop")
 		select {
-		case syncDone := <-syncEventCh:
+		case syncDone, ok := <-syncEventCh:
+			if !ok {
+				s.lg.Debug("syncEventCh closed, exiting update loop")
+				return
+			}
 			if syncDone.DoneType == protocol.AllShardDone {
 				s.lg.Info("Scanner update loop received event - all shards done.")
 				s.start()
