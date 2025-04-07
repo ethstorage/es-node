@@ -77,13 +77,15 @@ func (s *Worker) ScanBatch(ctx context.Context) error {
 			s.lg.Error("Scanner: read blob error", "kvIndex", kvIndex, "commit", commit.Hex(), "err", err)
 			if err == es.ErrCommitMismatch {
 				if err := s.fixKv(kvIndex, commit); err != nil {
-					s.lg.Error("Scanner: fix KV error", "kvIndex", kvIndex, "commit", commit.Hex(), "err", err)
+					s.lg.Error("Scanner: fix blob error", "kvIndex", kvIndex, "commit", commit.Hex(), "err", err)
 				}
 			}
 		}
 	}
 	s.nextKvIndex = nextKvIndex
-	s.lg.Info("Scanner: scan batch done", "from", kvsInBatch[0], "to", kvsInBatch[len(kvsInBatch)-1], "count", len(kvsInBatch), "nextKvIndex", nextKvIndex)
+	if len(kvsInBatch) > 0 {
+		s.lg.Info("Scanner: scan batch done", "from", kvsInBatch[0], "to", kvsInBatch[len(kvsInBatch)-1], "count", len(kvsInBatch), "nextKvIndex", nextKvIndex)
+	}
 	return nil
 }
 
@@ -141,6 +143,6 @@ func (s *Worker) fixKv(kvIndex uint64, commit common.Hash) error {
 	if err := s.sm.TryWrite(kvIndex, blob, commit); err != nil {
 		return fmt.Errorf("failed to write KV: %w", err)
 	}
-	s.lg.Info("Fix data finished", "kvIndex", kvIndex, "commit", commit.Hex())
+	s.lg.Info("Fix blob done", "kvIndex", kvIndex, "commit", commit.Hex())
 	return nil
 }

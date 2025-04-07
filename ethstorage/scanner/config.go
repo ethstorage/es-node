@@ -11,7 +11,7 @@ import (
 const (
 	EnabledFlagName  = "scanner.enabled"
 	IntervalFlagName = "scanner.interval"
-	EsRpcFlagName    = "scanner.es_rpc"
+	EsRpcFlagName    = "scanner.es-rpc"
 )
 
 type Config struct {

@@ -59,7 +59,7 @@ func (s *Scanner) update() {
 	defer func() {
 		sub.Unsubscribe()
 		close(syncEventCh)
-		s.lg.Info("Scanner event subscription closed")
+		s.lg.Debug("Scanner event subscription closed")
 	}()
 
 	for {

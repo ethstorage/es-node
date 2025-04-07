@@ -304,7 +304,7 @@ func EsNodeSync(ctx *cli.Context) error {
 	kvIndex := uint64(ctx.Int(kvIndexFlagName))
 	log.Info("Read flag", "name", kvIndexFlagName, "value", kvIndex)
 	if !ctx.IsSet(esRpcFlagName) {
-		return fmt.Errorf("es_rpc must be specified")
+		return fmt.Errorf("es-rpc must be specified")
 	}
 	esRpc := ctx.String(esRpcFlagName)
 	log.Info("Read flag", "name", esRpcFlagName, "value", esRpc)
