@@ -4,6 +4,7 @@
 package scanner
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"sort"
@@ -19,19 +20,17 @@ type Worker struct {
 	sm              *es.StorageManager
 	loadKvFromCache func(uint64, common.Hash) []byte
 	l1              es.Il1Source
-	rpcEndpoint     string
-	batchSize       uint64
+	cfg             Config
 	nextKvIndex     uint64
 	lg              log.Logger
 }
 
-func NewWorker(sm *es.StorageManager, f func(uint64, common.Hash) []byte, l1 es.Il1Source, rpc string, batchSize uint64, lg log.Logger) *Worker {
+func NewWorker(sm *es.StorageManager, f func(uint64, common.Hash) []byte, l1 es.Il1Source, cfg Config, lg log.Logger) *Worker {
 	return &Worker{
 		sm:              sm,
 		loadKvFromCache: f,
 		l1:              l1,
-		rpcEndpoint:     rpc,
-		batchSize:       batchSize,
+		cfg:             cfg,
 		lg:              lg,
 	}
 }
@@ -55,12 +54,22 @@ func (s *Worker) ScanBatch(ctx context.Context) error {
 		default:
 		}
 
-		kvIndex := kvsInBatch[i]
+		var err error
+		var found bool
 		var commit common.Hash
 		copy(commit[:], meta[32-es.HashSizeInContract:32])
-
-		// query blob and check commit from storage
-		_, found, err := s.sm.TryRead(kvIndex, int(s.sm.MaxKvSize()), commit)
+		kvIndex := kvsInBatch[i]
+		if s.cfg.Mode == modeCheckMeta {
+			// check meta only
+			var metaLocal []byte
+			metaLocal, found, err = s.sm.TryReadMeta(kvIndex)
+			if metaLocal != nil && !bytes.Equal(metaLocal[0:es.HashSizeInContract], commit[0:es.HashSizeInContract]) {
+				err = es.ErrCommitMismatch
+			}
+		} else if s.cfg.Mode == modeCheckBlob {
+			// query blob and check meta from storage
+			_, found, err = s.sm.TryRead(kvIndex, int(s.sm.MaxKvSize()), commit)
+		}
 		if found && err == nil {
 			s.lg.Debug("Scanner: check KV done", "kvIndex", kvIndex, "commit", commit)
 			continue
@@ -71,14 +80,14 @@ func (s *Worker) ScanBatch(ctx context.Context) error {
 			continue
 		}
 		if err != nil {
-			// query blob and check commit from downloader cache
+			// chances are the blob is downloaded but not written to the storage
 			if blob := s.loadKvFromCache(kvIndex, commit); blob != nil {
 				s.lg.Debug("Scanner: check KV done from cache", "kvIndex", kvIndex, "commit", commit)
 				continue
 			}
 			s.lg.Error("Scanner: read blob error", "kvIndex", kvIndex, "commit", commit.Hex(), "err", err)
 			if err == es.ErrCommitMismatch {
-				if s.rpcEndpoint == "" {
+				if s.cfg.EsRpc == "" {
 					s.lg.Warn("Scanner: unable to fix blob: no RPC endpoint provided")
 					continue
 				}
@@ -108,7 +117,7 @@ func (s *Worker) determineBatchIndexRange() ([]uint64, uint64, error) {
 		batchStart = 0
 		s.lg.Info("Scanner: scan batch start over")
 	}
-	batchEnd := batchStart + s.batchSize
+	batchEnd := batchStart + uint64(s.cfg.BatchSize)
 	if batchEnd > localKvTotal {
 		batchEnd = localKvTotal
 	}
@@ -140,7 +149,7 @@ func (s *Worker) queryLocalKvs() ([]uint64, error) {
 }
 
 func (s *Worker) fixKv(kvIndex uint64, commit common.Hash) error {
-	blob, err := DownloadBlobFromRPC(s.rpcEndpoint, kvIndex, commit)
+	blob, err := DownloadBlobFromRPC(s.cfg.EsRpc, kvIndex, commit)
 	if err != nil {
 		return fmt.Errorf("failed to download blob from RPC: %w", err)
 	}

@@ -38,7 +38,7 @@ func New(
 ) *Scanner {
 	cctx, cancel := context.WithCancel(ctx)
 	scanner := &Scanner{
-		worker:   NewWorker(sm, loadKvFromCache, l1, cfg.EsRpc, uint64(cfg.BatchSize), lg),
+		worker:   NewWorker(sm, loadKvFromCache, l1, cfg, lg),
 		feed:     feed,
 		interval: time.Minute * time.Duration(cfg.Interval),
 		ctx:      cctx,

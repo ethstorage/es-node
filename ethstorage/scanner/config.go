@@ -9,14 +9,20 @@ import (
 )
 
 const (
-	EnabledFlagName   = "scanner.enabled"
+	modeDisabled = iota
+	modeCheckMeta
+	modeCheckBlob
+)
+
+const (
+	ModeFlagName      = "scanner.mode"
 	BatchSizeFlagName = "scanner.batch-size"
 	IntervalFlagName  = "scanner.interval"
 	EsRpcFlagName     = "scanner.es-rpc"
 )
 
 type Config struct {
-	Enabled   bool
+	Mode      int
 	BatchSize int
 	Interval  int
 	EsRpc     string
@@ -25,10 +31,11 @@ type Config struct {
 func CLIFlags(envPrefix string) []cli.Flag {
 	envPrefix += "_SCANNER"
 	flags := []cli.Flag{
-		cli.BoolFlag{
-			Name:   EnabledFlagName,
-			Usage:  "Data scan enabled",
-			EnvVar: rollup.PrefixEnvVar(envPrefix, "ENABLED"),
+		cli.IntFlag{
+			Name:   ModeFlagName,
+			Usage:  "Data scan mode, 0: disabled, 1: check meta, 2: check blob",
+			EnvVar: rollup.PrefixEnvVar(envPrefix, "MODE"),
+			Value:  1,
 		},
 		cli.IntFlag{
 			Name:   BatchSizeFlagName,
@@ -52,15 +59,15 @@ func CLIFlags(envPrefix string) []cli.Flag {
 }
 
 func NewConfig(ctx *cli.Context) *Config {
-	// scan unless specifically disabled
-	if ctx.GlobalIsSet(EnabledFlagName) {
-		enabled := ctx.GlobalBool(EnabledFlagName)
-		if !enabled {
+	var mode int
+	if ctx.GlobalIsSet(ModeFlagName) {
+		mode = ctx.GlobalInt(ModeFlagName)
+		if mode != modeCheckMeta && mode != modeCheckBlob {
 			return nil
 		}
 	}
 	return &Config{
-		Enabled:   true,
+		Mode:      mode,
 		BatchSize: ctx.GlobalInt(BatchSizeFlagName),
 		Interval:  ctx.GlobalInt(IntervalFlagName),
 		EsRpc:     ctx.GlobalString(EsRpcFlagName),
