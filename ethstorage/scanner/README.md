@@ -6,11 +6,12 @@ This service offers a lightweight yet effective way to maintain network-wide dat
 
 ### Usage
 
-The scanner service is enabled as part of es-node process by default but can be disabled by `--scanner.enabled=false` or `ES_NODE_SCANNER_ENABLED=false`.
+The scanner service is enabled with `check meta` mode by default:
+- `--scanner.mode`                   Data scan mode, 0: disabled, 1: check meta, 2: check blob (default: 1)[`ES_NODE_SCANNER_MODE`].
 
 The following settings are required if the service is not disabled manually:
-- `--scanner.batch-size`             Data scan batch size (default: 4096) [`$ES_NODE_SCANNER_BATCH_SIZE`]
-- `--scanner.interval`               Data scan interval in minutes (default: 4) [`$ES_NODE_SCANNER_INTERVAL`]
+- `--scanner.batch-size`             Data scan batch size (default: 8192) [`$ES_NODE_SCANNER_BATCH_SIZE`]
+- `--scanner.interval`               Data scan interval in minutes (default: 3) [`$ES_NODE_SCANNER_INTERVAL`]
 
 The RPC configuration is necessary if you need to have the wrong blob fixed automatically:
 - `--scanner.es-rpc`                 EthStorage RPC endpoint [`$ES_NODE_SCANNER_ES_RPC`]

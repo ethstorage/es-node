@@ -43,13 +43,13 @@ func CLIFlags(envPrefix string) []cli.Flag {
 			Name:   BatchSizeFlagName,
 			Usage:  "Data scan batch size",
 			EnvVar: rollup.PrefixEnvVar(envPrefix, "BATCH_SIZE"),
-			Value:  4096,
+			Value:  8192,
 		},
 		cli.IntFlag{
 			Name:   IntervalFlagName,
 			Usage:  "Data scan interval in minutes",
 			EnvVar: rollup.PrefixEnvVar(envPrefix, "INTERVAL"),
-			Value:  4,
+			Value:  3,
 		},
 		cli.StringFlag{
 			Name:   EsRpcFlagName,
