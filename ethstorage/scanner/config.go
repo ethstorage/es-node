@@ -4,6 +4,8 @@
 package scanner
 
 import (
+	"fmt"
+
 	"github.com/ethstorage/go-ethstorage/ethstorage/rollup"
 	"github.com/urfave/cli"
 )
@@ -59,12 +61,12 @@ func CLIFlags(envPrefix string) []cli.Flag {
 }
 
 func NewConfig(ctx *cli.Context) *Config {
-	var mode int
-	if ctx.GlobalIsSet(ModeFlagName) {
-		mode = ctx.GlobalInt(ModeFlagName)
-		if mode != modeCheckMeta && mode != modeCheckBlob {
-			return nil
-		}
+	mode := ctx.GlobalInt(ModeFlagName)
+	if mode == modeDisabled {
+		return nil
+	}
+	if mode != modeCheckMeta && mode != modeCheckBlob {
+		panic(fmt.Sprintf("invalid scanner mode: %d", mode))
 	}
 	return &Config{
 		Mode:      mode,

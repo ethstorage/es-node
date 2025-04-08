@@ -69,6 +69,8 @@ func (s *Worker) ScanBatch(ctx context.Context) error {
 		} else if s.cfg.Mode == modeCheckBlob {
 			// query blob and check meta from storage
 			_, found, err = s.sm.TryRead(kvIndex, int(s.sm.MaxKvSize()), commit)
+		} else {
+			panic(fmt.Sprintf("invalid scanner mode: %d", s.cfg.Mode))
 		}
 		if found && err == nil {
 			// happy path
