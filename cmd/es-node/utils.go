@@ -234,7 +234,6 @@ func initShardManager(ctx *cli.Context, l1Rpc string, l1contract common.Address)
 	storageCfg.Filenames = ctx.StringSlice(flags.StorageFiles.Name)
 	shardManager := ethstorage.NewShardManager(storageCfg.L1Contract, storageCfg.KvSize, storageCfg.KvEntriesPerShard, storageCfg.ChunkSize)
 	for _, filename := range storageCfg.Filenames {
-		fmt.Printf("Adding data file %s\n", filename)
 		df, err := ethstorage.OpenDataFile(filename)
 		if err != nil {
 			return nil, fmt.Errorf("open data file failed: %w", err)
@@ -244,8 +243,8 @@ func initShardManager(ctx *cli.Context, l1Rpc string, l1contract common.Address)
 		}
 		shardManager.AddDataFileAndShard(df)
 	}
-	if shardManager.IsComplete() != nil {
-		return nil, fmt.Errorf("data files are not completed")
+	if err := shardManager.IsComplete(); err != nil {
+		return nil, fmt.Errorf("data files are not completed, %w", err)
 	}
 	return shardManager, nil
 }

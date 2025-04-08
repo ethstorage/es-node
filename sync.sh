@@ -18,7 +18,7 @@ start_flags=" sync \
   $file_flags \
   --storage.l1contract 0x804C520d3c084C805E37A35E90057Ac32831F96f \
   --l1.rpc http://88.99.30.186:8545 \
-  --es-rpc http://65.108.236.27:9540 \
+  --es_rpc http://65.108.236.27:9540 \
   $@"
 
 exec $executable $start_flags

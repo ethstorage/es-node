@@ -71,6 +71,7 @@ func (s *Worker) ScanBatch(ctx context.Context) error {
 			_, found, err = s.sm.TryRead(kvIndex, int(s.sm.MaxKvSize()), commit)
 		}
 		if found && err == nil {
+			// happy path
 			s.lg.Debug("Scanner: check KV done", "kvIndex", kvIndex, "commit", commit)
 			continue
 		}
@@ -91,6 +92,7 @@ func (s *Worker) ScanBatch(ctx context.Context) error {
 					s.lg.Warn("Scanner: unable to fix blob: no RPC endpoint provided")
 					continue
 				}
+				// try to fix the blob
 				if err := s.fixKv(kvIndex, commit); err != nil {
 					s.lg.Error("Scanner: fix blob error", "kvIndex", kvIndex, "commit", commit.Hex(), "err", err)
 				}
