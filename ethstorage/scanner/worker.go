@@ -128,7 +128,7 @@ func (s *Worker) queryLocalKvs() ([]uint64, error) {
 		return localShards[i] < localShards[j]
 	})
 	for _, shardId := range localShards {
-		for k := range kvEntries {
+		for k := uint64(0); k < kvEntries; k++ {
 			kvIdx := shardId*kvEntries + k
 			if kvIdx < kvEntryCount {
 				// only check non-empty data
