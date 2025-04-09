@@ -17,7 +17,6 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethstorage/go-ethstorage/ethstorage"
 	es "github.com/ethstorage/go-ethstorage/ethstorage"
 	"github.com/ethstorage/go-ethstorage/ethstorage/flags"
 	"github.com/ethstorage/go-ethstorage/ethstorage/storage"
@@ -232,9 +231,9 @@ func initShardManager(ctx *cli.Context, l1Rpc string, l1contract common.Address)
 		return nil, fmt.Errorf("flag is required: %s", flags.StorageFiles.Name)
 	}
 	storageCfg.Filenames = ctx.StringSlice(flags.StorageFiles.Name)
-	shardManager := ethstorage.NewShardManager(storageCfg.L1Contract, storageCfg.KvSize, storageCfg.KvEntriesPerShard, storageCfg.ChunkSize)
+	shardManager := es.NewShardManager(storageCfg.L1Contract, storageCfg.KvSize, storageCfg.KvEntriesPerShard, storageCfg.ChunkSize)
 	for _, filename := range storageCfg.Filenames {
-		df, err := ethstorage.OpenDataFile(filename)
+		df, err := es.OpenDataFile(filename)
 		if err != nil {
 			return nil, fmt.Errorf("open data file failed: %w", err)
 		}
