@@ -331,11 +331,6 @@ func EsNodeSync(ctx *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to download blob from RPC: %w", err)
 	}
-	// set the 3rd byte of the blob to its value plus 1
-	lg.Warn("Blob value is set to its value plus 1 for testing", "blob index before", blob[2])
-	blob[2] = blob[2] + 1
-	lg.Warn("Blob value is set to its value plus 1 for testing", "blob index after", blob[2])
-
 	lg.Info("Download blob from RPC done", "kvIndex", kvIndex, "commit", commit.Hex())
 	// write blob and meta
 	shardManager, err := initShardManager(ctx, l1Rpc, l1contract)
