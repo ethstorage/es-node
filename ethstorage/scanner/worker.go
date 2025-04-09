@@ -117,7 +117,7 @@ func (s *Worker) determineBatchIndexRange() ([]uint64, uint64, error) {
 	localKvTotal := uint64(len(localKvs))
 
 	batchStart := s.nextKvIndex
-	if batchStart == localKvTotal {
+	if batchStart >= localKvTotal {
 		batchStart = 0
 		s.lg.Info("Scanner: scan batch start over")
 	}
