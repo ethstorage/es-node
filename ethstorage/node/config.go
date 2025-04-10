@@ -18,6 +18,7 @@ import (
 	"github.com/ethstorage/go-ethstorage/ethstorage/miner"
 	"github.com/ethstorage/go-ethstorage/ethstorage/p2p"
 	"github.com/ethstorage/go-ethstorage/ethstorage/rollup"
+	"github.com/ethstorage/go-ethstorage/ethstorage/scanner"
 	"github.com/ethstorage/go-ethstorage/ethstorage/storage"
 )
 
@@ -60,6 +61,8 @@ type Config struct {
 	Mining *miner.Config
 
 	Archiver *archiver.Config
+
+	Scanner *scanner.Config
 }
 
 type MetricsConfig struct {
