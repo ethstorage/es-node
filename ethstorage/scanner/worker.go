@@ -137,6 +137,7 @@ func (s *Worker) queryLocalKvs() ([]uint64, error) {
 	var localKvs []uint64
 	kvEntries := s.sm.KvEntries()
 	localShards := s.sm.Shards()
+	s.lg.Info("Scanner: local shards", "shards", localShards)
 	sort.Slice(localShards, func(i, j int) bool {
 		return localShards[i] < localShards[j]
 	})

@@ -92,7 +92,7 @@ func (s *Scanner) start() {
 	go func() {
 		defer s.wg.Done()
 		ticker := time.NewTicker(s.interval)
-		s.lg.Info("Scanner started", "mode", s.worker.cfg.Mode, "interval", s.interval.String())
+		s.lg.Info("Scanner started", "mode", s.worker.cfg.Mode, "interval", s.interval.String(), "batchSize", s.worker.cfg.BatchSize)
 		defer ticker.Stop()
 
 		s.doWork()
