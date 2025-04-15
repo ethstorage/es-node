@@ -512,10 +512,8 @@ func (s *StorageManager) getKvMetas(kvIndices []uint64) ([][32]byte, error) {
 	return metas, nil
 }
 
+// Lock is required on the caller side to use this function
 func (s *StorageManager) TryWrite(kvIdx uint64, b []byte, commit common.Hash) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	success, err := s.shardManager.TryWrite(kvIdx, b, commit)
 	if !success || err != nil {
 		return errors.New("blob write failed")
