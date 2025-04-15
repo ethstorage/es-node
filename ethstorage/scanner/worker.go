@@ -17,8 +17,19 @@ import (
 	es "github.com/ethstorage/go-ethstorage/ethstorage"
 )
 
+type IStorageManager interface {
+	TryReadMeta(kvIdx uint64) ([]byte, bool, error)
+	TryRead(kvIdx uint64, readLen int, commit common.Hash) ([]byte, bool, error)
+	TryWrite(kvIndex uint64, blob []byte, commit common.Hash) error
+	MaxKvSize() uint64
+	KvEntries() uint64
+	Shards() []uint64
+}
+
+type fetchBlobFunc func(rpcEndpoint string, kvIndex uint64, hash common.Hash) ([]byte, error)
+
 type Worker struct {
-	sm              *es.StorageManager
+	sm              IStorageManager
 	loadKvFromCache func(uint64, common.Hash) []byte
 	l1              es.Il1Source
 	cfg             Config
@@ -27,7 +38,7 @@ type Worker struct {
 	mu              sync.Mutex // to keep fixKv() atomic
 }
 
-func NewWorker(sm *es.StorageManager, f func(uint64, common.Hash) []byte, l1 es.Il1Source, cfg Config, lg log.Logger) *Worker {
+func NewWorker(sm IStorageManager, f func(uint64, common.Hash) []byte, l1 es.Il1Source, cfg Config, lg log.Logger) *Worker {
 	return &Worker{
 		sm:              sm,
 		loadKvFromCache: f,
@@ -96,9 +107,8 @@ func (s *Worker) ScanBatch(ctx context.Context) error {
 					s.lg.Warn("Scanner: unable to fix blob: no RPC endpoint provided")
 					continue
 				}
-				// try to fix the blob
 				s.mu.Lock()
-				if err := s.fixKv(kvIndex, commit); err != nil {
+				if err := s.fixKv(kvIndex, commit, DownloadBlobFromRPC); err != nil {
 					s.lg.Error("Scanner: fix blob error", "kvIndex", kvIndex, "commit", commit.Hex(), "err", err)
 				}
 				s.mu.Unlock()
@@ -157,38 +167,33 @@ func (s *Worker) queryLocalKvs() ([]uint64, error) {
 	return localKvs, nil
 }
 
-func (s *Worker) fixKv(kvIndex uint64, commit common.Hash) error {
-	blob, err := DownloadBlobFromRPC(s.cfg.EsRpc, kvIndex, commit)
-	if err != nil {
-		return fmt.Errorf("failed to download blob from RPC: %w", err)
-	}
-	s.lg.Info("Scanner: download blob from RPC done", "kvIndex", kvIndex, "commit", commit.Hex())
-
+func (s *Worker) fixKv(kvIndex uint64, commit common.Hash, fetchBlob fetchBlobFunc) error {
+	// retrieve the meta since the commit in the batch download could be outdated
 	metas, err := s.l1.GetKvMetas([]uint64{kvIndex}, rpc.LatestBlockNumber.Int64())
 	if err != nil {
-		s.lg.Error("Scanner: error getting meta range", "kvIndex", kvIndex)
-		return fmt.Errorf("failed to query KV metas %w", err)
+		s.lg.Error("Scanner: error getting meta", "kvIndex", kvIndex)
+		return fmt.Errorf("failed to query KV meta %w", err)
 	}
 	s.lg.Info("Scanner: query KV meta done", "kvIndex", kvIndex, "meta", metas[0])
 	newCommit := common.BytesToHash(metas[0][0:es.HashSizeInContract])
-	// Chances are user updated the kv after scanner downloaded the meta in batch
 	if !bytes.Equal(newCommit[:], commit[0:es.HashSizeInContract]) {
-		s.lg.Warn("Scanner: fix blob aborted due to the meta in the contract has been updated: %x", newCommit)
-		// In case the RPC node has the latest blob, most likely in the downloader cache
-		s.lg.Info("Scanner: trying to download latest blob from RPC", "kvIndex", kvIndex, "commit", newCommit.Hex())
-		newBlob, err := DownloadBlobFromRPC(s.cfg.EsRpc, kvIndex, newCommit)
-		if err != nil {
-			return fmt.Errorf("failed to download blob from RPC: kvIndex=%d, commit=%x, %w, ", kvIndex, newCommit, err)
+		// Chances are the kv has been updated after scanner downloaded the meta in batch
+		metaLocal, _, _ := s.sm.TryReadMeta(kvIndex)
+		if metaLocal != nil && bytes.Equal(metaLocal[0:es.HashSizeInContract], newCommit[:]) {
+			s.lg.Info("Scanner: fix blob aborted: updated commits are same between the contract and local", "kvIndex", kvIndex, "commit", newCommit)
+			return nil
 		}
-		s.lg.Info("Scanner: download blob from RPC done", "kvIndex", kvIndex, "commit", newCommit.Hex())
-		blob = newBlob
-		commit = newCommit
 	}
-
-	preparedCommit := es.PrepareCommit(commit)
+	s.lg.Info("Scanner: trying to download blob from RPC", "kvIndex", kvIndex, "commit", newCommit)
+	blob, err := fetchBlob(s.cfg.EsRpc, kvIndex, newCommit)
+	if err != nil {
+		return fmt.Errorf("failed to download blob from RPC: kvIndex=%d, commit=%x, %w, ", kvIndex, newCommit, err)
+	}
+	s.lg.Info("Scanner: download blob from RPC done", "kvIndex", kvIndex, "commit", newCommit)
+	preparedCommit := es.PrepareCommit(newCommit)
 	if err := s.sm.TryWrite(kvIndex, blob, preparedCommit); err != nil {
-		return fmt.Errorf("failed to write KV: %w", err)
+		return fmt.Errorf("failed to write KV: kvIndex=%d, commit=%x, %w", kvIndex, preparedCommit, err)
 	}
-	s.lg.Info("Scanner: fix blob successfully!", "kvIndex", kvIndex, "commit", preparedCommit.Hex())
+	s.lg.Info("Scanner: fix blob successfully!", "kvIndex", kvIndex, "commit", preparedCommit)
 	return nil
 }
