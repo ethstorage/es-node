@@ -14,6 +14,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/rpc"
 )
 
 const (
@@ -25,6 +26,8 @@ const (
 var (
 	ErrCommitMismatch = errors.New("mismatched commit")
 )
+
+type FetchBlobFunc func(kvIndex uint64, hash common.Hash) ([]byte, error)
 
 type Il1Source interface {
 	GetKvMetas(kvIndices []uint64, blockNumber int64) ([][32]byte, error)
@@ -512,11 +515,53 @@ func (s *StorageManager) getKvMetas(kvIndices []uint64) ([][32]byte, error) {
 	return metas, nil
 }
 
-// Lock is required on the caller side to use this function
-func (s *StorageManager) TryWrite(kvIdx uint64, b []byte, commit common.Hash) error {
-	success, err := s.shardManager.TryWrite(kvIdx, b, commit)
-	if !success || err != nil {
-		return errors.New("blob write failed")
+// CheckMeta will check the meta in the contract and local storage file.
+// If the meta in the contract is different with the one in local storage file, it will return ErrCommitMismatch
+// Otherwise, it will return nil
+// It will also return the meta in the contract in each case.
+func (s *StorageManager) CheckMeta(kvIdx uint64) ([]byte, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.checkMeta(kvIdx)
+}
+
+func (s *StorageManager) checkMeta(kvIdx uint64) ([]byte, error) {
+	metaInContract, err := s.l1Source.GetKvMetas([]uint64{kvIdx}, rpc.LatestBlockNumber.Int64())
+	if err != nil {
+		return nil, fmt.Errorf("failed to query KV meta: kvIndex=%d, %w", kvIdx, err)
+	}
+	if len(metaInContract) == 0 {
+		return nil, fmt.Errorf("failed to query KV meta: kvIndex=%d, no meta found", kvIdx)
+	}
+	metaLocal, _, _ := s.shardManager.TryReadMeta(kvIdx)
+	if metaLocal != nil && bytes.Equal(metaLocal[0:HashSizeInContract], metaInContract[0][0:HashSizeInContract]) {
+		return metaInContract[0][:], ErrCommitMismatch
+	}
+	return metaInContract[0][:], nil
+}
+
+func (s *StorageManager) TryWrite(kvIdx uint64, commit common.Hash, blob []byte, fetchBlob FetchBlobFunc) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	newMeta, err := s.checkMeta(kvIdx)
+	if err != nil {
+		// fetch the blob again if the meta has been updated
+		if newMeta != nil && !bytes.Equal(newMeta[0:HashSizeInContract], commit[0:HashSizeInContract]) {
+			commit = common.BytesToHash(newMeta)
+			newBlob, err := fetchBlob(kvIdx, commit)
+			if err != nil {
+				return fmt.Errorf("failed to fetch the blob from RPC: kvIdx=%d, commit=%x, %w", kvIdx, commit, err)
+			}
+			blob = newBlob
+		}
+	}
+	ok, err := s.shardManager.TryWrite(kvIdx, blob, PrepareCommit(commit))
+	if !ok {
+		return fmt.Errorf("failed to write blob: kv %d not exist", kvIdx)
+	}
+	if err != nil {
+		return fmt.Errorf("failed to write blob: kvIdx=%d, %w", kvIdx, err)
 	}
 	return nil
 }
