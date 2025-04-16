@@ -20,7 +20,7 @@ type IStorageManager interface {
 	TryRead(kvIdx uint64, readLen int, commit common.Hash) ([]byte, bool, error)
 	TryReadMeta(kvIdx uint64) ([]byte, bool, error)
 	CheckMeta(kvIdx uint64) ([]byte, error)
-	TryWrite(kvIdx uint64, commit common.Hash, blob []byte, fetchBlob es.FetchBlobFunc) error
+	TryWriteWithMetaCheck(kvIdx uint64, commit common.Hash, blob []byte, fetchBlob es.FetchBlobFunc) error
 	MaxKvSize() uint64
 	KvEntries() uint64
 	Shards() []uint64
@@ -104,7 +104,10 @@ func (s *Worker) ScanBatch(ctx context.Context) error {
 					s.lg.Warn("Scanner: unable to fix blob: no RPC endpoint provided")
 					continue
 				}
-				if err := s.fixKv(kvIndex); err != nil {
+				fetchBlob := func(kvIndex uint64, commit common.Hash) ([]byte, error) {
+					return DownloadBlobFromRPC(s.cfg.EsRpc, kvIndex, commit)
+				}
+				if err := s.fixKv(kvIndex, fetchBlob); err != nil {
 					s.lg.Error("Scanner: fix blob error", "kvIndex", kvIndex, "err", err)
 				}
 			}
@@ -162,7 +165,7 @@ func (s *Worker) queryLocalKvs() ([]uint64, error) {
 	return localKvs, nil
 }
 
-func (s *Worker) fixKv(kvIndex uint64) error {
+func (s *Worker) fixKv(kvIndex uint64, fetchBlob es.FetchBlobFunc) error {
 	// check if the commit in the contract has been updated
 	meta, err := s.sm.CheckMeta(kvIndex)
 	if err == nil {
@@ -171,15 +174,12 @@ func (s *Worker) fixKv(kvIndex uint64) error {
 	}
 	commit := common.BytesToHash(meta)
 	s.lg.Info("Scanner: try to fix kv with latest commit", "kvIndex", kvIndex, "commit", commit)
-	fetchBlob := func(kvIndex uint64, commit common.Hash) ([]byte, error) {
-		return DownloadBlobFromRPC(s.cfg.EsRpc, kvIndex, commit)
-	}
 	blob, err := fetchBlob(kvIndex, commit)
 	if err != nil {
 		return fmt.Errorf("failed to fetch blob: kvIndex=%d, commit=%x, %w", kvIndex, commit, err)
 	}
 	s.lg.Info("Scanner: fetch blob done", "kvIndex", kvIndex, "commit", commit)
-	if err := s.sm.TryWrite(kvIndex, commit, blob, fetchBlob); err != nil {
+	if err := s.sm.TryWriteWithMetaCheck(kvIndex, commit, blob, fetchBlob); err != nil {
 		return fmt.Errorf("failed to write KV: kvIndex=%d, commit=%x, %w", kvIndex, commit, err)
 	}
 	s.lg.Info("Scanner: fixed blob successfully!", "kvIndex", kvIndex, "commit", commit)

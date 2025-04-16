@@ -540,7 +540,9 @@ func (s *StorageManager) checkMeta(kvIdx uint64) ([]byte, error) {
 	return metaInContract[0][:], nil
 }
 
-func (s *StorageManager) TryWrite(kvIdx uint64, commit common.Hash, blob []byte, fetchBlob FetchBlobFunc) error {
+// TryWriteWithMetaCheck will try to write the blob into the local storage file with corresponding commit.
+// If the meta in the contract is different with the one in local storage file, it will fetch the blob from RPC and write it into the local storage file.
+func (s *StorageManager) TryWriteWithMetaCheck(kvIdx uint64, commit common.Hash, blob []byte, fetchBlob FetchBlobFunc) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
