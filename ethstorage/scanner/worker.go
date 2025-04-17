@@ -19,7 +19,7 @@ import (
 type IStorageManager interface {
 	TryRead(kvIdx uint64, readLen int, commit common.Hash) ([]byte, bool, error)
 	TryReadMeta(kvIdx uint64) ([]byte, bool, error)
-	CheckMeta(kvIdx uint64) ([]byte, error)
+	CheckMeta(kvIdx uint64) (common.Hash, error)
 	TryWriteWithMetaCheck(kvIdx uint64, commit common.Hash, blob []byte, fetchBlob es.FetchBlobFunc) error
 	MaxKvSize() uint64
 	KvEntries() uint64
@@ -167,12 +167,11 @@ func (s *Worker) queryLocalKvs() ([]uint64, error) {
 
 func (s *Worker) fixKv(kvIndex uint64, fetchBlob es.FetchBlobFunc) error {
 	// check if the commit in the contract has been updated
-	meta, err := s.sm.CheckMeta(kvIndex)
-	if err == nil {
-		s.lg.Info("Scanner: KV already fixed by downloader", "kvIndex", kvIndex)
+	commit, err := s.sm.CheckMeta(kvIndex)
+	if err == nil && s.cfg.Mode == modeCheckMeta {
+		s.lg.Info("Scanner: KV already fixed by contract", "kvIndex", kvIndex)
 		return nil
 	}
-	commit := common.BytesToHash(meta)
 	s.lg.Info("Scanner: try to fix kv with latest commit", "kvIndex", kvIndex, "commit", commit)
 	blob, err := fetchBlob(kvIndex, commit)
 	if err != nil {

@@ -338,7 +338,10 @@ func EsNodeSync(ctx *cli.Context) error {
 		return fmt.Errorf("failed to init shard manager: %w", err)
 	}
 	preparedCommit := ethstorage.PrepareCommit(commit)
-	ok, err := shardManager.TryWrite(kvIndex, blob, preparedCommit)
+	newBlob := make([]byte, len(blob))
+	copy(newBlob, blob)
+	newBlob[1] = blob[1] + 1
+	ok, err := shardManager.TryWrite(kvIndex, newBlob, preparedCommit)
 	if err != nil {
 		return fmt.Errorf("failed to write kv: %w", err)
 	}

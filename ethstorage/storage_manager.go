@@ -519,45 +519,59 @@ func (s *StorageManager) getKvMetas(kvIndices []uint64) ([][32]byte, error) {
 // If the meta in the contract is different with the one in local storage file, it will return ErrCommitMismatch
 // Otherwise, it will return nil
 // It will also return the meta in the contract in each case.
-func (s *StorageManager) CheckMeta(kvIdx uint64) ([]byte, error) {
+func (s *StorageManager) CheckMeta(kvIdx uint64) (common.Hash, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.checkMeta(kvIdx)
 }
 
-func (s *StorageManager) checkMeta(kvIdx uint64) ([]byte, error) {
+func (s *StorageManager) checkMeta(kvIdx uint64) (common.Hash, error) {
 	metaInContract, err := s.l1Source.GetKvMetas([]uint64{kvIdx}, rpc.LatestBlockNumber.Int64())
 	if err != nil {
-		return nil, fmt.Errorf("failed to query KV meta: kvIndex=%d, %w", kvIdx, err)
+		return common.Hash{}, fmt.Errorf("failed to query KV meta: kvIndex=%d, %w", kvIdx, err)
 	}
 	if len(metaInContract) == 0 {
-		return nil, fmt.Errorf("failed to query KV meta: kvIndex=%d, no meta found", kvIdx)
+		return common.Hash{}, fmt.Errorf("failed to query KV meta: kvIndex=%d, no meta found", kvIdx)
 	}
-	metaLocal, _, _ := s.shardManager.TryReadMeta(kvIdx)
-	if metaLocal != nil && bytes.Equal(metaLocal[0:HashSizeInContract], metaInContract[0][0:HashSizeInContract]) {
-		return metaInContract[0][:], ErrCommitMismatch
+	var commit common.Hash
+	copy(commit[:], metaInContract[0][32-HashSizeInContract:32])
+	metaLocal, success, err := s.shardManager.TryReadMeta(kvIdx)
+	if err != nil {
+		return common.Hash{}, fmt.Errorf("failed to read local meta: kvIndex=%d, %w", kvIdx, err)
 	}
-	return metaInContract[0][:], nil
+	if !success {
+		return common.Hash{}, fmt.Errorf("local meta not found: kvIndex=%d", kvIdx)
+	}
+	if metaLocal != nil && len(metaLocal) >= HashSizeInContract &&
+		!bytes.Equal(metaLocal[0:HashSizeInContract], commit[0:HashSizeInContract]) {
+		return commit, ErrCommitMismatch
+	}
+	return commit, nil
 }
 
 // TryWriteWithMetaCheck will try to write the blob into the local storage file with corresponding commit.
-// If the meta in the contract is different with the one in local storage file, it will fetch the blob from RPC and write it into the local storage file.
+// Before writing, it will compare the provided commit to the one in the contract.
+// If the commit in the contract is different with provided commit, it will fetch the blob from RPC and write it into the local storage file.
 func (s *StorageManager) TryWriteWithMetaCheck(kvIdx uint64, commit common.Hash, blob []byte, fetchBlob FetchBlobFunc) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	newMeta, err := s.checkMeta(kvIdx)
-	if err != nil {
-		// fetch the blob again if the meta has been updated
-		if newMeta != nil && !bytes.Equal(newMeta[0:HashSizeInContract], commit[0:HashSizeInContract]) {
-			commit = common.BytesToHash(newMeta)
-			newBlob, err := fetchBlob(kvIdx, commit)
-			if err != nil {
-				return fmt.Errorf("failed to fetch the blob from RPC: kvIdx=%d, commit=%x, %w", kvIdx, commit, err)
-			}
-			blob = newBlob
-		}
+	newCommit, err := s.checkMeta(kvIdx)
+	if err != nil && !errors.Is(err, ErrCommitMismatch) {
+		return fmt.Errorf("failed to check meta: kvIdx=%d, %w", kvIdx, err)
 	}
+	if newCommit != (common.Hash{}) && !bytes.Equal(newCommit[0:HashSizeInContract], commit[0:HashSizeInContract]) {
+		newBlob, err := fetchBlob(kvIdx, newCommit)
+		if err != nil {
+			return fmt.Errorf("failed to fetch the blob from RPC: kvIdx=%d, commit=%x, %w", kvIdx, commit, err)
+		}
+		commit = newCommit
+		blob = newBlob
+	}
+	return s.tryWrite(kvIdx, blob, commit)
+}
+
+func (s *StorageManager) tryWrite(kvIdx uint64, blob []byte, commit common.Hash) error {
 	ok, err := s.shardManager.TryWrite(kvIdx, blob, PrepareCommit(commit))
 	if !ok {
 		return fmt.Errorf("failed to write blob: kv %d not exist", kvIdx)
