@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
 	es "github.com/ethstorage/go-ethstorage/ethstorage"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -44,9 +45,9 @@ func (m *MockStorageManager) TryWriteWithMetaCheck(kvIndex uint64, commit common
 	return args.Error(0)
 }
 
-func (m *MockStorageManager) CheckMeta(kvIndex uint64) ([]byte, error) {
+func (m *MockStorageManager) CheckMeta(kvIndex uint64) (common.Hash, error) {
 	args := m.Called(kvIndex)
-	return args.Get(0).([]byte), args.Error(1)
+	return args.Get(0).(common.Hash), args.Error(1)
 }
 
 func (m *MockStorageManager) MaxKvSize() uint64 {
@@ -86,26 +87,46 @@ func checkMocks(t *testing.T, sm *MockStorageManager) {
 func TestFixKv(t *testing.T) {
 	tests := []struct {
 		name       string
-		kvIndex    uint64
+		mode       int
 		fetchBlob  func(kvIndex uint64, hash common.Hash) ([]byte, error)
 		setupMocks func(*MockStorageManager)
 	}{
 		{
-			name:    "already_fixed_with_matching_commit",
-			kvIndex: 1,
-			setupMocks: func(sm *MockStorageManager) {
-				sm.On("CheckMeta", uint64(1)).Return([]byte{}, nil)
-			},
-		},
-		{
-			name:    "successful_fixed_with_commit_mismatch",
-			kvIndex: 1,
+			name: "successful_fixed_with_commit_in_sync",
+			mode: modeCheckBlob,
 			fetchBlob: func(kvIndex uint64, hash common.Hash) ([]byte, error) {
 				return []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}, nil
 			},
 			setupMocks: func(sm *MockStorageManager) {
-				sm.On("CheckMeta", uint64(1)).Return(common.Hex2Bytes("0a0b"), es.ErrCommitMismatch)
+				sm.On("CheckMeta", uint64(1)).Return(common.HexToHash("0a0b"), nil)
 				sm.On("TryWriteWithMetaCheck", uint64(1), common.HexToHash("0a0b"), mock.Anything, mock.Anything).Return(nil)
+			},
+		},
+		{
+			name: "successful_fixed_with_commit_mismatch",
+			fetchBlob: func(kvIndex uint64, hash common.Hash) ([]byte, error) {
+				return []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}, nil
+			},
+			setupMocks: func(sm *MockStorageManager) {
+				sm.On("CheckMeta", uint64(1)).Return(common.HexToHash("0a0b"), es.ErrCommitMismatch)
+				sm.On("TryWriteWithMetaCheck", uint64(1), common.HexToHash("0a0b"), mock.Anything, mock.Anything).Return(nil)
+			},
+		},
+		{
+			name: "successful_fixed_with_checkmeta_error",
+			fetchBlob: func(kvIndex uint64, hash common.Hash) ([]byte, error) {
+				return []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}, nil
+			},
+			setupMocks: func(sm *MockStorageManager) {
+				sm.On("CheckMeta", uint64(1)).Return(common.Hash{}, errors.New("check meta error"))
+				sm.On("TryWriteWithMetaCheck", uint64(1), common.HexToHash("0102"), mock.Anything, mock.Anything).Return(nil)
+			},
+		},
+		{
+			name: "already_fixed_with_matching_commit",
+			mode: modeCheckMeta,
+			setupMocks: func(sm *MockStorageManager) {
+				sm.On("CheckMeta", uint64(1)).Return(common.HexToHash("0a0b"), nil)
 			},
 		},
 	}
@@ -119,9 +140,10 @@ func TestFixKv(t *testing.T) {
 
 			worker := NewWorker(sm, nil, l1, Config{
 				EsRpc: "http://localhost:8545",
+				Mode:  tt.mode,
 			}, log.New())
 
-			err := worker.fixKv(tt.kvIndex, tt.fetchBlob)
+			err := worker.fixKv(uint64(1), common.HexToHash("0102"), tt.fetchBlob)
 			assert.NoError(t, err)
 
 			checkMocks(t, sm)

@@ -543,10 +543,11 @@ func (s *StorageManager) checkMeta(kvIdx uint64) (common.Hash, error) {
 		return common.Hash{}, fmt.Errorf("local meta not found: kvIndex=%d", kvIdx)
 	}
 	if metaLocal != nil && len(metaLocal) >= HashSizeInContract &&
-		!bytes.Equal(metaLocal[0:HashSizeInContract], commit[0:HashSizeInContract]) {
-		return commit, ErrCommitMismatch
+		bytes.Equal(metaLocal[0:HashSizeInContract], commit[0:HashSizeInContract]) {
+		// the commit is in sync
+		return commit, nil
 	}
-	return commit, nil
+	return commit, ErrCommitMismatch
 }
 
 // TryWriteWithMetaCheck will try to write the blob into the local storage file with corresponding commit.
