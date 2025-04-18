@@ -14,6 +14,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/rpc"
 )
 
 const (
@@ -23,8 +24,10 @@ const (
 )
 
 var (
-	errCommitMismatch = errors.New("commit from contract and input is not matched")
+	ErrCommitMismatch = errors.New("mismatched commit")
 )
+
+type FetchBlobFunc func(kvIndex uint64, hash common.Hash) ([]byte, error)
 
 type Il1Source interface {
 	GetKvMetas(kvIndices []uint64, blockNumber int64) ([][32]byte, error)
@@ -249,7 +252,7 @@ func (s *StorageManager) CommitEmptyBlobs(start, limit uint64) (uint64, uint64, 
 		err := s.commitEncodedBlob(index, encodedBlobs[i], hash, metas[i])
 		if err == nil {
 			inserted++
-		} else if err != errCommitMismatch {
+		} else if err != ErrCommitMismatch {
 			log.Info("Commit blobs fail", "kvIndex", kvIndices[i], "err", err.Error())
 			break
 		}
@@ -287,7 +290,7 @@ func (s *StorageManager) CommitBlob(kvIndex uint64, blob []byte, commit common.H
 func (s *StorageManager) commitEncodedBlob(kvIndex uint64, encodedBlob []byte, commit common.Hash, contractMeta [32]byte) error {
 	// the commit is different with what we got from the contract, so should not commit
 	if !bytes.Equal(contractMeta[32-HashSizeInContract:32], commit[0:HashSizeInContract]) {
-		return errCommitMismatch
+		return ErrCommitMismatch
 	}
 
 	m, success, err := s.shardManager.TryReadMeta(kvIndex)
@@ -510,6 +513,74 @@ func (s *StorageManager) getKvMetas(kvIndices []uint64) ([][32]byte, error) {
 		}
 	}
 	return metas, nil
+}
+
+// CheckMeta will check the meta in the contract and local storage file.
+// If the meta in the contract is different with the one in local storage file, it will return ErrCommitMismatch
+// Otherwise, it will return nil
+// It will also return the meta in the contract in each case.
+func (s *StorageManager) CheckMeta(kvIdx uint64) (common.Hash, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.checkMeta(kvIdx)
+}
+
+func (s *StorageManager) checkMeta(kvIdx uint64) (common.Hash, error) {
+	metaInContract, err := s.l1Source.GetKvMetas([]uint64{kvIdx}, rpc.LatestBlockNumber.Int64())
+	if err != nil {
+		return common.Hash{}, fmt.Errorf("failed to query KV meta: kvIndex=%d, %w", kvIdx, err)
+	}
+	if len(metaInContract) == 0 {
+		return common.Hash{}, fmt.Errorf("failed to query KV meta: kvIndex=%d, no meta found", kvIdx)
+	}
+	var commit common.Hash
+	copy(commit[:], metaInContract[0][32-HashSizeInContract:32])
+	metaLocal, success, err := s.shardManager.TryReadMeta(kvIdx)
+	if err != nil {
+		return common.Hash{}, fmt.Errorf("failed to read local meta: kvIndex=%d, %w", kvIdx, err)
+	}
+	if !success {
+		return common.Hash{}, fmt.Errorf("local meta not found: kvIndex=%d", kvIdx)
+	}
+	if metaLocal != nil && len(metaLocal) >= HashSizeInContract &&
+		bytes.Equal(metaLocal[0:HashSizeInContract], commit[0:HashSizeInContract]) {
+		// the commit is in sync
+		return commit, nil
+	}
+	return commit, ErrCommitMismatch
+}
+
+// TryWriteWithMetaCheck will try to write the blob into the local storage file with corresponding commit.
+// Before writing, it will compare the provided commit to the one in the contract.
+// If the commit in the contract is different with provided commit, it will fetch the blob from RPC and write it into the local storage file.
+func (s *StorageManager) TryWriteWithMetaCheck(kvIdx uint64, commit common.Hash, blob []byte, fetchBlob FetchBlobFunc) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	newCommit, err := s.checkMeta(kvIdx)
+	if err != nil && !errors.Is(err, ErrCommitMismatch) {
+		return fmt.Errorf("failed to check meta: kvIdx=%d, %w", kvIdx, err)
+	}
+	if newCommit != (common.Hash{}) && !bytes.Equal(newCommit[0:HashSizeInContract], commit[0:HashSizeInContract]) {
+		newBlob, err := fetchBlob(kvIdx, newCommit)
+		if err != nil {
+			return fmt.Errorf("failed to fetch the blob from RPC: kvIdx=%d, commit=%x, %w", kvIdx, commit, err)
+		}
+		commit = newCommit
+		blob = newBlob
+	}
+	return s.tryWrite(kvIdx, blob, commit)
+}
+
+func (s *StorageManager) tryWrite(kvIdx uint64, blob []byte, commit common.Hash) error {
+	ok, err := s.shardManager.TryWrite(kvIdx, blob, PrepareCommit(commit))
+	if !ok {
+		return fmt.Errorf("failed to write blob: kv %d not exist", kvIdx)
+	}
+	if err != nil {
+		return fmt.Errorf("failed to write blob: kvIdx=%d, %w", kvIdx, err)
+	}
+	return nil
 }
 
 // TryReadEncoded This function will read the encoded data from the local storage file. It also check whether the blob is empty or not synced,

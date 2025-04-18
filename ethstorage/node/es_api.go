@@ -50,7 +50,7 @@ func (api *esAPI) GetBlob(kvIndex uint64, blobHash common.Hash, decodeType Decod
 		}
 
 		if !bytes.Equal(commit[0:ethstorage.HashSizeInContract], blobHash[0:ethstorage.HashSizeInContract]) {
-			return nil, errors.New("commits not same")
+			return nil, ethstorage.ErrCommitMismatch
 		}
 
 		readCommit := common.Hash{}
