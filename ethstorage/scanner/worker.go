@@ -46,30 +46,30 @@ func NewWorker(sm IStorageManager, f func(uint64, common.Hash) []byte, l1 es.Il1
 	}
 }
 
-func (s *Worker) ScanBatch(ctx context.Context) error {
+func (s *Worker) ScanBatch(ctx context.Context, sendError func(kvIndex uint64, err error)) (*stats, error) {
 	sts := stats{}
 	localKvs, err := s.queryLocalKvs()
 	if err != nil {
-		return fmt.Errorf("failed to get local KV indices: %w", err)
+		return nil, fmt.Errorf("failed to get local KV indices: %w", err)
 	}
 	s.lg.Info("Scanner: query local KV entries done", "localKVs", shortPrt(localKvs))
 	sts.total = len(localKvs)
 
 	kvsInBatch, nextKvIndex, err := s.determineBatchIndexRange(localKvs)
 	if err != nil {
-		return fmt.Errorf("failed to get batch index range: %w", err)
+		return nil, fmt.Errorf("failed to get batch index range: %w", err)
 	}
 	metas, err := s.l1.GetKvMetas(kvsInBatch, rpc.LatestBlockNumber.Int64())
 	if err != nil {
 		s.lg.Error("Scanner: error getting meta range", "kvsInBatch", shortPrt(kvsInBatch))
-		return fmt.Errorf("failed to query KV metas %w", err)
+		return nil, fmt.Errorf("failed to query KV metas %w", err)
 	}
 	s.lg.Info("Scanner: query KV meta done", "kvsInBatch", shortPrt(kvsInBatch))
 	for i, meta := range metas {
 		select {
 		case <-ctx.Done():
 			s.lg.Info("Scanner canceled, stopping scan", "ctx.Err", ctx.Err())
-			return ctx.Err()
+			return nil, ctx.Err()
 		default:
 		}
 
@@ -113,12 +113,12 @@ func (s *Worker) ScanBatch(ctx context.Context) error {
 				if err := s.fixKv(kvIndex, commit, s.fetchBlob); err != nil {
 					sts.failed++
 					s.lg.Error("Scanner: fix blob error", "kvIndex", kvIndex, "err", err)
-					s.sendError(kvIndex, fmt.Errorf("failed to fix blob: %w", err))
+					sendError(kvIndex, fmt.Errorf("failed to fix blob: %w", err))
 				} else {
 					sts.fixed++
 				}
 			} else {
-				s.sendError(kvIndex, fmt.Errorf("failed to read blob: %w", err))
+				sendError(kvIndex, fmt.Errorf("failed to read blob: %w", err))
 			}
 		}
 	}
@@ -126,24 +126,11 @@ func (s *Worker) ScanBatch(ctx context.Context) error {
 	if len(kvsInBatch) > 0 {
 		s.lg.Info("Scanner: scan batch done", "from", kvsInBatch[0], "to", kvsInBatch[len(kvsInBatch)-1], "count", len(kvsInBatch), "nextKvIndex", nextKvIndex)
 	}
-	select {
-	case statsCh <- sts:
-	default:
-		s.lg.Warn("Scanner: sent scan report to chan failed", "lenOfCh", len(statsCh))
-	}
-	return nil
+	return &sts, nil
 }
 
 func (s *Worker) fetchBlob(kvIndex uint64, commit common.Hash) ([]byte, error) {
 	return DownloadBlobFromRPC(s.cfg.EsRpc, kvIndex, commit)
-}
-
-func (s *Worker) sendError(kvIndex uint64, err error) {
-	select {
-	case errorCh <- scanError{kvIndex, err}:
-	default:
-		s.lg.Warn("Scanner: sent error to chan failed", "err", err, "lenOfCh", len(errorCh))
-	}
 }
 
 func (s *Worker) determineBatchIndexRange(localKvs []uint64) ([]uint64, uint64, error) {

@@ -15,11 +15,6 @@ import (
 	"github.com/ethstorage/go-ethstorage/ethstorage/p2p/protocol"
 )
 
-var (
-	statsCh = make(chan stats, 10)
-	errorCh = make(chan scanError, 10)
-)
-
 type Scanner struct {
 	worker   *Worker
 	feed     *event.Feed
@@ -30,6 +25,8 @@ type Scanner struct {
 	running  bool
 	mu       sync.Mutex
 	lg       log.Logger
+	statsCh  chan stats
+	errorCh  chan scanError
 }
 
 func New(
@@ -49,6 +46,8 @@ func New(
 		ctx:      cctx,
 		cancel:   cancel,
 		lg:       lg,
+		statsCh:  make(chan stats, 10),
+		errorCh:  make(chan scanError, 10),
 	}
 	scanner.wg.Add(1)
 	go scanner.update()
@@ -118,16 +117,23 @@ func (s *Scanner) start() {
 				for _, e := range errCache {
 					s.lg.Error("Scanner error happened", "kvIndex", e.kvIndex, "error", e.err)
 				}
-			case st := <-statsCh:
+			case st := <-s.statsCh:
 				sts.update(st)
-			case err := <-errorCh:
-				// Update the error cache with the latest error for the kvIndex
+			case err := <-s.errorCh:
 				errCache[err.kvIndex] = err
 			case <-s.ctx.Done():
 				return
 			}
 		}
 	}()
+}
+
+func (s *Scanner) sendError(kvIndex uint64, err error) {
+	select {
+	case s.errorCh <- scanError{kvIndex, err}:
+	default:
+		s.lg.Warn("Scanner: sent error to chan failed", "err", err, "lenOfCh", len(s.errorCh))
+	}
 }
 
 func (s *Scanner) Close() {
@@ -150,7 +156,15 @@ func (s *Scanner) doWork() {
 	defer func(stt time.Time) {
 		s.lg.Info("Scan batch done", "duration", time.Since(stt).String())
 	}(start)
-	if err := s.worker.ScanBatch(s.ctx); err != nil {
+
+	sts, err := s.worker.ScanBatch(s.ctx, s.sendError)
+	if err != nil {
 		s.lg.Error("Scan batch failed", "err", err)
+	}
+
+	select {
+	case s.statsCh <- *sts:
+	default:
+		s.lg.Warn("Scanner: sent scan report to chan failed", "lenOfCh", len(s.statsCh))
 	}
 }
