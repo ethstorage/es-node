@@ -186,7 +186,7 @@ func (s *Worker) queryLocalKvs() ([]uint64, error) {
 }
 
 func (s *Worker) fixKv(kvIndex uint64, commit common.Hash, fetchBlob es.FetchBlobFunc) error {
-	s.lg.Info("Scanner: try to fix kv", "kvIndex", kvIndex, "commit", commit)
+	s.lg.Info("Scanner: try to fix blob", "kvIndex", kvIndex, "commit", commit)
 	commitToFetchBlob := commit
 	// check if the commit in the contract has been updated
 	newCommit, err := s.sm.CheckMeta(kvIndex)
