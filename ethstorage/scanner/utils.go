@@ -27,10 +27,10 @@ type scanError struct {
 }
 
 type stats struct {
-	total      int
-	mismatched int
-	fixed      int
-	failed     int
+	total      int // total number of kv entries stored in local
+	mismatched int // times of mismatched blob found
+	fixed      int // times of successful fix
+	failed     int // times of failed to fix blob
 }
 
 func (s *stats) update(st stats) {
