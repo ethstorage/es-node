@@ -16,7 +16,27 @@ import (
 	"github.com/ethstorage/go-ethstorage/ethstorage/blobs"
 )
 
+var (
+	reportCh = make(chan report, 1)
+	errCh    = make(chan scanError, 1)
+)
+
+type scanError struct {
+	kvIndex uint64
+	err     error
+}
+
+type report struct {
+	total      int
+	mismatched int
+	fixed      int
+	failed     int
+}
+
 func DownloadBlobFromRPC(rpcEndpoint string, kvIndex uint64, hash common.Hash) ([]byte, error) {
+	if rpcEndpoint == "" {
+		return nil, fmt.Errorf("RPC endpoint is empty")
+	}
 	client, err := rpc.DialHTTP(rpcEndpoint)
 	if err != nil {
 		return nil, fmt.Errorf("failed to dial RPC: error=%v, rpc=%s", err, rpcEndpoint)

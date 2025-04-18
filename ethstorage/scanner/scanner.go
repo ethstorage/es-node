@@ -91,17 +91,41 @@ func (s *Scanner) start() {
 	s.wg.Add(1)
 	go func() {
 		defer s.wg.Done()
-		ticker := time.NewTicker(s.interval)
+		mainTicker := time.NewTicker(s.interval)
 		s.lg.Info("Scanner started", "mode", s.worker.cfg.Mode, "interval", s.interval.String(), "batchSize", s.worker.cfg.BatchSize)
-		defer ticker.Stop()
+		defer mainTicker.Stop()
+		reportTicker := time.NewTicker(1 * time.Minute)
+		defer reportTicker.Stop()
+		errCache := make([]scanError, 0)
+		rpt := report{}
 
 		s.doWork()
+
+	loop:
 		for {
 			select {
+			case <-mainTicker.C:
+				s.doWork()
+			case <-reportTicker.C:
+				s.lg.Info("Scanner stats", "kvStored", rpt.total, "mismatched", rpt.mismatched, "fixed", rpt.fixed, "failed", rpt.failed)
+				for _, e := range errCache {
+					s.lg.Error("Scanner error happened", "kvIndex", e.kvIndex, "error", e.err)
+				}
+			case r := <-reportCh:
+				rpt.total = r.total
+				rpt.mismatched += r.mismatched
+				rpt.fixed += r.fixed
+				rpt.failed += r.failed
+			case err := <-errCh:
+				// cache only the last error for each kvIndex
+				for _, e := range errCache {
+					if e.kvIndex == err.kvIndex {
+						continue loop
+					}
+				}
+				errCache = append(errCache, err)
 			case <-s.ctx.Done():
 				return
-			case <-ticker.C:
-				s.doWork()
 			}
 		}
 	}()

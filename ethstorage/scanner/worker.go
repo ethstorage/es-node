@@ -47,7 +47,15 @@ func NewWorker(sm IStorageManager, f func(uint64, common.Hash) []byte, l1 es.Il1
 }
 
 func (s *Worker) ScanBatch(ctx context.Context) error {
-	kvsInBatch, nextKvIndex, err := s.determineBatchIndexRange()
+	rpt := report{}
+	localKvs, err := s.queryLocalKvs()
+	if err != nil {
+		return fmt.Errorf("failed to get local KV indices: %w", err)
+	}
+	s.lg.Info("Scanner: query local KV entries done", "localKVs", shortPrt(localKvs))
+	rpt.total = len(localKvs)
+
+	kvsInBatch, nextKvIndex, err := s.determineBatchIndexRange(localKvs)
 	if err != nil {
 		return fmt.Errorf("failed to get batch index range: %w", err)
 	}
@@ -101,15 +109,20 @@ func (s *Worker) ScanBatch(ctx context.Context) error {
 			}
 			s.lg.Error("Scanner: read blob error", "kvIndex", kvIndex, "commit", commit.Hex(), "err", err)
 			if err == es.ErrCommitMismatch {
-				if s.cfg.EsRpc == "" {
-					s.lg.Warn("Scanner: unable to fix blob: no RPC endpoint provided")
-					continue
-				}
+				rpt.mismatched++
 				fetchBlob := func(kvIndex uint64, commit common.Hash) ([]byte, error) {
 					return DownloadBlobFromRPC(s.cfg.EsRpc, kvIndex, commit)
 				}
 				if err := s.fixKv(kvIndex, commit, fetchBlob); err != nil {
+					rpt.failed++
 					s.lg.Error("Scanner: fix blob error", "kvIndex", kvIndex, "err", err)
+					select {
+					case errCh <- scanError{kvIndex, fmt.Errorf("failed to fix blob: %w", err)}:
+					default:
+						s.lg.Warn("Scanner: sent error to errCh failed", "lenOfCh", len(errCh))
+					}
+				} else {
+					rpt.fixed++
 				}
 			}
 		}
@@ -118,15 +131,16 @@ func (s *Worker) ScanBatch(ctx context.Context) error {
 	if len(kvsInBatch) > 0 {
 		s.lg.Info("Scanner: scan batch done", "from", kvsInBatch[0], "to", kvsInBatch[len(kvsInBatch)-1], "count", len(kvsInBatch), "nextKvIndex", nextKvIndex)
 	}
+
+	select {
+	case reportCh <- rpt:
+	default:
+		s.lg.Warn("Scanner: sent scan report to reportCh failed", "lenOfCh", len(reportCh))
+	}
 	return nil
 }
 
-func (s *Worker) determineBatchIndexRange() ([]uint64, uint64, error) {
-	localKvs, err := s.queryLocalKvs()
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to get local KV indices: %w", err)
-	}
-	s.lg.Info("Scanner: query local KV entries done", "localKVs", shortPrt(localKvs))
+func (s *Worker) determineBatchIndexRange(localKvs []uint64) ([]uint64, uint64, error) {
 	localKvTotal := uint64(len(localKvs))
 
 	batchStart := s.nextKvIndex
