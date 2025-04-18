@@ -16,11 +16,6 @@ import (
 	"github.com/ethstorage/go-ethstorage/ethstorage/blobs"
 )
 
-var (
-	statsCh = make(chan stats, 10)
-	errorCh = make(chan scanError, 10)
-)
-
 type scanError struct {
 	kvIndex uint64
 	err     error

@@ -15,6 +15,11 @@ import (
 	"github.com/ethstorage/go-ethstorage/ethstorage/p2p/protocol"
 )
 
+var (
+	statsCh = make(chan stats, 10)
+	errorCh = make(chan scanError, 10)
+)
+
 type Scanner struct {
 	worker   *Worker
 	feed     *event.Feed
@@ -99,7 +104,7 @@ func (s *Scanner) start() {
 		reportTicker := time.NewTicker(1 * time.Minute)
 		defer reportTicker.Stop()
 
-		var errCache []scanError
+		errCache := make(map[uint64]scanError)
 		var sts stats
 
 		s.doWork()
@@ -116,17 +121,8 @@ func (s *Scanner) start() {
 			case st := <-statsCh:
 				sts.update(st)
 			case err := <-errorCh:
-				// cache only the last error for each kvIndex
-				exists := false
-				for _, e := range errCache {
-					if e.kvIndex == err.kvIndex {
-						exists = true
-						break
-					}
-				}
-				if !exists {
-					errCache = append(errCache, err)
-				}
+				// Update the error cache with the latest error for the kvIndex
+				errCache[err.kvIndex] = err
 			case <-s.ctx.Done():
 				return
 			}
