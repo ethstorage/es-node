@@ -47,13 +47,13 @@ func NewWorker(sm IStorageManager, f func(uint64, common.Hash) []byte, l1 es.Il1
 }
 
 func (s *Worker) ScanBatch(ctx context.Context) error {
-	rpt := stats{}
+	sts := stats{}
 	localKvs, err := s.queryLocalKvs()
 	if err != nil {
 		return fmt.Errorf("failed to get local KV indices: %w", err)
 	}
 	s.lg.Info("Scanner: query local KV entries done", "localKVs", shortPrt(localKvs))
-	rpt.total = len(localKvs)
+	sts.total = len(localKvs)
 
 	kvsInBatch, nextKvIndex, err := s.determineBatchIndexRange(localKvs)
 	if err != nil {
@@ -109,16 +109,13 @@ func (s *Worker) ScanBatch(ctx context.Context) error {
 			}
 			s.lg.Error("Scanner: read blob error", "kvIndex", kvIndex, "commit", commit.Hex(), "err", err)
 			if err == es.ErrCommitMismatch {
-				rpt.mismatched++
-				fetchBlob := func(kvIndex uint64, commit common.Hash) ([]byte, error) {
-					return DownloadBlobFromRPC(s.cfg.EsRpc, kvIndex, commit)
-				}
-				if err := s.fixKv(kvIndex, commit, fetchBlob); err != nil {
-					rpt.failed++
+				sts.mismatched++
+				if err := s.fixKv(kvIndex, commit, s.fetchBlob); err != nil {
+					sts.failed++
 					s.lg.Error("Scanner: fix blob error", "kvIndex", kvIndex, "err", err)
 					s.sendError(kvIndex, fmt.Errorf("failed to fix blob: %w", err))
 				} else {
-					rpt.fixed++
+					sts.fixed++
 				}
 			} else {
 				s.sendError(kvIndex, fmt.Errorf("failed to read blob: %w", err))
@@ -130,11 +127,15 @@ func (s *Worker) ScanBatch(ctx context.Context) error {
 		s.lg.Info("Scanner: scan batch done", "from", kvsInBatch[0], "to", kvsInBatch[len(kvsInBatch)-1], "count", len(kvsInBatch), "nextKvIndex", nextKvIndex)
 	}
 	select {
-	case statsCh <- rpt:
+	case statsCh <- sts:
 	default:
 		s.lg.Warn("Scanner: sent scan report to chan failed", "lenOfCh", len(statsCh))
 	}
 	return nil
+}
+
+func (s *Worker) fetchBlob(kvIndex uint64, commit common.Hash) ([]byte, error) {
+	return DownloadBlobFromRPC(s.cfg.EsRpc, kvIndex, commit)
 }
 
 func (s *Worker) sendError(kvIndex uint64, err error) {
