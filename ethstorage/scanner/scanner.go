@@ -91,39 +91,42 @@ func (s *Scanner) start() {
 	s.wg.Add(1)
 	go func() {
 		defer s.wg.Done()
-		mainTicker := time.NewTicker(s.interval)
+
 		s.lg.Info("Scanner started", "mode", s.worker.cfg.Mode, "interval", s.interval.String(), "batchSize", s.worker.cfg.BatchSize)
+
+		mainTicker := time.NewTicker(s.interval)
 		defer mainTicker.Stop()
 		reportTicker := time.NewTicker(1 * time.Minute)
 		defer reportTicker.Stop()
-		errCache := make([]scanError, 0)
-		rpt := report{}
+
+		var errCache []scanError
+		var sts stats
 
 		s.doWork()
 
-	loop:
 		for {
 			select {
 			case <-mainTicker.C:
 				s.doWork()
 			case <-reportTicker.C:
-				s.lg.Info("Scanner stats", "kvStored", rpt.total, "mismatched", rpt.mismatched, "fixed", rpt.fixed, "failed", rpt.failed)
+				s.lg.Info("Scanner stats", "kvStored", sts.total, "mismatched", sts.mismatched, "fixed", sts.fixed, "failed", sts.failed)
 				for _, e := range errCache {
 					s.lg.Error("Scanner error happened", "kvIndex", e.kvIndex, "error", e.err)
 				}
-			case r := <-reportCh:
-				rpt.total = r.total
-				rpt.mismatched += r.mismatched
-				rpt.fixed += r.fixed
-				rpt.failed += r.failed
-			case err := <-errCh:
+			case st := <-statsCh:
+				sts.update(st)
+			case err := <-errorCh:
 				// cache only the last error for each kvIndex
+				exists := false
 				for _, e := range errCache {
 					if e.kvIndex == err.kvIndex {
-						continue loop
+						exists = true
+						break
 					}
 				}
-				errCache = append(errCache, err)
+				if !exists {
+					errCache = append(errCache, err)
+				}
 			case <-s.ctx.Done():
 				return
 			}

@@ -17,8 +17,8 @@ import (
 )
 
 var (
-	reportCh = make(chan report, 1)
-	errCh    = make(chan scanError, 1)
+	statsCh = make(chan stats, 10)
+	errorCh = make(chan scanError, 10)
 )
 
 type scanError struct {
@@ -26,11 +26,18 @@ type scanError struct {
 	err     error
 }
 
-type report struct {
+type stats struct {
 	total      int
 	mismatched int
 	fixed      int
 	failed     int
+}
+
+func (s *stats) update(st stats) {
+	s.total = st.total
+	s.mismatched += st.mismatched
+	s.fixed += st.fixed
+	s.failed += st.failed
 }
 
 func DownloadBlobFromRPC(rpcEndpoint string, kvIndex uint64, hash common.Hash) ([]byte, error) {
