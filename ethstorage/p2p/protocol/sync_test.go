@@ -657,7 +657,7 @@ func TestSync_RequestL2List(t *testing.T) {
 		assert.NoError(t, err)
 		root, _ := prover.GetRoot(blob, 0, 0)
 		commit := generateMetadata(root)
-		assert.Equal(t, meta, commit)
+		assert.Equal(t, common.BytesToHash(meta), commit)
 	}
 }
 
