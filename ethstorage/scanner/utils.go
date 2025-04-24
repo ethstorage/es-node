@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"fmt"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -20,19 +21,57 @@ type scanError struct {
 	kvIndex uint64
 	err     error
 }
+type statsType map[uint64]int // kvIndex -> times
 
-type stats struct {
-	total      int // total number of kv entries stored in local
-	mismatched int // times of mismatched blob found
-	fixed      int // times of successful fix
-	failed     int // times of failed to fix blob
+func (s *statsType) String() string {
+	var items []string
+	for kvIndex, times := range *s {
+		var str string
+		if times == 1 {
+			str = fmt.Sprintf("%d", kvIndex)
+		} else {
+			str = fmt.Sprintf("%d(%d times)", kvIndex, times)
+		}
+		items = append(items, str)
+	}
+	return "[" + strings.Join(items, ",") + "]"
 }
 
-func (s *stats) update(st stats) {
+type statsSum struct {
+	total      int       // total number of kv entries stored in local
+	mismatched statsType // mismatched indices with times occurred for each
+	fixed      statsType // successfully fixed indices with times occurred for each
+	failed     statsType // failed fixed indices with times occurred for each
+}
+
+func newStatsSum() *statsSum {
+	return &statsSum{
+		total:      0,
+		mismatched: make(statsType),
+		fixed:      make(statsType),
+		failed:     make(statsType),
+	}
+}
+
+func (s *statsSum) update(st stats) {
 	s.total = st.total
-	s.mismatched += st.mismatched
-	s.fixed += st.fixed
-	s.failed += st.failed
+
+	for _, kvIndex := range st.mismatched {
+		s.mismatched[kvIndex]++
+	}
+	for _, kvIndex := range st.fixed {
+		s.fixed[kvIndex]++
+	}
+	for _, kvIndex := range st.failed {
+		s.failed[kvIndex]++
+	}
+}
+
+type stats struct {
+	total      int      // total number of kv entries stored in local
+	mismatched []uint64 // kv indices of mismatched
+	fixed      []uint64 // kv indices of successful fix
+	failed     []uint64 // kv indices of failed fix
 }
 
 func DownloadBlobFromRPC(rpcEndpoint string, kvIndex uint64, hash common.Hash) ([]byte, error) {
