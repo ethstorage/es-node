@@ -107,7 +107,7 @@ func (s *Scanner) start() {
 		defer reportTicker.Stop()
 
 		errCache := make(map[uint64]scanError)
-		var sts stats
+		sts := newStatsSum()
 
 		s.doWork()
 
@@ -116,14 +116,18 @@ func (s *Scanner) start() {
 			case <-mainTicker.C:
 				s.doWork()
 			case <-reportTicker.C:
-				s.lg.Info("Scanner stats", "kvStored", sts.total, "mismatched", sts.mismatched, "fixed", sts.fixed, "failed", sts.failed)
+				s.lg.Info("Scanner stats", "kvStored", sts.total, "mismatched", sts.mismatched.String(), "fixed", sts.fixed.String(), "failed", sts.failed.String())
 				for _, e := range errCache {
-					s.lg.Error("Scanner error happened", "kvIndex", e.kvIndex, "error", e.err)
+					s.lg.Error("Scanner error happened earlier", "kvIndex", e.kvIndex, "error", e.err)
 				}
 			case st := <-s.statsCh:
 				sts.update(st)
 			case err := <-s.errorCh:
-				errCache[err.kvIndex] = err
+				if err.err != nil {
+					errCache[err.kvIndex] = err
+				} else {
+					delete(errCache, err.kvIndex)
+				}
 			case <-s.ctx.Done():
 				return
 			}

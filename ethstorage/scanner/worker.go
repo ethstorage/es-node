@@ -118,13 +118,15 @@ func (s *Worker) ScanBatch(ctx context.Context, sendError func(kvIndex uint64, e
 			}
 			s.lg.Error("Scanner: read blob error", "kvIndex", kvIndex, "commit", commit.Hex(), "err", err)
 			if err == es.ErrCommitMismatch {
-				sts.mismatched++
+				sts.mismatched = append(sts.mismatched, kvIndex)
 				if err := s.fixKv(kvIndex, commit, s.fetchBlob); err != nil {
-					sts.failed++
+					sts.failed = append(sts.failed, kvIndex)
 					s.lg.Error("Scanner: fix blob error", "kvIndex", kvIndex, "err", err)
 					sendError(kvIndex, fmt.Errorf("failed to fix blob: %w", err))
 				} else {
-					sts.fixed++
+					sts.fixed = append(sts.fixed, kvIndex)
+					// remove the error from the cache
+					sendError(kvIndex, nil)
 				}
 			} else {
 				sendError(kvIndex, fmt.Errorf("failed to read blob: %w", err))
