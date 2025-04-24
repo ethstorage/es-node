@@ -29,18 +29,21 @@ type Scanner struct {
 	errorCh  chan scanError
 }
 
+type LoadKvFromCacheFunc func(uint64, common.Hash) []byte
+
 func New(
 	ctx context.Context,
 	cfg Config,
 	sm *es.StorageManager,
-	loadKvFromCache func(uint64, common.Hash) []byte,
+	loadKvFromCache LoadKvFromCacheFunc,
+	fetchBlob es.FetchBlobFunc,
 	l1 es.Il1Source,
 	feed *event.Feed,
 	lg log.Logger,
 ) *Scanner {
 	cctx, cancel := context.WithCancel(ctx)
 	scanner := &Scanner{
-		worker:   NewWorker(sm, loadKvFromCache, l1, cfg, lg),
+		worker:   NewWorker(sm, loadKvFromCache, fetchBlob, l1, cfg, lg),
 		feed:     feed,
 		interval: time.Minute * time.Duration(cfg.Interval),
 		ctx:      cctx,

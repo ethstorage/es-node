@@ -29,17 +29,26 @@ type IStorageManager interface {
 
 type Worker struct {
 	sm              IStorageManager
-	loadKvFromCache func(uint64, common.Hash) []byte
+	loadKvFromCache LoadKvFromCacheFunc
+	fetchBlob       es.FetchBlobFunc
 	l1              es.Il1Source
 	cfg             Config
 	nextKvIndex     uint64
 	lg              log.Logger
 }
 
-func NewWorker(sm IStorageManager, f func(uint64, common.Hash) []byte, l1 es.Il1Source, cfg Config, lg log.Logger) *Worker {
+func NewWorker(
+	sm IStorageManager,
+	load LoadKvFromCacheFunc,
+	fetch es.FetchBlobFunc,
+	l1 es.Il1Source,
+	cfg Config,
+	lg log.Logger,
+) *Worker {
 	return &Worker{
 		sm:              sm,
-		loadKvFromCache: f,
+		loadKvFromCache: load,
+		fetchBlob:       fetch,
 		l1:              l1,
 		cfg:             cfg,
 		lg:              lg,
@@ -127,10 +136,6 @@ func (s *Worker) ScanBatch(ctx context.Context, sendError func(kvIndex uint64, e
 		s.lg.Info("Scanner: scan batch done", "from", kvsInBatch[0], "to", kvsInBatch[len(kvsInBatch)-1], "count", len(kvsInBatch), "nextKvIndex", nextKvIndex)
 	}
 	return &sts, nil
-}
-
-func (s *Worker) fetchBlob(kvIndex uint64, commit common.Hash) ([]byte, error) {
-	return DownloadBlobFromRPC(s.cfg.EsRpc, kvIndex, commit)
 }
 
 func (s *Worker) determineBatchIndexRange(localKvs []uint64) ([]uint64, uint64, error) {

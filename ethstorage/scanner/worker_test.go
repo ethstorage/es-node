@@ -138,7 +138,7 @@ func TestFixKv(t *testing.T) {
 
 			tt.setupMocks(sm)
 
-			worker := NewWorker(sm, nil, l1, Config{
+			worker := NewWorker(sm, nil, tt.fetchBlob, l1, Config{
 				EsRpc: "http://localhost:8545",
 				Mode:  tt.mode,
 			}, log.New())
