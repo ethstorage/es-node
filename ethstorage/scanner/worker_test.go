@@ -84,19 +84,19 @@ func checkMocks(t *testing.T, sm *MockStorageManager) {
 	sm.AssertExpectations(t)
 }
 
+func fetchBlob(kvIndex uint64, hash common.Hash) ([]byte, error) {
+	return []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}, nil
+}
+
 func TestFixKv(t *testing.T) {
 	tests := []struct {
 		name       string
 		mode       int
-		fetchBlob  func(kvIndex uint64, hash common.Hash) ([]byte, error)
 		setupMocks func(*MockStorageManager)
 	}{
 		{
 			name: "successful_fixed_with_commit_in_sync",
 			mode: modeCheckBlob,
-			fetchBlob: func(kvIndex uint64, hash common.Hash) ([]byte, error) {
-				return []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}, nil
-			},
 			setupMocks: func(sm *MockStorageManager) {
 				sm.On("CheckMeta", uint64(1)).Return(common.HexToHash("0a0b"), nil)
 				sm.On("TryWriteWithMetaCheck", uint64(1), common.HexToHash("0a0b"), mock.Anything, mock.Anything).Return(nil)
@@ -104,9 +104,6 @@ func TestFixKv(t *testing.T) {
 		},
 		{
 			name: "successful_fixed_with_commit_mismatch",
-			fetchBlob: func(kvIndex uint64, hash common.Hash) ([]byte, error) {
-				return []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}, nil
-			},
 			setupMocks: func(sm *MockStorageManager) {
 				sm.On("CheckMeta", uint64(1)).Return(common.HexToHash("0a0b"), es.ErrCommitMismatch)
 				sm.On("TryWriteWithMetaCheck", uint64(1), common.HexToHash("0a0b"), mock.Anything, mock.Anything).Return(nil)
@@ -114,9 +111,6 @@ func TestFixKv(t *testing.T) {
 		},
 		{
 			name: "successful_fixed_with_checkmeta_error",
-			fetchBlob: func(kvIndex uint64, hash common.Hash) ([]byte, error) {
-				return []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}, nil
-			},
 			setupMocks: func(sm *MockStorageManager) {
 				sm.On("CheckMeta", uint64(1)).Return(common.Hash{}, errors.New("check meta error"))
 				sm.On("TryWriteWithMetaCheck", uint64(1), common.HexToHash("0102"), mock.Anything, mock.Anything).Return(nil)
@@ -138,12 +132,12 @@ func TestFixKv(t *testing.T) {
 
 			tt.setupMocks(sm)
 
-			worker := NewWorker(sm, nil, tt.fetchBlob, l1, Config{
+			worker := NewWorker(sm, nil, fetchBlob, l1, Config{
 				EsRpc: "http://localhost:8545",
 				Mode:  tt.mode,
 			}, log.New())
 
-			err := worker.fixKv(uint64(1), common.HexToHash("0102"), tt.fetchBlob)
+			err := worker.fixKv(uint64(1), common.HexToHash("0102"))
 			assert.NoError(t, err)
 
 			checkMocks(t, sm)

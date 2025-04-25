@@ -119,7 +119,7 @@ func (s *Worker) ScanBatch(ctx context.Context, sendError func(kvIndex uint64, e
 			s.lg.Error("Scanner: read blob error", "kvIndex", kvIndex, "commit", commit.Hex(), "err", err)
 			if err == es.ErrCommitMismatch {
 				sts.mismatched = append(sts.mismatched, kvIndex)
-				if err := s.fixKv(kvIndex, commit, s.fetchBlob); err != nil {
+				if err := s.fixKv(kvIndex, commit); err != nil {
 					sts.failed = append(sts.failed, kvIndex)
 					s.lg.Error("Scanner: fix blob error", "kvIndex", kvIndex, "err", err)
 					sendError(kvIndex, fmt.Errorf("failed to fix blob: %w", err))
@@ -180,14 +180,17 @@ func (s *Worker) queryLocalKvs() ([]uint64, error) {
 	return localKvs, nil
 }
 
-func (s *Worker) fixKv(kvIndex uint64, commit common.Hash, fetchBlob es.FetchBlobFunc) error {
+func (s *Worker) fixKv(kvIndex uint64, commit common.Hash) error {
 	s.lg.Info("Scanner: try to fix blob", "kvIndex", kvIndex, "commit", commit)
 	commitToFetchBlob := commit
-	// check if the commit in the contract has been updated
 	newCommit, err := s.sm.CheckMeta(kvIndex)
 	if err != nil {
 		if errors.Is(err, es.ErrCommitMismatch) {
+			// the commit in the contract has been updated
 			commitToFetchBlob = newCommit
+		} else {
+			// use the old commit if check meta fails
+			s.lg.Warn("Scanner: check meta error", "kvIndex", kvIndex, "err", err)
 		}
 	} else {
 		// the commit in the contract is the same as the one in the storage
@@ -195,14 +198,15 @@ func (s *Worker) fixKv(kvIndex uint64, commit common.Hash, fetchBlob es.FetchBlo
 			s.lg.Info("Scanner: KV already fixed by downloader", "kvIndex", kvIndex)
 			return nil
 		}
+		// in case the commit in the contract is same with the one in the storage, and both updated lately
 		commitToFetchBlob = newCommit
 	}
-	blob, err := fetchBlob(kvIndex, commitToFetchBlob)
+	blob, err := s.fetchBlob(kvIndex, commitToFetchBlob)
 	if err != nil {
 		return fmt.Errorf("failed to fetch blob: kvIndex=%d, commit=%x, %w", kvIndex, commitToFetchBlob, err)
 	}
 	s.lg.Info("Scanner: fetch blob done", "kvIndex", kvIndex, "commit", commitToFetchBlob)
-	if err := s.sm.TryWriteWithMetaCheck(kvIndex, commitToFetchBlob, blob, fetchBlob); err != nil {
+	if err := s.sm.TryWriteWithMetaCheck(kvIndex, commitToFetchBlob, blob, s.fetchBlob); err != nil {
 		return fmt.Errorf("failed to write KV: kvIndex=%d, commit=%x, %w", kvIndex, commitToFetchBlob, err)
 	}
 	s.lg.Info("Scanner: fixed blob successfully!", "kvIndex", kvIndex, "commit", commitToFetchBlob)
