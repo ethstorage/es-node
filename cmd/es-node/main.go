@@ -25,7 +25,6 @@ import (
 	eslog "github.com/ethstorage/go-ethstorage/ethstorage/log"
 	"github.com/ethstorage/go-ethstorage/ethstorage/metrics"
 	"github.com/ethstorage/go-ethstorage/ethstorage/node"
-	"github.com/ethstorage/go-ethstorage/ethstorage/scanner"
 	"github.com/urfave/cli"
 )
 
@@ -327,7 +326,7 @@ func EsNodeSync(ctx *cli.Context) error {
 	// query blob
 	var commit common.Hash
 	copy(commit[:], meta[0][32-ethstorage.HashSizeInContract:32])
-	blob, err := scanner.DownloadBlobFromRPC(esRpc, kvIndex, commit)
+	blob, err := downloadBlobFromRPC(esRpc, kvIndex, commit)
 	if err != nil {
 		return fmt.Errorf("failed to download blob from RPC: %w", err)
 	}

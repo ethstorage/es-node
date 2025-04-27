@@ -4,9 +4,12 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"math/big"
+	"net/http"
 	"os"
 	"path/filepath"
 	"sort"
@@ -14,9 +17,12 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/crypto/kzg4844"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/rpc"
 	es "github.com/ethstorage/go-ethstorage/ethstorage"
 	"github.com/ethstorage/go-ethstorage/ethstorage/flags"
 	"github.com/ethstorage/go-ethstorage/ethstorage/storage"
@@ -211,6 +217,33 @@ func readRequiredFlag(ctx *cli.Context, flag cli.StringFlag) string {
 	return value
 }
 
+func downloadBlobFromRPC(endpoint string, kvIndex uint64, hash common.Hash) ([]byte, error) {
+	rpcClient, err := rpc.DialOptions(context.Background(), endpoint, rpc.WithHTTPClient(http.DefaultClient))
+	if err != nil {
+		return nil, err
+	}
+
+	var result hexutil.Bytes
+	// kvIndex, blobHash, encodeType, offset, length
+	if err := rpcClient.Call(&result, "es_getBlob", kvIndex, hash, 0, 0, 4096*32); err != nil {
+		return nil, err
+	}
+
+	var blob kzg4844.Blob
+	copy(blob[:], result)
+	commitment, err := kzg4844.BlobToCommitment(&blob)
+	if err != nil {
+		return nil, fmt.Errorf("blobToCommitment failed: %w", err)
+	}
+	blobhash := common.Hash(kzg4844.CalcBlobHashV1(sha256.New(), &commitment))
+	fmt.Printf("blobhash from blob: %x\n", blobhash)
+	if bytes.Compare(blobhash[:es.HashSizeInContract], hash[:es.HashSizeInContract]) != 0 {
+		return nil, fmt.Errorf("invalid blobhash for %d want: %x, got: %x", kvIndex, hash, blobhash)
+	}
+
+	return result, nil
+}
+
 func initShardManager(ctx *cli.Context, l1Rpc string, l1contract common.Address) (*es.ShardManager, error) {
 	miner := readRequiredFlag(ctx, flags.StorageMiner)
 	if !common.IsHexAddress(miner) {
@@ -233,6 +266,7 @@ func initShardManager(ctx *cli.Context, l1Rpc string, l1contract common.Address)
 	storageCfg.Filenames = ctx.StringSlice(flags.StorageFiles.Name)
 	shardManager := es.NewShardManager(storageCfg.L1Contract, storageCfg.KvSize, storageCfg.KvEntriesPerShard, storageCfg.ChunkSize)
 	for _, filename := range storageCfg.Filenames {
+		fmt.Printf("Adding data file %s\n", filename)
 		df, err := es.OpenDataFile(filename)
 		if err != nil {
 			return nil, fmt.Errorf("open data file failed: %w", err)
@@ -242,8 +276,8 @@ func initShardManager(ctx *cli.Context, l1Rpc string, l1contract common.Address)
 		}
 		shardManager.AddDataFileAndShard(df)
 	}
-	if err := shardManager.IsComplete(); err != nil {
-		return nil, fmt.Errorf("data files are not completed, %w", err)
+	if shardManager.IsComplete() != nil {
+		return nil, fmt.Errorf("data files are not completed")
 	}
 	return shardManager, nil
 }
