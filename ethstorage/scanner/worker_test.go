@@ -133,8 +133,7 @@ func TestFixKv(t *testing.T) {
 			tt.setupMocks(sm)
 
 			worker := NewWorker(sm, nil, fetchBlob, l1, Config{
-				EsRpc: "http://localhost:8545",
-				Mode:  tt.mode,
+				Mode: tt.mode,
 			}, log.New())
 
 			err := worker.fixKv(uint64(1), common.HexToHash("0102"))

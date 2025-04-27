@@ -26,7 +26,6 @@ type Config struct {
 	Mode      int
 	BatchSize int
 	Interval  int
-	EsRpc     string
 }
 
 func CLIFlags(envPrefix string) []cli.Flag {
