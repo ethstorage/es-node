@@ -20,7 +20,6 @@ const (
 	ModeFlagName      = "scanner.mode"
 	BatchSizeFlagName = "scanner.batch-size"
 	IntervalFlagName  = "scanner.interval"
-	EsRpcFlagName     = "scanner.es-rpc"
 )
 
 type Config struct {
@@ -51,11 +50,6 @@ func CLIFlags(envPrefix string) []cli.Flag {
 			EnvVar: rollup.PrefixEnvVar(envPrefix, "INTERVAL"),
 			Value:  3,
 		},
-		cli.StringFlag{
-			Name:   EsRpcFlagName,
-			Usage:  "EthStorage RPC endpoint to query blobs",
-			EnvVar: rollup.PrefixEnvVar(envPrefix, "ES_RPC"),
-		},
 	}
 	return flags
 }
@@ -72,6 +66,5 @@ func NewConfig(ctx *cli.Context) *Config {
 		Mode:      mode,
 		BatchSize: ctx.GlobalInt(BatchSizeFlagName),
 		Interval:  ctx.GlobalInt(IntervalFlagName),
-		EsRpc:     ctx.GlobalString(EsRpcFlagName),
 	}
 }
