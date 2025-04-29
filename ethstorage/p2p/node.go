@@ -227,6 +227,10 @@ func (n *NodeP2P) RequestL2Range(ctx context.Context, start, end uint64) (uint64
 	return n.syncCl.RequestL2Range(start, end)
 }
 
+func (n *NodeP2P) FetchBlob(index uint64, commit common.Hash) ([]byte, error) {
+	return n.syncCl.FetchBlob(index, commit)
+}
+
 // RequestShardList fetches shard list from remote peer
 func (n *NodeP2P) RequestShardList(remotePeer peer.ID) ([]*protocol.ContractShards, error) {
 	remoteShardList := make([]*protocol.ContractShards, 0)

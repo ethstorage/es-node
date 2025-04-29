@@ -9,6 +9,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"math/big"
 	"math/rand"
 	"os"
@@ -649,6 +650,15 @@ func TestSync_RequestL2List(t *testing.T) {
 		t.Fatal(err)
 	}
 	verifyKVs(data, excludedList, t)
+
+	for _, index := range indexes {
+		meta, _, _ := sm.TryReadMeta(index)
+		blob, err := syncCl.FetchBlob(index, common.BytesToHash(meta))
+		assert.NoError(t, err)
+		root, _ := prover.GetRoot(blob, 0, 0)
+		commit := generateMetadata(root)
+		assert.Equal(t, common.BytesToHash(meta), commit)
+	}
 }
 
 // TestSaveAndLoadSyncStatus test save sync state to DB for tasks and load sync state from DB for tasks.
