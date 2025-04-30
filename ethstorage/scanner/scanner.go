@@ -26,6 +26,7 @@ type Scanner struct {
 	mu       sync.Mutex
 	lg       log.Logger
 	errorCh  chan scanError
+	statsCh  chan stats
 }
 
 type LoadKvFromCacheFunc func(uint64, common.Hash) []byte
@@ -49,6 +50,7 @@ func New(
 		cancel:   cancel,
 		lg:       lg,
 		errorCh:  make(chan scanError, 10),
+		statsCh:  make(chan stats, 10),
 	}
 	scanner.wg.Add(1)
 	go scanner.update()
@@ -93,27 +95,20 @@ func (s *Scanner) start() {
 	s.running = true
 	s.mu.Unlock()
 
-	s.wg.Add(1)
+	s.wg.Add(2)
+
+	// Reporting and error handling goroutine
 	go func() {
 		defer s.wg.Done()
 
-		s.lg.Info("Scanner started", "mode", s.worker.cfg.Mode, "interval", s.interval.String(), "batchSize", s.worker.cfg.BatchSize)
-
-		mainTicker := time.NewTicker(s.interval)
-		defer mainTicker.Stop()
 		reportTicker := time.NewTicker(1 * time.Minute)
 		defer reportTicker.Stop()
 
 		errCache := make(map[uint64]scanError)
 		sts := newStatsSum()
 
-		s.doWork()
-
 		for {
 			select {
-			case <-mainTicker.C:
-				st := s.doWork()
-				sts.update(*st)
 			case <-reportTicker.C:
 				s.lg.Info("Scanner stats", "kvStored", sts.total, "mismatched", sts.mismatched.String(), "fixed", sts.fixed.String(), "failed", sts.failed.String())
 				for _, e := range errCache {
@@ -125,6 +120,29 @@ func (s *Scanner) start() {
 				} else {
 					delete(errCache, err.kvIndex)
 				}
+			case st := <-s.statsCh:
+				sts.update(st)
+			case <-s.ctx.Done():
+				return
+			}
+		}
+	}()
+
+	// Main scanning loop
+	go func() {
+		defer s.wg.Done()
+
+		s.lg.Info("Scanner started", "mode", s.worker.cfg.Mode, "interval", s.interval.String(), "batchSize", s.worker.cfg.BatchSize)
+
+		mainTicker := time.NewTicker(s.interval)
+		defer mainTicker.Stop()
+
+		s.doWork()
+
+		for {
+			select {
+			case <-mainTicker.C:
+				s.doWork()
 			case <-s.ctx.Done():
 				return
 			}
@@ -154,7 +172,7 @@ func (s *Scanner) Close() {
 	s.wg.Wait()
 }
 
-func (s *Scanner) doWork() *stats {
+func (s *Scanner) doWork() {
 	s.lg.Info("Scan batch started")
 	start := time.Now()
 	defer func(stt time.Time) {
@@ -165,5 +183,12 @@ func (s *Scanner) doWork() *stats {
 	if err != nil {
 		s.lg.Error("Scan batch failed", "err", err)
 	}
-	return sts
+
+	if sts != nil {
+		select {
+		case s.statsCh <- *sts:
+		default:
+			s.lg.Warn("Scanner: stats channel is full, dropping stats")
+		}
+	}
 }
