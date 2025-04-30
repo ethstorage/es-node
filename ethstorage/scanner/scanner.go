@@ -25,7 +25,6 @@ type Scanner struct {
 	running  bool
 	mu       sync.Mutex
 	lg       log.Logger
-	statsCh  chan stats
 	errorCh  chan scanError
 }
 
@@ -49,7 +48,6 @@ func New(
 		ctx:      cctx,
 		cancel:   cancel,
 		lg:       lg,
-		statsCh:  make(chan stats, 10),
 		errorCh:  make(chan scanError, 10),
 	}
 	scanner.wg.Add(1)
@@ -114,14 +112,13 @@ func (s *Scanner) start() {
 		for {
 			select {
 			case <-mainTicker.C:
-				s.doWork()
+				st := s.doWork()
+				sts.update(*st)
 			case <-reportTicker.C:
 				s.lg.Info("Scanner stats", "kvStored", sts.total, "mismatched", sts.mismatched.String(), "fixed", sts.fixed.String(), "failed", sts.failed.String())
 				for _, e := range errCache {
 					s.lg.Error("Scanner error happened earlier", "kvIndex", e.kvIndex, "error", e.err)
 				}
-			case st := <-s.statsCh:
-				sts.update(st)
 			case err := <-s.errorCh:
 				if err.err != nil {
 					errCache[err.kvIndex] = err
@@ -157,7 +154,7 @@ func (s *Scanner) Close() {
 	s.wg.Wait()
 }
 
-func (s *Scanner) doWork() {
+func (s *Scanner) doWork() *stats {
 	s.lg.Info("Scan batch started")
 	start := time.Now()
 	defer func(stt time.Time) {
@@ -168,10 +165,5 @@ func (s *Scanner) doWork() {
 	if err != nil {
 		s.lg.Error("Scan batch failed", "err", err)
 	}
-
-	select {
-	case s.statsCh <- *sts:
-	default:
-		s.lg.Warn("Scanner: sent scan report to chan failed", "lenOfCh", len(s.statsCh))
-	}
+	return sts
 }
