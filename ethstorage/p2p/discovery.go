@@ -24,7 +24,6 @@ import (
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
-	"github.com/multiformats/go-multiaddr"
 	ma "github.com/multiformats/go-multiaddr"
 )
 
@@ -179,7 +178,7 @@ func enrToAddrInfo(r *enode.Node) (*peer.AddrInfo, *crypto.Secp256k1PublicKey, e
 	} else {
 		ip = ip4
 	}
-	mAddr, err := multiaddr.NewMultiaddr(fmt.Sprintf("/%s/%s/tcp/%d", ipScheme, ip.String(), r.TCP()))
+	mAddr, err := ma.NewMultiaddr(fmt.Sprintf("/%s/%s/tcp/%d", ipScheme, ip.String(), r.TCP()))
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not construct multi addr: %w", err)
 	}
@@ -194,7 +193,7 @@ func enrToAddrInfo(r *enode.Node) (*peer.AddrInfo, *crypto.Secp256k1PublicKey, e
 	}
 	return &peer.AddrInfo{
 		ID:    peerID,
-		Addrs: []multiaddr.Multiaddr{mAddr},
+		Addrs: []ma.Multiaddr{mAddr},
 	}, pub, nil
 }
 
