@@ -596,13 +596,60 @@ func (s *SyncClient) RequestL2Range(start, end uint64) (uint64, error) {
 		if err != nil {
 			return 0, err
 		}
-		_, _, _, err = s.onResult(packet.Blobs)
+		_, _, inserted, err := s.onResult(packet.Blobs)
 		if err != nil {
 			return 0, err
 		}
-		return id, nil
+
+		return uint64(len(inserted)), nil
 	}
 	return 0, fmt.Errorf("no peer can be used to send requests")
+}
+
+func (s *SyncClient) FetchBlob(kvIndex uint64, commit common.Hash) ([]byte, error) {
+	if len(s.peers) == 0 {
+		return nil, fmt.Errorf("no peer can be used to send requests")
+	}
+
+	for _, pr := range s.peers {
+		var packet BlobsByListPacket
+		var payload *BlobPayload = nil
+
+		_, err := pr.RequestBlobsByList(rand.Uint64(), s.storageManager.ContractAddress(), kvIndex/s.storageManager.KvEntries(), []uint64{kvIndex}, &packet)
+		if err != nil {
+			log.Warn("FetchBlob failed", "error", err)
+			continue
+		}
+
+		for _, val := range packet.Blobs {
+			if val.BlobIndex != kvIndex {
+				continue
+			}
+			if !bytes.Equal(val.BlobCommit[0:ethstorage.HashSizeInContract], commit[0:ethstorage.HashSizeInContract]) {
+				log.Warn("FetchBlob failed", "peer", pr.ID(), "expected commit", commit.Hex(), "actual commit", val.BlobCommit.Hex())
+				continue
+			}
+			payload = val
+		}
+
+		if payload == nil {
+			continue
+		}
+
+		decodedBlob, success := s.decodeKV(payload)
+		if !success {
+			continue
+		}
+
+		success = s.checkBlobCommit(decodedBlob, payload)
+		if !success {
+			continue
+		}
+
+		return decodedBlob, nil
+	}
+
+	return nil, fmt.Errorf("fail to fetch blob from peers")
 }
 
 func (s *SyncClient) RequestL2List(indexes []uint64) (uint64, error) {
