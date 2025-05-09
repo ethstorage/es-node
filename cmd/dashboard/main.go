@@ -11,7 +11,6 @@ import (
 	"math"
 	"math/big"
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/ethereum/go-ethereum"
@@ -19,6 +18,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/ethereum/go-ethereum/ethdb/leveldb"
 	"github.com/ethereum/go-ethereum/log"
 	ethRPC "github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
@@ -280,7 +280,7 @@ func LoadConfig(ruleFile string) []*Param {
 func main() {
 	// Parse the flags and set up the logger to print everything requested
 	flag.Parse()
-	log.Root().SetHandler(log.LvlFilterHandler(log.Lvl(*logFlag), log.StreamHandler(os.Stderr, log.TerminalFormat(true))))
+	log.SetDefault(log.NewLogger(log.NewTerminalHandlerWithLevel(os.Stderr, log.LevelInfo, true)))
 
 	if *portFlag < 0 || *portFlag > math.MaxUint16 {
 		log.Crit("Invalid port")
@@ -288,21 +288,12 @@ func main() {
 
 	m := metrics.NewMetrics("dashboard")
 	params := LoadConfig(*configFileFlag)
-	db, err := rawdb.Open(rawdb.OpenOptions{
-		Type:              "leveldb",
-		Directory:         *dataPath,
-		AncientsDirectory: filepath.Join(*dataPath, "ancient"),
-		Namespace:         "es-data/db/dashboard/",
-		Cache:             2048,
-		Handles:           8196,
-		ReadOnly:          false,
-	})
+	db, err := leveldb.New(*dataPath, 2048, 8196, "es-data/db/dashboard/", false)
 	if err != nil {
 		log.Crit("Failed to create db", "err", err)
 	}
-
 	for _, param := range params {
-		d, err := newDashboard(param, db, m)
+		d, err := newDashboard(param, rawdb.NewDatabase(db), m)
 		if err != nil {
 			log.Crit("New dashboard fail", "err", err)
 		}

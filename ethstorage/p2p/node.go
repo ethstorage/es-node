@@ -46,13 +46,13 @@ type NodeP2P struct {
 
 // NewNodeP2P creates a new p2p node, and returns a reference to it. If the p2p is disabled, it returns nil.
 // If metrics are configured, a bandwidth monitor will be spawned in a goroutine.
-func NewNodeP2P(resourcesCtx context.Context, rollupCfg *rollup.EsConfig, l1ChainID uint64, log log.Logger, setup SetupP2P,
+func NewNodeP2P(resourcesCtx context.Context, rollupCfg *rollup.EsConfig, log log.Logger, setup SetupP2P,
 	storageManager *ethstorage.StorageManager, db ethdb.Database, m metrics.Metricer, feed *event.Feed) (*NodeP2P, error) {
 	if setup == nil {
 		return nil, errors.New("p2p node cannot be created without setup")
 	}
 	var n NodeP2P
-	if err := n.init(resourcesCtx, rollupCfg, l1ChainID, log, setup, storageManager, db, m, feed); err != nil {
+	if err := n.init(resourcesCtx, rollupCfg, log, setup, storageManager, db, m, feed); err != nil {
 		closeErr := n.Close()
 		if closeErr != nil {
 			log.Error("Failed to close p2p after starting with err", "closeErr", closeErr, "err", err)
@@ -65,7 +65,7 @@ func NewNodeP2P(resourcesCtx context.Context, rollupCfg *rollup.EsConfig, l1Chai
 	return &n, nil
 }
 
-func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig, l1ChainID uint64, log log.Logger, setup SetupP2P,
+func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig, log log.Logger, setup SetupP2P,
 	storageManager *ethstorage.StorageManager, db ethdb.Database, m metrics.Metricer, feed *event.Feed) error {
 	bwc := p2pmetrics.NewBandwidthCounter()
 	n.storageManager = storageManager
@@ -124,8 +124,10 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 				}
 				added := n.syncCl.AddPeer(remotePeerId, shards, conn.Stat().Direction)
 				if !added {
-					log.Debug("Close connection as AddPeer fail", "peer", remotePeerId)
+					log.Info("Close connection as AddPeer fail", "peer", remotePeerId)
 					conn.Close()
+				} else {
+					log.Info("Connected to peer", "peer", remotePeerId, "Direction", conn.Stat().Direction, "addr", conn.RemoteMultiaddr().String())
 				}
 			},
 			DisconnectedF: func(nw network.Network, conn network.Conn) {
@@ -133,7 +135,10 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 					log.Debug("No addresses in peer store, return without remove peer", "peer", conn.RemotePeer())
 					return
 				}
-				n.syncCl.RemovePeer(conn.RemotePeer())
+				removedExist := n.syncCl.RemovePeer(conn.RemotePeer())
+				if removedExist {
+					log.Info("Disconnected from peer", "peer", conn.RemotePeer(), "Direction", conn.Stat().Direction, "addr", conn.RemoteMultiaddr())
+				}
 			},
 		})
 
@@ -179,7 +184,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 		}
 
 		// All nil if disabled.
-		n.dv5Local, n.dv5Udp, n.isIPSet, err = setup.Discovery(log.New("p2p", "discv5"), l1ChainID, tcpPort, getLocalPublicIPv4())
+		n.dv5Local, n.dv5Udp, n.isIPSet, err = setup.Discovery(log.New("p2p", "discv5"), rollupCfg.L2ChainID.Uint64(), tcpPort, getLocalPublicIPv4())
 		if err != nil {
 			return fmt.Errorf("failed to start discv5: %w", err)
 		}
@@ -220,6 +225,10 @@ func (n *NodeP2P) PurgeBadPeers() {
 
 func (n *NodeP2P) RequestL2Range(ctx context.Context, start, end uint64) (uint64, error) {
 	return n.syncCl.RequestL2Range(start, end)
+}
+
+func (n *NodeP2P) FetchBlob(index uint64, commit common.Hash) ([]byte, error) {
+	return n.syncCl.FetchBlob(index, commit)
 }
 
 // RequestShardList fetches shard list from remote peer

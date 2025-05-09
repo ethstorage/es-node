@@ -51,7 +51,7 @@ func (p *KZGProver) GetRoot(data []byte, chunkPerKV, chunkSize uint64) (common.H
 	}
 	var blob gokzg4844.Blob
 	copy(blob[:], data)
-	commitment, err := p.ctx.BlobToKZGCommitment(blob, -1)
+	commitment, err := p.ctx.BlobToKZGCommitment(&blob, -1)
 	if err != nil {
 		return common.Hash{}, fmt.Errorf("could not convert blob to commitment: %v", err)
 	}
@@ -81,11 +81,11 @@ func (p *KZGProver) GenerateKZGProof(data []byte, sampleIdx uint64) ([]byte, err
 	sampleIdxReversed := reverseBits(sampleIdx)
 	var xe fr.Element
 	inputPoint := gokzg4844.SerializeScalar(*xe.Exp(p.ru, new(big.Int).SetUint64(sampleIdxReversed)))
-	proof, claimedValue, err := p.ctx.ComputeKZGProof(blob, inputPoint, -1)
+	proof, claimedValue, err := p.ctx.ComputeKZGProof(&blob, inputPoint, -1)
 	if err != nil {
 		return nil, fmt.Errorf("failed to compute proofs: %v", err)
 	}
-	commitment, err := p.ctx.BlobToKZGCommitment(blob, -1)
+	commitment, err := p.ctx.BlobToKZGCommitment(&blob, -1)
 	if err != nil {
 		return nil, fmt.Errorf("could not convert blob to commitment: %v", err)
 	}

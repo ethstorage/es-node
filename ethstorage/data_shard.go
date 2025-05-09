@@ -350,7 +350,7 @@ func checkCommit(commit common.Hash, blobData []byte) error {
 	blob := kzg4844.Blob{}
 	copy(blob[:], blobData)
 	// Generate VersionedHash
-	commitment, err := kzg4844.BlobToCommitment(blob)
+	commitment, err := kzg4844.BlobToCommitment(&blob)
 	if err != nil {
 		return fmt.Errorf("could not convert blob to commitment: %v", err)
 	}

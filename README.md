@@ -21,8 +21,8 @@ If you want to know more about EthStorage, refer to the [EthStorage Documentatio
 
 # Contact
 
-Please join our [Discord](https://discord.com/invite/xhCwaMp7ps) for any technical questions, and stay informed about news of EthStorage by following our [Twitter](https://twitter.com/EthStorage) account.
+Please join our [Discord](https://discord.com/invite/xhCwaMp7ps) for any technical questions, and stay informed about news of EthStorage by following our [X](https://x.com/EthStorage) account.
 
 # License
 
-This repository is licensed under [BLS](/LICENSE).
+This repository is licensed under [BSL](/LICENSE).

@@ -4,12 +4,12 @@
 package eth
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 
-	"github.com/crate-crypto/go-proto-danksharding-crypto/eth"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto/kzg4844"
 )
@@ -55,11 +55,11 @@ func (c *DAClient) DownloadBlob(hash common.Hash) (Blob, error) {
 	}
 	var blob kzg4844.Blob
 	copy(blob[:], data)
-	commit, err := kzg4844.BlobToCommitment(blob)
+	commit, err := kzg4844.BlobToCommitment(&blob)
 	if err != nil {
 		return Blob{}, fmt.Errorf("blobToCommitment failed: %w", err)
 	}
-	if common.Hash(eth.KZGToVersionedHash(commit)) != hash {
+	if common.Hash(kzg4844.CalcBlobHashV1(sha256.New(), &commit)) != hash {
 		return Blob{}, fmt.Errorf("invalid blob for %s", hash)
 	}
 	return Blob{VersionedHash: hash, Data: data}, nil

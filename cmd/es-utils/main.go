@@ -153,21 +153,12 @@ func init() {
 }
 
 func setupLogger() {
-	glogger := log.NewGlogHandler(log.StreamHandler(os.Stderr, log.TerminalFormat(false)))
-	glogger.Verbosity(log.Lvl(*verbosity))
-	log.Root().SetHandler(glogger)
-
-	// setup logger
-	var ostream log.Handler
 	output := io.Writer(os.Stderr)
-
 	usecolor := (isatty.IsTerminal(os.Stderr.Fd()) || isatty.IsCygwinTerminal(os.Stderr.Fd())) && os.Getenv("TERM") != "dumb"
 	if usecolor {
 		output = colorable.NewColorableStderr()
 	}
-	ostream = log.StreamHandler(output, log.TerminalFormat(usecolor))
-
-	glogger.SetHandler(ostream)
+	log.SetDefault(log.NewLogger(log.NewTerminalHandlerWithLevel(output, log.FromLegacyLevel(*verbosity), usecolor)))
 }
 
 func runCreate(cmd *cobra.Command, args []string) {

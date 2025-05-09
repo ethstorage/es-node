@@ -72,7 +72,7 @@ func LoadConfig(ruleFile string) []IChecker {
 
 func main() {
 	flag.Parse()
-	log.Root().SetHandler(log.LvlFilterHandler(log.Lvl(3), log.StreamHandler(os.Stderr, log.TerminalFormat(true))))
+	log.SetDefault(log.NewLogger(log.NewTerminalHandlerWithLevel(os.Stderr, log.LevelInfo, true)))
 
 	var (
 		logger    = log.New("app", "alert")

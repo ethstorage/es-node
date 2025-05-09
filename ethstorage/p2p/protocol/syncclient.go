@@ -555,13 +555,13 @@ func (s *SyncClient) AddPeer(id peer.ID, shards map[common.Address][]uint64, dir
 	return true
 }
 
-func (s *SyncClient) RemovePeer(id peer.ID) {
+func (s *SyncClient) RemovePeer(id peer.ID) bool {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	pr, ok := s.peers[id]
 	if !ok {
 		s.log.Debug("Cannot remove peer from sync duties, peer was not registered", "peer", id)
-		return
+		return false
 	}
 	pr.resCancel() // once loop exits
 	delete(s.peers, id)
@@ -571,6 +571,7 @@ func (s *SyncClient) RemovePeer(id peer.ID) {
 	for _, t := range s.tasks {
 		delete(t.statelessPeers, id)
 	}
+	return true
 }
 
 // Close will shut down the sync client and all attached work, and block until shutdown is complete.
@@ -595,13 +596,60 @@ func (s *SyncClient) RequestL2Range(start, end uint64) (uint64, error) {
 		if err != nil {
 			return 0, err
 		}
-		_, _, _, err = s.onResult(packet.Blobs)
+		_, _, inserted, err := s.onResult(packet.Blobs)
 		if err != nil {
 			return 0, err
 		}
-		return id, nil
+
+		return uint64(len(inserted)), nil
 	}
 	return 0, fmt.Errorf("no peer can be used to send requests")
+}
+
+func (s *SyncClient) FetchBlob(kvIndex uint64, commit common.Hash) ([]byte, error) {
+	if len(s.peers) == 0 {
+		return nil, fmt.Errorf("no peer can be used to send requests")
+	}
+
+	for _, pr := range s.peers {
+		var packet BlobsByListPacket
+		var payload *BlobPayload = nil
+
+		_, err := pr.RequestBlobsByList(rand.Uint64(), s.storageManager.ContractAddress(), kvIndex/s.storageManager.KvEntries(), []uint64{kvIndex}, &packet)
+		if err != nil {
+			log.Warn("FetchBlob failed", "error", err)
+			continue
+		}
+
+		for _, val := range packet.Blobs {
+			if val.BlobIndex != kvIndex {
+				continue
+			}
+			if !bytes.Equal(val.BlobCommit[0:ethstorage.HashSizeInContract], commit[0:ethstorage.HashSizeInContract]) {
+				log.Warn("FetchBlob failed", "peer", pr.ID(), "expected commit", commit.Hex(), "actual commit", val.BlobCommit.Hex())
+				continue
+			}
+			payload = val
+		}
+
+		if payload == nil {
+			continue
+		}
+
+		decodedBlob, success := s.decodeKV(payload)
+		if !success {
+			continue
+		}
+
+		success = s.checkBlobCommit(decodedBlob, payload)
+		if !success {
+			continue
+		}
+
+		return decodedBlob, nil
+	}
+
+	return nil, fmt.Errorf("fail to fetch blob from peers")
 }
 
 func (s *SyncClient) RequestL2List(indexes []uint64) (uint64, error) {

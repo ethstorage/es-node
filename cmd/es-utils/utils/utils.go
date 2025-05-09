@@ -221,13 +221,13 @@ func ComputeBlobs(blobs []kzg4844.Blob) ([]kzg4844.Commitment, []kzg4844.Proof, 
 		versionedHashes []common.Hash
 	)
 	for _, blob := range blobs {
-		commit, err := kzg4844.BlobToCommitment(blob)
+		commit, err := kzg4844.BlobToCommitment(&blob)
 		if err != nil {
 			return nil, nil, nil, err
 		}
 		commits = append(commits, commit)
 
-		proof, err := kzg4844.ComputeBlobProof(blob, commit)
+		proof, err := kzg4844.ComputeBlobProof(&blob, commit)
 		if err != nil {
 			return nil, nil, nil, err
 		}

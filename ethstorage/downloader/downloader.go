@@ -277,15 +277,31 @@ func (s *Downloader) download() {
 		// If downloadRange fails, then lastDownloadedBlock will keep the same as before. so when the next
 		// upload task starts, it will still try to download the blobs from the last failed block number
 		if blobs, err := s.downloadRange(start, end, false); err == nil {
-			// save to ethstorage shard file
-			kvIndices := make([]uint64, len(blobs))
-			dataBlobs := make([][]byte, len(blobs))
-			metas := make([]common.Hash, len(blobs))
-			for i, blob := range blobs {
+			// need to prepare kvIndices, dataBlobs, metas for the downloadFinished
+			// note that there will be parallel key-value writes in downloadFinished
+			// so we need to make sure that the kvIndices are unique, otherwise, the one that is written later will overwrite the previous one
+			// we will use a map named 'kvIdxToArrayIdx' to store the kvIndex to array index mapping
+			kvIndices := make([]uint64, 0)
+			dataBlobs := make([][]byte, 0)
+			metas := make([]common.Hash, 0)
+
+			kvIdxToArrayIdx := make(map[uint64]int)
+
+			for _, blob := range blobs {
 				s.log.Info("Blob will be saved into disk", "kvIndex", blob.kvIndex.Uint64(), "hash", hex.EncodeToString(blob.hash[:]))
-				kvIndices[i] = blob.kvIndex.Uint64()
-				dataBlobs[i] = blob.data
-				copy(metas[i][0:ethstorage.HashSizeInContract], blob.hash[0:ethstorage.HashSizeInContract])
+				if arrIdx, exists := kvIdxToArrayIdx[blob.kvIndex.Uint64()]; exists {
+					s.log.Info("Duplicate kvIndex found, will replace the previous one", "previous", kvIndices[arrIdx], "new", blob.kvIndex.Uint64())
+					dataBlobs[arrIdx] = blob.data
+					copy(metas[arrIdx][0:ethstorage.HashSizeInContract], blob.hash[0:ethstorage.HashSizeInContract])
+				} else {
+					kvIndices = append(kvIndices, blob.kvIndex.Uint64())
+					kvIdxToArrayIdx[blob.kvIndex.Uint64()] = len(kvIndices) - 1
+
+					dataBlobs = append(dataBlobs, blob.data)
+					meta := common.Hash{}
+					copy(meta[0:ethstorage.HashSizeInContract], blob.hash[0:ethstorage.HashSizeInContract])
+					metas = append(metas, meta)
+				}
 			}
 
 			ts := time.Now()

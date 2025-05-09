@@ -10,11 +10,11 @@ import (
 	"os"
 
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
-	"github.com/crate-crypto/go-proto-danksharding-crypto/eth"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/iden3/go-rapidsnark/types"
+	"github.com/protolambda/go-kzg/eth"
 )
 
 type ZKProof struct {
