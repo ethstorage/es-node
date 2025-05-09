@@ -11,9 +11,8 @@ RUN apk add --no-cache bash curl libstdc++ gcompat libgomp nodejs npm
 RUN npm install -g snarkjs
 
 # Entrypoint
-COPY --from=builder /es-node/init.sh /es-node/
-COPY --from=builder /es-node/run.sh /es-node/
-RUN chmod +x /es-node/init.sh /es-node/run.sh
+COPY --from=builder /es-node/*.sh /es-node/
+RUN chmod +x /es-node/*.sh
 WORKDIR /es-node
 
 EXPOSE 9545 9222 30305/udp
