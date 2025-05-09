@@ -8,7 +8,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sort"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
@@ -24,17 +23,19 @@ type IStorageManager interface {
 	TryWriteWithMetaCheck(kvIdx uint64, commit common.Hash, blob []byte, fetchBlob es.FetchBlobFunc) error
 	MaxKvSize() uint64
 	KvEntries() uint64
+	TotalKvs() uint64
 	Shards() []uint64
+	LoadKvIndexByRange(start, end uint64) []uint64
 }
 
 type Worker struct {
-	sm              IStorageManager
-	loadKvFromCache LoadKvFromCacheFunc
-	fetchBlob       es.FetchBlobFunc
-	l1              es.Il1Source
-	cfg             Config
-	nextKvIndex     uint64
-	lg              log.Logger
+	sm               IStorageManager
+	loadKvFromCache  LoadKvFromCacheFunc
+	fetchBlob        es.FetchBlobFunc
+	l1               es.Il1Source
+	cfg              Config
+	nextIndexOfKvIdx uint64
+	lg               log.Logger
 }
 
 func NewWorker(
@@ -57,14 +58,9 @@ func NewWorker(
 
 func (s *Worker) ScanBatch(ctx context.Context, sendError func(kvIndex uint64, err error)) (*stats, error) {
 	sts := stats{}
-	localKvs, err := s.queryLocalKvs()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get local KV indices: %w", err)
-	}
-	s.lg.Info("Scanner: query local KV entries done", "localKVs", shortPrt(localKvs))
-	sts.total = len(localKvs)
+	sts.total = int(s.sm.TotalKvs())
 
-	kvsInBatch, nextKvIndex, err := s.determineBatchIndexRange(localKvs)
+	kvsInBatch, nextKvIndex, err := s.determineBatchIndexRange()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get batch index range: %w", err)
 	}
@@ -133,51 +129,26 @@ func (s *Worker) ScanBatch(ctx context.Context, sendError func(kvIndex uint64, e
 			}
 		}
 	}
-	s.nextKvIndex = nextKvIndex
+	s.nextIndexOfKvIdx = nextKvIndex
 	if len(kvsInBatch) > 0 {
 		s.lg.Info("Scanner: scan batch done", "from", kvsInBatch[0], "to", kvsInBatch[len(kvsInBatch)-1], "count", len(kvsInBatch), "nextKvIndex", nextKvIndex)
 	}
 	return &sts, nil
 }
 
-func (s *Worker) determineBatchIndexRange(localKvs []uint64) ([]uint64, uint64, error) {
-	localKvTotal := uint64(len(localKvs))
+func (s *Worker) determineBatchIndexRange() ([]uint64, uint64, error) {
+	total := s.sm.TotalKvs()
 
-	batchStart := s.nextKvIndex
-	if batchStart >= localKvTotal {
+	batchStart := s.nextIndexOfKvIdx
+	if batchStart >= total {
 		batchStart = 0
 		s.lg.Info("Scanner: scan batch start over")
 	}
 	batchEnd := batchStart + uint64(s.cfg.BatchSize)
-	if batchEnd > localKvTotal {
-		batchEnd = localKvTotal
+	if batchEnd > total {
+		batchEnd = total
 	}
-	return localKvs[batchStart:batchEnd], batchEnd, nil
-}
-
-func (s *Worker) queryLocalKvs() ([]uint64, error) {
-	kvEntryCount, err := s.l1.GetStorageLastBlobIdx(rpc.LatestBlockNumber.Int64())
-	if err != nil {
-		return nil, fmt.Errorf("failed to query total KV entries: %w", err)
-	}
-	s.lg.Info("Scanner: query KV entry count done", "kvEntryCount", kvEntryCount)
-	var localKvs []uint64
-	kvEntries := s.sm.KvEntries()
-	localShards := s.sm.Shards()
-	s.lg.Info("Scanner: local shards", "shards", localShards)
-	sort.Slice(localShards, func(i, j int) bool {
-		return localShards[i] < localShards[j]
-	})
-	for _, shardId := range localShards {
-		for k := uint64(0); k < kvEntries; k++ {
-			kvIdx := shardId*kvEntries + k
-			if kvIdx < kvEntryCount {
-				// only check non-empty data
-				localKvs = append(localKvs, kvIdx)
-			}
-		}
-	}
-	return localKvs, nil
+	return s.sm.LoadKvIndexByRange(batchStart, batchEnd), batchEnd, nil
 }
 
 func (s *Worker) fixKv(kvIndex uint64, commit common.Hash) error {

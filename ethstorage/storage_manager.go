@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"sort"
 	"sync"
 	"time"
 
@@ -633,7 +634,49 @@ func (s *StorageManager) Shards() []uint64 {
 	for idx := range s.shardManager.ShardMap() {
 		shards = append(shards, idx)
 	}
+	sort.Slice(shards, func(i, j int) bool {
+		return shards[i] < shards[j]
+	})
 	return shards
+}
+
+func (s *StorageManager) TotalKvs() uint64 {
+	var totalEntries uint64
+	shards := s.Shards()
+	kvEntries := s.KvEntries()
+	lastKvIdx := s.LastKvIndex()
+	if lastKvIdx/kvEntries == shards[len(shards)-1] {
+		totalEntries = uint64(len(shards)-1)*kvEntries + lastKvIdx%kvEntries
+	} else {
+		// the last shard is not stored in the local storage
+		totalEntries = uint64(len(shards)) * kvEntries
+	}
+	return totalEntries
+}
+
+// LoadKvIndexByRange will load the kv index by range, it will return the kv index in the range of [start, end)
+// The start and end are the indices of the list of the kv entries sorted by the kv index
+func (s *StorageManager) LoadKvIndexByRange(start, end uint64) []uint64 {
+	if start >= end {
+		return nil
+	}
+
+	shards := s.Shards()
+	kvEntries := s.KvEntries()
+	lastKvIdx := s.LastKvIndex()
+
+	var localKvs []uint64
+	for _, shardId := range shards {
+		for k := uint64(0); k < kvEntries; k++ {
+			kvIdx := shardId*kvEntries + k
+			if kvIdx < lastKvIdx {
+				// only check non-empty data
+				localKvs = append(localKvs, kvIdx)
+			}
+		}
+	}
+
+	return localKvs[start:end]
 }
 
 func (s *StorageManager) ReadSampleUnlocked(shardIdx, sampleIdx uint64) (common.Hash, error) {
