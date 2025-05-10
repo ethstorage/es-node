@@ -239,10 +239,7 @@ func (s *Downloader) downloadToCache() {
 	s.mu.Unlock()
 
 	for start < end {
-		rangeEnd := start + downloadBatchSize
-		if rangeEnd > end {
-			rangeEnd = end
-		}
+		rangeEnd := min(start+downloadBatchSize, end)
 		_, err := s.downloadRange(start+1, rangeEnd, true)
 
 		if err != nil {
@@ -270,10 +267,7 @@ func (s *Downloader) download() {
 
 	for s.lastDownloadBlock < trackHead {
 		start := s.lastDownloadBlock + 1
-		end := s.lastDownloadBlock + downloadBatchSize
-		if end > trackHead {
-			end = trackHead
-		}
+		end := min(s.lastDownloadBlock+downloadBatchSize, trackHead)
 		// If downloadRange fails, then lastDownloadedBlock will keep the same as before. so when the next
 		// upload task starts, it will still try to download the blobs from the last failed block number
 		if blobs, err := s.downloadRange(start, end, false); err == nil {
