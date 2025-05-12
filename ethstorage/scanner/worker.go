@@ -58,15 +58,25 @@ func NewWorker(
 
 func (s *Worker) ScanBatch(ctx context.Context, sendError func(kvIndex uint64, err error)) (*stats, error) {
 	sts := stats{}
-	sts.total = int(s.sm.TotalKvs())
+	total := s.sm.TotalKvs()
+	s.lg.Info("Scanner: determining batch index range", "totalKvStored", total)
+	sts.total = int(total)
 
-	kvsInBatch, nextKvIndex, err := s.determineBatchIndexRange()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get batch index range: %w", err)
+	batchStart := s.nextIndexOfKvIdx
+	if batchStart >= total {
+		batchStart = 0
+		s.lg.Info("Scanner: scan batch start over")
 	}
+	batchEnd := batchStart + uint64(s.cfg.BatchSize)
+	if batchEnd > total {
+		batchEnd = total
+	}
+	kvsInBatch := s.sm.LoadKvIndexByRange(batchStart, batchEnd)
+	s.lg.Info("Scanner: batch index range", "batchStart", batchStart, "batchEnd", batchEnd, "kvsInBatch", shortPrt(kvsInBatch))
+
+	// Query the metas from the L1 contract
 	metas, err := s.l1.GetKvMetas(kvsInBatch, rpc.LatestBlockNumber.Int64())
 	if err != nil {
-		s.lg.Error("Scanner: error getting meta range", "kvsInBatch", shortPrt(kvsInBatch))
 		return nil, fmt.Errorf("failed to query KV metas %w", err)
 	}
 	s.lg.Info("Scanner: query KV meta done", "kvsInBatch", shortPrt(kvsInBatch))
@@ -129,26 +139,11 @@ func (s *Worker) ScanBatch(ctx context.Context, sendError func(kvIndex uint64, e
 			}
 		}
 	}
-	s.nextIndexOfKvIdx = nextKvIndex
+	s.nextIndexOfKvIdx = batchEnd
 	if len(kvsInBatch) > 0 {
-		s.lg.Info("Scanner: scan batch done", "from", kvsInBatch[0], "to", kvsInBatch[len(kvsInBatch)-1], "count", len(kvsInBatch), "nextKvIndex", nextKvIndex)
+		s.lg.Info("Scanner: scan batch done", "scanned", shortPrt(kvsInBatch), "count", len(kvsInBatch), "nextIndexOfKvIdx", s.nextIndexOfKvIdx)
 	}
 	return &sts, nil
-}
-
-func (s *Worker) determineBatchIndexRange() ([]uint64, uint64, error) {
-	total := s.sm.TotalKvs()
-
-	batchStart := s.nextIndexOfKvIdx
-	if batchStart >= total {
-		batchStart = 0
-		s.lg.Info("Scanner: scan batch start over")
-	}
-	batchEnd := batchStart + uint64(s.cfg.BatchSize)
-	if batchEnd > total {
-		batchEnd = total
-	}
-	return s.sm.LoadKvIndexByRange(batchStart, batchEnd), batchEnd, nil
 }
 
 func (s *Worker) fixKv(kvIndex uint64, commit common.Hash) error {
