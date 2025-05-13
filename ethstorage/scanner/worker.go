@@ -23,9 +23,8 @@ type IStorageManager interface {
 	TryWriteWithMetaCheck(kvIdx uint64, commit common.Hash, blob []byte, fetchBlob es.FetchBlobFunc) error
 	MaxKvSize() uint64
 	KvEntries() uint64
-	TotalKvs() uint64
+	LastKvIndex() uint64
 	Shards() []uint64
-	LoadKvIndexByRange(start, end uint64) []uint64
 }
 
 type Worker struct {
@@ -57,25 +56,49 @@ func NewWorker(
 }
 
 func (s *Worker) ScanBatch(ctx context.Context, sendError func(kvIndex uint64, err error)) (*stats, error) {
+	shards := s.sm.Shards()
+	kvEntries := s.sm.KvEntries()
+	lastKvIdx := s.sm.LastKvIndex() - 1
+	s.lg.Info("Scanner: scan batch started", "lastKvIdx", lastKvIdx, "shards", shards, "kvEntriesPerShard", kvEntries)
+	var totalEntries uint64
+	for _, shardId := range shards {
+		if shardId == lastKvIdx/kvEntries {
+			totalEntries += (lastKvIdx + 1) % kvEntries
+			break
+		}
+		totalEntries += kvEntries
+	}
+	s.lg.Info("Scanner: determining batch index range", "localKvs", previewLocalKvs(shards, kvEntries, lastKvIdx), "totalKvStored", totalEntries)
+
 	sts := stats{}
-	total := s.sm.TotalKvs()
-	s.lg.Info("Scanner: determining batch index range", "totalKvStored", total)
-	sts.total = int(total)
+	sts.total = int(totalEntries)
 
 	batchStart := s.nextIndexOfKvIdx
-	if batchStart >= total {
+	if batchStart >= totalEntries {
 		batchStart = 0
 		s.lg.Info("Scanner: scan batch start over")
 	}
 	batchEnd := batchStart + uint64(s.cfg.BatchSize)
-	if batchEnd > total {
-		batchEnd = total
+	if batchEnd > totalEntries {
+		batchEnd = totalEntries
 	}
-	kvsInBatch := s.sm.LoadKvIndexByRange(batchStart, batchEnd)
+
+	var localKvs []uint64
+out:
+	for _, shardId := range shards {
+		for k := uint64(0); k < kvEntries; k++ {
+			kvIdx := shardId*kvEntries + k
+			if kvIdx > lastKvIdx {
+				break out
+			}
+			localKvs = append(localKvs, kvIdx)
+		}
+	}
+	kvsInBatch := localKvs[batchStart:batchEnd]
 	s.lg.Info("Scanner: batch index range", "batchStart", batchStart, "batchEnd", batchEnd, "kvsInBatch", shortPrt(kvsInBatch))
 
 	// Query the metas from the L1 contract
-	metas, err := s.l1.GetKvMetas(kvsInBatch, rpc.LatestBlockNumber.Int64())
+	metas, err := s.l1.GetKvMetas(kvsInBatch, rpc.FinalizedBlockNumber.Int64())
 	if err != nil {
 		return nil, fmt.Errorf("failed to query KV metas %w", err)
 	}
