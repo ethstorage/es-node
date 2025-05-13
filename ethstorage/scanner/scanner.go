@@ -106,13 +106,16 @@ func (s *Scanner) start() {
 
 		errCache := make(map[uint64]scanError)
 		sts := newStatsSum()
+		statsUpdated := false
 
 		for {
 			select {
 			case <-reportTicker.C:
-				s.lg.Info("Scanner stats", "kvStored", sts.total, "mismatched", sts.mismatched.String(), "fixed", sts.fixed.String(), "failed", sts.failed.String())
-				for _, e := range errCache {
-					s.lg.Error("Scanner error happened earlier", "kvIndex", e.kvIndex, "error", e.err)
+				if statsUpdated { // Wait for stats updated for the first time
+					s.lg.Info("Scanner stats", "kvStored", sts.total, "mismatched", sts.mismatched.String(), "fixed", sts.fixed.String(), "failed", sts.failed.String())
+					for _, e := range errCache {
+						s.lg.Error("Scanner error happened earlier", "kvIndex", e.kvIndex, "error", e.err)
+					}
 				}
 			case err := <-s.errorCh:
 				if err.err != nil {
@@ -122,6 +125,7 @@ func (s *Scanner) start() {
 				}
 			case st := <-s.statsCh:
 				sts.update(st)
+				statsUpdated = true
 			case <-s.ctx.Done():
 				return
 			}
