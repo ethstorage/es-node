@@ -24,9 +24,25 @@ const (
 	MetaDownloadThread = 32
 )
 
-var (
-	ErrCommitMismatch = errors.New("mismatched commit")
-)
+type CommitMismatchError struct {
+	expected [HashSizeInContract]byte
+	found    [HashSizeInContract]byte
+}
+
+func (e *CommitMismatchError) Error() string {
+	return fmt.Sprintf("commit mismatch: expected=%x, found=%x", e.expected, e.found)
+}
+
+func NewCommitMismatchError(expected, found common.Hash) error {
+	var exp = [HashSizeInContract]byte{}
+	var fnd = [HashSizeInContract]byte{}
+	copy(exp[:], expected[0:HashSizeInContract])
+	copy(fnd[:], found[0:HashSizeInContract])
+	return &CommitMismatchError{
+		expected: exp,
+		found:    fnd,
+	}
+}
 
 type FetchBlobFunc func(kvIndex uint64, hash common.Hash) ([]byte, error)
 
@@ -253,9 +269,12 @@ func (s *StorageManager) CommitEmptyBlobs(start, limit uint64) (uint64, uint64, 
 		err := s.commitEncodedBlob(index, encodedBlobs[i], hash, metas[i])
 		if err == nil {
 			inserted++
-		} else if err != ErrCommitMismatch {
-			log.Info("Commit blobs fail", "kvIndex", kvIndices[i], "err", err.Error())
-			break
+		} else {
+			var commitErr *CommitMismatchError
+			if !errors.As(err, &commitErr) {
+				log.Info("Commit blobs fail", "kvIndex", kvIndices[i], "err", err.Error())
+				break
+			}
 		}
 		// if meta is not equal to empty hash, that mean the blob is not empty,
 		// so cancel the fill empty for that index and continue the rest.
@@ -291,7 +310,7 @@ func (s *StorageManager) CommitBlob(kvIndex uint64, blob []byte, commit common.H
 func (s *StorageManager) commitEncodedBlob(kvIndex uint64, encodedBlob []byte, commit common.Hash, contractMeta [32]byte) error {
 	// the commit is different with what we got from the contract, so should not commit
 	if !bytes.Equal(contractMeta[32-HashSizeInContract:32], commit[0:HashSizeInContract]) {
-		return ErrCommitMismatch
+		return NewCommitMismatchError(common.BytesToHash(contractMeta[32-HashSizeInContract:32]), commit)
 	}
 
 	m, success, err := s.shardManager.TryReadMeta(kvIndex)
@@ -517,7 +536,8 @@ func (s *StorageManager) getKvMetas(kvIndices []uint64) ([][32]byte, error) {
 }
 
 // CheckMeta will check the meta in the contract and local storage file.
-// If the meta in the contract is different with the one in local storage file, it will return ErrCommitMismatch
+// If the meta in the contract is different with the one in local storage file,
+// it will return NewCommitMismatchError
 // Otherwise, it will return nil
 // It will also return the meta in the contract in each case.
 func (s *StorageManager) CheckMeta(kvIdx uint64) (common.Hash, error) {
@@ -527,7 +547,7 @@ func (s *StorageManager) CheckMeta(kvIdx uint64) (common.Hash, error) {
 }
 
 func (s *StorageManager) checkMeta(kvIdx uint64) (common.Hash, error) {
-	metaInContract, err := s.l1Source.GetKvMetas([]uint64{kvIdx}, rpc.LatestBlockNumber.Int64())
+	metaInContract, err := s.l1Source.GetKvMetas([]uint64{kvIdx}, rpc.FinalizedBlockNumber.Int64())
 	if err != nil {
 		return common.Hash{}, fmt.Errorf("failed to query KV meta: kvIndex=%d, %w", kvIdx, err)
 	}
@@ -548,7 +568,7 @@ func (s *StorageManager) checkMeta(kvIdx uint64) (common.Hash, error) {
 		// the commit is in sync
 		return commit, nil
 	}
-	return commit, ErrCommitMismatch
+	return commit, NewCommitMismatchError(commit, common.BytesToHash(metaLocal))
 }
 
 // TryWriteWithMetaCheck will try to write the blob into the local storage file with corresponding commit.
@@ -559,7 +579,8 @@ func (s *StorageManager) TryWriteWithMetaCheck(kvIdx uint64, commit common.Hash,
 	defer s.mu.Unlock()
 
 	newCommit, err := s.checkMeta(kvIdx)
-	if err != nil && !errors.Is(err, ErrCommitMismatch) {
+	var mismatchErr *CommitMismatchError
+	if !errors.As(err, &mismatchErr) {
 		return fmt.Errorf("failed to check meta: kvIdx=%d, %w", kvIdx, err)
 	}
 	if newCommit != (common.Hash{}) && !bytes.Equal(newCommit[0:HashSizeInContract], commit[0:HashSizeInContract]) {

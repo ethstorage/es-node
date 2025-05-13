@@ -105,7 +105,7 @@ func TestFixKv(t *testing.T) {
 		{
 			name: "successful_fixed_with_commit_mismatch",
 			setupMocks: func(sm *MockStorageManager) {
-				sm.On("CheckMeta", uint64(1)).Return(common.HexToHash("0a0b"), es.ErrCommitMismatch)
+				sm.On("CheckMeta", uint64(1)).Return(common.HexToHash("0a0b"), es.NewCommitMismatchError(common.HexToHash("0a0b"), common.HexToHash("0102")))
 				sm.On("TryWriteWithMetaCheck", uint64(1), common.HexToHash("0a0b"), mock.Anything, mock.Anything).Return(nil)
 			},
 		},
