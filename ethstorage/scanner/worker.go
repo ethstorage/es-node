@@ -56,10 +56,97 @@ func NewWorker(
 }
 
 func (s *Worker) ScanBatch(ctx context.Context, sendError func(kvIndex uint64, err error)) (*stats, error) {
+	kvsInBatch, totalEntries, batchEnd := s.getKvsInBatch()
+	sts := stats{}
+	sts.total = int(totalEntries)
+
+	// Query the metas from the L1 contract
+	metas, err := s.l1.GetKvMetas(kvsInBatch, rpc.FinalizedBlockNumber.Int64())
+	if err != nil {
+		s.lg.Error("Scanner: failed to query KV metas", "error", err)
+		return nil, fmt.Errorf("failed to query KV metas: %w", err)
+	}
+	s.lg.Info("Scanner: query KV meta done", "kvsInBatch", shortPrt(kvsInBatch))
+
+	for i, meta := range metas {
+		select {
+		case <-ctx.Done():
+			s.lg.Warn("Scanner canceled, stopping scan", "ctx.Err", ctx.Err())
+			return nil, ctx.Err()
+		default:
+		}
+
+		var found bool
+		var commit common.Hash
+		copy(commit[:], meta[32-es.HashSizeInContract:32])
+		kvIndex := kvsInBatch[i]
+		if s.cfg.Mode == modeCheckMeta {
+			// Check meta only
+			var metaLocal []byte
+			metaLocal, found, err = s.sm.TryReadMeta(kvIndex)
+			if err != nil {
+				s.lg.Error("Scanner: failed to read meta", "kvIndex", kvIndex, "error", err)
+				sendError(kvIndex, fmt.Errorf("failed to read meta: %w", err))
+				continue
+			}
+			if metaLocal != nil && !bytes.Equal(metaLocal[0:es.HashSizeInContract], commit[0:es.HashSizeInContract]) {
+				err = es.NewCommitMismatchError(commit, common.BytesToHash(metaLocal))
+			}
+		} else if s.cfg.Mode == modeCheckBlob {
+			// Query blob and check meta from storage
+			_, found, err = s.sm.TryRead(kvIndex, int(s.sm.MaxKvSize()), commit)
+		} else {
+			s.lg.Error("Scanner: invalid scanner mode", "mode", s.cfg.Mode)
+			return nil, fmt.Errorf("invalid scanner mode: %d", s.cfg.Mode)
+		}
+
+		if found && err == nil {
+			// Happy path
+			s.lg.Debug("Scanner: check KV done", "kvIndex", kvIndex, "commit", commit)
+			continue
+		}
+
+		if !found {
+			// The shard does not exist locally
+			s.lg.Warn("Scanner: blob not found", "kvIndex", kvIndex, "commit", commit)
+			continue
+		}
+
+		if err != nil {
+			var commitErr *es.CommitMismatchError
+			if errors.As(err, &commitErr) {
+				s.lg.Warn("Scanner: commit mismatch found", "kvIndex", kvIndex, "error", err)
+				sts.mismatched = append(sts.mismatched, kvIndex)
+				if fixErr := s.fixKv(kvIndex, commit); fixErr != nil {
+					sts.failed = append(sts.failed, kvIndex)
+					s.lg.Error("Scanner: fix blob error", "kvIndex", kvIndex, "error", fixErr)
+					sendError(kvIndex, fmt.Errorf("failed to fix blob: %w", fixErr))
+				} else {
+					sts.fixed = append(sts.fixed, kvIndex)
+					sendError(kvIndex, nil) // Clear the error
+				}
+			} else {
+				s.lg.Error("Scanner: unexpected error", "kvIndex", kvIndex, "error", err)
+				sendError(kvIndex, fmt.Errorf("unexpected error: %w", err))
+			}
+		}
+	}
+
+	s.nextIndexOfKvIdx = batchEnd
+	if len(kvsInBatch) > 0 {
+		s.lg.Info("Scanner: scan batch done", "scanned", shortPrt(kvsInBatch), "count", len(kvsInBatch), "nextIndexOfKvIdx", s.nextIndexOfKvIdx)
+	}
+	return &sts, nil
+}
+
+func (s *Worker) getKvsInBatch() ([]uint64, uint64, uint64) {
 	shards := s.sm.Shards()
 	kvEntries := s.sm.KvEntries()
+	// LastKvIndex() actually returns the total number of kv entries stored in the contract
 	lastKvIdx := s.sm.LastKvIndex() - 1
 	s.lg.Info("Scanner: scan batch started", "lastKvIdx", lastKvIdx, "shards", shards, "kvEntriesPerShard", kvEntries)
+
+	// Add up the total number of kv entries stored in the local storage
 	var totalEntries uint64
 	for _, shardId := range shards {
 		if shardId == lastKvIdx/kvEntries {
@@ -68,10 +155,8 @@ func (s *Worker) ScanBatch(ctx context.Context, sendError func(kvIndex uint64, e
 		}
 		totalEntries += kvEntries
 	}
-	s.lg.Info("Scanner: determining batch index range", "localKvs", previewLocalKvs(shards, kvEntries, lastKvIdx), "totalKvStored", totalEntries)
-
-	sts := stats{}
-	sts.total = int(totalEntries)
+	summary := summaryLocalKvs(shards, kvEntries, lastKvIdx)
+	s.lg.Info("Scanner: determining batch index range", "localKvs", summary, "totalKvStored", totalEntries)
 
 	batchStart := s.nextIndexOfKvIdx
 	if batchStart >= totalEntries {
@@ -94,79 +179,12 @@ out:
 			localKvs = append(localKvs, kvIdx)
 		}
 	}
+	if batchEnd > uint64(len(localKvs)) {
+		batchEnd = uint64(len(localKvs))
+	}
 	kvsInBatch := localKvs[batchStart:batchEnd]
 	s.lg.Info("Scanner: batch index range", "batchStart", batchStart, "batchEnd", batchEnd, "kvsInBatch", shortPrt(kvsInBatch))
-
-	// Query the metas from the L1 contract
-	metas, err := s.l1.GetKvMetas(kvsInBatch, rpc.FinalizedBlockNumber.Int64())
-	if err != nil {
-		return nil, fmt.Errorf("failed to query KV metas %w", err)
-	}
-	s.lg.Info("Scanner: query KV meta done", "kvsInBatch", shortPrt(kvsInBatch))
-	for i, meta := range metas {
-		select {
-		case <-ctx.Done():
-			s.lg.Info("Scanner canceled, stopping scan", "ctx.Err", ctx.Err())
-			return nil, ctx.Err()
-		default:
-		}
-
-		var err error
-		var found bool
-		var commit common.Hash
-		copy(commit[:], meta[32-es.HashSizeInContract:32])
-		kvIndex := kvsInBatch[i]
-		if s.cfg.Mode == modeCheckMeta {
-			// check meta only
-			var metaLocal []byte
-			metaLocal, found, err = s.sm.TryReadMeta(kvIndex)
-			if metaLocal != nil && !bytes.Equal(metaLocal[0:es.HashSizeInContract], commit[0:es.HashSizeInContract]) {
-				err = es.ErrCommitMismatch
-			}
-		} else if s.cfg.Mode == modeCheckBlob {
-			// query blob and check meta from storage
-			_, found, err = s.sm.TryRead(kvIndex, int(s.sm.MaxKvSize()), commit)
-		} else {
-			panic(fmt.Sprintf("invalid scanner mode: %d", s.cfg.Mode))
-		}
-		if found && err == nil {
-			// happy path
-			s.lg.Debug("Scanner: check KV done", "kvIndex", kvIndex, "commit", commit)
-			continue
-		}
-		if !found {
-			// the shard does not exist locally
-			s.lg.Warn("Scanner: blob not found", "kvIndex", kvIndex, "commit", commit)
-			continue
-		}
-		if err != nil {
-			// chances are the blob is downloaded but not written to the storage
-			if blob := s.loadKvFromCache(kvIndex, commit); blob != nil {
-				s.lg.Debug("Scanner: check KV done from cache", "kvIndex", kvIndex, "commit", commit)
-				continue
-			}
-			s.lg.Error("Scanner: read blob error", "kvIndex", kvIndex, "commit", commit.Hex(), "err", err)
-			if err == es.ErrCommitMismatch {
-				sts.mismatched = append(sts.mismatched, kvIndex)
-				if err := s.fixKv(kvIndex, commit); err != nil {
-					sts.failed = append(sts.failed, kvIndex)
-					s.lg.Error("Scanner: fix blob error", "kvIndex", kvIndex, "err", err)
-					sendError(kvIndex, fmt.Errorf("failed to fix blob: %w", err))
-				} else {
-					sts.fixed = append(sts.fixed, kvIndex)
-					// remove the error from the cache
-					sendError(kvIndex, nil)
-				}
-			} else {
-				sendError(kvIndex, fmt.Errorf("failed to read blob: %w", err))
-			}
-		}
-	}
-	s.nextIndexOfKvIdx = batchEnd
-	if len(kvsInBatch) > 0 {
-		s.lg.Info("Scanner: scan batch done", "scanned", shortPrt(kvsInBatch), "count", len(kvsInBatch), "nextIndexOfKvIdx", s.nextIndexOfKvIdx)
-	}
-	return &sts, nil
+	return kvsInBatch, totalEntries, batchEnd
 }
 
 func (s *Worker) fixKv(kvIndex uint64, commit common.Hash) error {
@@ -174,7 +192,8 @@ func (s *Worker) fixKv(kvIndex uint64, commit common.Hash) error {
 	commitToFetchBlob := commit
 	newCommit, err := s.sm.CheckMeta(kvIndex)
 	if err != nil {
-		if errors.Is(err, es.ErrCommitMismatch) {
+		var commitErr *es.CommitMismatchError
+		if errors.As(err, &commitErr) {
 			// the commit in the contract has been updated
 			commitToFetchBlob = newCommit
 		} else {
