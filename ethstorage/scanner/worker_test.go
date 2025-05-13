@@ -40,14 +40,9 @@ func (m *MockStorageManager) TryRead(kvIndex uint64, size int, commit common.Has
 	return args.Get(0).([]byte), args.Bool(1), args.Error(2)
 }
 
-func (m *MockStorageManager) TryWriteWithMetaCheck(kvIndex uint64, commit common.Hash, blob []byte, fetchBlob es.FetchBlobFunc) error {
-	args := m.Called(kvIndex, commit, blob, fetchBlob)
+func (m *MockStorageManager) TryWriteWithMetaCheck(kvIndex uint64, commit common.Hash, fetchBlob es.FetchBlobFunc) error {
+	args := m.Called(kvIndex, commit, fetchBlob)
 	return args.Error(0)
-}
-
-func (m *MockStorageManager) CheckMeta(kvIndex uint64) (common.Hash, error) {
-	args := m.Called(kvIndex)
-	return args.Get(0).(common.Hash), args.Error(1)
 }
 
 func (m *MockStorageManager) MaxKvSize() uint64 {

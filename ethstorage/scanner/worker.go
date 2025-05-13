@@ -19,8 +19,7 @@ import (
 type IStorageManager interface {
 	TryRead(kvIdx uint64, readLen int, commit common.Hash) ([]byte, bool, error)
 	TryReadMeta(kvIdx uint64) ([]byte, bool, error)
-	CheckMeta(kvIdx uint64) (common.Hash, error)
-	TryWriteWithMetaCheck(kvIdx uint64, commit common.Hash, blob []byte, fetchBlob es.FetchBlobFunc) error
+	TryWriteWithMetaCheck(kvIdx uint64, commit common.Hash, fetchBlob es.FetchBlobFunc) error
 	MaxKvSize() uint64
 	KvEntries() uint64
 	LastKvIndex() uint64
@@ -146,7 +145,7 @@ func (s *Worker) getKvsInBatch() ([]uint64, uint64, uint64) {
 	lastKvIdx := s.sm.LastKvIndex() - 1
 	s.lg.Info("Scanner: scan batch started", "lastKvIdx", lastKvIdx, "shards", shards, "kvEntriesPerShard", kvEntries)
 
-	// Add up the total number of kv entries stored in the local storage
+	// Calculate the total number of KV entries stored locally
 	var totalEntries uint64
 	for _, shardId := range shards {
 		if shardId == lastKvIdx/kvEntries {
@@ -158,6 +157,7 @@ func (s *Worker) getKvsInBatch() ([]uint64, uint64, uint64) {
 	summary := summaryLocalKvs(shards, kvEntries, lastKvIdx)
 	s.lg.Info("Scanner: determining batch index range", "localKvs", summary, "totalKvStored", totalEntries)
 
+	// Determine batch start and end indices
 	batchStart := s.nextIndexOfKvIdx
 	if batchStart >= totalEntries {
 		batchStart = 0
@@ -168,7 +168,9 @@ func (s *Worker) getKvsInBatch() ([]uint64, uint64, uint64) {
 		batchEnd = totalEntries
 	}
 
-	var localKvs []uint64
+	// Collect KV indices for the current batch
+	var kvsInBatch []uint64
+	var currentIndex uint64
 out:
 	for _, shardId := range shards {
 		for k := uint64(0); k < kvEntries; k++ {
@@ -176,47 +178,24 @@ out:
 			if kvIdx > lastKvIdx {
 				break out
 			}
-			localKvs = append(localKvs, kvIdx)
+			if currentIndex >= batchStart && currentIndex < batchEnd {
+				kvsInBatch = append(kvsInBatch, kvIdx)
+			}
+			currentIndex++
+			if currentIndex >= batchEnd {
+				break out
+			}
 		}
 	}
-	if batchEnd > uint64(len(localKvs)) {
-		batchEnd = uint64(len(localKvs))
-	}
-	kvsInBatch := localKvs[batchStart:batchEnd]
 	s.lg.Info("Scanner: batch index range", "batchStart", batchStart, "batchEnd", batchEnd, "kvsInBatch", shortPrt(kvsInBatch))
 	return kvsInBatch, totalEntries, batchEnd
 }
 
 func (s *Worker) fixKv(kvIndex uint64, commit common.Hash) error {
 	s.lg.Info("Scanner: try to fix blob", "kvIndex", kvIndex, "commit", commit)
-	commitToFetchBlob := commit
-	newCommit, err := s.sm.CheckMeta(kvIndex)
-	if err != nil {
-		var commitErr *es.CommitMismatchError
-		if errors.As(err, &commitErr) {
-			// the commit in the contract has been updated
-			commitToFetchBlob = newCommit
-		} else {
-			// use the old commit if check meta fails
-			s.lg.Warn("Scanner: check meta error", "kvIndex", kvIndex, "err", err)
-		}
-	} else {
-		// the commit in the contract is the same as the one in the storage
-		if s.cfg.Mode == modeCheckMeta {
-			s.lg.Info("Scanner: KV already fixed by downloader", "kvIndex", kvIndex)
-			return nil
-		}
-		// in case the commit in the contract is same with the one in the storage, and both updated lately
-		commitToFetchBlob = newCommit
+	if err := s.sm.TryWriteWithMetaCheck(kvIndex, commit, s.fetchBlob); err != nil {
+		return fmt.Errorf("failed to write KV: kvIndex=%d, commit=%x, %w", kvIndex, commit, err)
 	}
-	blob, err := s.fetchBlob(kvIndex, commitToFetchBlob)
-	if err != nil {
-		return fmt.Errorf("failed to fetch blob: kvIndex=%d, commit=%x, %w", kvIndex, commitToFetchBlob, err)
-	}
-	s.lg.Info("Scanner: fetch blob done", "kvIndex", kvIndex, "commit", commitToFetchBlob)
-	if err := s.sm.TryWriteWithMetaCheck(kvIndex, commitToFetchBlob, blob, s.fetchBlob); err != nil {
-		return fmt.Errorf("failed to write KV: kvIndex=%d, commit=%x, %w", kvIndex, commitToFetchBlob, err)
-	}
-	s.lg.Info("Scanner: fixed blob successfully!", "kvIndex", kvIndex, "commit", commitToFetchBlob)
+	s.lg.Info("Scanner: fixed blob successfully!", "kvIndex", kvIndex)
 	return nil
 }

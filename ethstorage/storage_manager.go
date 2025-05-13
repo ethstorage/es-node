@@ -571,25 +571,19 @@ func (s *StorageManager) checkMeta(kvIdx uint64) (common.Hash, error) {
 	return commit, NewCommitMismatchError(commit, common.BytesToHash(metaLocal))
 }
 
-// TryWriteWithMetaCheck will try to write the blob into the local storage file with corresponding commit.
-// Before writing, it will compare the provided commit to the one in the contract.
-// If the commit in the contract is different with provided commit, it will fetch the blob from RPC and write it into the local storage file.
-func (s *StorageManager) TryWriteWithMetaCheck(kvIdx uint64, commit common.Hash, blob []byte, fetchBlob FetchBlobFunc) error {
+// TryWriteWithMetaCheck will try to fetch blob and write into the local storage file.
+// Before fetching blob, it will compare the provided commit to the one in the contract and make sure the correct commit is used.
+func (s *StorageManager) TryWriteWithMetaCheck(kvIdx uint64, commit common.Hash, fetchBlob FetchBlobFunc) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	newCommit, err := s.checkMeta(kvIdx)
-	var mismatchErr *CommitMismatchError
-	if !errors.As(err, &mismatchErr) {
-		return fmt.Errorf("failed to check meta: kvIdx=%d, %w", kvIdx, err)
-	}
-	if newCommit != (common.Hash{}) && !bytes.Equal(newCommit[0:HashSizeInContract], commit[0:HashSizeInContract]) {
-		newBlob, err := fetchBlob(kvIdx, newCommit)
-		if err != nil {
-			return fmt.Errorf("failed to fetch the blob from RPC: kvIdx=%d, commit=%x, %w", kvIdx, commit, err)
-		}
+	newCommit, _ := s.checkMeta(kvIdx)
+	if newCommit != (common.Hash{}) {
 		commit = newCommit
-		blob = newBlob
+	}
+	blob, err := fetchBlob(kvIdx, commit)
+	if err != nil {
+		return fmt.Errorf("failed to fetch the blob from RPC: kvIdx=%d, commit=%x, %w", kvIdx, commit, err)
 	}
 	return s.tryWrite(kvIdx, blob, commit)
 }
