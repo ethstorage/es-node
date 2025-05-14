@@ -55,7 +55,15 @@ func NewWorker(
 }
 
 func (s *Worker) ScanBatch(ctx context.Context, sendError func(kvIndex uint64, err error)) (*stats, error) {
-	kvsInBatch, totalEntries, batchEnd := s.getKvsInBatch()
+	// Query local storage info
+	shards := s.sm.Shards()
+	kvEntries := s.sm.KvEntries()
+	// LastKvIndex() actually returns the total number of kv entries stored in the contract
+	lastKvIdx := s.sm.LastKvIndex() - 1
+	s.lg.Info("Scanner: local storage info", "lastKvIdx", lastKvIdx, "shards", shards, "kvEntriesPerShard", kvEntries)
+
+	// Determine the batch of KV indices to scan
+	kvsInBatch, totalEntries, batchEnd := getKvsInBatch(shards, kvEntries, lastKvIdx, uint64(s.cfg.BatchSize), s.nextIndexOfKvIdx, s.lg)
 	sts := stats{}
 	sts.total = int(totalEntries)
 
@@ -138,13 +146,16 @@ func (s *Worker) ScanBatch(ctx context.Context, sendError func(kvIndex uint64, e
 	return &sts, nil
 }
 
-func (s *Worker) getKvsInBatch() ([]uint64, uint64, uint64) {
-	shards := s.sm.Shards()
-	kvEntries := s.sm.KvEntries()
-	// LastKvIndex() actually returns the total number of kv entries stored in the contract
-	lastKvIdx := s.sm.LastKvIndex() - 1
-	s.lg.Info("Scanner: scan batch started", "lastKvIdx", lastKvIdx, "shards", shards, "kvEntriesPerShard", kvEntries)
+func (s *Worker) fixKv(kvIndex uint64, commit common.Hash) error {
+	s.lg.Info("Scanner: try to fix blob", "kvIndex", kvIndex, "commit", commit)
+	if err := s.sm.TryWriteWithMetaCheck(kvIndex, commit, s.fetchBlob); err != nil {
+		return fmt.Errorf("failed to write KV: kvIndex=%d, commit=%x, %w", kvIndex, commit, err)
+	}
+	s.lg.Info("Scanner: fixed blob successfully!", "kvIndex", kvIndex)
+	return nil
+}
 
+func getKvsInBatch(shards []uint64, kvEntries, lastKvIdx, batchSize, nextIndexOfKvIdx uint64, lg log.Logger) ([]uint64, uint64, uint64) {
 	// Calculate the total number of KV entries stored locally
 	var totalEntries uint64
 	for _, shardId := range shards {
@@ -155,15 +166,15 @@ func (s *Worker) getKvsInBatch() ([]uint64, uint64, uint64) {
 		totalEntries += kvEntries
 	}
 	summary := summaryLocalKvs(shards, kvEntries, lastKvIdx)
-	s.lg.Info("Scanner: determining batch index range", "localKvs", summary, "totalKvStored", totalEntries)
+	lg.Info("Scanner: KV entries stored locally", "localKvs", summary, "totalKvStored", totalEntries)
 
 	// Determine batch start and end indices
-	batchStart := s.nextIndexOfKvIdx
+	batchStart := nextIndexOfKvIdx
 	if batchStart >= totalEntries {
 		batchStart = 0
-		s.lg.Info("Scanner: scan batch start over")
+		lg.Info("Scanner: scan batch start over")
 	}
-	batchEnd := batchStart + uint64(s.cfg.BatchSize)
+	batchEnd := batchStart + batchSize
 	if batchEnd > totalEntries {
 		batchEnd = totalEntries
 	}
@@ -187,15 +198,6 @@ out:
 			}
 		}
 	}
-	s.lg.Info("Scanner: batch index range", "batchStart", batchStart, "batchEnd", batchEnd, "kvsInBatch", shortPrt(kvsInBatch))
+	lg.Info("Scanner: batch index range", "batchStart", batchStart, "batchEnd", batchEnd, "kvsInBatch", shortPrt(kvsInBatch))
 	return kvsInBatch, totalEntries, batchEnd
-}
-
-func (s *Worker) fixKv(kvIndex uint64, commit common.Hash) error {
-	s.lg.Info("Scanner: try to fix blob", "kvIndex", kvIndex, "commit", commit)
-	if err := s.sm.TryWriteWithMetaCheck(kvIndex, commit, s.fetchBlob); err != nil {
-		return fmt.Errorf("failed to write KV: kvIndex=%d, commit=%x, %w", kvIndex, commit, err)
-	}
-	s.lg.Info("Scanner: fixed blob successfully!", "kvIndex", kvIndex)
-	return nil
 }

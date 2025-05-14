@@ -583,7 +583,7 @@ func (s *StorageManager) TryWriteWithMetaCheck(kvIdx uint64, commit common.Hash,
 	}
 	blob, err := fetchBlob(kvIdx, commit)
 	if err != nil {
-		return fmt.Errorf("failed to fetch the blob from RPC: kvIdx=%d, commit=%x, %w", kvIdx, commit, err)
+		return fmt.Errorf("fetch blob error: kvIdx=%d, commit=%x, %w", kvIdx, commit, err)
 	}
 	return s.tryWrite(kvIdx, blob, commit)
 }

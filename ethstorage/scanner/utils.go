@@ -65,15 +65,28 @@ type stats struct {
 	failed     []uint64 // kv indices of failed fix
 }
 
-func shortPrt(arr []uint64) string {
-	if len(arr) <= 6 {
-		return fmt.Sprintf("%v", arr)
+func shortPrt(nums []uint64) string {
+	if len(nums) == 0 {
+		return ""
 	}
-	return fmt.Sprintf("[%d %d %d... %d %d %d]", arr[0], arr[1], arr[2], arr[len(arr)-3], arr[len(arr)-2], arr[len(arr)-1])
+	var (
+		res        []string
+		start, end = nums[0], nums[0]
+	)
+	for i := 1; i < len(nums); i++ {
+		if nums[i] == end+1 {
+			end = nums[i]
+		} else {
+			res = append(res, formatRange(start, end))
+			start, end = nums[i], nums[i]
+		}
+	}
+	res = append(res, formatRange(start, end))
+	return strings.Join(res, ",")
 }
 
 func summaryLocalKvs(shards []uint64, kvEntries, lastKvIdx uint64) string {
-	var shardStrs []string
+	var res []string
 	for _, shard := range shards {
 		if shard*kvEntries > lastKvIdx {
 			// skip empty shards
@@ -83,7 +96,18 @@ func summaryLocalKvs(shards []uint64, kvEntries, lastKvIdx uint64) string {
 		if shard == (lastKvIdx)/kvEntries {
 			lastEntry = lastKvIdx
 		}
-		shardStrs = append(shardStrs, fmt.Sprintf("shard%d[%d-%d]", shard, shard*kvEntries, lastEntry))
+		shardView := fmt.Sprintf("shard%d%s", shard, formatRange(shard*kvEntries, lastEntry))
+		res = append(res, shardView)
 	}
-	return strings.Join(shardStrs, ",")
+	return strings.Join(res, ",")
+}
+
+func formatRange(start, end uint64) string {
+	if start == end {
+		return fmt.Sprintf("[%d]", start)
+	} else if end == start+1 {
+		return fmt.Sprintf("[%d,%d]", start, end)
+	} else {
+		return fmt.Sprintf("[%d-%d]", start, end)
+	}
 }
