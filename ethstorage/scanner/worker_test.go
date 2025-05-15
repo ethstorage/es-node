@@ -1,140 +1,156 @@
-// Copyright 2022-2023, EthStorage.
-// For license information, see https://github.com/ethstorage/es-node/blob/main/LICENSE
-
 package scanner
 
 import (
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
-	es "github.com/ethstorage/go-ethstorage/ethstorage"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 )
 
-var (
-	kvSize    uint64 = 1 << 17
-	kvEntries uint64 = 16
-)
-
-type MockStorageManager struct {
-	es.StorageManager
-	mock.Mock
-}
-
-func (m *MockStorageManager) TryReadMeta(kvIndex uint64) ([]byte, bool, error) {
-	args := m.Called(kvIndex)
-	if args.Get(0) == nil {
-		return nil, args.Bool(1), args.Error(2)
-	}
-	return args.Get(0).([]byte), args.Bool(1), args.Error(2)
-}
-
-func (m *MockStorageManager) TryRead(kvIndex uint64, size int, commit common.Hash) ([]byte, bool, error) {
-	args := m.Called(kvIndex, size, commit)
-	if args.Get(0) == nil {
-		return nil, args.Bool(1), args.Error(2)
-	}
-	return args.Get(0).([]byte), args.Bool(1), args.Error(2)
-}
-
-func (m *MockStorageManager) TryWriteWithMetaCheck(kvIndex uint64, commit common.Hash, fetchBlob es.FetchBlobFunc) error {
-	args := m.Called(kvIndex, commit, fetchBlob)
-	return args.Error(0)
-}
-
-func (m *MockStorageManager) MaxKvSize() uint64 {
-	return m.StorageManager.MaxKvSize()
-}
-
-func (m *MockStorageManager) KvEntries() uint64 {
-	return m.StorageManager.KvEntries()
-}
-
-func (m *MockStorageManager) Shards() []uint64 {
-	return m.StorageManager.Shards()
-}
-
-type MockL1Source struct {
-	es.Il1Source
-	mock.Mock
-}
-
-func (m *MockL1Source) GetKvMetas(kvIndices []uint64, blockNumber int64) ([][32]byte, error) {
-	args := m.Called(kvIndices, blockNumber)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).([][32]byte), args.Error(1)
-}
-
-func (m *MockL1Source) GetStorageLastBlobIdx(blockNumber int64) (uint64, error) {
-	args := m.Called(blockNumber)
-	return args.Get(0).(uint64), args.Error(1)
-}
-
-func checkMocks(t *testing.T, sm *MockStorageManager) {
-	sm.AssertExpectations(t)
-}
-
-func fetchBlob(kvIndex uint64, hash common.Hash) ([]byte, error) {
-	return []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}, nil
-}
-
-func TestFixKv(t *testing.T) {
+func TestGetKvsInBatch(t *testing.T) {
 	tests := []struct {
-		name       string
-		mode       int
-		setupMocks func(*MockStorageManager)
+		name             string
+		shards           []uint64
+		kvEntries        uint64
+		lastKvIdx        uint64
+		batchSize        uint64
+		nextIndexOfKvIdx uint64
+		expectedKvs      []uint64
+		expectedTotal    uint64
+		expectedBatchEnd uint64
 	}{
 		{
-			name: "successful_fixed_with_commit_in_sync",
-			mode: modeCheckBlob,
-			setupMocks: func(sm *MockStorageManager) {
-				sm.On("CheckMeta", uint64(1)).Return(common.HexToHash("0a0b"), nil)
-				sm.On("TryWriteWithMetaCheck", uint64(1), common.HexToHash("0a0b"), mock.Anything, mock.Anything).Return(nil)
-			},
+			name:             "1 shard batch 1",
+			shards:           []uint64{0},
+			kvEntries:        8,
+			lastKvIdx:        6,
+			batchSize:        5,
+			nextIndexOfKvIdx: 0,
+			expectedKvs:      []uint64{0, 1, 2, 3, 4},
+			expectedTotal:    7,
+			expectedBatchEnd: 5,
 		},
 		{
-			name: "successful_fixed_with_commit_mismatch",
-			setupMocks: func(sm *MockStorageManager) {
-				sm.On("CheckMeta", uint64(1)).Return(common.HexToHash("0a0b"), es.NewCommitMismatchError(common.HexToHash("0a0b"), common.HexToHash("0102")))
-				sm.On("TryWriteWithMetaCheck", uint64(1), common.HexToHash("0a0b"), mock.Anything, mock.Anything).Return(nil)
-			},
+			name:             "1 shard batch 2",
+			shards:           []uint64{0},
+			kvEntries:        8,
+			lastKvIdx:        6,
+			batchSize:        5,
+			nextIndexOfKvIdx: 5,
+			expectedKvs:      []uint64{5, 6},
+			expectedTotal:    7,
+			expectedBatchEnd: 7,
 		},
 		{
-			name: "successful_fixed_with_checkmeta_error",
-			setupMocks: func(sm *MockStorageManager) {
-				sm.On("CheckMeta", uint64(1)).Return(common.Hash{}, errors.New("check meta error"))
-				sm.On("TryWriteWithMetaCheck", uint64(1), common.HexToHash("0102"), mock.Anything, mock.Anything).Return(nil)
-			},
+			name:             "2 shards batch 1",
+			shards:           []uint64{0, 1},
+			kvEntries:        8,
+			lastKvIdx:        12,
+			batchSize:        5,
+			nextIndexOfKvIdx: 0,
+			expectedKvs:      []uint64{0, 1, 2, 3, 4},
+			expectedTotal:    13,
+			expectedBatchEnd: 5,
 		},
 		{
-			name: "already_fixed_with_matching_commit",
-			mode: modeCheckMeta,
-			setupMocks: func(sm *MockStorageManager) {
-				sm.On("CheckMeta", uint64(1)).Return(common.HexToHash("0a0b"), nil)
-			},
+			name:             "2 shards batch 2",
+			shards:           []uint64{0, 1},
+			kvEntries:        8,
+			lastKvIdx:        12,
+			batchSize:        5,
+			nextIndexOfKvIdx: 5,
+			expectedKvs:      []uint64{5, 6, 7, 8, 9},
+			expectedTotal:    13,
+			expectedBatchEnd: 10,
+		},
+		{
+			name:             "2 shards batch 3",
+			shards:           []uint64{0, 1},
+			kvEntries:        8,
+			lastKvIdx:        12,
+			batchSize:        5,
+			nextIndexOfKvIdx: 10,
+			expectedKvs:      []uint64{10, 11, 12},
+			expectedTotal:    13,
+			expectedBatchEnd: 13,
+		},
+		{
+			name:             "Batch spans 2 shards 1",
+			shards:           []uint64{0, 1},
+			kvEntries:        8,
+			lastKvIdx:        12,
+			batchSize:        10,
+			nextIndexOfKvIdx: 0,
+			expectedKvs:      []uint64{0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
+			expectedTotal:    13,
+			expectedBatchEnd: 10,
+		},
+		{
+			name:             "Batch spans 2 shards 2",
+			shards:           []uint64{0, 1},
+			kvEntries:        8,
+			lastKvIdx:        12,
+			batchSize:        10,
+			nextIndexOfKvIdx: 10,
+			expectedKvs:      []uint64{10, 11, 12},
+			expectedTotal:    13,
+			expectedBatchEnd: 13,
+		},
+		{
+			name:             "Batch exceeds total entries 1",
+			shards:           []uint64{0, 1},
+			kvEntries:        8,
+			lastKvIdx:        12,
+			batchSize:        20,
+			nextIndexOfKvIdx: 0,
+			expectedKvs:      []uint64{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12},
+			expectedTotal:    13,
+			expectedBatchEnd: 13,
+		},
+		{
+			name:             "Batch exceeds total entries 2",
+			shards:           []uint64{0, 1},
+			kvEntries:        8,
+			lastKvIdx:        12,
+			batchSize:        20,
+			nextIndexOfKvIdx: 13,
+			expectedKvs:      []uint64{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12},
+			expectedTotal:    13,
+			expectedBatchEnd: 13,
+		},
+		{
+			name:             "Discontinuous shards batch 1",
+			shards:           []uint64{0, 2},
+			kvEntries:        8,
+			lastKvIdx:        21,
+			batchSize:        10,
+			nextIndexOfKvIdx: 0,
+			expectedKvs:      []uint64{0, 1, 2, 3, 4, 5, 6, 7, 16, 17},
+			expectedTotal:    14,
+			expectedBatchEnd: 10,
+		},
+		{
+			name:             "Discontinuous shards batch 2",
+			shards:           []uint64{0, 2},
+			kvEntries:        8,
+			lastKvIdx:        21,
+			batchSize:        10,
+			nextIndexOfKvIdx: 10,
+			expectedKvs:      []uint64{18, 19, 20, 21},
+			expectedTotal:    14,
+			expectedBatchEnd: 14,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			storageManager := es.NewStorageManager(es.NewShardManager(common.Address{}, kvSize, kvEntries, kvSize), nil)
-			sm := &MockStorageManager{StorageManager: *storageManager}
-			l1 := new(MockL1Source)
+			logger := log.New()
 
-			tt.setupMocks(sm)
+			kvs, total, batchEnd := getKvsInBatch(tt.shards, tt.kvEntries, tt.lastKvIdx, tt.batchSize, tt.nextIndexOfKvIdx, logger)
 
-			worker := NewWorker(sm, nil, fetchBlob, l1, Config{
-				Mode: tt.mode,
-			}, log.New())
-
-			err := worker.fixKv(uint64(1), common.HexToHash("0102"))
-			assert.NoError(t, err)
-
-			checkMocks(t, sm)
+			assert.Equal(t, tt.expectedKvs, kvs, "KV indices do not match")
+			assert.Equal(t, tt.expectedTotal, total, "Total entries do not match")
+			assert.Equal(t, tt.expectedBatchEnd, batchEnd, "Batch end index does not match")
 		})
 	}
 }
