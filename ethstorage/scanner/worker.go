@@ -4,7 +4,6 @@
 package scanner
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -101,9 +100,7 @@ func (s *Worker) ScanBatch(ctx context.Context, sendError func(kvIndex uint64, e
 				sendError(kvIndex, fmt.Errorf("failed to read meta: %w", err))
 				continue
 			}
-			if metaLocal != nil && !bytes.Equal(metaLocal[0:es.HashSizeInContract], commit[0:es.HashSizeInContract]) {
-				err = es.NewCommitMismatchError(commit, common.BytesToHash(metaLocal))
-			}
+			err = es.CompareCommits(commit.Bytes(), metaLocal)
 		} else if s.cfg.Mode == modeCheckBlob {
 			// Query blob and check meta from storage
 			_, found, err = s.sm.TryRead(kvIndex, int(s.sm.MaxKvSize()), commit)

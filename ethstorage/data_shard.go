@@ -356,10 +356,7 @@ func checkCommit(commit common.Hash, blobData []byte) error {
 	}
 	versionedHash := eth.KZGToVersionedHash(eth.KZGCommitment(commitment))
 	// Get the hash and only take 24 bits
-	if !bytes.Equal(versionedHash[0:HashSizeInContract], commit[0:HashSizeInContract]) {
-		return NewCommitMismatchError(commit, common.Hash(versionedHash))
-	}
-	return nil
+	return CompareCommits(commit.Bytes(), versionedHash[:])
 }
 
 // Write a value of the KV to the store using a customized encoder.

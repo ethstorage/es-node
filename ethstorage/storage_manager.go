@@ -33,14 +33,19 @@ func (e *CommitMismatchError) Error() string {
 	return fmt.Sprintf("commit mismatch: expected=%x, found=%x", e.expected, e.found)
 }
 
-func NewCommitMismatchError(expected, found common.Hash) error {
-	var exp = [HashSizeInContract]byte{}
-	var fnd = [HashSizeInContract]byte{}
-	copy(exp[:], expected[0:HashSizeInContract])
-	copy(fnd[:], found[0:HashSizeInContract])
+func CompareCommits(expected, found []byte) error {
+	if len(expected) < HashSizeInContract {
+		return fmt.Errorf("invalid length of commit %x: %d", expected, len(expected))
+	}
+	if len(found) < HashSizeInContract {
+		return fmt.Errorf("invalid length of commit %x: %d", found, len(found))
+	}
+	if bytes.Equal(expected[0:HashSizeInContract], found[0:HashSizeInContract]) {
+		return nil
+	}
 	return &CommitMismatchError{
-		expected: exp,
-		found:    fnd,
+		expected: [HashSizeInContract]byte(expected[0:HashSizeInContract]),
+		found:    [HashSizeInContract]byte(found[0:HashSizeInContract]),
 	}
 }
 
@@ -309,8 +314,8 @@ func (s *StorageManager) CommitBlob(kvIndex uint64, blob []byte, commit common.H
 
 func (s *StorageManager) commitEncodedBlob(kvIndex uint64, encodedBlob []byte, commit common.Hash, contractMeta [32]byte) error {
 	// the commit is different with what we got from the contract, so should not commit
-	if !bytes.Equal(contractMeta[32-HashSizeInContract:32], commit[0:HashSizeInContract]) {
-		return NewCommitMismatchError(common.BytesToHash(contractMeta[32-HashSizeInContract:32]), commit)
+	if err := CompareCommits(commit.Bytes(), contractMeta[32-HashSizeInContract:32]); err != nil {
+		return err
 	}
 
 	m, success, err := s.shardManager.TryReadMeta(kvIndex)
@@ -563,12 +568,7 @@ func (s *StorageManager) checkMeta(kvIdx uint64) (common.Hash, error) {
 	if !success {
 		return common.Hash{}, fmt.Errorf("local meta not found: kvIndex=%d", kvIdx)
 	}
-	if metaLocal != nil && len(metaLocal) >= HashSizeInContract &&
-		bytes.Equal(metaLocal[0:HashSizeInContract], commit[0:HashSizeInContract]) {
-		// the commit is in sync
-		return commit, nil
-	}
-	return commit, NewCommitMismatchError(commit, common.BytesToHash(metaLocal))
+	return commit, CompareCommits(commit.Bytes(), metaLocal)
 }
 
 // TryWriteWithMetaCheck will try to fetch blob and write into the local storage file.

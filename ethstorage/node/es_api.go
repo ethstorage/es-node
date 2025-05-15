@@ -4,7 +4,6 @@
 package node
 
 import (
-	"bytes"
 	"errors"
 
 	"github.com/ethereum/go-ethereum"
@@ -49,8 +48,8 @@ func (api *esAPI) GetBlob(kvIndex uint64, blobHash common.Hash, decodeType Decod
 			return nil, err
 		}
 
-		if !bytes.Equal(commit[0:ethstorage.HashSizeInContract], blobHash[0:ethstorage.HashSizeInContract]) {
-			return nil, ethstorage.NewCommitMismatchError(blobHash, common.BytesToHash(commit))
+		if err := ethstorage.CompareCommits(blobHash.Bytes(), commit); err != nil {
+			return nil, err
 		}
 
 		readCommit := common.Hash{}
