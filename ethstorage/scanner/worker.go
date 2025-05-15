@@ -59,7 +59,12 @@ func (s *Worker) ScanBatch(ctx context.Context, sendError func(kvIndex uint64, e
 	shards := s.sm.Shards()
 	kvEntries := s.sm.KvEntries()
 	// LastKvIndex() actually returns the total number of kv entries stored in the contract
-	lastKvIdx := s.sm.LastKvIndex() - 1
+	entryCount := s.sm.LastKvIndex()
+	if entryCount == 0 {
+		s.lg.Info("Scanner: no KV entries found in local storage")
+		return nil, nil
+	}
+	lastKvIdx := entryCount - 1
 	s.lg.Info("Scanner: local storage info", "lastKvIdx", lastKvIdx, "shards", shards, "kvEntriesPerShard", kvEntries)
 
 	// Determine the batch of KV indices to scan
@@ -155,7 +160,7 @@ func (s *Worker) fixKv(kvIndex uint64, commit common.Hash) error {
 	return nil
 }
 
-func getKvsInBatch(shards []uint64, kvEntries, lastKvIdx, batchSize, nextIndexOfKvIdx uint64, lg log.Logger) ([]uint64, uint64, uint64) {
+func getKvsInBatch(shards []uint64, kvEntries, lastKvIdx, batchSize, batchStartIndex uint64, lg log.Logger) ([]uint64, uint64, uint64) {
 	// Calculate the total number of KV entries stored locally
 	var totalEntries uint64
 	for _, shardId := range shards {
@@ -165,11 +170,12 @@ func getKvsInBatch(shards []uint64, kvEntries, lastKvIdx, batchSize, nextIndexOf
 		}
 		totalEntries += kvEntries
 	}
+
 	summary := summaryLocalKvs(shards, kvEntries, lastKvIdx)
 	lg.Info("Scanner: KV entries stored locally", "localKvs", summary, "totalKvStored", totalEntries)
 
 	// Determine batch start and end indices
-	batchStart := nextIndexOfKvIdx
+	batchStart := batchStartIndex
 	if batchStart >= totalEntries {
 		batchStart = 0
 		lg.Info("Scanner: scan batch start over")

@@ -14,7 +14,7 @@ func TestGetKvsInBatch(t *testing.T) {
 		kvEntries        uint64
 		lastKvIdx        uint64
 		batchSize        uint64
-		nextIndexOfKvIdx uint64
+		batchStartIndex  uint64
 		expectedKvs      []uint64
 		expectedTotal    uint64
 		expectedBatchEnd uint64
@@ -25,7 +25,7 @@ func TestGetKvsInBatch(t *testing.T) {
 			kvEntries:        8,
 			lastKvIdx:        6,
 			batchSize:        5,
-			nextIndexOfKvIdx: 0,
+			batchStartIndex:  0,
 			expectedKvs:      []uint64{0, 1, 2, 3, 4},
 			expectedTotal:    7,
 			expectedBatchEnd: 5,
@@ -36,7 +36,7 @@ func TestGetKvsInBatch(t *testing.T) {
 			kvEntries:        8,
 			lastKvIdx:        6,
 			batchSize:        5,
-			nextIndexOfKvIdx: 5,
+			batchStartIndex:  5,
 			expectedKvs:      []uint64{5, 6},
 			expectedTotal:    7,
 			expectedBatchEnd: 7,
@@ -47,7 +47,7 @@ func TestGetKvsInBatch(t *testing.T) {
 			kvEntries:        8,
 			lastKvIdx:        12,
 			batchSize:        5,
-			nextIndexOfKvIdx: 0,
+			batchStartIndex:  0,
 			expectedKvs:      []uint64{0, 1, 2, 3, 4},
 			expectedTotal:    13,
 			expectedBatchEnd: 5,
@@ -58,7 +58,7 @@ func TestGetKvsInBatch(t *testing.T) {
 			kvEntries:        8,
 			lastKvIdx:        12,
 			batchSize:        5,
-			nextIndexOfKvIdx: 5,
+			batchStartIndex:  5,
 			expectedKvs:      []uint64{5, 6, 7, 8, 9},
 			expectedTotal:    13,
 			expectedBatchEnd: 10,
@@ -69,7 +69,7 @@ func TestGetKvsInBatch(t *testing.T) {
 			kvEntries:        8,
 			lastKvIdx:        12,
 			batchSize:        5,
-			nextIndexOfKvIdx: 10,
+			batchStartIndex:  10,
 			expectedKvs:      []uint64{10, 11, 12},
 			expectedTotal:    13,
 			expectedBatchEnd: 13,
@@ -80,7 +80,7 @@ func TestGetKvsInBatch(t *testing.T) {
 			kvEntries:        8,
 			lastKvIdx:        12,
 			batchSize:        10,
-			nextIndexOfKvIdx: 0,
+			batchStartIndex:  0,
 			expectedKvs:      []uint64{0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
 			expectedTotal:    13,
 			expectedBatchEnd: 10,
@@ -91,10 +91,21 @@ func TestGetKvsInBatch(t *testing.T) {
 			kvEntries:        8,
 			lastKvIdx:        12,
 			batchSize:        10,
-			nextIndexOfKvIdx: 10,
+			batchStartIndex:  10,
 			expectedKvs:      []uint64{10, 11, 12},
 			expectedTotal:    13,
 			expectedBatchEnd: 13,
+		},
+		{
+			name:             "Batch spans 2 shards 3: kv increases",
+			shards:           []uint64{0, 1},
+			kvEntries:        8,
+			lastKvIdx:        13,
+			batchSize:        10,
+			batchStartIndex:  13,
+			expectedKvs:      []uint64{13},
+			expectedTotal:    14,
+			expectedBatchEnd: 14,
 		},
 		{
 			name:             "Batch exceeds total entries 1",
@@ -102,7 +113,7 @@ func TestGetKvsInBatch(t *testing.T) {
 			kvEntries:        8,
 			lastKvIdx:        12,
 			batchSize:        20,
-			nextIndexOfKvIdx: 0,
+			batchStartIndex:  0,
 			expectedKvs:      []uint64{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12},
 			expectedTotal:    13,
 			expectedBatchEnd: 13,
@@ -113,7 +124,7 @@ func TestGetKvsInBatch(t *testing.T) {
 			kvEntries:        8,
 			lastKvIdx:        12,
 			batchSize:        20,
-			nextIndexOfKvIdx: 13,
+			batchStartIndex:  13,
 			expectedKvs:      []uint64{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12},
 			expectedTotal:    13,
 			expectedBatchEnd: 13,
@@ -124,7 +135,7 @@ func TestGetKvsInBatch(t *testing.T) {
 			kvEntries:        8,
 			lastKvIdx:        21,
 			batchSize:        10,
-			nextIndexOfKvIdx: 0,
+			batchStartIndex:  0,
 			expectedKvs:      []uint64{0, 1, 2, 3, 4, 5, 6, 7, 16, 17},
 			expectedTotal:    14,
 			expectedBatchEnd: 10,
@@ -135,10 +146,32 @@ func TestGetKvsInBatch(t *testing.T) {
 			kvEntries:        8,
 			lastKvIdx:        21,
 			batchSize:        10,
-			nextIndexOfKvIdx: 10,
+			batchStartIndex:  10,
 			expectedKvs:      []uint64{18, 19, 20, 21},
 			expectedTotal:    14,
 			expectedBatchEnd: 14,
+		},
+		{
+			name:             "Boundary conditions 1 kv",
+			shards:           []uint64{0},
+			kvEntries:        8,
+			lastKvIdx:        0,
+			batchSize:        5,
+			batchStartIndex:  0,
+			expectedKvs:      []uint64{0},
+			expectedTotal:    1,
+			expectedBatchEnd: 1,
+		},
+		{
+			name:             "Kv exceeds local shard",
+			shards:           []uint64{0},
+			kvEntries:        8,
+			lastKvIdx:        8,
+			batchSize:        10,
+			batchStartIndex:  0,
+			expectedKvs:      []uint64{0, 1, 2, 3, 4, 5, 6, 7},
+			expectedTotal:    8,
+			expectedBatchEnd: 8,
 		},
 	}
 
@@ -146,7 +179,7 @@ func TestGetKvsInBatch(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			logger := log.New()
 
-			kvs, total, batchEnd := getKvsInBatch(tt.shards, tt.kvEntries, tt.lastKvIdx, tt.batchSize, tt.nextIndexOfKvIdx, logger)
+			kvs, total, batchEnd := getKvsInBatch(tt.shards, tt.kvEntries, tt.lastKvIdx, tt.batchSize, tt.batchStartIndex, logger)
 
 			assert.Equal(t, tt.expectedKvs, kvs, "KV indices do not match")
 			assert.Equal(t, tt.expectedTotal, total, "Total entries do not match")
