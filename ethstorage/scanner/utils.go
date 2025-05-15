@@ -92,9 +92,11 @@ func summaryLocalKvs(shards []uint64, kvEntries, lastKvIdx uint64) string {
 			// skip empty shards
 			break
 		}
-		lastEntry := shard*kvEntries + kvEntries - 1
-		if shard == (lastKvIdx)/kvEntries {
+		var lastEntry uint64
+		if shard == lastKvIdx/kvEntries {
 			lastEntry = lastKvIdx
+		} else {
+			lastEntry = (shard+1)*kvEntries - 1
 		}
 		shardView := fmt.Sprintf("shard%d%s", shard, formatRange(shard*kvEntries, lastEntry))
 		res = append(res, shardView)

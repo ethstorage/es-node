@@ -25,27 +25,35 @@ const (
 )
 
 type CommitMismatchError struct {
-	expected [HashSizeInContract]byte
-	found    [HashSizeInContract]byte
+	expected []byte
+	found    []byte
+	message  string
 }
 
 func (e *CommitMismatchError) Error() string {
+	if e.message != "" {
+		return e.message
+	}
 	return fmt.Sprintf("commit mismatch: expected=%x, found=%x", e.expected, e.found)
 }
 
 func CompareCommits(expected, found []byte) error {
 	if len(expected) < HashSizeInContract {
-		return fmt.Errorf("invalid length of commit %x: %d", expected, len(expected))
+		return &CommitMismatchError{
+			message: fmt.Sprintf("invalid length of commit %x: %d", expected, len(expected)),
+		}
 	}
 	if len(found) < HashSizeInContract {
-		return fmt.Errorf("invalid length of commit %x: %d", found, len(found))
+		return &CommitMismatchError{
+			message: fmt.Sprintf("invalid length of commit %x: %d", found, len(found)),
+		}
 	}
 	if bytes.Equal(expected[0:HashSizeInContract], found[0:HashSizeInContract]) {
 		return nil
 	}
 	return &CommitMismatchError{
-		expected: [HashSizeInContract]byte(expected[0:HashSizeInContract]),
-		found:    [HashSizeInContract]byte(found[0:HashSizeInContract]),
+		expected: expected[0:HashSizeInContract],
+		found:    found[0:HashSizeInContract],
 	}
 }
 
@@ -314,7 +322,7 @@ func (s *StorageManager) CommitBlob(kvIndex uint64, blob []byte, commit common.H
 
 func (s *StorageManager) commitEncodedBlob(kvIndex uint64, encodedBlob []byte, commit common.Hash, contractMeta [32]byte) error {
 	// the commit is different with what we got from the contract, so should not commit
-	if err := CompareCommits(commit.Bytes(), contractMeta[32-HashSizeInContract:32]); err != nil {
+	if err := CompareCommits(contractMeta[32-HashSizeInContract:32], commit.Bytes()); err != nil {
 		return err
 	}
 
