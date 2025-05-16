@@ -78,7 +78,7 @@ func (s *Worker) ScanBatch(ctx context.Context, sendError func(kvIndex uint64, e
 		s.lg.Error("Scanner: failed to query KV metas", "error", err)
 		return nil, fmt.Errorf("failed to query KV metas: %w", err)
 	}
-	s.lg.Info("Scanner: query KV meta done", "kvsInBatch", shortPrt(kvsInBatch))
+	s.lg.Debug("Scanner: query KV meta done", "kvsInBatch", shortPrt(kvsInBatch))
 
 	for i, meta := range metas {
 		select {
@@ -169,7 +169,7 @@ func getKvsInBatch(shards []uint64, kvEntries, lastKvIdx, batchSize, batchStartI
 		totalEntries += kvEntries
 	}
 
-	lg.Info("Scanner: KV entries stored locally", "totalKvStored", totalEntries)
+	lg.Debug("Scanner: KV entries stored locally", "totalKvStored", totalEntries)
 
 	// Determine batch start and end indices
 	batchStart := batchStartIndex
