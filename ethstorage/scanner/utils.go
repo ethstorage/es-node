@@ -5,6 +5,7 @@ package scanner
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 )
 
@@ -14,10 +15,18 @@ type scanError struct {
 }
 type statsType map[uint64]int // kvIndex -> times
 
-func (s *statsType) String() string {
+func (s statsType) String() string {
 	var items []string
-	for kvIndex, times := range *s {
+	keys := make([]uint64, 0, len(s))
+	for k := range s {
+		keys = append(keys, k)
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		return keys[i] < keys[j]
+	})
+	for _, kvIndex := range keys {
 		var str string
+		times := s[kvIndex]
 		if times == 1 {
 			str = fmt.Sprintf("%d", kvIndex)
 		} else {
@@ -29,6 +38,7 @@ func (s *statsType) String() string {
 }
 
 type statsSum struct {
+	localKvs   string
 	total      int       // total number of kv entries stored in local
 	mismatched statsType // mismatched indices with times occurred for each
 	fixed      statsType // successfully fixed indices with times occurred for each
@@ -37,6 +47,7 @@ type statsSum struct {
 
 func newStatsSum() *statsSum {
 	return &statsSum{
+		localKvs:   "",
 		total:      0,
 		mismatched: make(statsType),
 		fixed:      make(statsType),
@@ -45,6 +56,7 @@ func newStatsSum() *statsSum {
 }
 
 func (s *statsSum) update(st stats) {
+	s.localKvs = st.localKvs
 	s.total = st.total
 
 	for _, kvIndex := range st.mismatched {
@@ -59,6 +71,7 @@ func (s *statsSum) update(st stats) {
 }
 
 type stats struct {
+	localKvs   string   // kv entries stored in local
 	total      int      // total number of kv entries stored in local
 	mismatched []uint64 // kv indices of mismatched
 	fixed      []uint64 // kv indices of successful fix

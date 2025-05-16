@@ -69,6 +69,7 @@ func (s *Worker) ScanBatch(ctx context.Context, sendError func(kvIndex uint64, e
 	// Determine the batch of KV indices to scan
 	kvsInBatch, totalEntries, batchEnd := getKvsInBatch(shards, kvEntries, lastKvIdx, uint64(s.cfg.BatchSize), s.nextIndexOfKvIdx, s.lg)
 	sts := stats{}
+	sts.localKvs = summaryLocalKvs(shards, kvEntries, lastKvIdx)
 	sts.total = int(totalEntries)
 
 	// Query the metas from the L1 contract
@@ -168,8 +169,7 @@ func getKvsInBatch(shards []uint64, kvEntries, lastKvIdx, batchSize, batchStartI
 		totalEntries += kvEntries
 	}
 
-	summary := summaryLocalKvs(shards, kvEntries, lastKvIdx)
-	lg.Info("Scanner: KV entries stored locally", "localKvs", summary, "totalKvStored", totalEntries)
+	lg.Info("Scanner: KV entries stored locally", "totalKvStored", totalEntries)
 
 	// Determine batch start and end indices
 	batchStart := batchStartIndex

@@ -112,7 +112,13 @@ func (s *Scanner) start() {
 			select {
 			case <-reportTicker.C:
 				if statsUpdated { // Wait for stats updated for the first time
-					s.lg.Info("Scanner stats", "kvStored", sts.total, "mismatched", sts.mismatched.String(), "fixed", sts.fixed.String(), "failed", sts.failed.String())
+					s.lg.Info("Scanner stats",
+						"localKvs", sts.localKvs,
+						"localKvsCount", sts.total,
+						"mismatched", sts.mismatched.String(),
+						"fixed", sts.fixed.String(),
+						"failed", sts.failed.String(),
+					)
 					for _, e := range errCache {
 						s.lg.Error("Scanner error happened earlier", "kvIndex", e.kvIndex, "error", e.err)
 					}
