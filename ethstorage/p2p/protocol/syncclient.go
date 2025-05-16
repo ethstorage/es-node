@@ -625,8 +625,8 @@ func (s *SyncClient) FetchBlob(kvIndex uint64, commit common.Hash) ([]byte, erro
 			if val.BlobIndex != kvIndex {
 				continue
 			}
-			if !bytes.Equal(val.BlobCommit[0:ethstorage.HashSizeInContract], commit[0:ethstorage.HashSizeInContract]) {
-				log.Warn("FetchBlob failed", "peer", pr.ID(), "expected commit", commit.Hex(), "actual commit", val.BlobCommit.Hex())
+			if commitError := ethstorage.CompareCommits(commit.Bytes(), val.BlobCommit.Bytes()); commitError != nil {
+				log.Warn("FetchBlob failed", "peer", pr.ID(), "error", commitError)
 				continue
 			}
 			payload = val

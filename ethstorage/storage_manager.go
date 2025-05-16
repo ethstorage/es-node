@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"sort"
 	"sync"
 	"time"
 
@@ -653,14 +652,7 @@ func (s *StorageManager) ContractAddress() common.Address {
 }
 
 func (s *StorageManager) Shards() []uint64 {
-	shards := make([]uint64, 0)
-	for idx := range s.shardManager.ShardMap() {
-		shards = append(shards, idx)
-	}
-	sort.Slice(shards, func(i, j int) bool {
-		return shards[i] < shards[j]
-	})
-	return shards
+	return s.shardManager.ShardIds()
 }
 
 func (s *StorageManager) ReadSampleUnlocked(shardIdx, sampleIdx uint64) (common.Hash, error) {
