@@ -136,7 +136,6 @@ func (n *EsNode) init(ctx context.Context, cfg *Config) error {
 	if err := n.initArchiver(ctx, cfg); err != nil {
 		return err
 	}
-	n.initScanner(ctx, cfg)
 	return nil
 }
 
@@ -270,7 +269,8 @@ func (n *EsNode) initStorageManager(ctx context.Context, cfg *Config) error {
 		"l1contract", cfg.Storage.L1Contract,
 		"kvSize", shardManager.MaxKvSize(),
 		"chunkSize", shardManager.ChunkSize(),
-		"kvsPerShard", shardManager.KvEntries())
+		"kvsPerShard", shardManager.KvEntries(),
+		"shards", shardManager.ShardIds())
 
 	n.storageManager = ethstorage.NewStorageManager(shardManager, n.l1Source)
 	return nil
@@ -364,6 +364,8 @@ func (n *EsNode) Start(ctx context.Context, cfg *Config) error {
 		n.log.Error("Could not start a downloader", "err", err)
 		return err
 	}
+	// Scanner must be started after downloader resets storage manager
+	n.initScanner(ctx, cfg)
 
 	if n.p2pNode != nil {
 		if err := n.p2pNode.Start(); err != nil {
