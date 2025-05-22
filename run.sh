@@ -37,7 +37,7 @@ start_flags=" --network devnet \
   --state.upload.url http://metrics.ethstorage.io:8080 \
   --p2p.listen.udp 30305 \
   --p2p.sync.concurrency 32 \
-  --p2p.bootnodes enr:-Lq4QJYpKZcyA3hY9b_Yrw9RxIVQQfkFs30dkSuzzyB_o0Y6R97oQ-IneCl3Oh5u4kaXtTpSAsI2dRLfmeuEWKnVRUCGAY1e3vN3imV0aHN0b3JhZ2Xdgg0FgNjXlIBMUg08CEyAXjejXpAFesMoMflvwYCCaWSCdjSCaXCEQW0_molzZWNwMjU2azGhArxc4O1K_QiyuEHFmZNkFkSguyxvttNfRg5WXpLTIvG5g3RjcIIkBoN1ZHCCdmE \
+  --p2p.bootnodes enr:-Lq4QJJ0yRKf_npK6crMuzouNwyDNpp6Ie9ifD5eeDHwaLQ7eVeXuAm9rlpeLiPq6rckjhInQiNQQU6G0_yJ3MHiRZyGAZb2ocJvimV0aHN0b3JhZ2Xdgg0FgNjXlIBMUg08CEyAXjejXpAFesMoMflvwYCCaWSCdjSCaXCEQW1FWolzZWNwMjU2azGhA9HWWqvQhIuPuMrmVCI4q3xPTFejTEz4YPYrUdLxaU9sg3RjcIIkBoN1ZHCCdmE \
 $@"
 
 exec $executable $start_flags
