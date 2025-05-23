@@ -51,8 +51,8 @@ if [ -n "$zkp_mode" ] && [ "$zkp_mode" != 1 ] && [ "$zkp_mode" != 2 ]; then
   exit 1
 fi
 
-if [ $use_miner = 1 ]; then 
-	mkdir -p ./build/bin/snark_lib/zkey
+if [ $use_miner = 1 ]; then
+  mkdir -p ./build/bin/snark_lib/zkey
   # download zkey if not yet
   zkey_name="blob_poseidon2.zkey"
   zkey_size=560301223
