@@ -4,6 +4,9 @@
 # env ES_NODE_STORAGE_MINER=<miner> ./init.sh
 
 executable="./build/bin/es-node"
+if [ ! -f "$executable" ]; then
+  make build
+fi
 echo "========== build info =================="
 $executable --version
 echo "========================================"
@@ -49,6 +52,7 @@ if [ -n "$zkp_mode" ] && [ "$zkp_mode" != 1 ] && [ "$zkp_mode" != 2 ]; then
 fi
 
 if [ $use_miner = 1 ]; then 
+	mkdir -p ./build/bin/snark_lib/zkey
   # download zkey if not yet
   zkey_name="blob_poseidon2.zkey"
   zkey_size=560301223
