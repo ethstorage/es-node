@@ -200,10 +200,7 @@ func (ds *DataShard) readWith(kvIdx uint64, readLen int, decoder func([]byte, ui
 			break
 		}
 
-		chunkReadLen := readLen
-		if chunkReadLen > int(ds.chunkSize) {
-			chunkReadLen = int(ds.chunkSize)
-		}
+		chunkReadLen := min(readLen, int(ds.chunkSize))
 		readLen = readLen - chunkReadLen
 
 		chunkIdx := kvIdx*ds.chunksPerKv + i
