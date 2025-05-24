@@ -52,7 +52,7 @@ git clone https://github.com/ethstorage/es-node.git
 cd es-node 
 make
 ./init-rpc.sh
-./run-rpc.sh  --l1.beacon http://localhost:3600 --archiver.enabled
+./run-rpc.sh --l1.beacon http://localhost:3600 --archiver.enabled
 ```
 
 Note: The default port for the Archive service is 9645.
