@@ -164,8 +164,8 @@ To start the op-node, execute the following command:
   --rpc.addr=0.0.0.0 \
   --rpc.port=9595 \
   --rpc.enable-admin \
-  --l1=http://88.99.30.186:8545 \
-  --l1.beacon=http://88.99.30.186:3500 \
+  --l1=http://65.108.230.142:8545 \
+  --l1.beacon=http://65.108.230.142:3500 \
   --l1.rpckind=basic \
   --l1.beacon-archiver=http://65.108.236.27:9645
 ```
