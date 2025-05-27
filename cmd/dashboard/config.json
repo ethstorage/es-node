@@ -2,7 +2,7 @@
   {
     "name":"Sepolia",
     "type": "l1",
-    "rpc":"http://88.99.30.186:8545",
+    "rpc":"http://65.108.230.142:8545",
     "chainID": 3333,
     "contract":"0x804C520d3c084C805E37A35E90057Ac32831F96f",
     "startNumber": 5528000
