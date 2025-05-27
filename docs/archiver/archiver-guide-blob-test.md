@@ -36,7 +36,7 @@ To download and run a proxy for the Beacon client, execute the following command
 ```bash
 git clone https://github.com/ethstorage/beacon-api-wrapper.git
 cd beacon-api-wrapper
-go run cmd/main.go -r 3 -b http://88.99.30.186:3500
+go run cmd/main.go -r 3 -b http://65.108.230.142:3500
 ```
 
 This proxy functions like a standard Beacon API, except that it has a much shorter blob retention period - 3 epochs or 96 slots in this case. Consequently, when a `blob_sidecars` request is made for blobs older than this time frame, it will return an empty list: `{"data":[]}`.
@@ -64,8 +64,8 @@ For additional details and options for running an es-node, please refer to the [
 Set the following environment variables for later use:
 
 ```bash
-export RPC_URL="http://88.99.30.186:8545"
-export BEACON_API="http://88.99.30.186:3500"
+export RPC_URL="http://65.108.230.142:8545"
+export BEACON_API="http://65.108.230.142:3500"
 export BEACON_API_MOCK="http://localhost:3600"
 export ARCHIVE_SERVICE="http://65.108.236.27:9645"
 ```
