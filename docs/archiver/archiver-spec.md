@@ -6,7 +6,7 @@ Es-node Archiver Specification
 1. As a long-term data availability solution for rollups, the es-node archiver will serve as a fallback source of blob sidecars besides Ethereum Layer 1.  
 2. The way to provide blob is the same as the [getBlobSidecars beacon API](https://ethereum.github.io/beacon-APIs/#/Beacon/getBlobSidecars)  beacon API `/eth/v1/beacon/blob_sidecars/{block_id}`, where you can provide `block_id` in path and `indices` as a query string to download blob sidecars as an array in json format. A live example:
 ```sh
-curl -X 'GET'   'http://88.99.30.186:3500/eth/v1/beacon/blob_sidecars/4700280?indices=0,2'   -H 'accept: application/json' 
+curl -X 'GET'   'http://65.108.230.142:3500/eth/v1/beacon/blob_sidecars/4700280?indices=0,2'   -H 'accept: application/json' 
 ```
  
 3. The difference in returned data between es-node archiver API and beacon API is that for each blob es-node archiver only returns blob content, index, kzg commitment, and kzg proof. Other elements will be omitted according to how Optimism uses the service.
