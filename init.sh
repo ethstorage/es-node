@@ -4,6 +4,9 @@
 # env ES_NODE_STORAGE_MINER=<miner> ./init.sh
 
 executable="./build/bin/es-node"
+if [ ! -f "$executable" ]; then
+  make build
+fi
 echo "========== build info =================="
 $executable --version
 echo "========================================"
@@ -48,15 +51,16 @@ if [ -n "$zkp_mode" ] && [ "$zkp_mode" != 1 ] && [ "$zkp_mode" != 2 ]; then
   exit 1
 fi
 
-if [ $use_miner = 1 ]; then 
+if [ $use_miner = 1 ]; then
+  mkdir -p ./build/bin/snark_lib/zkey
   # download zkey if not yet
   zkey_name="blob_poseidon2.zkey"
   zkey_size=560301223
-  zkey_url="https://es-node-zkey.s3.us-west-1.amazonaws.com/blob_poseidon2_testnet1.zkey"
+  zkey_url="https://es-zkey.s3.us-west-2.amazonaws.com/blob_poseidon2.zkey"
   if [ "$zkp_mode" = 1 ]; then
     zkey_name="blob_poseidon.zkey"
     zkey_size=280151245
-    zkey_url="https://drive.usercontent.google.com/download?id=1ZLfhYeCXMnbk6wUiBADRAn1mZ8MI_zg-&export=download&confirm=t&uuid=16ddcd58-2498-4d65-8931-934df3d0065c"
+    zkey_url="https://es-zkey.s3.us-west-2.amazonaws.com/blob_poseidon1.zkey"
   fi
   zkey_file="./build/bin/snark_lib/zkey/$zkey_name"
   if [ ! -e  ${zkey_file} ] || [ $(wc -c <  ${zkey_file}) -ne ${zkey_size} ]; then
