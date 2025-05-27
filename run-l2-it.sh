@@ -28,7 +28,7 @@ exec ./build/bin/es-node \
   --l1.block_time 2 \
   --l1.rpc http://5.9.87.214:8545 \
   --da.url http://5.9.87.214:8888 \
-  --randao.url http://88.99.30.186:8545 \
+  --randao.url http://65.108.230.142:8545 \
   --state.upload.url http://127.0.0.1:9096 \
   --rpc.port 9596 \
   --p2p.listen.udp 30396 \
