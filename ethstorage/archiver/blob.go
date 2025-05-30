@@ -12,9 +12,8 @@ import (
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethstorage/go-ethstorage/ethstorage/blobs"
 )
-
-const BlobLength = 131072
 
 type BlobSidecars struct {
 	Data []*BlobSidecar `json:"data"`
@@ -65,7 +64,7 @@ func (b *byte48) UnmarshalJSON(data []byte) error {
 	return hexutil.UnmarshalFixedJSON(reflect.TypeOf(b), data, b[:])
 }
 
-type blobContent [BlobLength]byte
+type blobContent [blobs.BlobLength]byte
 
 func (b blobContent) MarshalJSON() ([]byte, error) {
 	return []byte(fmt.Sprintf(`"%#x"`, b)), nil

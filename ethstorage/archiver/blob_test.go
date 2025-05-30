@@ -7,6 +7,8 @@ import (
 	"encoding/json"
 	"reflect"
 	"testing"
+
+	"github.com/ethstorage/go-ethstorage/ethstorage/blobs"
 )
 
 func TestMarshalUnmarshal(t *testing.T) {
@@ -14,7 +16,7 @@ func TestMarshalUnmarshal(t *testing.T) {
 		Index:         3,
 		KZGCommitment: [48]byte{1, 2, 3},
 		KZGProof:      [48]byte{4, 5, 6},
-		Blob:          [BlobLength]byte{7, 8, 9},
+		Blob:          [blobs.BlobLength]byte{7, 8, 9},
 	}
 
 	marshalled, err := json.Marshal(testBlob)
