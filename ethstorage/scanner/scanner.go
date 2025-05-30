@@ -35,7 +35,6 @@ func New(
 	ctx context.Context,
 	cfg Config,
 	sm *es.StorageManager,
-	loadKvFromCache LoadKvFromCacheFunc,
 	fetchBlob es.FetchBlobFunc,
 	l1 es.Il1Source,
 	feed *event.Feed,
@@ -43,7 +42,7 @@ func New(
 ) *Scanner {
 	cctx, cancel := context.WithCancel(ctx)
 	scanner := &Scanner{
-		worker:   NewWorker(sm, loadKvFromCache, fetchBlob, l1, cfg, lg),
+		worker:   NewWorker(sm, fetchBlob, l1, cfg, lg),
 		feed:     feed,
 		interval: time.Minute * time.Duration(cfg.Interval),
 		ctx:      cctx,

@@ -344,7 +344,6 @@ func (n *EsNode) initScanner(ctx context.Context, cfg *Config) {
 		ctx,
 		*cfg.Scanner,
 		n.storageManager,
-		n.blobCache.GetKeyValueByIndex,
 		n.p2pNode.FetchBlob,
 		n.l1Source,
 		n.feed,

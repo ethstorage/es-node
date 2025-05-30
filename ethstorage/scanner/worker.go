@@ -27,7 +27,6 @@ type IStorageManager interface {
 
 type Worker struct {
 	sm               IStorageManager
-	loadKvFromCache  LoadKvFromCacheFunc
 	fetchBlob        es.FetchBlobFunc
 	l1               es.Il1Source
 	cfg              Config
@@ -37,19 +36,17 @@ type Worker struct {
 
 func NewWorker(
 	sm IStorageManager,
-	load LoadKvFromCacheFunc,
 	fetch es.FetchBlobFunc,
 	l1 es.Il1Source,
 	cfg Config,
 	lg log.Logger,
 ) *Worker {
 	return &Worker{
-		sm:              sm,
-		loadKvFromCache: load,
-		fetchBlob:       fetch,
-		l1:              l1,
-		cfg:             cfg,
-		lg:              lg,
+		sm:        sm,
+		fetchBlob: fetch,
+		l1:        l1,
+		cfg:       cfg,
+		lg:        lg,
 	}
 }
 
