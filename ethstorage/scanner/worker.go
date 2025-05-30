@@ -115,7 +115,7 @@ func (s *Worker) ScanBatch(ctx context.Context, sendError func(kvIndex uint64, e
 
 		if !found {
 			// The shard does not exist locally
-			s.lg.Warn("Scanner: blob not found", "kvIndex", kvIndex, "commit", commit)
+			s.lg.Error("Scanner: blob not found", "kvIndex", kvIndex, "commit", commit)
 			continue
 		}
 
