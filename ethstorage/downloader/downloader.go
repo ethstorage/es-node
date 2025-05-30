@@ -162,7 +162,6 @@ func (s *Downloader) Start() error {
 	if err != nil {
 		return err
 	}
-	s.log.Info("Downloader started", "lastDownloadBlock", s.lastDownloadBlock, "lastKvIndex", s.sm.LastKvIndex())
 
 	s.wg.Add(1)
 	go s.eventLoop()
@@ -260,14 +259,14 @@ func (s *Downloader) download() {
 	s.mu.Lock()
 	trackHead := s.finalizedHead
 	s.mu.Unlock()
-	s.log.Warn("Download blobs", "trackHead", trackHead, "lastDownloadBlock", s.lastDownloadBlock)
-	// if (s.lastDownloadBlock > 0) && (trackHead-s.lastDownloadBlock > int64(s.minDurationForBlobsRequest)) {
-	// 	// TODO: @Qiang we can also enter into an recovery mode (e.g., scan local blobs to obtain a heal list, more complicated, will do later)
-	// 	prompt := "Ethereum only keep blobs for one month, but it has been over one month since last blob download." +
-	// 		"You may need to restart this node with full re-sync"
-	// 	s.log.Error(prompt)
-	// 	return
-	// }
+
+	if (s.lastDownloadBlock > 0) && (trackHead-s.lastDownloadBlock > int64(s.minDurationForBlobsRequest)) {
+		// TODO: @Qiang we can also enter into an recovery mode (e.g., scan local blobs to obtain a heal list, more complicated, will do later)
+		prompt := "Ethereum only keep blobs for one month, but it has been over one month since last blob download." +
+			"You may need to restart this node with full re-sync"
+		s.log.Error(prompt)
+		return
+	}
 
 	for s.lastDownloadBlock < trackHead {
 		start := s.lastDownloadBlock + 1
@@ -324,17 +323,8 @@ func (s *Downloader) download() {
 				s.log.Error("Save lastDownloadedBlock into db error", "err", err)
 				return
 			}
-			if end%1000 == 1 {
-				s.log.Warn("LastDownloadedBlock saved into db", "lastDownloadedBlock", end)
-			}
+			s.log.Debug("LastDownloadedBlock saved into db", "lastDownloadedBlock", end)
 
-			// bs, err = s.db.Get(append(downloaderPrefix, lastDownloadKey...))
-			// if err != nil {
-			// 	s.log.Error("Get lastDownloadedBlock from db error", "err", err)
-			// } else {
-			// 	lastDownloadBlock := int64(binary.LittleEndian.Uint64(bs))
-			// 	s.log.Warn("Downloader load lastDownloadBlock", "block", lastDownloadBlock)
-			// }
 			s.dumpBlobsIfNeeded(blobs)
 
 			s.lastDownloadBlock = end
