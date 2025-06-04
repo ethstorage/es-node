@@ -203,10 +203,7 @@ func ConvertToBlobs(data []byte) []kzg4844.Blob {
 	blobs := []kzg4844.Blob{}
 	blobIndex := 0
 	for i := 0; i < len(data); i += params.BlobTxFieldElementsPerBlob * 32 {
-		max := i + params.BlobTxFieldElementsPerBlob*32
-		if max > len(data) {
-			max = len(data)
-		}
+		max := min(i+params.BlobTxFieldElementsPerBlob*32, len(data))
 		blobs = append(blobs, kzg4844.Blob{})
 		copy(blobs[blobIndex][:], data[i:max])
 		blobIndex++
@@ -259,10 +256,7 @@ func EncodeBlobs(data []byte) []kzg4844.Blob {
 			blobIndex++
 			fieldIndex = 0
 		}
-		max := i + 31
-		if max > len(data) {
-			max = len(data)
-		}
+		max := min(i+31, len(data))
 		copy(blobs[blobIndex][fieldIndex*32+1:], data[i:max])
 	}
 	return blobs
