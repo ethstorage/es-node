@@ -42,7 +42,7 @@ if [ -z "$ES_NODE_CLEF_RPC" ]; then
 fi
 
 if [ -z "$ES_NODE_RANDAO_RPC" ]; then
-  export ES_NODE_RANDAO_RPC="http://88.99.30.186:8545"
+  export ES_NODE_RANDAO_RPC="http://65.108.230.142:8545"
 fi
 
 echo ES_NODE_L1_ETH_RPC = $ES_NODE_L1_ETH_RPC
@@ -57,4 +57,3 @@ if [ ! -e  ${zkey_file} ]; then
 fi
 
 go test -tags rapidsnark_asm  -run ^TestMining$ -timeout 0 github.com/ethstorage/go-ethstorage/integration_tests -v -count=1
- 
