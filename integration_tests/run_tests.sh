@@ -26,7 +26,7 @@ if [ -z "$ES_NODE_STORAGE_L1CONTRACT_CLEF" ]; then
 fi
 # A newly deployed contract is required for each run for miner test, with zkp verifier of mode 2
 if [ -z "$ES_NODE_STORAGE_L1CONTRACT" ]; then
-  export ES_NODE_STORAGE_L1CONTRACT=0x517ad0ba959f3556930c9Bc483B454584F7e11df
+  export ES_NODE_STORAGE_L1CONTRACT=0xAbb7332F5a5fa4517E7905BC08eF948C24aB4a77
 fi
 # A contract with zkp verifier of mode 1 (one proof per sample)
 if [ -z "$ES_NODE_STORAGE_L1CONTRACT_ZKP1" ]; then
@@ -52,7 +52,7 @@ echo ES_NODE_STORAGE_MINER = $ES_NODE_STORAGE_MINER
 zkey_file="./ethstorage/prover/snark_lib/blob_poseidon2.zkey"
 if [ ! -e  ${zkey_file} ]; then
   echo "${zkey_file} not found, start downloading..."
-  zkey_url="https://es-node-zkey.s3.us-west-1.amazonaws.com/blob_poseidon2_testnet1.zkey"
+  zkey_url="https://es-zkey.s3.us-west-2.amazonaws.com/blob_poseidon2.zkey"
   curl $zkey_url -o ${zkey_file} 
 fi
 
