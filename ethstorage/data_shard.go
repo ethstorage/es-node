@@ -337,7 +337,7 @@ func checkCommit(commit common.Hash, blobData []byte) error {
 		// blob is empty 0x00...00
 		for _, b := range blobData {
 			if b != 0 {
-				return fmt.Errorf("commit does not match")
+				return fmt.Errorf("empty commit but blob is not empty")
 			}
 		}
 		return nil
@@ -353,10 +353,7 @@ func checkCommit(commit common.Hash, blobData []byte) error {
 	}
 	versionedHash := eth.KZGToVersionedHash(eth.KZGCommitment(commitment))
 	// Get the hash and only take 24 bits
-	if !bytes.Equal(versionedHash[0:HashSizeInContract], commit[0:HashSizeInContract]) {
-		return fmt.Errorf("commit does not match")
-	}
-	return nil
+	return CompareCommits(commit.Bytes(), versionedHash[:])
 }
 
 // Write a value of the KV to the store using a customized encoder.

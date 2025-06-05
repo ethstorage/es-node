@@ -300,7 +300,7 @@ func EsNodeSync(ctx *cli.Context) error {
 	if !ctx.IsSet(kvIndexFlagName) {
 		return fmt.Errorf("kv_index must be specified")
 	}
-	kvIndex := ctx.Int(kvIndexFlagName)
+	kvIndex := uint64(ctx.Int(kvIndexFlagName))
 	log.Info("Read flag", "name", kvIndexFlagName, "value", kvIndex)
 	if !ctx.IsSet(esRpcFlagName) {
 		return fmt.Errorf("es_rpc must be specified")
@@ -318,7 +318,7 @@ func EsNodeSync(ctx *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to dial eth client: %w", err)
 	}
-	meta, err := pClient.GetKvMetas([]uint64{uint64(kvIndex)}, rpc.LatestBlockNumber.Int64())
+	meta, err := pClient.GetKvMetas([]uint64{kvIndex}, rpc.LatestBlockNumber.Int64())
 	if err != nil {
 		return fmt.Errorf("failed to get meta: %w", err)
 	}
@@ -326,7 +326,7 @@ func EsNodeSync(ctx *cli.Context) error {
 	// query blob
 	var commit common.Hash
 	copy(commit[:], meta[0][32-ethstorage.HashSizeInContract:32])
-	blob, err := downloadBlobFromRPC(esRpc, uint64(kvIndex), commit)
+	blob, err := downloadBlobFromRPC(esRpc, kvIndex, commit)
 	if err != nil {
 		return fmt.Errorf("failed to download blob from RPC: %w", err)
 	}
@@ -336,8 +336,8 @@ func EsNodeSync(ctx *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to init shard manager: %w", err)
 	}
-	commit = ethstorage.PrepareCommit(commit)
-	ok, err := shardManager.TryWrite(uint64(kvIndex), blob, commit)
+	preparedCommit := ethstorage.PrepareCommit(commit)
+	ok, err := shardManager.TryWrite(kvIndex, blob, preparedCommit)
 	if err != nil {
 		return fmt.Errorf("failed to write kv: %w", err)
 	}
