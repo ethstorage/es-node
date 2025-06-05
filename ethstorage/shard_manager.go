@@ -245,10 +245,7 @@ func (sm *ShardManager) DecodeOrEncodeKV(kvIdx uint64, b []byte, hash common.Has
 				break
 			}
 
-			chunkReadLen := datalen
-			if chunkReadLen > int(sm.chunkSize) {
-				chunkReadLen = int(sm.chunkSize)
-			}
+			chunkReadLen := min(datalen, int(sm.chunkSize))
 			datalen = datalen - chunkReadLen
 
 			chunkIdx := kvIdx*ds.chunksPerKv + i

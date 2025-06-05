@@ -384,10 +384,7 @@ func (s *StorageManager) DownloadAllMetas(ctx context.Context, batchSize uint64)
 		first, limit := s.KvEntries()*sid, s.KvEntries()*(sid+1)
 
 		// batch request metas until the lastKvIdx
-		end := limit
-		if end > lastKvIdx {
-			end = lastKvIdx
-		}
+		end := min(limit, lastKvIdx)
 
 		// Additional check to ensure end is not less than first
 		// E.g. There are more than one shard, and lastKvIdx is even less than the first of the current shard
@@ -458,10 +455,7 @@ func (s *StorageManager) downloadMetaInRange(ctx context.Context, from, to, batc
 		lastKvIdx := s.lastKvIdx
 		s.mu.Unlock()
 
-		batchLimit := from + batchSize
-		if batchLimit > to {
-			batchLimit = to
-		}
+		batchLimit := min(from+batchSize, to)
 		// In case remove is supported and lastKvIndex is decreased
 		if batchLimit > lastKvIdx {
 			batchLimit = lastKvIdx
