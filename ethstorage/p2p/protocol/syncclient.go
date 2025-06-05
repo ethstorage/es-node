@@ -511,14 +511,16 @@ func (s *SyncClient) cleanTasks() {
 }
 
 func (s *SyncClient) Start() error {
+	s.mux.Send(EthStorageSyncDone{DoneType: SingleShardDone, ShardId: 0})
+
 	// Retrieve the previous sync status from LevelDB and abort if already synced
 	s.loadSyncStatus()
 	s.lock.Lock()
 	s.closingPeers = false
 	s.lock.Unlock()
 
-	s.wg.Add(2)
-	go s.mainLoop()
+	s.wg.Add(1)
+	// go s.mainLoop()
 	go s.saveStatusLoop()
 
 	return nil
