@@ -37,6 +37,7 @@ start_flags=" --network devnet \
   --p2p.listen.udp 30307 \
   --rpc.port 9847 \
   --miner.min-profit -100000000000000000 \
+  --scanner.mode=0 \
 $@"
 
 exec $executable $start_flags
