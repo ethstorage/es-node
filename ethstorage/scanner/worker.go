@@ -179,23 +179,27 @@ func getKvsInBatch(shards []uint64, kvEntries, lastKvIdx, batchSize, batchStartI
 		batchEnd = totalEntries
 	}
 
+	// Calculate starting and ending shard indices and offsets.
+	startShard := batchStart / kvEntries
+	startOffset := batchStart % kvEntries
+
+	endIndex := batchEnd - 1
+	endShard := endIndex / kvEntries
+	endOffset := (endIndex % kvEntries) + 1
+
 	// Collect KV indices for the current batch
-	var kvsInBatch []uint64
-	var currentIndex uint64
-out:
-	for _, shardId := range shards {
-		for k := uint64(0); k < kvEntries; k++ {
-			kvIdx := shardId*kvEntries + k
-			if kvIdx > lastKvIdx {
-				break out
-			}
-			if currentIndex >= batchStart && currentIndex < batchEnd {
-				kvsInBatch = append(kvsInBatch, kvIdx)
-			}
-			currentIndex++
-			if currentIndex >= batchEnd {
-				break out
-			}
+	kvsInBatch := make([]uint64, 0, batchEnd-batchStart)
+	for i := startShard; i <= endShard; i++ {
+		localStart := uint64(0)
+		localEnd := kvEntries
+		if i == startShard {
+			localStart = startOffset
+		}
+		if i == endShard {
+			localEnd = endOffset
+		}
+		for k := localStart; k < localEnd; k++ {
+			kvsInBatch = append(kvsInBatch, shards[i]*kvEntries+k)
 		}
 	}
 	lg.Info("Scanner: batch index range", "batchStart", batchStart, "batchEnd", batchEnd, "kvsInBatch", shortPrt(kvsInBatch))
