@@ -310,7 +310,7 @@ func UploadBlobs(
 	signer := crypto.PubkeyToAddress(key.PublicKey)
 	var keys []common.Hash
 	var blobIndex []*big.Int
-	var lengthes []*big.Int
+	var lengths []*big.Int
 
 	var blobs []kzg4844.Blob
 	if needEncoding {
@@ -321,9 +321,9 @@ func UploadBlobs(
 	for i, blob := range blobs {
 		keys = append(keys, genKey(signer, i, blob[:]))
 		blobIndex = append(blobIndex, new(big.Int).SetUint64(uint64(i)))
-		lengthes = append(lengthes, new(big.Int).SetUint64(BlobSize))
+		lengths = append(lengths, new(big.Int).SetUint64(BlobSize))
 	}
-	log.Info("blobs", "keys", keys, "blobIndexes", blobIndex, "sizes", lengthes)
+	log.Info("blobs", "keys", keys, "blobIndexes", blobIndex, "sizes", lengths)
 	bytes32Array, _ := abi.NewType("bytes32[]", "", nil)
 	uint256Array, _ := abi.NewType("uint256[]", "", nil)
 	args := abi.Arguments{
@@ -331,7 +331,7 @@ func UploadBlobs(
 		{Type: uint256Array},
 		{Type: uint256Array},
 	}
-	dataField, err := args.Pack(keys, blobIndex, lengthes)
+	dataField, err := args.Pack(keys, blobIndex, lengths)
 	if err != nil {
 		log.Error("Failed to pack data", "err", err)
 		return nil, nil, err
