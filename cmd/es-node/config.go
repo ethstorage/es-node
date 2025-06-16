@@ -23,6 +23,7 @@ import (
 	"github.com/ethstorage/go-ethstorage/ethstorage/node"
 	p2pcli "github.com/ethstorage/go-ethstorage/ethstorage/p2p/cli"
 	"github.com/ethstorage/go-ethstorage/ethstorage/rollup"
+	"github.com/ethstorage/go-ethstorage/ethstorage/scanner"
 	"github.com/ethstorage/go-ethstorage/ethstorage/signer"
 	"github.com/ethstorage/go-ethstorage/ethstorage/storage"
 	"github.com/urfave/cli"
@@ -117,6 +118,7 @@ func NewConfig(ctx *cli.Context, log log.Logger) (*node.Config, error) {
 		Storage:  *storageConfig,
 		Mining:   minerConfig,
 		Archiver: archiverConfig,
+		Scanner:  scanner.NewConfig(ctx),
 	}
 	if err := cfg.Check(); err != nil {
 		return nil, err

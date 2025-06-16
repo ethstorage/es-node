@@ -139,7 +139,7 @@ func (s *Downloader) Start() error {
 				return err
 			} else {
 				s.lastDownloadBlock = header.Number.Int64()
-				s.log.Info("Downloader will use the latest finialized block to start for the first time", "block", s.lastDownloadBlock)
+				s.log.Info("Downloader will use the latest finalized block to start for the first time", "block", s.lastDownloadBlock)
 			}
 		} else {
 			s.lastDownloadBlock = int64(binary.LittleEndian.Uint64(bs))
