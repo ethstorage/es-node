@@ -134,7 +134,7 @@ func newWorker(
 	var submissionStates map[uint64]SubmissionState
 	if status, _ := db.Get(SubmissionStatusKey); status != nil {
 		if err := json.Unmarshal(status, &submissionStates); err != nil {
-			log.Error("Failed to decode submission states", "err", err)
+			lg.Error("Failed to decode submission states", "err", err)
 		}
 	}
 	worker := &worker{
@@ -201,23 +201,23 @@ func (w *worker) close() {
 func (w *worker) saveStates() {
 	states, err := json.Marshal(w.submissionStates)
 	if err != nil {
-		log.Error("Failed to marshal submission states", "err", err)
+		w.lg.Error("Failed to marshal submission states", "err", err)
 		return
 	}
 	err = w.db.Put(SubmissionStatusKey, states)
 	if err != nil {
-		log.Error("Failed to store submission states", "err", err)
+		w.lg.Error("Failed to store submission states", "err", err)
 		return
 	}
 
 	states, err = json.Marshal(w.miningStates)
 	if err != nil {
-		log.Error("Failed to marshal mining states", "err", err)
+		w.lg.Error("Failed to marshal mining states", "err", err)
 		return
 	}
 	err = w.db.Put(MiningStatusKey, states)
 	if err != nil {
-		log.Error("Failed to store mining states", "err", err)
+		w.lg.Error("Failed to store mining states", "err", err)
 		return
 	}
 }
@@ -436,37 +436,15 @@ func (w *worker) resultLoop() {
 					s.LastSucceededTime = time.Now().UnixMilli()
 				}
 			}
-			if txHash != (common.Hash{}) {
-				// waiting for tx confirmation or timeout
-				ticker := time.NewTicker(1 * time.Second)
-				checked := 0
-				for range ticker.C {
-					if checked > miningTransactionTimeout {
-						log.Warn("Waiting for mining transaction confirm timed out", "txHash", txHash)
-						break
-					}
-
-					checked++
-					_, isPending, err := w.l1API.TransactionByHash(context.Background(), txHash)
-					if err != nil {
-						log.Error("Querying transaction by hash failed", "error", err, "txHash", txHash)
-						continue
-					} else if !isPending {
-						log.Info("Mining transaction confirmed", "txHash", txHash)
-						w.checkTxStatus(txHash, result.miner)
-						break
-					}
-				}
-				ticker.Stop()
-			}
+			w.reportMiningResult(result, txHash, err)
 			// optimistically check next result if exists
 			w.notifyResultLoop()
 		case <-ticker.C:
 			for shardId, s := range w.submissionStates {
-				log.Info("Mining stats", "shard", shardId, "succeeded", s.Succeeded, "failed", s.Failed, "dropped", s.Dropped)
+				w.lg.Info("Mining stats", "shard", shardId, "succeeded", s.Succeeded, "failed", s.Failed, "dropped", s.Dropped)
 			}
 			if len(errorCache) > 0 {
-				log.Error("Mining stats", "lastError", errorCache[len(errorCache)-1])
+				w.lg.Error("Mining stats", "lastError", errorCache[len(errorCache)-1])
 			}
 		case <-saveStatesTicker.C:
 			w.saveStates()
@@ -485,15 +463,66 @@ func (w *worker) resultLoop() {
 	}
 }
 
-func (w *worker) checkTxStatus(txHash common.Hash, miner common.Address) {
+func (w *worker) reportMiningResult(rs *result, txHash common.Hash, err error) {
+	msg := fmt.Sprintf(
+		"A storage proof has been created on shard %d at block %v by miner %s",
+		rs.startShardId,
+		rs.blockNumber,
+		rs.miner.Hex(),
+	)
+	if err == errDropped {
+		msg += " but dropped due to low profit."
+		w.lg.Warn("Mining transaction dropped due to low profit")
+	} else if err != nil {
+		msg += fmt.Sprintf(" but failed to submit mining transaction due to %s", err.Error())
+		w.lg.Error("Mining transaction failed", "error", err)
+	} else if txHash == (common.Hash{}) {
+		msg += " but failed to submit mining transaction."
+		w.lg.Error("Failed to submit mining transaction")
+	} else {
+		msg += fmt.Sprintf(" and submitted as transaction %s. \n", txHash.Hex())
+		w.lg.Info("Mining transaction submitted", "txHash", txHash)
+
+		// waiting for tx confirmation or timeout
+		ticker := time.NewTicker(1 * time.Second)
+		checked := 0
+		for range ticker.C {
+			_, isPending, err := w.l1API.TransactionByHash(context.Background(), txHash)
+			if err == nil && !isPending {
+				w.lg.Info("Mining transaction confirmed", "txHash", txHash)
+				msg += w.checkTxStatus(txHash)
+				break
+			}
+			checked++
+			if checked > miningTransactionTimeout {
+				msg += "However, waiting for the transaction confirmation timed out. You can check the transaction status on the block explorer."
+				w.lg.Warn("Waiting for mining transaction confirm timed out", "txHash", txHash)
+				break
+			}
+		}
+		ticker.Stop()
+	}
+	sendEmail(msg, w.lg)
+}
+
+func (w *worker) checkTxStatus(txHash common.Hash) string {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
+
+	var msg string
 	receipt, err := w.l1API.TransactionReceipt(ctx, txHash)
-	if err != nil || receipt == nil {
-		log.Warn("Mining transaction not found!", "err", err, "txHash", txHash)
+	if receipt == nil {
+		if err != nil {
+			msg = fmt.Sprintf("Mining transaction receipt not found due to error: %s", err.Error())
+		} else {
+			msg = "Mining transaction receipt not found."
+		}
+		w.lg.Warn("Mining transaction receipt not found!", "err", err, "txHash", txHash)
 	} else if receipt.Status == 1 {
-		log.Info("Mining transaction success!      √", "miner", miner)
-		log.Info("Mining transaction details", "txHash", txHash, "gasUsed", receipt.GasUsed, "effectiveGasPrice", receipt.EffectiveGasPrice)
+		msg = "Mining transaction succeeded! \n"
+		msg += fmt.Sprintf("Gas used: %d, Effective gas price: %s \n", receipt.GasUsed, receipt.EffectiveGasPrice)
+		w.lg.Info("Mining transaction success!      √", "txHash", txHash)
+		w.lg.Info("Mining transaction details", "txHash", txHash, "gasUsed", receipt.GasUsed, "effectiveGasPrice", receipt.EffectiveGasPrice)
 		cost := new(big.Int).Mul(new(big.Int).SetUint64(receipt.GasUsed), receipt.EffectiveGasPrice)
 		var reward *big.Int
 		for _, rLog := range receipt.Logs {
@@ -504,16 +533,25 @@ func (w *worker) checkTxStatus(txHash common.Hash, miner common.Address) {
 			}
 		}
 		if reward != nil {
+			r, c, p := fmtEth(reward), fmtEth(cost), fmtEth(new(big.Int).Sub(reward, cost))
+			msg += fmt.Sprintf("Reward: %s, Cost: %s, Profit: %s", r, c, p)
 			// TODO: the cost should include receipt.L1Fee for op-geth
-			log.Info("Mining transaction accounting (in ether)",
-				"reward", fmtEth(reward),
-				"cost", fmtEth(cost),
-				"profit", fmtEth(new(big.Int).Sub(reward, cost)),
+			w.lg.Info("Mining transaction accounting (in ether)",
+				"reward", r,
+				"cost", c,
+				"profit", p,
 			)
 		}
 	} else if receipt.Status == 0 {
-		log.Warn("Mining transaction failed!      ×", "txHash", txHash)
+		msg = "Mining transaction failed! \n"
+		w.lg.Warn("Mining transaction failed!      ×", "txHash", txHash)
 	}
+	return msg
+}
+
+func sendEmail(msg string, lg log.Logger) {
+	fmt.Println("Sending email notification...")
+	fmt.Println(msg)
 }
 
 // https://github.com/ethereum/go-ethereum/issues/21221#issuecomment-805852059
