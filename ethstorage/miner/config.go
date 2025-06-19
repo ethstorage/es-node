@@ -13,6 +13,15 @@ import (
 	"github.com/ethstorage/go-ethstorage/ethstorage/signer"
 )
 
+type EmailConfig struct {
+	Username string
+	Password string
+	Host     string
+	Port     int
+	To       []string
+	From     string
+}
+
 type Config struct {
 	// contract
 	RandomChecks   uint64
@@ -38,6 +47,17 @@ type Config struct {
 	SignerFnFactory  signer.SignerFactory
 	SignerAddr       common.Address
 	MinimumProfit    *big.Int
+
+	EmailConfig EmailConfig
+}
+
+var DefaultEmailConfig = EmailConfig{
+	Username: "web3url.gateway@gmail.com",
+	Password: "",
+	Host:     "smtp.gmail.com",
+	Port:     587,
+	To:       []string{},
+	From:     "",
 }
 
 var DefaultConfig = Config{
@@ -55,4 +75,5 @@ var DefaultConfig = Config{
 	ZKProverImpl:     1,
 	ThreadsPerShard:  uint64(2 * runtime.NumCPU()),
 	MinimumProfit:    common.Big0,
+	EmailConfig:      DefaultEmailConfig,
 }

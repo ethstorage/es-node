@@ -18,7 +18,6 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/params"
 	es "github.com/ethstorage/go-ethstorage/ethstorage"
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
 )
@@ -465,22 +464,23 @@ func (w *worker) resultLoop() {
 
 func (w *worker) reportMiningResult(rs *result, txHash common.Hash, err error) {
 	msg := fmt.Sprintf(
-		"A storage proof has been created on shard %d at block %v by miner %s",
+		"A storage proof was generated on shard %d at block %v.\n",
 		rs.startShardId,
 		rs.blockNumber,
-		rs.miner.Hex(),
 	)
+	var status bool
 	if err == errDropped {
-		msg += " but dropped due to low profit."
+		msg += "However, it was dropped due to insufficient profit."
 		w.lg.Warn("Mining transaction dropped due to low profit")
 	} else if err != nil {
-		msg += fmt.Sprintf(" but failed to submit mining transaction due to %s", err.Error())
+		msg += fmt.Sprintf("However, the mining transaction could not be submitted due to %s", err.Error())
 		w.lg.Error("Mining transaction failed", "error", err)
 	} else if txHash == (common.Hash{}) {
-		msg += " but failed to submit mining transaction."
+		msg += "However, the mining transaction failed to submit for unclear reasons."
 		w.lg.Error("Failed to submit mining transaction")
 	} else {
-		msg += fmt.Sprintf(" and submitted as transaction %s. \n", txHash.Hex())
+		msg += fmt.Sprintf("Miner: %s\n", rs.miner.Hex())
+		msg += fmt.Sprintf("Transaction hash: %s\n", txHash.Hex())
 		w.lg.Info("Mining transaction submitted", "txHash", txHash)
 
 		// waiting for tx confirmation or timeout
@@ -490,7 +490,9 @@ func (w *worker) reportMiningResult(rs *result, txHash common.Hash, err error) {
 			_, isPending, err := w.l1API.TransactionByHash(context.Background(), txHash)
 			if err == nil && !isPending {
 				w.lg.Info("Mining transaction confirmed", "txHash", txHash)
-				msg += w.checkTxStatus(txHash)
+				success, ret := w.checkTxStatus(txHash)
+				msg += ret
+				status = success
 				break
 			}
 			checked++
@@ -502,14 +504,17 @@ func (w *worker) reportMiningResult(rs *result, txHash common.Hash, err error) {
 		}
 		ticker.Stop()
 	}
-	sendEmail(msg, w.lg)
+	sendEmail(status, msg, DefaultEmailConfig, w.lg)
 }
 
-func (w *worker) checkTxStatus(txHash common.Hash) string {
+func (w *worker) checkTxStatus(txHash common.Hash) (bool, string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	var msg string
+	var (
+		success bool
+		msg     string
+	)
 	receipt, err := w.l1API.TransactionReceipt(ctx, txHash)
 	if receipt == nil {
 		if err != nil {
@@ -519,7 +524,8 @@ func (w *worker) checkTxStatus(txHash common.Hash) string {
 		}
 		w.lg.Warn("Mining transaction receipt not found!", "err", err, "txHash", txHash)
 	} else if receipt.Status == 1 {
-		msg = "Mining transaction succeeded! \n"
+		success = true
+		msg = "Status: success! \n"
 		msg += fmt.Sprintf("Gas used: %d, Effective gas price: %s \n", receipt.GasUsed, receipt.EffectiveGasPrice)
 		w.lg.Info("Mining transaction success!      √", "txHash", txHash)
 		w.lg.Info("Mining transaction details", "txHash", txHash, "gasUsed", receipt.GasUsed, "effectiveGasPrice", receipt.EffectiveGasPrice)
@@ -546,31 +552,7 @@ func (w *worker) checkTxStatus(txHash common.Hash) string {
 		msg = "Mining transaction failed! \n"
 		w.lg.Warn("Mining transaction failed!      ×", "txHash", txHash)
 	}
-	return msg
-}
-
-func sendEmail(msg string, lg log.Logger) {
-	fmt.Println("Sending email notification...")
-	fmt.Println(msg)
-}
-
-// https://github.com/ethereum/go-ethereum/issues/21221#issuecomment-805852059
-func weiToEther(wei *big.Int) *big.Float {
-	f := new(big.Float)
-	f.SetPrec(236) //  IEEE 754 octuple-precision binary floating-point format: binary256
-	f.SetMode(big.ToNearestEven)
-	if wei == nil {
-		return f.SetInt64(0)
-	}
-	fWei := new(big.Float)
-	fWei.SetPrec(236) //  IEEE 754 octuple-precision binary floating-point format: binary256
-	fWei.SetMode(big.ToNearestEven)
-	return f.Quo(fWei.SetInt(wei), big.NewFloat(params.Ether))
-}
-
-func fmtEth(wei *big.Int) string {
-	f := weiToEther(wei)
-	return fmt.Sprintf("%.9f", f)
+	return success, msg
 }
 
 // mineTask actually executes a mining task
