@@ -17,7 +17,7 @@ type EmailConfig struct {
 	Username string
 	Password string
 	Host     string
-	Port     int
+	Port     uint64
 	To       []string
 	From     string
 }

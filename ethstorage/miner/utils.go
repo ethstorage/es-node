@@ -65,7 +65,7 @@ func sendEmail(status bool, msg string, config EmailConfig, lg log.Logger) {
 		[]byte(emailBody),
 	)
 	if err != nil {
-		lg.Error("Failed to send email", "error", err)
+		lg.Error("Failed to send email", "error", err, "config", config)
 		fmt.Println(emailBody)
 	} else {
 		lg.Info("Email notification sent successfully!")

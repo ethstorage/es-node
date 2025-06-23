@@ -504,7 +504,9 @@ func (w *worker) reportMiningResult(rs *result, txHash common.Hash, err error) {
 		}
 		ticker.Stop()
 	}
-	sendEmail(status, msg, DefaultEmailConfig, w.lg)
+	if len(w.config.EmailConfig.To) > 0 {
+		sendEmail(status, msg, w.config.EmailConfig, w.lg)
+	}
 }
 
 func (w *worker) checkTxStatus(txHash common.Hash) (bool, string) {

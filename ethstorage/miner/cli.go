@@ -24,6 +24,14 @@ const (
 	ZKProverImplFlagName     = "miner.zk-prover-impl"
 	ThreadsPerShardFlagName  = "miner.threads-per-shard"
 	MinimumProfitFlagName    = "miner.min-profit"
+
+	// proof submission notify
+	EmailUsernameFlagName = "miner.email-username"
+	EmailPasswordFlagName = "miner.email-password"
+	EmailHostFlagName     = "miner.email-host"
+	EmailPortFlagName     = "miner.email-port"
+	EmailToFlagName       = "miner.email-to"
+	EmailFromFlagName     = "miner.email-from"
 )
 
 func CLIFlags(envPrefix string) []cli.Flag {
@@ -76,6 +84,40 @@ func CLIFlags(envPrefix string) []cli.Flag {
 			Value:  DefaultConfig.ThreadsPerShard,
 			EnvVar: rollup.PrefixEnvVar(envPrefix, "THREADS_PER_SHARD"),
 		},
+		cli.StringFlag{
+			Name:   EmailUsernameFlagName,
+			Usage:  "Email username for notifications",
+			Value:  DefaultEmailConfig.Username,
+			EnvVar: rollup.PrefixEnvVar(envPrefix, "EMAIL_USERNAME"),
+		},
+		cli.StringFlag{
+			Name:   EmailPasswordFlagName,
+			Usage:  "Email password for notifications",
+			EnvVar: rollup.PrefixEnvVar(envPrefix, "EMAIL_PASSWORD"),
+		},
+		cli.StringFlag{
+			Name:   EmailHostFlagName,
+			Usage:  "Email host for notifications",
+			Value:  DefaultEmailConfig.Host,
+			EnvVar: rollup.PrefixEnvVar(envPrefix, "EMAIL_HOST"),
+		},
+		cli.Uint64Flag{
+			Name:   EmailPortFlagName,
+			Usage:  "Email port for notifications",
+			Value:  DefaultEmailConfig.Port,
+			EnvVar: rollup.PrefixEnvVar(envPrefix, "EMAIL_PORT"),
+		},
+		cli.StringSliceFlag{
+			Name:   EmailToFlagName,
+			Usage:  "Email addresses to send notifications to",
+			EnvVar: rollup.PrefixEnvVar(envPrefix, "EMAIL_TO"),
+		},
+		cli.StringFlag{
+			Name:   EmailFromFlagName,
+			Usage:  "Email address that will appear as the sender of the notifications",
+			Value:  DefaultEmailConfig.From,
+			EnvVar: rollup.PrefixEnvVar(envPrefix, "EMAIL_FROM"),
+		},
 	}
 	return flag
 }
@@ -90,6 +132,12 @@ type CLIConfig struct {
 	ZKProverMode     uint64
 	ZKProverImpl     uint64
 	ThreadsPerShard  uint64
+	EmailUsername    string
+	EmailPassword    string
+	EmailHost        string
+	EmailPort        uint64
+	EmailTo          []string
+	EmailFrom        string
 }
 
 func (c CLIConfig) Check() error {
@@ -128,6 +176,12 @@ func (c CLIConfig) ToMinerConfig() (Config, error) {
 	cfg.PriorityGasPrice = c.PriorityGasPrice
 	cfg.MinimumProfit = c.MinimumProfit
 	cfg.ThreadsPerShard = c.ThreadsPerShard
+	cfg.EmailConfig.Username = c.EmailUsername
+	cfg.EmailConfig.Password = c.EmailPassword
+	cfg.EmailConfig.Host = c.EmailHost
+	cfg.EmailConfig.Port = c.EmailPort
+	cfg.EmailConfig.To = c.EmailTo
+	cfg.EmailConfig.From = c.EmailFrom
 	return cfg, nil
 }
 
@@ -142,6 +196,12 @@ func ReadCLIConfig(ctx *cli.Context) CLIConfig {
 		ZKProverMode:     ctx.GlobalUint64(ZKProverModeFlagName),
 		ZKProverImpl:     ctx.GlobalUint64(ZKProverImplFlagName),
 		ThreadsPerShard:  ctx.GlobalUint64(ThreadsPerShardFlagName),
+		EmailUsername:    ctx.GlobalString(EmailUsernameFlagName),
+		EmailPassword:    ctx.GlobalString(EmailPasswordFlagName),
+		EmailHost:        ctx.GlobalString(EmailHostFlagName),
+		EmailPort:        ctx.GlobalUint64(EmailPortFlagName),
+		EmailTo:          ctx.GlobalStringSlice(EmailToFlagName),
+		EmailFrom:        ctx.GlobalString(EmailFromFlagName),
 	}
 	return cfg
 }
