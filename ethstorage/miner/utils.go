@@ -45,16 +45,13 @@ func sendEmail(status bool, msg string, config EmailConfig, lg log.Logger) {
 
 	emailBody := fmt.Sprintf("Subject: %s\r\n", emailSubject)
 	emailBody += fmt.Sprintf("To: %s\r\n", config.To)
-	if config.From == "" {
-		localIP := p2p.GetLocalPublicIPv4()
-		if localIP != nil {
-			lg.Info("Using local IP for email sender", "ip", localIP.String())
-			config.From = "EthStorage Node <es-node@" + localIP.String() + ">"
-		} else {
-			config.From = "EthStorage Node"
-		}
-	}
 	emailBody += fmt.Sprintf("From: %s\r\n", config.From)
+
+	localIP := p2p.GetLocalPublicIPv4()
+	if localIP != nil {
+		lg.Info("Using local IP for email sender", "ip", localIP.String())
+		msg = "EthStorage Node Location: " + localIP.String() + "\r\n" + msg
+	}
 	emailBody += "\r\n" + msg
 
 	err := smtp.SendMail(

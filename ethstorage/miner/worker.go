@@ -479,8 +479,8 @@ func (w *worker) reportMiningResult(rs *result, txHash common.Hash, err error) {
 		msg += "However, the mining transaction failed to submit for unclear reasons."
 		w.lg.Error("Failed to submit mining transaction")
 	} else {
-		msg += fmt.Sprintf("Miner: %s\n", rs.miner.Hex())
-		msg += fmt.Sprintf("Transaction hash: %s\n", txHash.Hex())
+		msg += fmt.Sprintf("Miner: %s\r\n", rs.miner.Hex())
+		msg += fmt.Sprintf("Transaction hash: %s\r\n", txHash.Hex())
 		w.lg.Info("Mining transaction submitted", "txHash", txHash)
 
 		// waiting for tx confirmation or timeout
@@ -527,8 +527,8 @@ func (w *worker) checkTxStatus(txHash common.Hash) (bool, string) {
 		w.lg.Warn("Mining transaction receipt not found!", "err", err, "txHash", txHash)
 	} else if receipt.Status == 1 {
 		success = true
-		msg = "Status: success! \n"
-		msg += fmt.Sprintf("Gas used: %d, Effective gas price: %s \n", receipt.GasUsed, receipt.EffectiveGasPrice)
+		msg = "Status: success! \r\n"
+		msg += fmt.Sprintf("Gas used: %d, Effective gas price: %s \r\n", receipt.GasUsed, receipt.EffectiveGasPrice)
 		w.lg.Info("Mining transaction success!      √", "txHash", txHash)
 		w.lg.Info("Mining transaction details", "txHash", txHash, "gasUsed", receipt.GasUsed, "effectiveGasPrice", receipt.EffectiveGasPrice)
 		cost := new(big.Int).Mul(new(big.Int).SetUint64(receipt.GasUsed), receipt.EffectiveGasPrice)
@@ -551,7 +551,7 @@ func (w *worker) checkTxStatus(txHash common.Hash) (bool, string) {
 			)
 		}
 	} else if receipt.Status == 0 {
-		msg = "Mining transaction failed! \n"
+		msg = "Mining transaction failed! \r\n"
 		w.lg.Warn("Mining transaction failed!      ×", "txHash", txHash)
 	}
 	return success, msg
