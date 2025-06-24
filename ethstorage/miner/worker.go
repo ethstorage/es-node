@@ -527,7 +527,7 @@ func (w *worker) checkTxStatus(txHash common.Hash) (bool, string) {
 		w.lg.Warn("Mining transaction receipt not found!", "err", err, "txHash", txHash)
 	} else if receipt.Status == 1 {
 		success = true
-		msg = "Status: success! \r\n"
+		msg = "Transaction status: success! \r\n"
 		msg += fmt.Sprintf("Gas used: %d, Effective gas price: %s \r\n", receipt.GasUsed, receipt.EffectiveGasPrice)
 		w.lg.Info("Mining transaction success!      √", "txHash", txHash)
 		w.lg.Info("Mining transaction details", "txHash", txHash, "gasUsed", receipt.GasUsed, "effectiveGasPrice", receipt.EffectiveGasPrice)
@@ -551,7 +551,7 @@ func (w *worker) checkTxStatus(txHash common.Hash) (bool, string) {
 			)
 		}
 	} else if receipt.Status == 0 {
-		msg = "Mining transaction failed! \r\n"
+		msg = "Transaction status: failed! \r\n"
 		w.lg.Warn("Mining transaction failed!      ×", "txHash", txHash)
 	}
 	return success, msg
