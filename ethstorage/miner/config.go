@@ -57,7 +57,7 @@ var DefaultEmailConfig = EmailConfig{
 	Host:     "smtp.gmail.com",
 	Port:     587,
 	To:       []string{},
-	From:     "EthStorage Node",
+	From:     "EthStorage<web3url.gateway@gmail.com>",
 }
 
 var DefaultConfig = Config{
