@@ -49,10 +49,11 @@ func sendEmail(status bool, msg string, config EmailConfig, lg log.Logger) {
 
 	localIP := p2p.GetLocalPublicIPv4()
 	if localIP != nil {
-		lg.Info("Using local IP for email sender", "ip", localIP.String())
 		msg = "EthStorage Node Location: " + localIP.String() + "\r\n" + msg
 	}
 	emailBody += "\r\n" + msg
+
+	fmt.Println(emailBody)
 
 	err := smtp.SendMail(
 		fmt.Sprintf("%s:%d", config.Host, config.Port),
@@ -63,7 +64,6 @@ func sendEmail(status bool, msg string, config EmailConfig, lg log.Logger) {
 	)
 	if err != nil {
 		lg.Error("Failed to send email", "error", err, "config", config)
-		fmt.Println(emailBody)
 	} else {
 		lg.Info("Email notification sent successfully!")
 	}
