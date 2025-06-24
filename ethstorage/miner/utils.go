@@ -49,7 +49,7 @@ func sendEmail(status bool, msg string, config EmailConfig, lg log.Logger) {
 
 	localIP := p2p.GetLocalPublicIPv4()
 	if localIP != nil {
-		msg = strings.Replace(msg, "\r\n\r\n", fmt.Sprintf("\r\n\r\nLocation: %s\r\n", localIP.String()), 1)
+		msg = strings.Replace(msg, "\r\n\r\n", fmt.Sprintf("\r\n\r\nLocation: %s", localIP.String()), 1)
 	}
 	emailBody += "\r\n" + msg
 
