@@ -43,14 +43,13 @@ func sendEmail(status bool, msg string, config EmailConfig, lg log.Logger) {
 		emailSubject += "❌ Failure"
 	}
 
-	emailBody := fmt.Sprintf("Subject: %s\r\n", emailSubject)
-	emailBody += fmt.Sprintf("To: %s\r\n", config.To)
-	emailBody += fmt.Sprintf("From: %s\r\n", config.From)
-
 	localIP := p2p.GetLocalPublicIPv4()
 	if localIP != nil {
-		msg = strings.Replace(msg, "\r\n\r\n", fmt.Sprintf("\r\n\r\nLocation: %s", localIP.String()), 1)
+		msg = strings.Replace(msg, "es-node", fmt.Sprintf("es-node@%s", localIP.String()), 1)
 	}
+	emailBody := fmt.Sprintf("Subject: %s\r\n", emailSubject)
+	emailBody += fmt.Sprintf("To: %s\r\n", strings.Join(config.To, ", "))
+	emailBody += fmt.Sprintf("From: %s\r\n", config.From)
 	emailBody += "\r\n" + msg
 
 	err := smtp.SendMail(
