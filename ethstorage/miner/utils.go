@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/big"
 	"net/smtp"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
@@ -34,7 +35,6 @@ func fmtEth(wei *big.Int) string {
 
 func sendEmail(status bool, msg string, config EmailConfig, lg log.Logger) {
 	lg.Info("Sending email notification...")
-	auth := smtp.PlainAuth("", config.Username, config.Password, config.Host)
 
 	emailSubject := "EthStorage Proof Submission: "
 	if status {
@@ -49,19 +49,18 @@ func sendEmail(status bool, msg string, config EmailConfig, lg log.Logger) {
 
 	localIP := p2p.GetLocalPublicIPv4()
 	if localIP != nil {
-		msg = "EthStorage Node Location: " + localIP.String() + "\r\n" + msg
+		msg = strings.Replace(msg, "\r\n\r\n", fmt.Sprintf("\r\n\r\nLocation: %s\r\n", localIP.String()), 1)
 	}
 	emailBody += "\r\n" + msg
 
-	fmt.Println(emailBody)
-
 	err := smtp.SendMail(
 		fmt.Sprintf("%s:%d", config.Host, config.Port),
-		auth,
+		smtp.PlainAuth("", config.Username, config.Password, config.Host),
 		config.From,
 		config.To,
 		[]byte(emailBody),
 	)
+	lg.Debug("Email body", "body", emailBody)
 	if err != nil {
 		lg.Error("Failed to send email", "error", err, "config", config)
 	} else {
