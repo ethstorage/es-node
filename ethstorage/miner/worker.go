@@ -471,16 +471,16 @@ func (w *worker) reportMiningResult(rs *result, txHash common.Hash, err error) {
 	var status bool
 	if err == errDropped {
 		msg += "However, it was dropped due to insufficient profit."
-		w.lg.Warn("Mining transaction dropped due to low profit")
+		w.lg.Warn("Mining transaction dropped due to low profit.")
 	} else if err != nil {
 		msg += fmt.Sprintf("However, the mining transaction could not be submitted due to %s", err.Error())
 		w.lg.Error("Mining transaction failed", "error", err)
 	} else if txHash == (common.Hash{}) {
 		msg += "However, the mining transaction failed to submit for unclear reasons."
-		w.lg.Error("Failed to submit mining transaction")
+		w.lg.Error("Failed to submit mining transaction.")
 	} else {
 		msg += fmt.Sprintf("Miner: %s\r\n", rs.miner.Hex())
-		msg += fmt.Sprintf("Transaction hash: %s\r\n", txHash.Hex())
+		msg += fmt.Sprintf("Transaction hash: %s\r\n\r\n", txHash.Hex())
 		w.lg.Info("Mining transaction submitted", "txHash", txHash)
 
 		// waiting for tx confirmation or timeout
@@ -519,16 +519,18 @@ func (w *worker) checkTxStatus(txHash common.Hash) (bool, string) {
 	)
 	receipt, err := w.l1API.TransactionReceipt(ctx, txHash)
 	if receipt == nil {
+		msg = "Unfortunately, "
 		if err != nil {
-			msg = fmt.Sprintf("Mining transaction receipt not found due to error: %s", err.Error())
+			msg += fmt.Sprintf("the mining transaction receipt not found due to %s", err.Error())
 		} else {
-			msg = "Mining transaction receipt not found."
+			msg += "the mining transaction receipt not found."
 		}
 		w.lg.Warn("Mining transaction receipt not found!", "err", err, "txHash", txHash)
 	} else if receipt.Status == 1 {
 		success = true
 		msg = "Transaction status: success! \r\n"
-		msg += fmt.Sprintf("Gas used: %d, Effective gas price: %s \r\n", receipt.GasUsed, receipt.EffectiveGasPrice)
+		msg += fmt.Sprintf("Gas used: %d \r\n", receipt.GasUsed)
+		msg += fmt.Sprintf("Effective gas price: %s \r\n", receipt.EffectiveGasPrice)
 		w.lg.Info("Mining transaction success!      √", "txHash", txHash)
 		w.lg.Info("Mining transaction details", "txHash", txHash, "gasUsed", receipt.GasUsed, "effectiveGasPrice", receipt.EffectiveGasPrice)
 		cost := new(big.Int).Mul(new(big.Int).SetUint64(receipt.GasUsed), receipt.EffectiveGasPrice)
@@ -542,7 +544,9 @@ func (w *worker) checkTxStatus(txHash common.Hash) (bool, string) {
 		}
 		if reward != nil {
 			r, c, p := fmtEth(reward), fmtEth(cost), fmtEth(new(big.Int).Sub(reward, cost))
-			msg += fmt.Sprintf("Reward: %s, Cost: %s, Profit: %s", r, c, p)
+			msg += fmt.Sprintf("Reward: %s\r\n", r)
+			msg += fmt.Sprintf("Cost: %s\r\n", c)
+			msg += fmt.Sprintf("Profit: %s\r\n", p)
 			// TODO: the cost should include receipt.L1Fee for op-geth
 			w.lg.Info("Mining transaction accounting (in ether)",
 				"reward", r,
@@ -550,7 +554,7 @@ func (w *worker) checkTxStatus(txHash common.Hash) (bool, string) {
 				"profit", p,
 			)
 		}
-	} else if receipt.Status == 0 {
+	} else {
 		msg = "Transaction status: failed! \r\n"
 		w.lg.Warn("Mining transaction failed!      ×", "txHash", txHash)
 	}

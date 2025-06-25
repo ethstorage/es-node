@@ -42,15 +42,15 @@ func sendEmail(status bool, msg string, config EmailConfig, lg log.Logger) {
 	} else {
 		emailSubject += "❌ Failure"
 	}
-
-	localIP := p2p.GetLocalPublicIPv4()
-	if localIP != nil {
-		msg = strings.Replace(msg, "es-node", fmt.Sprintf("es-node@%s", localIP.String()), 1)
-	}
 	emailBody := fmt.Sprintf("Subject: %s\r\n", emailSubject)
 	emailBody += fmt.Sprintf("To: %s\r\n", strings.Join(config.To, ", "))
 	emailBody += fmt.Sprintf("From: \"EthStorage\" <%s>\r\n", config.From)
+	localIP := p2p.GetLocalPublicIPv4()
+	if localIP != nil {
+		msg = strings.Replace(msg, "es-node", fmt.Sprintf("es-node at %s", localIP.String()), 1)
+	}
 	emailBody += "\r\n" + msg
+	lg.Debug("Email body", "body", emailBody)
 
 	err := smtp.SendMail(
 		fmt.Sprintf("%s:%d", config.Host, config.Port),
@@ -59,9 +59,14 @@ func sendEmail(status bool, msg string, config EmailConfig, lg log.Logger) {
 		config.To,
 		[]byte(emailBody),
 	)
-	lg.Debug("Email body", "body", emailBody)
 	if err != nil {
-		lg.Error("Failed to send email", "error", err, "config", config)
+		lg.Error("Failed to send email", "error", err, "config", map[string]interface{}{
+			"Host":     config.Host,
+			"Port":     config.Port,
+			"Username": config.Username,
+			"From":     config.From,
+			"To":       config.To,
+		})
 	} else {
 		lg.Info("Email notification sent successfully!")
 	}
