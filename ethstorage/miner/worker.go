@@ -521,11 +521,11 @@ func (w *worker) checkTxStatus(txHash common.Hash) (bool, string) {
 	if receipt == nil {
 		msg = "Unfortunately, "
 		if err != nil {
-			msg += fmt.Sprintf("the mining transaction receipt not found due to %s", err.Error())
+			msg += fmt.Sprintf("the mining transaction receipt was not found due to %s", err.Error())
 		} else {
-			msg += "the mining transaction receipt not found."
+			msg += "the mining transaction receipt was not found."
 		}
-		w.lg.Warn("Mining transaction receipt not found!", "err", err, "txHash", txHash)
+		w.lg.Warn("Mining transaction receipt was not found!", "err", err, "txHash", txHash)
 	} else if receipt.Status == 1 {
 		success = true
 		msg = "Transaction status: success! \r\n"
