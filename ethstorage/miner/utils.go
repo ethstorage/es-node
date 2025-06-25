@@ -49,7 +49,7 @@ func sendEmail(status bool, msg string, config EmailConfig, lg log.Logger) {
 	}
 	emailBody := fmt.Sprintf("Subject: %s\r\n", emailSubject)
 	emailBody += fmt.Sprintf("To: %s\r\n", strings.Join(config.To, ", "))
-	emailBody += fmt.Sprintf("From: %s\r\n", config.From)
+	emailBody += fmt.Sprintf("From: \"EthStorage\" <%s>\r\n", config.From)
 	emailBody += "\r\n" + msg
 
 	err := smtp.SendMail(

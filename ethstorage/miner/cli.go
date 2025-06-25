@@ -87,7 +87,6 @@ func CLIFlags(envPrefix string) []cli.Flag {
 		cli.StringFlag{
 			Name:   EmailUsernameFlagName,
 			Usage:  "Email username for notifications",
-			Value:  DefaultEmailConfig.Username,
 			EnvVar: rollup.PrefixEnvVar(envPrefix, "EMAIL_USERNAME"),
 		},
 		cli.StringFlag{
@@ -98,13 +97,13 @@ func CLIFlags(envPrefix string) []cli.Flag {
 		cli.StringFlag{
 			Name:   EmailHostFlagName,
 			Usage:  "Email host for notifications",
-			Value:  DefaultEmailConfig.Host,
+			Value:  DefaultConfig.EmailConfig.Host,
 			EnvVar: rollup.PrefixEnvVar(envPrefix, "EMAIL_HOST"),
 		},
 		cli.Uint64Flag{
 			Name:   EmailPortFlagName,
 			Usage:  "Email port for notifications",
-			Value:  DefaultEmailConfig.Port,
+			Value:  DefaultConfig.EmailConfig.Port,
 			EnvVar: rollup.PrefixEnvVar(envPrefix, "EMAIL_PORT"),
 		},
 		cli.StringSliceFlag{
@@ -115,7 +114,6 @@ func CLIFlags(envPrefix string) []cli.Flag {
 		cli.StringFlag{
 			Name:   EmailFromFlagName,
 			Usage:  "Email address that will appear as the sender of the notifications",
-			Value:  DefaultEmailConfig.From,
 			EnvVar: rollup.PrefixEnvVar(envPrefix, "EMAIL_FROM"),
 		},
 	}

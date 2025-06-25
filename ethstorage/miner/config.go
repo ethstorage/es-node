@@ -51,15 +51,6 @@ type Config struct {
 	EmailConfig EmailConfig
 }
 
-var DefaultEmailConfig = EmailConfig{
-	Username: "web3url.gateway@gmail.com",
-	Password: "",
-	Host:     "smtp.gmail.com",
-	Port:     587,
-	To:       []string{},
-	From:     "EthStorage<web3url.gateway@gmail.com>",
-}
-
 var DefaultConfig = Config{
 	RandomChecks:   2,
 	NonceLimit:     1048576,
@@ -75,5 +66,8 @@ var DefaultConfig = Config{
 	ZKProverImpl:     1,
 	ThreadsPerShard:  uint64(2 * runtime.NumCPU()),
 	MinimumProfit:    common.Big0,
-	EmailConfig:      DefaultEmailConfig,
+	EmailConfig: EmailConfig{
+		Host: "smtp.gmail.com",
+		Port: 587,
+	},
 }
