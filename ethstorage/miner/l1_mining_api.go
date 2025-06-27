@@ -42,6 +42,7 @@ type l1MiningAPI struct {
 	lg log.Logger
 }
 
+// Pre-check if the miner has been whitelisted before actually mining
 func (m *l1MiningAPI) CheckMinerRole(ctx context.Context, contract, miner common.Address) error {
 	enforced, err := m.PollingClient.ReadContractField("enforceMinerRole", nil)
 	if err != nil {
@@ -63,7 +64,7 @@ func (m *l1MiningAPI) CheckMinerRole(ctx context.Context, contract, miner common
 			m.lg.Info("Miner role granted", "miner", miner)
 			return nil
 		}
-		return fmt.Errorf("miner role not granted: %s", miner)
+		return fmt.Errorf("miner role not granted to: %s", miner)
 	}
 	m.lg.Info("Miner role not enforced")
 	return nil
