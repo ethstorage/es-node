@@ -134,6 +134,7 @@ Miner: 0xabc123...
 Transaction hash: 0xdef456...
 
 Transaction status: failed!
+You can check the detailed error message on the block explorer. 
 ```
 
 #### Transaction Confirmation Timeout

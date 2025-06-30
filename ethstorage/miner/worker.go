@@ -556,6 +556,7 @@ func (w *worker) checkTxStatus(txHash common.Hash) (bool, string) {
 		}
 	} else {
 		msg = "Transaction status: failed! \r\n"
+		msg += "You can check the detailed error message on the block explorer. \r\n"
 		w.lg.Warn("Mining transaction failed!      ×", "txHash", txHash)
 	}
 	return success, msg
