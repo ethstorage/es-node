@@ -74,7 +74,7 @@ func (p *ZKProver) GenerateZKProofRaw(encodingKeys []common.Hash, sampleIdxs []u
 		p.lg.Error("Read publics failed", "error", err)
 		return nil, nil, err
 	}
-	os.RemoveAll(filepath.Dir(publicFile))
+	p.lg.Info("Generate zk proof done", "publicFile", publicFile, "publics", publics)
 	return proof, publics, nil
 }
 

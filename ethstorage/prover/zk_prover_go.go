@@ -130,7 +130,7 @@ func (p *ZKProverGo) prove(inputBytes []byte) ([]byte, string, error) {
 		p.lg.Error("Prove failed", "error", err)
 		return nil, "", err
 	}
-	p.lg.Debug("Generate zk proof", "publicInputs", publicInputs)
+	p.lg.Info("Generate zk proof", "publicInputs", publicInputs)
 	proof, err := readProof([]byte(proofRaw))
 	if err != nil {
 		p.lg.Error("Read proof failed", "error", err)
