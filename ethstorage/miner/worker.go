@@ -468,6 +468,7 @@ func (w *worker) reportMiningResult(rs *result, txHash common.Hash, err error) {
 		rs.startShardId,
 		rs.blockNumber,
 	)
+	msg += fmt.Sprintf("Time: %s\r\n", time.Now().Format("2006-01-02 15:04:05"))
 	var status bool
 	if err == errDropped {
 		msg += "However, it was dropped due to insufficient profit."
