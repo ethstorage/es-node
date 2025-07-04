@@ -505,7 +505,7 @@ func (w *worker) reportMiningResult(rs *result, txHash common.Hash, err error) {
 		}
 		ticker.Stop()
 	}
-	if len(w.config.EmailConfig.To) > 0 {
+	if w.config.EmailConfig.enabled() {
 		sendEmail(status, msg, w.config.EmailConfig, w.lg)
 	}
 }

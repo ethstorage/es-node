@@ -22,6 +22,10 @@ type EmailConfig struct {
 	From     string
 }
 
+func (c EmailConfig) enabled() bool {
+	return c.Username != "" && c.Password != "" && c.Host != "" && c.Port != 0 && len(c.To) > 0 && c.From != ""
+}
+
 type Config struct {
 	// contract
 	RandomChecks   uint64
