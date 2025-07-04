@@ -17,6 +17,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
+	"golang.org/x/mod/semver"
 )
 
 const (
@@ -331,4 +332,32 @@ func (w *PollingClient) ReadContractField(fieldName string, blockNumber *big.Int
 		return nil, fmt.Errorf("failed to get %s from contract: %v", fieldName, err)
 	}
 	return bs, nil
+}
+
+func (w *PollingClient) GetContractVersion() (string, error) {
+	bs, err := w.ReadContractField("version", nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to get version from contract: %v", err)
+	}
+	versionStr, err := decodeString(bs)
+	if err != nil {
+		return "", fmt.Errorf("failed to decode version string: %v", err)
+	}
+	version := "v" + versionStr
+	if !semver.IsValid(version) {
+		return "", fmt.Errorf("invalid version string: %s", versionStr)
+	}
+	return version, nil
+}
+
+func decodeString(data []byte) (string, error) {
+	if len(data) < 64 {
+		return "", fmt.Errorf("data too short")
+	}
+	strLen := new(big.Int).SetBytes(data[32:64]).Int64()
+	if int64(len(data)) < 64+strLen {
+		return "", fmt.Errorf("data length mismatch")
+	}
+	strBytes := data[64 : 64+strLen]
+	return string(strBytes), nil
 }

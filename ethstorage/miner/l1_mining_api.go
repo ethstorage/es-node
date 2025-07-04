@@ -19,10 +19,12 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethstorage/go-ethstorage/ethstorage"
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
+	"golang.org/x/mod/semver"
 )
 
 const (
-	gasBufferRatio = 1.2
+	gasBufferRatio         = 1.2
+	versionMineRoleEnabled = "v0.1.2"
 )
 
 var (
@@ -44,6 +46,14 @@ type l1MiningAPI struct {
 
 // Pre-check if the miner has been whitelisted before actually mining
 func (m *l1MiningAPI) CheckMinerRole(ctx context.Context, contract, miner common.Address) error {
+	version, err := m.GetContractVersion()
+	if err != nil {
+		return fmt.Errorf("failed to get contract version: %w", err)
+	}
+	m.lg.Info("Storage Contract version", "version", version)
+	if semver.Compare(version, versionMineRoleEnabled) == -1 {
+		return nil
+	}
 	enforced, err := m.PollingClient.ReadContractField("enforceMinerRole", nil)
 	if err != nil {
 		return fmt.Errorf("failed to query enforceMinerRole(): %w", err)
