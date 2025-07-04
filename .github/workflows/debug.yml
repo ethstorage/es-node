@@ -1,0 +1,29 @@
+name: debug
+on: push
+
+jobs:
+  debug:
+    runs-on: self-hosted
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Use Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20.x'
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Set ENV Parameters
+        run: |
+          echo ES_NODE_CONTRACT_ADDRESS=`cat ../storage-contracts-v1/.caddr` >> "$GITHUB_ENV"
+          echo ES_NODE_UPLOADER_PRIVATE_KEY=`cat ../uploader.key` >> "$GITHUB_ENV"
+          echo ES_NODE_STORAGE_MINER=0x5C935469C5592Aeeac3372e922d9bCEabDF8830d >> "$GITHUB_ENV"
+
+      - name: Set Miner To Whitelist
+        run: |
+          cast send -r 'http://5.9.87.214:8545' --private-key $ES_NODE_UPLOADER_PRIVATE_KEY $ES_NODE_CONTRACT_ADDRESS "grantMinerRole(address)" $ES_NODE_STORAGE_MINER
