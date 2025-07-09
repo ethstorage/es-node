@@ -145,6 +145,9 @@ func (c CLIConfig) Check() error {
 			return fmt.Errorf("%s folder not found in ZKWorkingDir: %v", prover.SnarkLib, err)
 		}
 	}
+	if len(c.EmailTo) > 0 && (c.EmailUsername == "" || c.EmailPassword == "" || c.EmailFrom == "") {
+		return fmt.Errorf("if email recipients are set, email username, password and sender must be set")
+	}
 	return nil
 }
 
