@@ -483,31 +483,35 @@ func (w *worker) reportMiningResult(rs *result, txHash common.Hash, err error) {
 		msg += fmt.Sprintf("Miner: %s\r\n", rs.miner.Hex())
 		msg += fmt.Sprintf("Transaction hash: %s\r\n\r\n", txHash.Hex())
 		w.lg.Info("Mining transaction submitted", "txHash", txHash)
-
-		// waiting for tx confirmation or timeout
-		ticker := time.NewTicker(1 * time.Second)
-		checked := 0
-		for range ticker.C {
-			_, isPending, err := w.l1API.TransactionByHash(context.Background(), txHash)
-			if err == nil && !isPending {
-				w.lg.Info("Mining transaction confirmed", "txHash", txHash)
-				success, ret := w.checkTxStatus(txHash)
-				msg += ret
-				status = success
-				break
-			}
-			checked++
-			if checked > miningTransactionTimeout {
-				msg += "However, waiting for the transaction confirmation timed out. You can check the transaction status on the block explorer."
-				w.lg.Warn("Waiting for mining transaction confirm timed out", "txHash", txHash)
-				break
-			}
-		}
-		ticker.Stop()
+		status = w.checkTxStatusRepeatedly(txHash, &msg)
 	}
 	if w.config.EmailConfig.enabled() {
 		sendEmail(status, msg, w.config.EmailConfig, w.lg)
 	}
+}
+
+func (w *worker) checkTxStatusRepeatedly(txHash common.Hash, msg *string) bool {
+	// waiting for tx confirmation or timeout
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
+	checked := 0
+	for range ticker.C {
+		_, isPending, err := w.l1API.TransactionByHash(context.Background(), txHash)
+		if err == nil && !isPending {
+			w.lg.Info("Mining transaction confirmed", "txHash", txHash)
+			success, ret := w.checkTxStatus(txHash)
+			*msg += ret
+			return success
+		}
+		checked++
+		if checked > miningTransactionTimeout {
+			*msg += "However, waiting for the transaction confirmation timed out. You can check the transaction status on the block explorer."
+			w.lg.Warn("Waiting for mining transaction confirm timed out", "txHash", txHash)
+			break
+		}
+	}
+	return false
 }
 
 func (w *worker) checkTxStatus(txHash common.Hash) (bool, string) {
