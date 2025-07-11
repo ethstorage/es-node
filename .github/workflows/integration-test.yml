@@ -53,6 +53,10 @@ jobs:
           echo ES_NODE_SIGNER_PRIVATE_KEY=`cat ../private.key` >> "$GITHUB_ENV"
           echo ES_NODE_STORAGE_MINER=0x5C935469C5592Aeeac3372e922d9bCEabDF8830d >> "$GITHUB_ENV"
 
+      - name: Set Miner To Whitelist
+        run: |
+          cast send -r 'http://5.9.87.214:8545' --private-key $ES_NODE_SIGNER_PRIVATE_KEY $ES_NODE_CONTRACT_ADDRESS "grantMinerRole(address)" $ES_NODE_STORAGE_MINER
+
       - name: Upload Blobs
         run: |
           cd ./integration_tests/scripts 
