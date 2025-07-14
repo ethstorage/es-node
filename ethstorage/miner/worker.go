@@ -246,6 +246,19 @@ func (w *worker) newWorkLoop() {
 				taskChs:  taskChs,
 			}
 			w.shardTaskMap[shardIdx] = task
+
+			if w.config.EmailConfig.enabled() {
+				go func() {
+					emailSubject := fmt.Sprintf("EthStorage Mining Task Started: Shard %d", shardIdx)
+					msg := fmt.Sprintf("A new mining task has been started for shard %d on es-node.\r\n\r\n", shardIdx)
+					msg += fmt.Sprintf("Start time: %s\r\n", time.Now().Format("2006-01-02 15:04:05"))
+					msg += fmt.Sprintf("Miner: %s\r\n", miner.Hex())
+					msg += fmt.Sprintf("Threads per shard: %d\r\n", w.config.ThreadsPerShard)
+					msg += fmt.Sprintf("Minimum profit: %s\r\n", w.config.MinimumProfit)
+					w.lg.Info("New mining task started", "shard", shardIdx, "miner", miner.Hex(), "threads", w.config.ThreadsPerShard)
+					sendEmail(emailSubject, msg, w.config.EmailConfig, w.lg)
+				}()
+			}
 		case block := <-w.chainHeadCh:
 			if !w.isRunning() {
 				break
@@ -486,7 +499,13 @@ func (w *worker) reportMiningResult(rs *result, txHash common.Hash, err error) {
 		status = w.checkTxStatusRepeatedly(txHash, &msg)
 	}
 	if w.config.EmailConfig.enabled() {
-		sendEmail(status, msg, w.config.EmailConfig, w.lg)
+		emailSubject := "EthStorage Proof Submission: "
+		if status {
+			emailSubject += "✅ Success"
+		} else {
+			emailSubject += "❌ Failure"
+		}
+		sendEmail(emailSubject, msg, w.config.EmailConfig, w.lg)
 	}
 }
 

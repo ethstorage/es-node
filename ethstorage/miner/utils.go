@@ -33,15 +33,9 @@ func fmtEth(wei *big.Int) string {
 	return fmt.Sprintf("%.9f", f)
 }
 
-func sendEmail(status bool, msg string, config EmailConfig, lg log.Logger) {
+func sendEmail(emailSubject, msg string, config EmailConfig, lg log.Logger) {
 	lg.Info("Sending email notification...")
 
-	emailSubject := "EthStorage Proof Submission: "
-	if status {
-		emailSubject += "✅ Success"
-	} else {
-		emailSubject += "❌ Failure"
-	}
 	emailBody := fmt.Sprintf("Subject: %s\r\n", emailSubject)
 	emailBody += fmt.Sprintf("To: %s\r\n", strings.Join(config.To, ", "))
 	emailBody += fmt.Sprintf("From: \"EthStorage\" <%s>\r\n", config.From)
