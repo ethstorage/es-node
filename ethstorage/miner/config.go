@@ -14,16 +14,13 @@ import (
 )
 
 type EmailConfig struct {
+	Enabled  bool
 	Username string
 	Password string
 	Host     string
 	Port     uint64
 	To       []string
 	From     string
-}
-
-func (c EmailConfig) enabled() bool {
-	return c.Username != "" && c.Password != "" && c.Host != "" && c.Port != 0 && len(c.To) > 0 && c.From != ""
 }
 
 type Config struct {

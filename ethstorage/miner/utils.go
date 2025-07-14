@@ -34,14 +34,14 @@ func fmtEth(wei *big.Int) string {
 }
 
 func sendEmail(emailSubject, msg string, config EmailConfig, lg log.Logger) {
-	lg.Info("Sending email notification...")
+	lg.Info("Sending email notification", "subject", emailSubject)
 
 	emailBody := fmt.Sprintf("Subject: %s\r\n", emailSubject)
 	emailBody += fmt.Sprintf("To: %s\r\n", strings.Join(config.To, ", "))
 	emailBody += fmt.Sprintf("From: \"EthStorage\" <%s>\r\n", config.From)
 	localIP := p2p.GetLocalPublicIPv4()
 	if localIP != nil {
-		msg = strings.Replace(msg, "es-node", fmt.Sprintf("es-node at %s", localIP.String()), 1)
+		msg = strings.Replace(msg, "es-node", fmt.Sprintf("the es-node at %s", localIP.String()), 1)
 	}
 	emailBody += "\r\n" + msg
 	lg.Debug("Email body", "body", emailBody)

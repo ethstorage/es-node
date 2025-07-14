@@ -26,6 +26,7 @@ const (
 	MinimumProfitFlagName    = "miner.min-profit"
 
 	// proof submission notify
+	EmailEnabledFlagName  = "miner.email-enabled"
 	EmailUsernameFlagName = "miner.email-username"
 	EmailPasswordFlagName = "miner.email-password"
 	EmailHostFlagName     = "miner.email-host"
@@ -84,6 +85,11 @@ func CLIFlags(envPrefix string) []cli.Flag {
 			Value:  DefaultConfig.ThreadsPerShard,
 			EnvVar: rollup.PrefixEnvVar(envPrefix, "THREADS_PER_SHARD"),
 		},
+		cli.BoolFlag{
+			Name:   EmailEnabledFlagName,
+			Usage:  "Enable proof submission notifications via email",
+			EnvVar: rollup.PrefixEnvVar(envPrefix, "EMAIL_ENABLED"),
+		},
 		cli.StringFlag{
 			Name:   EmailUsernameFlagName,
 			Usage:  "Email username for notifications",
@@ -130,6 +136,7 @@ type CLIConfig struct {
 	ZKProverMode     uint64
 	ZKProverImpl     uint64
 	ThreadsPerShard  uint64
+	EmailEnabled     bool
 	EmailUsername    string
 	EmailPassword    string
 	EmailHost        string
@@ -145,8 +152,25 @@ func (c CLIConfig) Check() error {
 			return fmt.Errorf("%s folder not found in ZKWorkingDir: %v", prover.SnarkLib, err)
 		}
 	}
-	if len(c.EmailTo) > 0 && (c.EmailUsername == "" || c.EmailPassword == "" || c.EmailFrom == "") {
-		return fmt.Errorf("if email recipients are set, email username, password and sender must be set")
+	if c.EmailEnabled {
+		if c.EmailUsername == "" {
+			return fmt.Errorf("email username is empty")
+		}
+		if c.EmailPassword == "" {
+			return fmt.Errorf("email password is empty")
+		}
+		if c.EmailHost == "" {
+			return fmt.Errorf("email host is empty")
+		}
+		if c.EmailPort == 0 {
+			return fmt.Errorf("email port is empty")
+		}
+		if len(c.EmailTo) == 0 {
+			return fmt.Errorf("email to is empty")
+		}
+		if c.EmailFrom == "" {
+			return fmt.Errorf("email from is empty")
+		}
 	}
 	return nil
 }
@@ -177,6 +201,7 @@ func (c CLIConfig) ToMinerConfig() (Config, error) {
 	cfg.PriorityGasPrice = c.PriorityGasPrice
 	cfg.MinimumProfit = c.MinimumProfit
 	cfg.ThreadsPerShard = c.ThreadsPerShard
+	cfg.EmailConfig.Enabled = c.EmailEnabled
 	cfg.EmailConfig.Username = c.EmailUsername
 	cfg.EmailConfig.Password = c.EmailPassword
 	cfg.EmailConfig.Host = c.EmailHost
@@ -197,6 +222,7 @@ func ReadCLIConfig(ctx *cli.Context) CLIConfig {
 		ZKProverMode:     ctx.GlobalUint64(ZKProverModeFlagName),
 		ZKProverImpl:     ctx.GlobalUint64(ZKProverImplFlagName),
 		ThreadsPerShard:  ctx.GlobalUint64(ThreadsPerShardFlagName),
+		EmailEnabled:     ctx.GlobalBool(EmailEnabledFlagName),
 		EmailUsername:    ctx.GlobalString(EmailUsernameFlagName),
 		EmailPassword:    ctx.GlobalString(EmailPasswordFlagName),
 		EmailHost:        ctx.GlobalString(EmailHostFlagName),
