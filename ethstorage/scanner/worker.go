@@ -160,7 +160,7 @@ func getKvsInBatch(shards []uint64, kvEntries, lastKvIdx, batchSize, batchStartI
 	var totalEntries uint64
 	for _, shardId := range shards {
 		if shardId == lastKvIdx/kvEntries {
-			totalEntries += (lastKvIdx + 1) % kvEntries
+			totalEntries += lastKvIdx%kvEntries + 1
 			break
 		}
 		totalEntries += kvEntries
