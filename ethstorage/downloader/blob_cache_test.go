@@ -135,7 +135,7 @@ func TestEncoding(t *testing.T) {
 		t.Run(fmt.Sprintf("test kv: %d", i), func(t *testing.T) {
 			blobEncoded := cache.GetKeyValueByIndex(kvIndex, kvHash)
 			blobDecoded := sm.DecodeBlob(blobEncoded, kvHash, kvIndex, kvSize)
-			bytesWant := []byte(fmt.Sprintf(blobData, kvIndex))
+			bytesWant := fmt.Appendf(nil, blobData, kvIndex)
 			if !bytes.Equal(blobDecoded[:len(bytesWant)], bytesWant) {
 				t.Errorf("GetKeyValueByIndex and decoded = %s, want %s", blobDecoded[:len(bytesWant)], bytesWant)
 			}
@@ -227,7 +227,7 @@ func newBlockBlobs(blockNumber, blobLen uint64) (*blockBlobs, error) {
 		kvIdx := big.NewInt(int64(kvIndex))
 		blob := &blob{
 			kvIndex: kvIdx,
-			data:    []byte(fmt.Sprintf(blobData, kvIndex)),
+			data:    fmt.Appendf(nil, blobData, kvIndex),
 		}
 		kzgBlob := kzg4844.Blob{}
 		copy(kzgBlob[:], blob.data)
