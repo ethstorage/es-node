@@ -90,12 +90,12 @@ func (d *dashboard) ReportStateHandler(w http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal(body, &state)
 	if err != nil {
 		log.Warn("Parse node state failed", "state", string(body), "error", err.Error())
-		w.Write([]byte(fmt.Sprintf(`{"status":"error", "err message":"%s"}`, err.Error())))
+		w.Write(fmt.Appendf(nil, `{"status":"error", "err message":"%s"}`, err.Error()))
 		return
 	}
 	if err = d.checkState(&state); err != nil {
 		log.Warn("check node state failed", "state", string(body), "error", err.Error())
-		w.Write([]byte(fmt.Sprintf(`{"status":"error", "err message":"%s"}`, err.Error())))
+		w.Write(fmt.Appendf(nil, `{"status":"error", "err message":"%s"}`, err.Error()))
 		return
 	}
 
