@@ -8,7 +8,7 @@ This guide describes how to configure and use the email notification feature in 
 
 If enabled, storage providers will receive email notifications for the following mining events:
 
-1. When a shard finishes syncing data via P2P and begins its mining task. This happens when a node is started for the first time or has been offline for a while, requiring its local storage to catch up with the network.  
+1. When a shard finishes syncing data via P2P and begins its mining task. This happens when a node is started for the first time requiring its local storage to catch up with the network.
 2. When a storage proof is generated and submitted to the smart contract as a mining transaction.
 
 ## SMTP Service Preparation
@@ -77,7 +77,7 @@ ES_NODE_MINER_EMAIL_PASSWORD="abcd  efgh  ijkl  mnop" \
 - It is recommended to use the environment variable (`ES_NODE_MINER_EMAIL_PASSWORD`) for the password.
 - If your password contains spaces, enclose it in double quotes.
 - To support multiple recipients, use the CLI flag (`--miner.email-to`) repeatedly to assign different email addresses.
-- To disable email notifications, ether remove the flag `--miner.email-enabled`, or set `--miner.email-enabled=false`.
+- To disable email notifications, either remove the flag `--miner.email-enabled`, or set `--miner.email-enabled=false`.
 - The `--miner.email-from` value **must be a valid email address** (no display name or angle brackets).
 
 ---
