@@ -8,7 +8,7 @@ This guide describes how to configure and use the email notification feature in 
 
 If enabled, storage providers will receive email notifications for the following mining events:
 
-1. When a shard finishes syncing data via P2P and begins its mining task. This happens when a node is started for the first time requiring its local storage to catch up with the network.
+1. When the es-node is started and each of the local data shards is ready to mine. Note that on first startup, the node's local storage must synchronize via P2P to catch up with the network.
 2. When a storage proof is generated and submitted to the smart contract as a mining transaction.
 
 ## SMTP Service Preparation
