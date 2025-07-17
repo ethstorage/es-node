@@ -95,7 +95,7 @@ func newDashboard(param *Param, db ethdb.Database, m metrics.Metricer) (*dashboa
 	}
 
 	start := param.StartNumber
-	if status, _ := db.Get([]byte(fmt.Sprintf("%s-%s", dbKey_Prefix_LastBlock, contract.Hex()))); status != nil {
+	if status, _ := db.Get(fmt.Appendf(nil, "%s-%s", dbKey_Prefix_LastBlock, contract.Hex())); status != nil {
 		start = new(big.Int).SetBytes(status).Uint64()
 	}
 
@@ -173,7 +173,7 @@ func (d *dashboard) RefreshMiningMetrics() {
 		}
 		d.startBlock = next
 	}
-	d.db.Put([]byte(fmt.Sprintf("%s-%s", dbKey_Prefix_LastBlock, d.contract.Hex())), new(big.Int).SetUint64(d.startBlock).Bytes())
+	d.db.Put(fmt.Appendf(nil, "%s-%s", dbKey_Prefix_LastBlock, d.contract.Hex()), new(big.Int).SetUint64(d.startBlock).Bytes())
 }
 
 func (d *dashboard) FetchMiningEvents(start, end uint64) ([]*miningEvent, uint64, error) {
