@@ -64,7 +64,7 @@ func (s *Worker) ScanBatch(ctx context.Context, sendError func(kvIndex uint64, e
 	s.lg.Info("Scanner: local storage info", "lastKvIdx", lastKvIdx, "shards", shards, "kvEntriesPerShard", kvEntries)
 
 	// Determine the batch of KV indices to scan
-	kvsInBatch, totalEntries, batchEnd := getKvsInBatch(shards, kvEntries, lastKvIdx, uint64(s.cfg.BatchSize), s.nextIndexOfKvIdx, s.lg)
+	kvsInBatch, totalEntries, batchEndExclusive := getKvsInBatch(shards, kvEntries, lastKvIdx, uint64(s.cfg.BatchSize), s.nextIndexOfKvIdx, s.lg)
 	sts := stats{}
 	sts.localKvs = summaryLocalKvs(shards, kvEntries, lastKvIdx)
 	sts.total = int(totalEntries)
@@ -139,7 +139,7 @@ func (s *Worker) ScanBatch(ctx context.Context, sendError func(kvIndex uint64, e
 		}
 	}
 
-	s.nextIndexOfKvIdx = batchEnd
+	s.nextIndexOfKvIdx = batchEndExclusive
 	if len(kvsInBatch) > 0 {
 		s.lg.Info("Scanner: scan batch done", "scanned", shortPrt(kvsInBatch), "count", len(kvsInBatch), "nextIndexOfKvIdx", s.nextIndexOfKvIdx)
 	}
@@ -158,50 +158,56 @@ func (s *Worker) fixKv(kvIndex uint64, commit common.Hash) error {
 func getKvsInBatch(shards []uint64, kvEntries, lastKvIdx, batchSize, batchStartIndex uint64, lg log.Logger) ([]uint64, uint64, uint64) {
 	// Calculate the total number of KV entries stored locally
 	var totalEntries uint64
-	for _, shardId := range shards {
-		if shardId == lastKvIdx/kvEntries {
+	// The shard indices in shards are sorted but may not be continuous: e.g. [0, 1, 3, 4] means shard 2 is missing.
+	for _, shardIndex := range shards {
+		// the last shard may not have full kvEntries
+		if shardIndex == lastKvIdx/kvEntries {
 			totalEntries += lastKvIdx%kvEntries + 1
 			break
 		}
+		// full shards
 		totalEntries += kvEntries
 	}
-
 	lg.Debug("Scanner: KV entries stored locally", "totalKvStored", totalEntries)
 
-	// Determine batch start and end indices
-	batchStart := batchStartIndex
-	if batchStart >= totalEntries {
-		batchStart = 0
-		lg.Info("Scanner: scan batch start over")
+	// Determine batch start and end KV indices
+	startKvIndex := batchStartIndex
+	if startKvIndex >= totalEntries {
+		startKvIndex = 0
+		lg.Info("Scanner: restarting scan from beginning")
 	}
-	batchEnd := batchStart + batchSize
-	if batchEnd > totalEntries {
-		batchEnd = totalEntries
+	endKvIndexExclusive := startKvIndex + batchSize
+	if endKvIndexExclusive > totalEntries {
+		endKvIndexExclusive = totalEntries
 	}
+	// The actual batch would be [startKvIndex, endKvIndexExclusive) or [startKvIndex, endIndex]
+	endIndex := endKvIndexExclusive - 1
 
-	// Calculate starting and ending shard indices and offsets.
-	startShard := batchStart / kvEntries
-	startOffset := batchStart % kvEntries
+	// Calculate starting and ending shard indices and offsets where KV starts and ends on the current shard.
+	startShardPos := startKvIndex / kvEntries
+	startKvOffset := startKvIndex % kvEntries
 
-	endIndex := batchEnd - 1
-	endShard := endIndex / kvEntries
-	endOffset := (endIndex % kvEntries) + 1
+	endShardPos := endIndex / kvEntries
+	endKvOffset := endIndex%kvEntries + 1 // +1 because the end KV is exclusive
 
 	// Collect KV indices for the current batch
-	kvsInBatch := make([]uint64, 0, batchEnd-batchStart)
-	for i := startShard; i <= endShard; i++ {
+	kvsInBatch := make([]uint64, 0, endKvIndexExclusive-startKvIndex)
+	// Loop through the shards from startShardPos to endShardPos(inclusive)
+	for i := startShardPos; i <= endShardPos; i++ {
+		// Default range of the full shards
 		localStart := uint64(0)
 		localEnd := kvEntries
-		if i == startShard {
-			localStart = startOffset
+		// If the shard is the first or last shard in the batch, adjust the start and end offsets
+		if i == startShardPos {
+			localStart = startKvOffset
 		}
-		if i == endShard {
-			localEnd = endOffset
+		if i == endShardPos {
+			localEnd = endKvOffset
 		}
-		for k := localStart; k < localEnd; k++ {
+		for k := localStart; k < localEnd; k++ { // shards[shardPos]=shardIndex
 			kvsInBatch = append(kvsInBatch, shards[i]*kvEntries+k)
 		}
 	}
-	lg.Info("Scanner: batch index range", "batchStart", batchStart, "batchEnd", batchEnd, "kvsInBatch", shortPrt(kvsInBatch))
-	return kvsInBatch, totalEntries, batchEnd
+	lg.Info("Scanner: batch index range", "batchStart", startKvIndex, "batchEnd(exclusive)", endKvIndexExclusive, "kvsInBatch", shortPrt(kvsInBatch))
+	return kvsInBatch, totalEntries, endKvIndexExclusive
 }
