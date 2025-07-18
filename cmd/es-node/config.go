@@ -17,6 +17,7 @@ import (
 	"github.com/ethstorage/go-ethstorage/ethstorage/archiver"
 	"github.com/ethstorage/go-ethstorage/ethstorage/db"
 	"github.com/ethstorage/go-ethstorage/ethstorage/downloader"
+	"github.com/ethstorage/go-ethstorage/ethstorage/email"
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
 	"github.com/ethstorage/go-ethstorage/ethstorage/flags"
 	"github.com/ethstorage/go-ethstorage/ethstorage/miner"
@@ -144,6 +145,14 @@ func NewMinerConfig(ctx *cli.Context, client *ethclient.Client, l1Contract, mine
 	if err != nil {
 		return nil, err
 	}
+	if minerConfig.EmailEnabled {
+		emailConfig, err := email.GetEmailConfig(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get email config: %w", err)
+		}
+		minerConfig.EmailConfig = *emailConfig
+	}
+
 	cctx := context.Background()
 	randomChecks, err := readUintFromContract(cctx, client, l1Contract, "randomChecks")
 	if err != nil {
