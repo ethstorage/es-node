@@ -45,9 +45,8 @@ func (c EmailConfig) Check() error {
 
 func (c EmailConfig) String() string {
 	return fmt.Sprintf(
-		"Username: %s\nPassword: %s\nHost: %s\nPort: %d\nTo: %s\nFrom: %s",
+		"Username: %s\nHost: %s\nPort: %d\nTo: %s\nFrom: %s",
 		c.Username,
-		strings.Repeat("*", len(c.Password)),
 		c.Host,
 		c.Port,
 		strings.Join(c.To, ", "),
