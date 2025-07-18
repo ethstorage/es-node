@@ -17,14 +17,15 @@ import (
 	oppprof "github.com/ethereum-optimism/optimism/op-service/pprof"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethstorage/go-ethstorage/ethstorage"
+	"github.com/ethstorage/go-ethstorage/ethstorage/email"
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
 	"github.com/ethstorage/go-ethstorage/ethstorage/flags"
 	eslog "github.com/ethstorage/go-ethstorage/ethstorage/log"
 	"github.com/ethstorage/go-ethstorage/ethstorage/metrics"
 	"github.com/ethstorage/go-ethstorage/ethstorage/node"
+
 	"github.com/urfave/cli"
 )
 
@@ -36,6 +37,7 @@ var (
 	BuildTime     = ""
 	systemVersion = fmt.Sprintf("%s/%s", runtime.GOARCH, runtime.GOOS)
 	golangVersion = runtime.Version()
+	defaultLog    = eslog.NewLogger(eslog.DefaultCLIConfig())
 )
 
 // VersionWithMeta holds the textual version string including the metadata.
@@ -60,10 +62,6 @@ var BuildInfo = func() string {
 }()
 
 func main() {
-	// Set up logger with a default INFO level in case we fail to parse flags,
-	// otherwise the final critical log won't show what the parsing error was.
-	eslog.SetupDefaults()
-
 	app := cli.NewApp()
 	app.Version = BuildInfo
 	app.Flags = flags.Flags
@@ -120,19 +118,41 @@ func main() {
 			},
 			Action: EsNodeSync,
 		},
+		{
+			Name:    "email",
+			Aliases: []string{"mail"},
+			Usage:   "Send a test email using the configured SMTP settings",
+			Flags:   email.CLIFlags("ES_NODE"),
+			Action: func(ctx *cli.Context) error {
+				emailConfig, err := email.GetEmailConfig(ctx)
+				if err != nil {
+					return err
+				}
+				defaultLog.Info("Email configuration", "username", emailConfig.Username)
+				defaultLog.Info("Email configuration", "host", emailConfig.Host)
+				defaultLog.Info("Email configuration", "port", strconv.FormatUint(emailConfig.Port, 10))
+				defaultLog.Info("Email configuration", "to", strings.Join(emailConfig.To, ", "))
+				defaultLog.Info("Email configuration", "from", emailConfig.From)
+
+				subject := "Test Email from EthStorage"
+				body := "This is a test email sent from the EthStorage node CLI."
+				email.SendEmail(subject, body, *emailConfig, defaultLog)
+				return nil
+			},
+		},
 	}
 
 	err := app.Run(os.Args)
 	if err != nil {
-		log.Crit("Application failed", "message", err)
+		defaultLog.Crit("Application failed", "message", err)
 	}
 }
 
 func EsNodeMain(ctx *cli.Context) error {
-	log.Info("Configuring EthStorage Node")
+	defaultLog.Info("Configuring EthStorage Node")
 	logCfg := eslog.ReadCLIConfig(ctx)
 	if err := logCfg.Check(); err != nil {
-		log.Error("Unable to create the log config", "error", err)
+		defaultLog.Error("Unable to create the log config", "error", err)
 		return err
 	}
 	log := eslog.NewLogger(logCfg)
@@ -199,7 +219,7 @@ func EsNodeMain(ctx *cli.Context) error {
 func EsNodeInit(ctx *cli.Context) error {
 	logCfg := eslog.ReadCLIConfig(ctx)
 	if err := logCfg.Check(); err != nil {
-		log.Error("Unable to create the log config", "error", err)
+		defaultLog.Error("Unable to create the log config", "error", err)
 		return err
 	}
 	log := eslog.NewLogger(logCfg)
@@ -301,12 +321,12 @@ func EsNodeSync(ctx *cli.Context) error {
 		return fmt.Errorf("kv_index must be specified")
 	}
 	kvIndex := uint64(ctx.Int(kvIndexFlagName))
-	log.Info("Read flag", "name", kvIndexFlagName, "value", kvIndex)
+	lg.Info("Read flag", "name", kvIndexFlagName, "value", kvIndex)
 	if !ctx.IsSet(esRpcFlagName) {
 		return fmt.Errorf("es_rpc must be specified")
 	}
 	esRpc := ctx.String(esRpcFlagName)
-	log.Info("Read flag", "name", esRpcFlagName, "value", esRpc)
+	lg.Info("Read flag", "name", esRpcFlagName, "value", esRpc)
 	// query meta
 	contract := readRequiredFlag(ctx, flags.StorageL1Contract)
 	if !common.IsHexAddress(contract) {

@@ -6,12 +6,8 @@ package miner
 import (
 	"fmt"
 	"math/big"
-	"net/smtp"
-	"strings"
 
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethstorage/go-ethstorage/ethstorage/p2p"
 )
 
 // https://github.com/ethereum/go-ethereum/issues/21221#issuecomment-805852059
@@ -31,37 +27,4 @@ func weiToEther(wei *big.Int) *big.Float {
 func fmtEth(wei *big.Int) string {
 	f := weiToEther(wei)
 	return fmt.Sprintf("%.9f", f)
-}
-
-func sendEmail(emailSubject, msg string, config EmailConfig, lg log.Logger) {
-	lg.Info("Sending email notification", "subject", emailSubject)
-
-	emailBody := fmt.Sprintf("Subject: %s\r\n", emailSubject)
-	emailBody += fmt.Sprintf("To: %s\r\n", strings.Join(config.To, ", "))
-	emailBody += fmt.Sprintf("From: \"EthStorage\" <%s>\r\n", config.From)
-	localIP := p2p.GetLocalPublicIPv4()
-	if localIP != nil {
-		msg = strings.Replace(msg, "es-node", fmt.Sprintf("the es-node at %s", localIP.String()), 1)
-	}
-	emailBody += "\r\n" + msg
-	lg.Debug("Email body", "body", emailBody)
-
-	err := smtp.SendMail(
-		fmt.Sprintf("%s:%d", config.Host, config.Port),
-		smtp.PlainAuth("", config.Username, config.Password, config.Host),
-		config.From,
-		config.To,
-		[]byte(emailBody),
-	)
-	if err != nil {
-		lg.Error("Failed to send email", "error", err, "config", map[string]interface{}{
-			"Host":     config.Host,
-			"Port":     config.Port,
-			"Username": config.Username,
-			"From":     config.From,
-			"To":       config.To,
-		})
-	} else {
-		lg.Info("Email notification sent successfully!")
-	}
 }

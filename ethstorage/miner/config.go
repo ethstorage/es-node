@@ -9,19 +9,10 @@ import (
 	"runtime"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethstorage/go-ethstorage/ethstorage/email"
 	"github.com/ethstorage/go-ethstorage/ethstorage/prover"
 	"github.com/ethstorage/go-ethstorage/ethstorage/signer"
 )
-
-type EmailConfig struct {
-	Enabled  bool
-	Username string
-	Password string
-	Host     string
-	Port     uint64
-	To       []string
-	From     string
-}
 
 type Config struct {
 	// contract
@@ -49,7 +40,9 @@ type Config struct {
 	SignerAddr       common.Address
 	MinimumProfit    *big.Int
 
-	EmailConfig EmailConfig
+	// for proof submission notifications
+	EmailEnabled bool
+	EmailConfig  email.EmailConfig
 }
 
 var DefaultConfig = Config{
@@ -67,8 +60,4 @@ var DefaultConfig = Config{
 	ZKProverImpl:     1,
 	ThreadsPerShard:  uint64(2 * runtime.NumCPU()),
 	MinimumProfit:    common.Big0,
-	EmailConfig: EmailConfig{
-		Host: "smtp.gmail.com",
-		Port: 587,
-	},
 }

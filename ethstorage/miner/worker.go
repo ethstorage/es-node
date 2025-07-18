@@ -19,6 +19,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/log"
 	es "github.com/ethstorage/go-ethstorage/ethstorage"
+	"github.com/ethstorage/go-ethstorage/ethstorage/email"
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
 )
 
@@ -241,15 +242,14 @@ func (w *worker) newWorkLoop() {
 			}
 			w.lg.Info("Worker is starting task loops", "shard", shardIdx, "threads", w.config.ThreadsPerShard)
 
-			if w.config.EmailConfig.Enabled {
+			if w.config.EmailEnabled {
 				emailSubject := fmt.Sprintf("EthStorage Mining Task Started: Shard %d", shardIdx)
 				msg := fmt.Sprintf("A new mining task has been initiated for shard %d on es-node.\r\n\r\n", shardIdx)
-				msg += fmt.Sprintf("Start time: %s\r\n", time.Now().Format("2006-01-02 15:04:05"))
 				msg += fmt.Sprintf("Miner: %s\r\n", miner.Hex())
 				msg += fmt.Sprintf("Threads per shard: %d\r\n", w.config.ThreadsPerShard)
 				msg += fmt.Sprintf("Minimum profit: %s\r\n", w.config.MinimumProfit)
 				go func() {
-					sendEmail(emailSubject, msg, w.config.EmailConfig, w.lg)
+					email.SendEmail(emailSubject, msg, w.config.EmailConfig, w.lg)
 				}()
 			}
 			task := task{
@@ -481,7 +481,6 @@ func (w *worker) reportMiningResult(rs *result, txHash common.Hash, err error) {
 		rs.startShardId,
 		rs.blockNumber,
 	)
-	msg += fmt.Sprintf("Time: %s\r\n", time.Now().Format("2006-01-02 15:04:05"))
 	var status bool
 	if err == errDropped {
 		msg += "However, it was dropped due to insufficient profit."
@@ -498,14 +497,14 @@ func (w *worker) reportMiningResult(rs *result, txHash common.Hash, err error) {
 		w.lg.Info("Mining transaction submitted", "txHash", txHash)
 		status = w.checkTxStatusRepeatedly(txHash, &msg)
 	}
-	if w.config.EmailConfig.Enabled {
+	if w.config.EmailEnabled {
 		emailSubject := "EthStorage Proof Submission: "
 		if status {
 			emailSubject += "✅ Success"
 		} else {
 			emailSubject += "❌ Failure"
 		}
-		sendEmail(emailSubject, msg, w.config.EmailConfig, w.lg)
+		email.SendEmail(emailSubject, msg, w.config.EmailConfig, w.lg)
 	}
 }
 
