@@ -95,7 +95,7 @@ func ReportStateHandler(w http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal(body, state)
 	if err != nil {
 		addErrorMessage(fmt.Sprintf("Parse node state failed with error %s", err.Error()))
-		w.Write([]byte(fmt.Sprintf(`{"status":"error", "err message":"%s"}`, err.Error())))
+		w.Write(fmt.Appendf(nil, `{"status":"error", "err message":"%s"}`, err.Error()))
 		return
 	}
 
