@@ -29,9 +29,8 @@ jobs:
       - name: Deploy Contracts
         run: |
           cd ../storage-contracts-v1 
-          git checkout main
-          git pull
           git checkout new-zkey
+          git pull
           npm install 
           git submodule init && git submodule update
           npx hardhat run scripts/deployL2-it.js --network qkc_testnet >> deploy.log
