@@ -8,6 +8,7 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -22,28 +23,47 @@ type ZKProverGo struct {
 	zkey []byte
 	wasm []byte
 	lg   log.Logger
+	mu   sync.Mutex
 }
 
+var (
+	zkProverGoInstance *ZKProverGo
+	zkProverGoOnce     sync.Once
+)
+
+// Singleton with a lock is used as RapidsNARK may not be thread-safe at the C++ level.
 func NewZKProverGo(libDir, zkeyFile, wasmName string, lg log.Logger) (*ZKProverGo, error) {
-	wasmBytes, err := os.ReadFile(filepath.Join(libDir, wasmName))
+	var err error
+	zkProverGoOnce.Do(func() {
+		wasmBytes, e1 := os.ReadFile(filepath.Join(libDir, wasmName))
+		if e1 != nil {
+			lg.Error("Read wasm file failed", "error", e1)
+			err = e1
+			return
+		}
+		zkey, e2 := os.ReadFile(zkeyFile)
+		if e2 != nil {
+			lg.Error("Read zkey file failed", "error", e2)
+			err = e2
+			return
+		}
+		zkProverGoInstance = &ZKProverGo{
+			zkey: zkey,
+			wasm: wasmBytes,
+			lg:   lg,
+		}
+	})
 	if err != nil {
-		lg.Error("Read wasm file failed", "error", err)
 		return nil, err
 	}
-	zkey, err := os.ReadFile(zkeyFile)
-	if err != nil {
-		lg.Error("Read zkey file failed", "error", err)
-		return nil, err
-	}
-	return &ZKProverGo{
-		zkey: zkey,
-		wasm: wasmBytes,
-		lg:   lg,
-	}, nil
+	return zkProverGoInstance, nil
 }
 
 // Generate ZK Proof for the given encoding key and sample index
 func (p *ZKProverGo) GenerateZKProof(encodingKeys []common.Hash, sampleIdxs []uint64) ([]byte, []*big.Int, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
 	proof, publics, err := p.GenerateZKProofRaw(encodingKeys, sampleIdxs)
 	if err != nil {
 		return nil, nil, err
@@ -81,6 +101,9 @@ func (p *ZKProverGo) GenerateZKProofRaw(encodingKeys []common.Hash, sampleIdxs [
 }
 
 func (p *ZKProverGo) GenerateZKProofPerSample(encodingKey common.Hash, sampleIdx uint64) ([]byte, *big.Int, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
 	p.lg.Debug("Generate zk proof", "encodingKey", encodingKey.Hex(), "sampleIdx", sampleIdx)
 	if int(sampleIdx) >= eth.FieldElementsPerBlob {
 		return nil, nil, fmt.Errorf("sample index out of scope: %d", sampleIdx)
