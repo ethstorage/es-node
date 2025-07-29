@@ -9,6 +9,7 @@ import (
 	"io"
 	"math/rand"
 	"net"
+	"slices"
 	"strconv"
 	"time"
 
@@ -223,10 +224,8 @@ func FilterEnodes(log log.Logger, chainID uint64) func(node *enode.Node) bool {
 				continue
 			}
 			for _, sid := range ss {
-				for _, rsid := range cs.ShardIds {
-					if sid == rsid {
-						return true
-					}
+				if slices.Contains(cs.ShardIds, sid) {
+					return true
 				}
 			}
 		}
