@@ -30,7 +30,7 @@ if [ -z "$ES_NODE_STORAGE_L1CONTRACT" ]; then
 fi
 # A contract with zkp verifier of mode 1 (one proof per sample)
 if [ -z "$ES_NODE_STORAGE_L1CONTRACT_ZKP1" ]; then
-  export ES_NODE_STORAGE_L1CONTRACT_ZKP1=0x2F7ed3be22937803eCa55E16B5D36D29E95b6cd0
+  export ES_NODE_STORAGE_L1CONTRACT_ZKP1=0x5b6f1fCdF1b829E3AD5a16117Ed95540B9d6Fa55
 fi
 # The commonly used l1 eth rpc endpoint
 if [ -z "$ES_NODE_L1_ETH_RPC" ]; then
