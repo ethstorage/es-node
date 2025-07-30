@@ -181,16 +181,17 @@ func SendBlobTx(
 	tx := types.MustSignNewTx(key, types.NewCancunSigner(chainId), blobtx)
 
 	var errRetry error
-	for i := 0; i < 5; i++ {
+	const maxRetries = 5
+	for i := 0; i <= maxRetries; i++ {
 		errRetry = client.SendTransaction(context.Background(), tx)
 		if errRetry == nil {
 			break
 		}
-		log.Warn("SendTransaction failed, will retry", "attempt", i+1, "error", errRetry)
+		log.Warn("SendTransaction failed", "retriesLeft", maxRetries-i, "error", errRetry)
 		time.Sleep(2 * time.Second)
 	}
 	if errRetry != nil {
-		log.Crit("Unable to send transaction", "error", err)
+		log.Crit("Unable to send transaction", "error", errRetry)
 	}
 
 	for {
