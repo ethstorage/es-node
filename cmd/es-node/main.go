@@ -131,7 +131,7 @@ func main() {
 				defaultLog.Info("Email configuration", "username", emailConfig.Username)
 				defaultLog.Info("Email configuration", "host", emailConfig.Host)
 				defaultLog.Info("Email configuration", "port", strconv.FormatUint(emailConfig.Port, 10))
-				defaultLog.Info("Email configuration", "to", strings.Join(emailConfig.To, ", "))
+				defaultLog.Info("Email configuration", "to", emailConfig.To)
 				defaultLog.Info("Email configuration", "from", emailConfig.From)
 
 				subject := "Test Email from EthStorage"

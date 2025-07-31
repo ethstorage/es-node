@@ -63,7 +63,7 @@ func GetEmailConfig(ctx *cli.Context) (*EmailConfig, error) {
 		Password: ctx.String(EmailPasswordFlagName),
 		Host:     ctx.String(EmailHostFlagName),
 		Port:     ctx.Uint64(EmailPortFlagName),
-		To:       ctx.StringSlice(EmailToFlagName),
+		To:       ctx.String(EmailToFlagName),
 		From:     ctx.String(EmailFromFlagName),
 	}
 	if err := cfg.Check(); err != nil {

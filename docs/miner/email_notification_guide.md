@@ -46,8 +46,7 @@ You can configure email notifications via CLI flags or environment variables. Th
   --email.host smtp.gmail.com \
   --email.port 587 \
   --email.from from@gmail.com \
-  --email.to to1@gmail.com \
-  --email.to to2@gmail.com \
+  --email.to to1@gmail.com,to2@gmail.com \
   ...
 ```
 Then execute the script with the SMTP password, miner address, and private key as environment variables:
@@ -97,7 +96,7 @@ Sent at: Fri, 18 Jul 2025 11:14:25 +0800
 - Keep your SMTP credentials secure.
 - It is recommended to use the environment variable (`ES_NODE_EMAIL_PASSWORD`) for the password.
 - If your password contains spaces, enclose it in double quotes.
-- To support multiple recipients, use the CLI flag (`--email.to`) repeatedly to assign different email addresses.
+- To specify multiple recipients, separate addresses with commas for the value of `--email.to`.
 - To disable email notifications, either remove the flag `--miner.email-enabled`, or set `--miner.email-enabled=false`.
 - The `--email.from` value **must be a valid email address** (no display name or angle brackets).
 

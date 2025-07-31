@@ -17,7 +17,7 @@ type EmailConfig struct {
 	Password string
 	Host     string
 	Port     uint64
-	To       []string
+	To       string
 	From     string
 }
 
@@ -34,7 +34,7 @@ func (c EmailConfig) Check() error {
 	if c.Port == 0 {
 		return fmt.Errorf("email port is empty")
 	}
-	if len(c.To) == 0 {
+	if c.To == "" {
 		return fmt.Errorf("email to is empty")
 	}
 	if c.From == "" {
@@ -49,7 +49,7 @@ func (c EmailConfig) String() string {
 		c.Username,
 		c.Host,
 		c.Port,
-		strings.Join(c.To, ", "),
+		c.To,
 		c.From,
 	)
 }
@@ -58,7 +58,7 @@ func SendEmail(emailSubject, msg string, config EmailConfig, lg log.Logger) {
 	lg.Info("Sending email notification", "subject", emailSubject)
 
 	emailBody := fmt.Sprintf("Subject: %s\r\n", emailSubject)
-	emailBody += fmt.Sprintf("To: %s\r\n", strings.Join(config.To, ", "))
+	emailBody += fmt.Sprintf("To: %s\r\n", config.To)
 	emailBody += fmt.Sprintf("From: \"EthStorage\" <%s>\r\n", config.From)
 	localIP := p2p.GetLocalPublicIPv4()
 	if localIP != nil {
@@ -72,7 +72,7 @@ func SendEmail(emailSubject, msg string, config EmailConfig, lg log.Logger) {
 		fmt.Sprintf("%s:%d", config.Host, config.Port),
 		smtp.PlainAuth("", config.Username, config.Password, config.Host),
 		config.From,
-		config.To,
+		strings.Split(config.To, ","),
 		[]byte(emailBody),
 	)
 	if err != nil {
