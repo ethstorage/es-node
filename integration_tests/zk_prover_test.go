@@ -116,10 +116,10 @@ func TestZKProver_GenerateZKProofPerSample(t *testing.T) {
 				}
 				err = verifyProof1(t, pubs, proofRaw)
 				if (err != nil) != tt.wantErr {
-					t.Errorf("ZKProver.GenerateZKProofPerSample() verifyDecodeSample err: %v", err)
+					t.Errorf("ZKProver.GenerateZKProofPerSample() verifyProof err: %v", err)
 					return
 				}
-				t.Log("verifyDecodeSample success!")
+				t.Log("verifyProof success!")
 			})
 		}
 	}
@@ -150,7 +150,6 @@ func verifyProof1(t *testing.T, pubs []*big.Int, proof []byte) error {
 		{Type: u2},
 	}.UnpackValues(proof)
 	if err != nil {
-		t.Errorf("ZKProver.GenerateZKProof() unpackValues err: %v", err)
 		return err
 	}
 	ctx := context.Background()
