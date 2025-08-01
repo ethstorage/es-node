@@ -176,7 +176,7 @@ func checkInvalidSamplesError(logFile string) (int, error) {
 			}
 			if ft, e := suspiciousKVs[kvIdx]; e {
 				t, got := fetchLogTime(logText)
-				if got && t.Sub(ft).Seconds() < 2 {
+				if got && t.Sub(ft).Seconds() < 5 {
 					count++
 					delete(minedEmptyKVs, kvIdx)
 					delete(suspiciousKVs, kvIdx)
@@ -252,7 +252,12 @@ func fetchShardAndBlock(text string) (shard string, block uint64, err error) {
 }
 
 func fetchLogTime(text string) (time.Time, bool) {
+	// INFO [08-01|07:21:30.015] Downloaded and encoded                   blockNumber=9,584,593 kvIdx=11918
+	// t=2025-02-07T12:11:35+0000 lvl=info msg="Downloaded and encoded"                blockNumber=2,036,896 kvIdx=11594
 	timeStr := extractWithName(text, `t=(?P<timeStr>[\s\S]+)\+0000`, "timeStr")
+	if timeStr == "" {
+		timeStr = fetchFromNewFormat(text)
+	}
 	t, err := time.Parse("2006-01-02T15:04:05", timeStr)
 	if err != nil {
 		log.Warn("Parse time string fail", "timeStr", timeStr)
@@ -304,6 +309,18 @@ func fetchBlockAndDifficulty(text string) (string, string, error) {
 	}
 
 	return fmt.Sprintf("%s-%s", shard, block), diff, nil
+}
+
+func fetchFromNewFormat(text string) string {
+	timeStr := extractWithName(text, `\[(?P<timeStr>\d{2}-\d{2}\|\d{2}:\d{2}:\d{2})\.\d{3}\]`, "timeStr")
+	if timeStr == "" {
+		return ""
+	}
+
+	timestampStr := strings.Replace(timeStr, "|", "T", 1)
+	fullTimeStr := fmt.Sprintf("%d-%s", time.Now().Year(), timestampStr)
+
+	return fullTimeStr
 }
 
 func extractWithName(text, patten, name string) string {
