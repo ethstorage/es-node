@@ -36,6 +36,11 @@ func Test_CheckKnownFailure(t *testing.T) {
 			expectCount: 1,
 		},
 		{
+			name:        "invalidsamples3",
+			filePath:    "./testdata/invalidsamples3.log",
+			expectCount: 1,
+		},
+		{
 			name:        "minedtstoosmall",
 			filePath:    "./testdata/minedtstoosmall.log",
 			expectCount: 1,
