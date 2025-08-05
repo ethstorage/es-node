@@ -29,7 +29,7 @@ const (
 
 func TestZKProver_GenerateZKProof(t *testing.T) {
 	proverPath, _ := filepath.Abs(prPath)
-	zkeyFull := filepath.Join(proverPath, prover.SnarkLib, zkey2Name)
+	zkeyFull := filepath.Join(proverPath, prover.SnarkLib, "zkey", zkey2Name)
 	if _, err := os.Stat(zkeyFull); os.IsNotExist(err) {
 		t.Fatalf("%s not found", zkeyFull)
 	}
