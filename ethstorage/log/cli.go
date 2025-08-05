@@ -118,7 +118,3 @@ func ReadCLIConfig(ctx *cli.Context) CLIConfig {
 	}
 	return cfg
 }
-
-func SetupDefaults() {
-	log.SetDefault(log.NewLogger(log.NewTerminalHandlerWithLevel(os.Stdout, log.LevelInfo, true)))
-}
