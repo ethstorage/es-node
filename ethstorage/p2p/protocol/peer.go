@@ -7,6 +7,7 @@ import (
 	"context"
 	"math"
 	"math/big"
+	"slices"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
@@ -65,10 +66,8 @@ func (p *Peer) Shards() map[common.Address][]uint64 {
 // IsShardExist checks whether one specific shard is supported by this peer.
 func (p *Peer) IsShardExist(contract common.Address, shardId uint64) bool {
 	if ids, ok := p.shards[contract]; ok {
-		for _, id := range ids {
-			if id == shardId {
-				return true
-			}
+		if slices.Contains(ids, shardId) {
+			return true
 		}
 	}
 
