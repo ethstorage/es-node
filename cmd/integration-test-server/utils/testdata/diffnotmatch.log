@@ -55,7 +55,7 @@ t=2025-02-05T04:36:50+0000 lvl=info msg="Initialized miner"
 t=2025-02-05T04:36:50+0000 lvl=info msg="Starting JSON-RPC server"
 t=2025-02-05T04:36:50+0000 lvl=info msg="Metrics disabled"
 t=2025-02-05T04:36:50+0000 lvl=info msg="Starting storage node"                 version=v0.1.16-bc8defb6-1737813580
-t=2025-02-05T04:36:50+0000 lvl=info msg="Downloader will use the latest finialized block to start for the first time" block=1,936,267
+t=2025-02-05T04:36:50+0000 lvl=info msg="Downloader will use the latest finalized block to start for the first time" block=1,936,267
 t=2025-02-05T04:36:50+0000 lvl=info msg="Start upload node state"
 t=2025-02-05T04:36:50+0000 lvl=info msg="Storage node started"
 t=2025-02-05T04:36:50+0000 lvl=info msg="Download loop started"
