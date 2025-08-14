@@ -422,7 +422,7 @@ func getKvInfo(pc *eth.PollingClient, blobLen int) ([]uint64, []common.Hash, err
 	}
 	metas, err := pc.GetKvMetas(kvIndices, rpc.LatestBlockNumber.Int64())
 	if err != nil {
-		log.Error("Failed to get verioned hashs", "error", err)
+		log.Error("Failed to get versioned hashs", "error", err)
 		return nil, nil, err
 	}
 	if len(metas) != len(kvIndices) {
