@@ -11,6 +11,7 @@ import (
 	"math/big"
 	"math/rand"
 	"runtime"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -1050,9 +1051,7 @@ func (s *SyncClient) OnBlobsByRange(res *blobsByRangeResponse) {
 		return
 	}
 
-	sort.Slice(inserted, func(i, j int) bool {
-		return inserted[i] < inserted[j]
-	})
+	slices.Sort(inserted)
 	last := inserted[len(inserted)-1]
 	missing := make([]uint64, 0)
 	for i, n := 0, res.req.subTask.next; n <= last; n++ {
