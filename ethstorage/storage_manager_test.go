@@ -183,7 +183,7 @@ func setup(t *testing.T) {
 
 func TestStorageManager_LastKvIndex(t *testing.T) {
 	setup(t)
-	idx := storageManager.kvEntryCount()
+	idx := storageManager.kvEntryCount
 	t.Log("kvEntryCnt", idx)
 }
 
