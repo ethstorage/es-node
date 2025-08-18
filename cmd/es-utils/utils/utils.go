@@ -422,7 +422,7 @@ func queryBlobBaseFee(l1 *ethclient.Client) (*big.Int, error) {
 }
 
 func getKvInfo(pc *eth.PollingClient, blobLen int) ([]uint64, []common.Hash, error) {
-	lastIdx, err := pc.GetStorageLastBlobIdx(rpc.LatestBlockNumber.Int64())
+	lastIdx, err := pc.GetStorageKvEntryCount(rpc.LatestBlockNumber.Int64())
 	if err != nil {
 		return nil, nil, err
 	}
