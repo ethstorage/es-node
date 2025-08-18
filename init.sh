@@ -61,7 +61,7 @@ if [ $use_miner = 1 ]; then
   if [ "$zkp_mode" = 1 ]; then
     zkey_name="blob_poseidon.zkey"
     zkey_size=280153702
-    zkey_url="https://es-zkey.s3.us-west-2.amazonaws.com/blob_poseidon1_gamma.zkey"
+    zkey_url="https://es-zkey.s3.us-west-2.amazonaws.com/blob_poseidon1.zkey"
   fi
   zkey_file="$zkey_path/$zkey_name"
   if [ ! -e  ${zkey_file} ] || [ $(wc -c <  ${zkey_file}) -ne ${zkey_size} ]; then
