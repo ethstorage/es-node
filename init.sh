@@ -56,8 +56,8 @@ if [ $use_miner = 1 ]; then
   mkdir -p $zkey_path
   # download zkey if not yet
   zkey_name="blob_poseidon2.zkey"
-  zkey_size=560303266
-  zkey_url="https://es-zkey.s3.us-west-2.amazonaws.com/blob_poseidon2_gamma.zkey"
+  zkey_size=560301223
+  zkey_url="https://es-zkey.s3.us-west-2.amazonaws.com/blob_poseidon2.zkey"
   if [ "$zkp_mode" = 1 ]; then
     zkey_name="blob_poseidon.zkey"
     zkey_size=280153702
