@@ -71,7 +71,7 @@ type StorageManager struct {
 	shardManager      *ShardManager
 	localL1           int64      // local view of most-recent-finalized L1 block
 	mu                sync.Mutex // protect kvEntryCount, shardManager and blobMeta read/write state
-	kvEntryCount      uint64     // kvEntryCnt in the most-recent-finalized L1 block
+	kvEntryCount      uint64     // kvEntryCount in the most-recent-finalized L1 block
 	l1Source          Il1Source
 	blobMetas         map[uint64][32]byte
 }
@@ -165,11 +165,11 @@ func (s *StorageManager) DownloadFinished(newL1 int64, kvIndices []uint64, blobs
 		}
 	}
 
-	kvEntryCnt, err := s.l1Source.GetStorageKvEntryCount(newL1)
+	kvEntryCount, err := s.l1Source.GetStorageKvEntryCount(newL1)
 	if err != nil {
 		return err
 	}
-	s.kvEntryCount = kvEntryCnt
+	s.kvEntryCount = kvEntryCount
 	s.localL1 = newL1
 
 	s.updateLocalMetas(kvIndices, commits)
@@ -193,11 +193,11 @@ func (s *StorageManager) Reset(newL1 int64) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	kvEntryCnt, err := s.l1Source.GetStorageKvEntryCount(newL1)
+	kvEntryCount, err := s.l1Source.GetStorageKvEntryCount(newL1)
 	if err != nil {
 		return err
 	}
-	s.kvEntryCount = kvEntryCnt
+	s.kvEntryCount = kvEntryCount
 	s.localL1 = newL1
 
 	return nil
@@ -377,22 +377,22 @@ func (s *StorageManager) syncCheck(kvIdx uint64) error {
 // DownloadAllMetas This function download the blob hashes of all the local storage shards from the smart contract
 func (s *StorageManager) DownloadAllMetas(ctx context.Context, batchSize uint64) error {
 	s.mu.Lock()
-	kvEntryCnt := s.kvEntryCount
+	kvEntryCount := s.kvEntryCount
 	s.mu.Unlock()
 
 	for _, sid := range s.Shards() {
 		first, limit := s.KvEntries()*sid, s.KvEntries()*(sid+1)
 
-		// batch request metas until the kvEntryCnt
-		end := min(limit, kvEntryCnt)
+		// batch request metas until the kvEntryCount
+		end := min(limit, kvEntryCount)
 
 		// Additional check to ensure end is not less than first
-		// E.g. There are more than one shard, and kvEntryCnt is even less than the first of the current shard
+		// E.g. There are more than one shard, and kvEntryCount is even less than the first of the current shard
 		if end < first {
 			continue
 		}
 
-		log.Info("Begin to download metas", "shard", sid, "first", first, "end", end, "limit", limit, "kvEntryCnt", kvEntryCnt)
+		log.Info("Begin to download metas", "shard", sid, "first", first, "end", end, "limit", limit, "kvEntryCount", kvEntryCount)
 		ts := time.Now()
 
 		err := s.downloadMetaInParallel(ctx, first, end, batchSize)
@@ -452,13 +452,13 @@ func (s *StorageManager) downloadMetaInRange(ctx context.Context, from, to, batc
 	for from < to {
 		s.mu.Lock()
 		localL1 := s.localL1
-		kvEntryCnt := s.kvEntryCount
+		kvEntryCount := s.kvEntryCount
 		s.mu.Unlock()
 
 		batchLimit := min(from+batchSize, to)
 		// In case remove is supported and kvEntryCount is decreased
-		if batchLimit > kvEntryCnt {
-			batchLimit = kvEntryCnt
+		if batchLimit > kvEntryCount {
+			batchLimit = kvEntryCount
 		}
 
 		kvIndices := []uint64{}
