@@ -43,7 +43,8 @@ func (t *test) toUrl() string {
 }
 
 func TestArchiveAPI(t *testing.T) {
-
+	// skip as the archiver is not running anymore
+	t.SkipNow()
 	tests := []test{
 		{
 			query:           "4756895",
