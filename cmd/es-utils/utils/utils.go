@@ -179,9 +179,19 @@ func SendBlobTx(
 		Sidecar:    sideCar,
 	}
 	tx := types.MustSignNewTx(key, types.NewCancunSigner(chainId), blobtx)
-	err = client.SendTransaction(context.Background(), tx)
-	if err != nil {
-		log.Crit("Unable to send transaction", "error", err)
+
+	var errRetry error
+	const maxRetries = 5
+	for i := 0; i <= maxRetries; i++ {
+		errRetry = client.SendTransaction(context.Background(), tx)
+		if errRetry == nil {
+			break
+		}
+		log.Warn("SendTransaction failed", "retriesLeft", maxRetries-i, "error", errRetry)
+		time.Sleep(2 * time.Second)
+	}
+	if errRetry != nil {
+		log.Crit("Unable to send transaction", "error", errRetry)
 	}
 
 	for {
@@ -412,7 +422,7 @@ func queryBlobBaseFee(l1 *ethclient.Client) (*big.Int, error) {
 }
 
 func getKvInfo(pc *eth.PollingClient, blobLen int) ([]uint64, []common.Hash, error) {
-	lastIdx, err := pc.GetStorageLastBlobIdx(rpc.LatestBlockNumber.Int64())
+	lastIdx, err := pc.GetStorageKvEntryCount(rpc.LatestBlockNumber.Int64())
 	if err != nil {
 		return nil, nil, err
 	}

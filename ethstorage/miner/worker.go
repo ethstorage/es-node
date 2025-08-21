@@ -91,6 +91,7 @@ type result struct {
 	masks           []*big.Int
 	inclusiveProofs [][]byte
 	decodeProof     [][]byte
+	timestamp       uint64
 }
 
 // worker is the main object which takes care of storage mining
@@ -647,6 +648,7 @@ func (w *worker) mineTask(t *taskItem) (bool, error) {
 				masks:           masks,
 				decodeProof:     decodeProof,
 				inclusiveProofs: inclusiveProofs,
+				timestamp:       t.mineTime,
 			}
 			// push result to the result map
 			w.resultLock.Lock()
