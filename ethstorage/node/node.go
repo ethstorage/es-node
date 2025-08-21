@@ -29,6 +29,7 @@ import (
 	"github.com/ethstorage/go-ethstorage/ethstorage/p2p"
 	"github.com/ethstorage/go-ethstorage/ethstorage/p2p/protocol"
 	"github.com/ethstorage/go-ethstorage/ethstorage/prover"
+	"github.com/ethstorage/go-ethstorage/ethstorage/scanner"
 	"github.com/hashicorp/go-multierror"
 )
 
@@ -67,6 +68,8 @@ type EsNode struct {
 	feed *event.Feed
 	// long term blob provider API for rollups
 	archiverAPI *archiver.APIService
+	// data integrity check on a regular basis
+	scanner *scanner.Scanner
 }
 
 func New(ctx context.Context, cfg *Config, log log.Logger, appVersion string, m metrics.Metricer) (*EsNode, error) {
@@ -266,7 +269,8 @@ func (n *EsNode) initStorageManager(ctx context.Context, cfg *Config) error {
 		"l1contract", cfg.Storage.L1Contract,
 		"kvSize", shardManager.MaxKvSize(),
 		"chunkSize", shardManager.ChunkSize(),
-		"kvsPerShard", shardManager.KvEntries())
+		"kvsPerShard", shardManager.KvEntries(),
+		"shards", shardManager.ShardIds())
 
 	n.storageManager = ethstorage.NewStorageManager(shardManager, n.l1Source)
 	return nil
@@ -305,6 +309,9 @@ func (n *EsNode) initMiner(ctx context.Context, cfg *Config) error {
 		return nil
 	}
 	l1api := miner.NewL1MiningAPI(n.l1Source, n.randaoSource, n.log)
+	if err := l1api.CheckMinerRole(ctx, cfg.Storage.L1Contract, cfg.Storage.Miner); err != nil {
+		n.log.Crit("Check miner role", "err", err)
+	}
 	pvr := prover.NewKZGPoseidonProver(
 		cfg.Mining.ZKWorkingDir,
 		cfg.Mining.ZKeyFile,
@@ -331,6 +338,22 @@ func (n *EsNode) initArchiver(ctx context.Context, cfg *Config) error {
 	return nil
 }
 
+func (n *EsNode) initScanner(ctx context.Context, cfg *Config) {
+	if cfg.Scanner == nil {
+		// not enabled
+		return
+	}
+	n.scanner = scanner.New(
+		ctx,
+		*cfg.Scanner,
+		n.storageManager,
+		n.p2pNode.FetchBlob,
+		n.l1Source,
+		n.feed,
+		n.log,
+	)
+}
+
 func (n *EsNode) Start(ctx context.Context, cfg *Config) error {
 	n.startL1(cfg)
 
@@ -343,6 +366,8 @@ func (n *EsNode) Start(ctx context.Context, cfg *Config) error {
 		n.log.Error("Could not start a downloader", "err", err)
 		return err
 	}
+	// Scanner must be started after downloader resets storage manager
+	n.initScanner(ctx, cfg)
 
 	if n.p2pNode != nil {
 		if err := n.p2pNode.Start(); err != nil {
@@ -526,6 +551,10 @@ func (n *EsNode) Close() error {
 
 	if n.archiverAPI != nil {
 		n.archiverAPI.Stop(context.Background())
+	}
+
+	if n.scanner != nil {
+		n.scanner.Close()
 	}
 	// close L2 driver
 	// if n.l2Driver != nil {

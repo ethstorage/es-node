@@ -21,7 +21,7 @@ const (
 	metafileName      = "metafile.dat.meta"
 	defaultEncodeType = ENCODE_BLOB_POSEIDON
 	kvEntries         = uint64(16)
-	lastKvIndex       = uint64(16)
+	kvEntryCnt        = uint64(16)
 )
 
 var (
@@ -61,7 +61,7 @@ func (l1 *mockL1Source) GetKvMetas(kvIndices []uint64, blockNumber int64) ([][32
 	return metas, nil
 }
 
-func (l1 *mockL1Source) GetStorageLastBlobIdx(blockNumber int64) (uint64, error) {
+func (l1 *mockL1Source) GetStorageKvEntryCount(blockNumber int64) (uint64, error) {
 	return l1.lastBlobIndex, nil
 }
 
@@ -148,7 +148,7 @@ func setup(t *testing.T) {
 		file.Close()
 		os.Remove(file.Name())
 	}(metafile)
-	l1 := newMockL1Source(lastKvIndex, metafileName)
+	l1 := newMockL1Source(kvEntryCnt, metafileName)
 
 	// create shard manage
 	sm, files := createEthStorage(contractAddress, []uint64{0},
@@ -183,8 +183,8 @@ func setup(t *testing.T) {
 
 func TestStorageManager_LastKvIndex(t *testing.T) {
 	setup(t)
-	idx := storageManager.LastKvIndex()
-	t.Log("lastKvIndex", idx)
+	idx := storageManager.kvEntryCount
+	t.Log("kvEntryCnt", idx)
 }
 
 func TestStorageManager_DownloadFinished(t *testing.T) {

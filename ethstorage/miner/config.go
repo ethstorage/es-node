@@ -9,6 +9,7 @@ import (
 	"runtime"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethstorage/go-ethstorage/ethstorage/email"
 	"github.com/ethstorage/go-ethstorage/ethstorage/prover"
 	"github.com/ethstorage/go-ethstorage/ethstorage/signer"
 )
@@ -38,6 +39,10 @@ type Config struct {
 	SignerFnFactory  signer.SignerFactory
 	SignerAddr       common.Address
 	MinimumProfit    *big.Int
+
+	// for proof submission notifications
+	EmailEnabled bool
+	EmailConfig  email.EmailConfig
 }
 
 var DefaultConfig = Config{

@@ -28,7 +28,7 @@ exec ./build/bin/es-node \
   --l1.block_time 2 \
   --l1.rpc http://5.9.87.214:8545 \
   --da.url http://5.9.87.214:8888 \
-  --randao.url http://88.99.30.186:8545 \
+  --randao.url http://65.108.230.142:8545 \
   --state.upload.url http://127.0.0.1:9096 \
   --rpc.port 9596 \
   --p2p.listen.udp 30396 \
@@ -36,4 +36,4 @@ exec ./build/bin/es-node \
   --p2p.priv.path $data_dir/esnode_p2p_priv.txt \
   --p2p.peerstore.path $data_dir/esnode_peerstore_db \
   --p2p.discovery.path $data_dir/esnode_discovery_db \
-  --p2p.bootnodes enr:-Li4QBp6QW2ji7JF-3yijZrQ54PqPZ-Io_xEtMUslxxcmGS5TAXiiU6hypBZbB_atxh2Pc72-MgonzU5_R-_qd_PBXyGAZDucmwzimV0aHN0b3JhZ2XbAYDY15SXhtonBXvE13WNGfkk7Nj9Y4_Qr8GAgmlkgnY0gmlwhFhjHrqJc2VjcDI1NmsxoQJ8KIsZjyfFPHZOR66JORtqr5ax0QU6QmvT6QE0QllVZIN0Y3CCJE-DdWRwgna7
+  --p2p.bootnodes enr:-Lu4QFjZbYGUJSvXn56eQELUYd2lY0gRKIG8FGWzV4wKVhf7StMTvlTLiMwkbsagg09s1AAeonpYN_h8AvZWl7pCOP6GAZcrhU4FimV0aHN0b3JhZ2Xegg0FgNnYlEl6Yz1E_cSmjk3_UdPb2jmfC1qAwoABgmlkgnY0gmlwhEFtP5qJc2VjcDI1NmsxoQJ8KIsZjyfFPHZOR66JORtqr5ax0QU6QmvT6QE0QllVZIN0Y3CCJE-DdWRwgna7

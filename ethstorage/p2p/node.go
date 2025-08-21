@@ -184,7 +184,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 		}
 
 		// All nil if disabled.
-		n.dv5Local, n.dv5Udp, n.isIPSet, err = setup.Discovery(log.New("p2p", "discv5"), rollupCfg.L2ChainID.Uint64(), tcpPort, getLocalPublicIPv4())
+		n.dv5Local, n.dv5Udp, n.isIPSet, err = setup.Discovery(log.New("p2p", "discv5"), rollupCfg.L2ChainID.Uint64(), tcpPort, GetLocalPublicIPv4())
 		if err != nil {
 			return fmt.Errorf("failed to start discv5: %w", err)
 		}
@@ -324,7 +324,7 @@ func FindActiveTCPPort(h host.Host) (uint16, error) {
 	return tcpPort, nil
 }
 
-func getLocalPublicIPv4() net.IP {
+func GetLocalPublicIPv4() net.IP {
 	addresses, err := net.InterfaceAddrs()
 	if err != nil {
 		log.Debug("getLocalPublicIPv4 fail", "err", err.Error())
