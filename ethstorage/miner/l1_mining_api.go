@@ -19,10 +19,12 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethstorage/go-ethstorage/ethstorage"
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
+	"golang.org/x/mod/semver"
 )
 
 const (
-	gasBufferRatio = 1.2
+	gasBufferRatio         = 1.2
+	versionMineRoleEnabled = "v0.1.2"
 )
 
 var (
@@ -40,6 +42,42 @@ type l1MiningAPI struct {
 	*eth.PollingClient
 	rc *eth.RandaoClient
 	lg log.Logger
+}
+
+// Pre-check if the miner has been whitelisted before actually mining
+func (m *l1MiningAPI) CheckMinerRole(ctx context.Context, contract, miner common.Address) error {
+	version, err := m.GetContractVersion()
+	if err != nil {
+		return fmt.Errorf("failed to get contract version: %w", err)
+	}
+	m.lg.Info("Storage Contract version", "version", version)
+	if semver.Compare(version, versionMineRoleEnabled) == -1 {
+		return nil
+	}
+	enforced, err := m.PollingClient.ReadContractField("enforceMinerRole", nil)
+	if err != nil {
+		return fmt.Errorf("failed to query enforceMinerRole(): %w", err)
+	}
+	if new(big.Int).SetBytes(enforced).Uint64() == 1 {
+		m.lg.Info("Miner role enforced")
+
+		addrType, _ := abi.NewType("address", "", nil)
+		data, _ := abi.Arguments{{Type: addrType}}.Pack(miner)
+		sig := crypto.Keccak256Hash([]byte(`hasMinerRole(address)`))
+		calldata := append(sig[:4], data...)
+		result, err := m.CallContract(ctx, ethereum.CallMsg{To: &contract, Data: calldata}, nil)
+		if err != nil {
+			return fmt.Errorf("failed to query hasMinerRole(): %w", err)
+		}
+		hasMinerRole := new(big.Int).SetBytes(result).Uint64()
+		if hasMinerRole == 1 {
+			m.lg.Info("Miner role granted", "miner", miner)
+			return nil
+		}
+		return fmt.Errorf("miner role not granted to: %s", miner)
+	}
+	m.lg.Info("Miner role not enforced")
+	return nil
 }
 
 func (m *l1MiningAPI) GetMiningInfo(ctx context.Context, contract common.Address, shardIdx uint64) (*miningInfo, error) {

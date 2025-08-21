@@ -9,7 +9,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -31,10 +30,8 @@ var zkp1Contract = common.HexToAddress(os.Getenv("ES_NODE_STORAGE_L1CONTRACT_ZKP
 const zkeyName = "blob_poseidon.zkey"
 
 func TestZKProver_GenerateZKProofPerSample(t *testing.T) {
-	// skip now as zkey is not ready for mode 1
-	t.SkipNow()
 	proverPath, _ := filepath.Abs(prPath)
-	zkeyFull := filepath.Join(proverPath, prover.SnarkLib, zkeyName)
+	zkeyFull := filepath.Join(proverPath, prover.SnarkLib, "zkey", zkeyName)
 	if _, err := os.Stat(zkeyFull); os.IsNotExist(err) {
 		t.Fatalf("%s not found", zkeyFull)
 	}
@@ -68,8 +65,8 @@ func TestZKProver_GenerateZKProofPerSample(t *testing.T) {
 		},
 	}
 	libDir := filepath.Join(proverPath, prover.SnarkLib)
-	pjs := prover.NewZKProver(proverPath, zkeyName, prover.WasmName, lg)
-	pgo, err := prover.NewZKProverGo(libDir, zkeyName, prover.WasmName, lg)
+	pjs := prover.NewZKProver(proverPath, zkeyFull, prover.WasmName, lg)
+	pgo, err := prover.NewZKProverGo(libDir, zkeyFull, prover.WasmName, lg)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -88,12 +85,12 @@ func TestZKProver_GenerateZKProofPerSample(t *testing.T) {
 					t.Errorf("ZKProver.GenerateInput() error = %v", err)
 					return
 				}
-				intputStr, ok := inputs["xIn"].(string)
+				inputStr, ok := inputs["xIn"].(string)
 				if !ok {
 					t.Errorf("ZKProver.GenerateInput() type: %v, want string", reflect.TypeOf(inputs["xIn"]))
 					return
 				}
-				if intputStr != tt.xIn {
+				if inputStr != tt.xIn {
 					t.Errorf("ZKProver.GenerateInput() xIn = %v, want %v", inputs["xIn"], tt.xIn)
 					return
 				}
@@ -111,12 +108,18 @@ func TestZKProver_GenerateZKProofPerSample(t *testing.T) {
 					t.Errorf("ZKProver.GenerateZKProofPerSample() mask = %v, GenerateMask %v", mask, maskGo)
 					return
 				}
-				err = verifyDecodeSample(proofRaw, tt.args.sampleIdx, tt.args.encodingKey, mask)
+				xInBig, _ := new(big.Int).SetString(tt.xIn, 10)
+				pubs := []*big.Int{
+					tt.args.encodingKey.Big(),
+					xInBig,
+					mask,
+				}
+				err = verifyProof1(t, pubs, proofRaw)
 				if (err != nil) != tt.wantErr {
-					t.Errorf("ZKProver.GenerateZKProofPerSample() verifyDecodeSample err: %v", err)
+					t.Errorf("ZKProver.GenerateZKProofPerSample() verifyProof err: %v", err)
 					return
 				}
-				t.Log("verifyDecodeSample success!")
+				t.Log("verifyProof success!")
 			})
 		}
 	}
@@ -136,75 +139,38 @@ func GenerateMask(encodingKey common.Hash, sampleIdx uint64) (*big.Int, error) {
 	return new(big.Int).SetBytes(mask), nil
 }
 
-func verifyDecodeSample(proofBytes []byte, sampleIdx uint64, encodingKey common.Hash, mask *big.Int) error {
+// call Decoder.sol
+func verifyProof1(t *testing.T, pubs []*big.Int, proof []byte) error {
+	u2, _ := abi.NewType("uint256[2]", "", nil)
+	u3, _ := abi.NewType("uint256[3]", "", nil)
+	u22, _ := abi.NewType("uint256[2][2]", "", nil)
+	unpacked, err := abi.Arguments{
+		{Type: u2},
+		{Type: u22},
+		{Type: u2},
+	}.UnpackValues(proof)
+	if err != nil {
+		return err
+	}
 	ctx := context.Background()
 	client, err := ethclient.DialContext(ctx, l1Endpoint)
 	if err != nil {
-		log.Fatalf("Failed to connect to the Ethereum client: %v", err)
+		t.Fatalf("Failed to connect to the Ethereum client: %v", err)
 	}
 	defer client.Close()
-
-	encodingKeyBN := new(big.Int).SetBytes(encodingKey[:])
-	indexBN := new(big.Int).SetInt64(int64(sampleIdx))
-	h := crypto.Keccak256Hash([]byte("decodeSample(((uint256,uint256),(uint256[2],uint256[2]),(uint256,uint256)),uint256,uint256,uint256)"))
-	uintType, _ := abi.NewType("uint256", "", nil)
-	proofType, _ := abi.NewType("tuple", "", []abi.ArgumentMarshaling{
-		{
-			Name: "A", Type: "tuple", Components: []abi.ArgumentMarshaling{
-				{Name: "X", Type: "uint256"},
-				{Name: "Y", Type: "uint256"},
-			},
-		},
-		{
-			Name: "B", Type: "tuple", Components: []abi.ArgumentMarshaling{
-				{Name: "X", Type: "uint256[2]"},
-				{Name: "Y", Type: "uint256[2]"},
-			},
-		},
-		{
-			Name: "C", Type: "tuple", Components: []abi.ArgumentMarshaling{
-				{Name: "X", Type: "uint256"},
-				{Name: "Y", Type: "uint256"},
-			},
-		},
-	})
+	h := crypto.Keccak256Hash([]byte("verifyProof(uint256[2],uint256[2][2],uint256[2],uint256[3])"))
 	args := abi.Arguments{
-		{Type: proofType},
-		{Type: uintType},
-		{Type: uintType},
-		{Type: uintType},
+		{Type: u2},
+		{Type: u22},
+		{Type: u2},
+		{Type: u3},
 	}
-	proof := parseProof(proofBytes)
-	values := []interface{}{proof, encodingKeyBN, indexBN, mask}
+	values := append(unpacked, pubs)
 	dataField, err := args.Pack(values...)
 	if err != nil {
-		return fmt.Errorf("Err: %v, args.Pack: %v", err, values)
+		return fmt.Errorf("%v, values: %v", err, values)
 	}
+	t.Logf("values: %x", values)
 	calldata := append(h[0:4], dataField...)
 	return callVerify(calldata, zkp1Contract)
-}
-
-type ZKProof struct {
-	A prover.G1Point `json:"A"`
-	B prover.G2Point `json:"B"`
-	C prover.G1Point `json:"C"`
-}
-
-func parseProof(data []byte) ZKProof {
-	zkProof := ZKProof{}
-	x1 := new(big.Int).SetBytes(data[:32])
-	y1 := new(big.Int).SetBytes(data[32:64])
-	zkProof.A = prover.G1Point{X: x1, Y: y1}
-	var x2 [2]*big.Int
-	var y2 [2]*big.Int
-	x2[0] = new(big.Int).SetBytes(data[64:96])
-	x2[1] = new(big.Int).SetBytes(data[96:128])
-	y2[0] = new(big.Int).SetBytes(data[128:160])
-	y2[1] = new(big.Int).SetBytes(data[160:192])
-	zkProof.B = prover.G2Point{X: x2, Y: y2}
-	x3 := new(big.Int).SetBytes(data[192:224])
-	y3 := new(big.Int).SetBytes(data[224:256])
-	zkProof.C = prover.G1Point{X: x3, Y: y3}
-
-	return zkProof
 }

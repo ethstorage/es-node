@@ -139,7 +139,7 @@ func (s *Downloader) Start() error {
 				return err
 			} else {
 				s.lastDownloadBlock = header.Number.Int64()
-				s.log.Info("Downloader will use the latest finialized block to start for the first time", "block", s.lastDownloadBlock)
+				s.log.Info("Downloader will use the latest finalized block to start for the first time", "block", s.lastDownloadBlock)
 			}
 		} else {
 			s.lastDownloadBlock = int64(binary.LittleEndian.Uint64(bs))
@@ -239,10 +239,7 @@ func (s *Downloader) downloadToCache() {
 	s.mu.Unlock()
 
 	for start < end {
-		rangeEnd := start + downloadBatchSize
-		if rangeEnd > end {
-			rangeEnd = end
-		}
+		rangeEnd := min(start+downloadBatchSize, end)
 		_, err := s.downloadRange(start+1, rangeEnd, true)
 
 		if err != nil {
@@ -270,10 +267,7 @@ func (s *Downloader) download() {
 
 	for s.lastDownloadBlock < trackHead {
 		start := s.lastDownloadBlock + 1
-		end := s.lastDownloadBlock + downloadBatchSize
-		if end > trackHead {
-			end = trackHead
-		}
+		end := min(s.lastDownloadBlock+downloadBatchSize, trackHead)
 		// If downloadRange fails, then lastDownloadedBlock will keep the same as before. so when the next
 		// upload task starts, it will still try to download the blobs from the last failed block number
 		if blobs, err := s.downloadRange(start, end, false); err == nil {
