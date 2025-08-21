@@ -148,7 +148,7 @@ type StorageManager interface {
 
 	StorageManagerWriter
 
-	LastKvIndex() uint64
+	KvEntryCount() uint64
 
 	DecodeKV(kvIdx uint64, b []byte, hash common.Hash, providerAddr common.Address, encodeType uint64) ([]byte, bool, error)
 
@@ -280,7 +280,7 @@ func (s *SyncClient) loadSyncStatus() {
 	}
 
 	// create tasks
-	lastKvIndex := s.storageManager.LastKvIndex()
+	lastKvIndex := s.storageManager.KvEntryCount()
 	for _, sid := range s.storageManager.Shards() {
 		exist := false
 		for _, t := range progress.Tasks {
@@ -625,8 +625,8 @@ func (s *SyncClient) FetchBlob(kvIndex uint64, commit common.Hash) ([]byte, erro
 			if val.BlobIndex != kvIndex {
 				continue
 			}
-			if !bytes.Equal(val.BlobCommit[0:ethstorage.HashSizeInContract], commit[0:ethstorage.HashSizeInContract]) {
-				log.Warn("FetchBlob failed", "peer", pr.ID(), "expected commit", commit.Hex(), "actual commit", val.BlobCommit.Hex())
+			if commitError := ethstorage.CompareCommits(commit.Bytes(), val.BlobCommit.Bytes()); commitError != nil {
+				log.Warn("FetchBlob failed", "peer", pr.ID(), "error", commitError)
 				continue
 			}
 			payload = val
@@ -1145,13 +1145,13 @@ func (s *SyncClient) FillFileWithEmptyBlob(start, limit uint64) (uint64, error) 
 		inserted = uint64(0)
 		next     = start
 	)
-	lastBlobIdx := s.storageManager.LastKvIndex()
-	if lastBlobIdx > limit {
+	kvEntryCnt := s.storageManager.KvEntryCount()
+	if kvEntryCnt > limit {
 		return limit + 1, nil
 	}
 
-	if start < lastBlobIdx {
-		start = lastBlobIdx
+	if start < kvEntryCnt {
+		start = kvEntryCnt
 	}
 	inserted, next, err := s.storageManager.CommitEmptyBlobs(start, limit)
 	if inserted > 0 {

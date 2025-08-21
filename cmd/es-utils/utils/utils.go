@@ -179,9 +179,19 @@ func SendBlobTx(
 		Sidecar:    sideCar,
 	}
 	tx := types.MustSignNewTx(key, types.NewCancunSigner(chainId), blobtx)
-	err = client.SendTransaction(context.Background(), tx)
-	if err != nil {
-		log.Crit("Unable to send transaction", "error", err)
+
+	var errRetry error
+	const maxRetries = 5
+	for i := 0; i <= maxRetries; i++ {
+		errRetry = client.SendTransaction(context.Background(), tx)
+		if errRetry == nil {
+			break
+		}
+		log.Warn("SendTransaction failed", "retriesLeft", maxRetries-i, "error", errRetry)
+		time.Sleep(2 * time.Second)
+	}
+	if errRetry != nil {
+		log.Crit("Unable to send transaction", "error", errRetry)
 	}
 
 	for {
@@ -203,10 +213,7 @@ func ConvertToBlobs(data []byte) []kzg4844.Blob {
 	blobs := []kzg4844.Blob{}
 	blobIndex := 0
 	for i := 0; i < len(data); i += params.BlobTxFieldElementsPerBlob * 32 {
-		max := i + params.BlobTxFieldElementsPerBlob*32
-		if max > len(data) {
-			max = len(data)
-		}
+		max := min(i+params.BlobTxFieldElementsPerBlob*32, len(data))
 		blobs = append(blobs, kzg4844.Blob{})
 		copy(blobs[blobIndex][:], data[i:max])
 		blobIndex++
@@ -259,10 +266,7 @@ func EncodeBlobs(data []byte) []kzg4844.Blob {
 			blobIndex++
 			fieldIndex = 0
 		}
-		max := i + 31
-		if max > len(data) {
-			max = len(data)
-		}
+		max := min(i+31, len(data))
 		copy(blobs[blobIndex][fieldIndex*32+1:], data[i:max])
 	}
 	return blobs
@@ -316,7 +320,7 @@ func UploadBlobs(
 	signer := crypto.PubkeyToAddress(key.PublicKey)
 	var keys []common.Hash
 	var blobIndex []*big.Int
-	var lengthes []*big.Int
+	var lengths []*big.Int
 
 	var blobs []kzg4844.Blob
 	if needEncoding {
@@ -327,9 +331,9 @@ func UploadBlobs(
 	for i, blob := range blobs {
 		keys = append(keys, genKey(signer, i, blob[:]))
 		blobIndex = append(blobIndex, new(big.Int).SetUint64(uint64(i)))
-		lengthes = append(lengthes, new(big.Int).SetUint64(BlobSize))
+		lengths = append(lengths, new(big.Int).SetUint64(BlobSize))
 	}
-	log.Info("blobs", "keys", keys, "blobIndexes", blobIndex, "sizes", lengthes)
+	log.Info("blobs", "keys", keys, "blobIndexes", blobIndex, "sizes", lengths)
 	bytes32Array, _ := abi.NewType("bytes32[]", "", nil)
 	uint256Array, _ := abi.NewType("uint256[]", "", nil)
 	args := abi.Arguments{
@@ -337,7 +341,7 @@ func UploadBlobs(
 		{Type: uint256Array},
 		{Type: uint256Array},
 	}
-	dataField, err := args.Pack(keys, blobIndex, lengthes)
+	dataField, err := args.Pack(keys, blobIndex, lengths)
 	if err != nil {
 		log.Error("Failed to pack data", "err", err)
 		return nil, nil, err
@@ -418,7 +422,7 @@ func queryBlobBaseFee(l1 *ethclient.Client) (*big.Int, error) {
 }
 
 func getKvInfo(pc *eth.PollingClient, blobLen int) ([]uint64, []common.Hash, error) {
-	lastIdx, err := pc.GetStorageLastBlobIdx(rpc.LatestBlockNumber.Int64())
+	lastIdx, err := pc.GetStorageKvEntryCount(rpc.LatestBlockNumber.Int64())
 	if err != nil {
 		return nil, nil, err
 	}

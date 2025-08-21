@@ -11,6 +11,8 @@ import (
 	es "github.com/ethstorage/go-ethstorage/ethstorage"
 )
 
+const BlobLength = 131072
+
 type BlobCacheReader interface {
 	GetKeyValueByIndex(index uint64, hash common.Hash) []byte
 	GetSampleData(kvIndex, sampleIndexInKv uint64) []byte

@@ -6,6 +6,7 @@ package ethstorage
 import (
 	"fmt"
 	"math/bits"
+	"sort"
 
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -77,6 +78,9 @@ func (sm *ShardManager) ShardIds() []uint64 {
 	for id := range sm.shardMap {
 		shardIds = append(shardIds, id)
 	}
+	sort.Slice(shardIds, func(i, j int) bool {
+		return shardIds[i] < shardIds[j]
+	})
 	return shardIds
 }
 
@@ -241,10 +245,7 @@ func (sm *ShardManager) DecodeOrEncodeKV(kvIdx uint64, b []byte, hash common.Has
 				break
 			}
 
-			chunkReadLen := datalen
-			if chunkReadLen > int(sm.chunkSize) {
-				chunkReadLen = int(sm.chunkSize)
-			}
+			chunkReadLen := min(datalen, int(sm.chunkSize))
 			datalen = datalen - chunkReadLen
 
 			chunkIdx := kvIdx*ds.chunksPerKv + i

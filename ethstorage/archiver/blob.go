@@ -12,9 +12,8 @@ import (
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethstorage/go-ethstorage/ethstorage/blobs"
 )
-
-const BlobLength = 131072
 
 type BlobSidecars struct {
 	Data []*BlobSidecar `json:"data"`
@@ -36,7 +35,7 @@ func (a *BlobSidecar) String() string {
 type Index uint64
 
 func (i Index) MarshalJSON() ([]byte, error) {
-	return []byte(fmt.Sprintf(`"%d"`, i)), nil
+	return fmt.Appendf(nil, `"%d"`, i), nil
 }
 
 func (i *Index) UnmarshalJSON(data []byte) error {
@@ -58,17 +57,17 @@ func (i *Index) UnmarshalJSON(data []byte) error {
 type byte48 [48]byte
 
 func (b byte48) MarshalJSON() ([]byte, error) {
-	return []byte(fmt.Sprintf(`"%#x"`, b)), nil
+	return fmt.Appendf(nil, `"%#x"`, b), nil
 }
 
 func (b *byte48) UnmarshalJSON(data []byte) error {
 	return hexutil.UnmarshalFixedJSON(reflect.TypeOf(b), data, b[:])
 }
 
-type blobContent [BlobLength]byte
+type blobContent [blobs.BlobLength]byte
 
 func (b blobContent) MarshalJSON() ([]byte, error) {
-	return []byte(fmt.Sprintf(`"%#x"`, b)), nil
+	return fmt.Appendf(nil, `"%#x"`, b), nil
 }
 
 func (b *blobContent) UnmarshalJSON(data []byte) error {

@@ -8,8 +8,10 @@ import (
 	"time"
 
 	"github.com/ethstorage/go-ethstorage/ethstorage/archiver"
+	"github.com/ethstorage/go-ethstorage/ethstorage/email"
 	eslog "github.com/ethstorage/go-ethstorage/ethstorage/log"
 	"github.com/ethstorage/go-ethstorage/ethstorage/miner"
+	"github.com/ethstorage/go-ethstorage/ethstorage/scanner"
 	"github.com/ethstorage/go-ethstorage/ethstorage/signer"
 	"github.com/urfave/cli"
 )
@@ -249,6 +251,8 @@ func init() {
 	optionalFlags = append(optionalFlags, signer.CLIFlags(envVarPrefix)...)
 	optionalFlags = append(optionalFlags, miner.CLIFlags(envVarPrefix)...)
 	optionalFlags = append(optionalFlags, archiver.CLIFlags(envVarPrefix)...)
+	optionalFlags = append(optionalFlags, scanner.CLIFlags(envVarPrefix)...)
+	optionalFlags = append(optionalFlags, email.CLIFlags(envVarPrefix)...)
 	Flags = append(requiredFlags, optionalFlags...)
 }
 
