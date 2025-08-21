@@ -5,7 +5,7 @@ package scanner
 
 import (
 	"fmt"
-	"sort"
+	"slices"
 	"strings"
 )
 
@@ -21,9 +21,7 @@ func (s statsType) String() string {
 	for k := range s {
 		keys = append(keys, k)
 	}
-	sort.Slice(keys, func(i, j int) bool {
-		return keys[i] < keys[j]
-	})
+	slices.Sort(keys)
 	for _, kvIndex := range keys {
 		var str string
 		times := s[kvIndex]
