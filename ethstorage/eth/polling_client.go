@@ -228,8 +228,8 @@ func (w *PollingClient) FilterLogsByBlockRange(start *big.Int, end *big.Int, eve
 	return w.FilterLogs(context.Background(), query)
 }
 
-func (w *PollingClient) GetStorageLastBlobIdx(blockNumber int64) (uint64, error) {
-	h := crypto.Keccak256Hash([]byte(`lastKvIdx()`))
+func (w *PollingClient) GetStorageKvEntryCount(blockNumber int64) (uint64, error) {
+	h := crypto.Keccak256Hash([]byte(`kvEntryCount()`))
 
 	callMsg := ethereum.CallMsg{
 		To:   &w.esContract,
@@ -299,13 +299,13 @@ func (w *PollingClient) GetKvMetas(kvIndices []uint64, blockNumber int64) ([][32
 	return res[0].([][32]byte), nil
 }
 
-func (w *PollingClient) GetMiningReward(shard uint64, blockNumber int64) (*big.Int, error) {
+func (w *PollingClient) GetMiningReward(shard uint64, timestamp uint64) (*big.Int, error) {
 	h := crypto.Keccak256Hash([]byte(`miningReward(uint256,uint256)`))
 	uint256Type, _ := abi.NewType("uint256", "", nil)
 	dataField, err := abi.Arguments{
 		{Type: uint256Type},
 		{Type: uint256Type},
-	}.Pack(new(big.Int).SetUint64(shard), new(big.Int).SetInt64(blockNumber))
+	}.Pack(new(big.Int).SetUint64(shard), new(big.Int).SetUint64(timestamp))
 	if err != nil {
 		return nil, err
 	}
