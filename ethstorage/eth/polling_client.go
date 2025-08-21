@@ -299,13 +299,13 @@ func (w *PollingClient) GetKvMetas(kvIndices []uint64, blockNumber int64) ([][32
 	return res[0].([][32]byte), nil
 }
 
-func (w *PollingClient) GetMiningReward(shard uint64, blockNumber int64) (*big.Int, error) {
+func (w *PollingClient) GetMiningReward(shard uint64, timestamp uint64) (*big.Int, error) {
 	h := crypto.Keccak256Hash([]byte(`miningReward(uint256,uint256)`))
 	uint256Type, _ := abi.NewType("uint256", "", nil)
 	dataField, err := abi.Arguments{
 		{Type: uint256Type},
 		{Type: uint256Type},
-	}.Pack(new(big.Int).SetUint64(shard), new(big.Int).SetInt64(blockNumber))
+	}.Pack(new(big.Int).SetUint64(shard), new(big.Int).SetUint64(timestamp))
 	if err != nil {
 		return nil, err
 	}
