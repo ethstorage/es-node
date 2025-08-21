@@ -149,7 +149,7 @@ type StorageManager interface {
 
 	StorageManagerWriter
 
-	LastKvIndex() uint64
+	KvEntryCount() uint64
 
 	DecodeKV(kvIdx uint64, b []byte, hash common.Hash, providerAddr common.Address, encodeType uint64) ([]byte, bool, error)
 
@@ -281,7 +281,7 @@ func (s *SyncClient) loadSyncStatus() {
 	}
 
 	// create tasks
-	lastKvIndex := s.storageManager.LastKvIndex()
+	lastKvIndex := s.storageManager.KvEntryCount()
 	for _, sid := range s.storageManager.Shards() {
 		exist := false
 		for _, t := range progress.Tasks {
@@ -1144,13 +1144,13 @@ func (s *SyncClient) FillFileWithEmptyBlob(start, limit uint64) (uint64, error) 
 		inserted = uint64(0)
 		next     = start
 	)
-	lastBlobIdx := s.storageManager.LastKvIndex()
-	if lastBlobIdx > limit {
+	kvEntryCnt := s.storageManager.KvEntryCount()
+	if kvEntryCnt > limit {
 		return limit + 1, nil
 	}
 
-	if start < lastBlobIdx {
-		start = lastBlobIdx
+	if start < kvEntryCnt {
+		start = kvEntryCnt
 	}
 	inserted, next, err := s.storageManager.CommitEmptyBlobs(start, limit)
 	if inserted > 0 {
