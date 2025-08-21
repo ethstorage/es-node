@@ -305,7 +305,7 @@ func (m *l1MiningAPI) suggestGasPrices(ctx context.Context, cfg Config) (*big.In
 
 type GasPriceChecker interface {
 	GetL1Fee(ctx context.Context, tx *types.Transaction) (*big.Int, error)
-	GetMiningReward(shardID uint64, blockNumber int64) (*big.Int, error)
+	GetMiningReward(shardID uint64, timestamp uint64) (*big.Int, error)
 }
 
 // Adjust the gas price based on the estimated rewards, costs, and default tx fee cap.
@@ -330,7 +330,7 @@ func checkGasPrice(
 			extraCost = l1fee
 		}
 	}
-	reward, err := checker.GetMiningReward(rst.startShardId, rst.blockNumber.Int64())
+	reward, err := checker.GetMiningReward(rst.startShardId, rst.timestamp)
 	if err != nil {
 		lg.Warn("Query mining reward failed", "error", err.Error())
 	}
