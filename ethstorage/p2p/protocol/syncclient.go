@@ -148,7 +148,7 @@ type StorageManager interface {
 
 	StorageManagerWriter
 
-	LastKvIndex() uint64
+	KvEntryCount() uint64
 
 	DecodeKV(kvIdx uint64, b []byte, hash common.Hash, providerAddr common.Address, encodeType uint64) ([]byte, bool, error)
 
@@ -280,7 +280,7 @@ func (s *SyncClient) loadSyncStatus() {
 	}
 
 	// create tasks
-	lastKvIndex := s.storageManager.LastKvIndex()
+	lastKvIndex := s.storageManager.KvEntryCount()
 	for _, sid := range s.storageManager.Shards() {
 		exist := false
 		for _, t := range progress.Tasks {
@@ -596,13 +596,60 @@ func (s *SyncClient) RequestL2Range(start, end uint64) (uint64, error) {
 		if err != nil {
 			return 0, err
 		}
-		_, _, _, err = s.onResult(packet.Blobs)
+		_, _, inserted, err := s.onResult(packet.Blobs)
 		if err != nil {
 			return 0, err
 		}
-		return id, nil
+
+		return uint64(len(inserted)), nil
 	}
 	return 0, fmt.Errorf("no peer can be used to send requests")
+}
+
+func (s *SyncClient) FetchBlob(kvIndex uint64, commit common.Hash) ([]byte, error) {
+	if len(s.peers) == 0 {
+		return nil, fmt.Errorf("no peer can be used to send requests")
+	}
+
+	for _, pr := range s.peers {
+		var packet BlobsByListPacket
+		var payload *BlobPayload = nil
+
+		_, err := pr.RequestBlobsByList(rand.Uint64(), s.storageManager.ContractAddress(), kvIndex/s.storageManager.KvEntries(), []uint64{kvIndex}, &packet)
+		if err != nil {
+			log.Warn("FetchBlob failed", "error", err)
+			continue
+		}
+
+		for _, val := range packet.Blobs {
+			if val.BlobIndex != kvIndex {
+				continue
+			}
+			if commitError := ethstorage.CompareCommits(commit.Bytes(), val.BlobCommit.Bytes()); commitError != nil {
+				log.Warn("FetchBlob failed", "peer", pr.ID(), "error", commitError)
+				continue
+			}
+			payload = val
+		}
+
+		if payload == nil {
+			continue
+		}
+
+		decodedBlob, success := s.decodeKV(payload)
+		if !success {
+			continue
+		}
+
+		success = s.checkBlobCommit(decodedBlob, payload)
+		if !success {
+			continue
+		}
+
+		return decodedBlob, nil
+	}
+
+	return nil, fmt.Errorf("fail to fetch blob from peers")
 }
 
 func (s *SyncClient) RequestL2List(indexes []uint64) (uint64, error) {
@@ -1098,13 +1145,13 @@ func (s *SyncClient) FillFileWithEmptyBlob(start, limit uint64) (uint64, error) 
 		inserted = uint64(0)
 		next     = start
 	)
-	lastBlobIdx := s.storageManager.LastKvIndex()
-	if lastBlobIdx > limit {
+	kvEntryCnt := s.storageManager.KvEntryCount()
+	if kvEntryCnt > limit {
 		return limit + 1, nil
 	}
 
-	if start < lastBlobIdx {
-		start = lastBlobIdx
+	if start < kvEntryCnt {
+		start = kvEntryCnt
 	}
 	inserted, next, err := s.storageManager.CommitEmptyBlobs(start, limit)
 	if inserted > 0 {

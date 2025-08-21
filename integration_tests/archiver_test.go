@@ -20,7 +20,7 @@ import (
 const (
 	urlPattern   = "http://%s/eth/v1/beacon/blob_sidecars/%s"
 	archiverAddr = "65.108.236.27:9645"
-	beaconAddr   = "88.99.30.186:3500"
+	beaconAddr   = "65.108.230.142:3500"
 )
 
 type test struct {
@@ -43,7 +43,8 @@ func (t *test) toUrl() string {
 }
 
 func TestArchiveAPI(t *testing.T) {
-
+	// skip as the archiver is not running anymore
+	t.SkipNow()
 	tests := []test{
 		{
 			query:           "4756895",
