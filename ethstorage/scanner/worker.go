@@ -21,7 +21,7 @@ type IStorageManager interface {
 	TryWriteWithMetaCheck(kvIdx uint64, commit common.Hash, fetchBlob es.FetchBlobFunc) error
 	MaxKvSize() uint64
 	KvEntries() uint64
-	LastKvIndex() uint64
+	KvEntryCount() uint64
 	Shards() []uint64
 }
 
@@ -54,8 +54,7 @@ func (s *Worker) ScanBatch(ctx context.Context, sendError func(kvIndex uint64, e
 	// Query local storage info
 	shards := s.sm.Shards()
 	kvEntries := s.sm.KvEntries()
-	// LastKvIndex() actually returns the total number of kv entries stored in the contract
-	entryCount := s.sm.LastKvIndex()
+	entryCount := s.sm.KvEntryCount()
 	if entryCount == 0 {
 		s.lg.Info("Scanner: no KV entries found in local storage")
 		return nil, nil

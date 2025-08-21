@@ -228,8 +228,8 @@ func (w *PollingClient) FilterLogsByBlockRange(start *big.Int, end *big.Int, eve
 	return w.FilterLogs(context.Background(), query)
 }
 
-func (w *PollingClient) GetStorageLastBlobIdx(blockNumber int64) (uint64, error) {
-	h := crypto.Keccak256Hash([]byte(`lastKvIdx()`))
+func (w *PollingClient) GetStorageKvEntryCount(blockNumber int64) (uint64, error) {
+	h := crypto.Keccak256Hash([]byte(`kvEntryCount()`))
 
 	callMsg := ethereum.CallMsg{
 		To:   &w.esContract,
