@@ -1,3 +1,4 @@
+[![Build](https://github.com/ethstorage/es-node/actions/workflows/alerting.yml/badge.svg)](https://github.com/ethstorage/es-node/actions)
 
 Golang implementation of the EthStorage node.
 
