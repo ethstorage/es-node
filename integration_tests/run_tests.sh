@@ -26,7 +26,7 @@ if [ -z "$ES_NODE_STORAGE_L1CONTRACT_CLEF" ]; then
 fi
 # A newly deployed contract is required for each run for miner test, with zkp verifier of mode 2
 if [ -z "$ES_NODE_STORAGE_L1CONTRACT" ]; then
-  export ES_NODE_STORAGE_L1CONTRACT=0xdeCB41e30Fc3d64Fc9DB14Dad40AD505dd25eF30
+  export ES_NODE_STORAGE_L1CONTRACT=0x11e2a001E740A6cD5dCe7FEADAd6b221452aC182
 fi
 # A contract with zkp verifier of mode 1 (one proof per sample)
 if [ -z "$ES_NODE_STORAGE_L1CONTRACT_ZKP1" ]; then
