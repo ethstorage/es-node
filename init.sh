@@ -52,7 +52,8 @@ if [ -n "$zkp_mode" ] && [ "$zkp_mode" != 1 ] && [ "$zkp_mode" != 2 ]; then
 fi
 
 if [ $use_miner = 1 ]; then
-  mkdir -p ./build/bin/snark_lib/zkey
+  zkey_path="./build/bin/snark_lib/zkey"
+  mkdir -p $zkey_path
   # download zkey if not yet
   zkey_name="blob_poseidon2.zkey"
   zkey_size=560412712
@@ -62,7 +63,7 @@ if [ $use_miner = 1 ]; then
     zkey_size=280269776
     zkey_url="https://ethstorage-trusted-setup.s3.us-west-2.amazonaws.com/blob-poseidon-circuit_final.zkey"
   fi
-  zkey_file="./build/bin/snark_lib/zkey/$zkey_name"
+  zkey_file="$zkey_path/$zkey_name"
   if [ ! -e  ${zkey_file} ] || [ $(wc -c <  ${zkey_file}) -ne ${zkey_size} ]; then
     echo "Start downloading ${zkey_file}..." 
     curl $zkey_url -o ${zkey_file}

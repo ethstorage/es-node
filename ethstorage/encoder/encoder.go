@@ -25,16 +25,12 @@ func Encode(hash common.Hash, size int) ([]byte, error) {
 	k := big.NewInt(0).SetBytes(hash.Bytes())
 
 	// TODO: simple hash to point mapping
-	for k.Cmp(constants.Q) != -1 {
-		k = k.Sub(k, constants.Q)
-	}
+	k.Mod(k, constants.Q)
 
 	elements := make([]*ff.Element, 0)
 	for i := 0; i < size/64; i++ {
-		k1 := new(big.Int).Set(k)
-		k1 = k1.Add(k1, big.NewInt(int64(i)))
-		k2 := new(big.Int).Set(k)
-		k2 = k2.Add(k2, big.NewInt(int64(i+1)))
+		k1 := new(big.Int).Add(k, big.NewInt(int64(i)))
+		k2 := new(big.Int).Add(k, big.NewInt(int64(i+1)))
 		hs, _ := poseidon.HashState(initialState, []*big.Int{k1, k2})
 		elements = append(elements, hs[0], hs[1])
 	}

@@ -10,7 +10,7 @@ const privateKey = process.env.ES_NODE_UPLOADER_PRIVATE_KEY;
 const contractAddr = process.env.ES_NODE_CONTRACT_ADDRESS;
 const RPC = 'http://5.9.87.214:8545';
 const contractABI = [
-    "function lastKvIdx() public view returns (uint40)"
+    "function kvEntryCount() public view returns (uint40)"
 ]
 
 const provider = new ethers.JsonRpcProvider(RPC);
@@ -28,7 +28,7 @@ async function UploadBlobsForIntegrationTest() {
         address: contractAddr
     })
     while (true) {
-        const currentIndex = await contract.lastKvIdx();
+        const currentIndex = await contract.kvEntryCount();
         const totalCount = MAX_BLOB - currentIndex;
         console.log("Current Number:", currentIndex, " Total Number:", totalCount, "at", new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
         if (totalCount <= 0) {

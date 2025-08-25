@@ -22,7 +22,7 @@ func Test_l1MiningAPI_checkGasPrice(t *testing.T) {
 	unsignedTx := &types.Transaction{}
 	mockResult := result{
 		startShardId: 0,
-		blockNumber:  big.NewInt(100),
+		timestamp:    0,
 	}
 	lgr := esLog.NewLogger(esLog.CLIConfig{
 		Level:  "debug",
@@ -229,7 +229,7 @@ func Test_l1MiningAPI_checkGasPrice(t *testing.T) {
 			ctx := context.Background()
 			mockAPI := &MockMiningAPI{l1MiningAPI: l1MiningAPI{lg: lgr}}
 			mockAPI.On("GetL1Fee", ctx, unsignedTx).Return(tc.l1Fee, tc.l1FeeErr)
-			mockAPI.On("GetMiningReward", mockResult.startShardId, mockResult.blockNumber.Int64()).Return(tc.reward, tc.rewardErr)
+			mockAPI.On("GetMiningReward", mockResult.startShardId, mockResult.timestamp).Return(tc.reward, tc.rewardErr)
 
 			gotGasFeeCap, gotErr := checkGasPrice(
 				ctx,
@@ -265,7 +265,7 @@ func (m *MockMiningAPI) GetL1Fee(ctx context.Context, tx *types.Transaction) (*b
 	return args.Get(0).(*big.Int), args.Error(1)
 }
 
-func (m *MockMiningAPI) GetMiningReward(shardId uint64, blockNumber int64) (*big.Int, error) {
-	args := m.Called(shardId, blockNumber)
+func (m *MockMiningAPI) GetMiningReward(shardId uint64, timestamp uint64) (*big.Int, error) {
+	args := m.Called(shardId, timestamp)
 	return args.Get(0).(*big.Int), args.Error(1)
 }

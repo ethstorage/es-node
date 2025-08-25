@@ -9,12 +9,13 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"math/big"
 	"math/rand"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/detailyang/go-fallocate"
 	"github.com/ethereum/go-ethereum"
@@ -119,7 +120,7 @@ func (l1 *mockL1Source) GetKvMetas(kvIndices []uint64, blockNumber int64) ([][32
 	return metas, nil
 }
 
-func (l1 *mockL1Source) GetStorageLastBlobIdx(blockNumber int64) (uint64, error) {
+func (l1 *mockL1Source) GetStorageKvEntryCount(blockNumber int64) (uint64, error) {
 	return l1.lastBlobIndex, nil
 }
 

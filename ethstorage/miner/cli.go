@@ -24,6 +24,9 @@ const (
 	ZKProverImplFlagName     = "miner.zk-prover-impl"
 	ThreadsPerShardFlagName  = "miner.threads-per-shard"
 	MinimumProfitFlagName    = "miner.min-profit"
+
+	// proof submission notify
+	EmailEnabledFlagName = "miner.email-enabled"
 )
 
 func CLIFlags(envPrefix string) []cli.Flag {
@@ -76,6 +79,11 @@ func CLIFlags(envPrefix string) []cli.Flag {
 			Value:  DefaultConfig.ThreadsPerShard,
 			EnvVar: rollup.PrefixEnvVar(envPrefix, "THREADS_PER_SHARD"),
 		},
+		cli.BoolFlag{
+			Name:   EmailEnabledFlagName,
+			Usage:  "Enable proof submission notifications via email",
+			EnvVar: rollup.PrefixEnvVar(envPrefix, "EMAIL_ENABLED"),
+		},
 	}
 	return flag
 }
@@ -90,6 +98,7 @@ type CLIConfig struct {
 	ZKProverMode     uint64
 	ZKProverImpl     uint64
 	ThreadsPerShard  uint64
+	EmailEnabled     bool
 }
 
 func (c CLIConfig) Check() error {
@@ -128,6 +137,7 @@ func (c CLIConfig) ToMinerConfig() (Config, error) {
 	cfg.PriorityGasPrice = c.PriorityGasPrice
 	cfg.MinimumProfit = c.MinimumProfit
 	cfg.ThreadsPerShard = c.ThreadsPerShard
+	cfg.EmailEnabled = c.EmailEnabled
 	return cfg, nil
 }
 
@@ -142,6 +152,7 @@ func ReadCLIConfig(ctx *cli.Context) CLIConfig {
 		ZKProverMode:     ctx.GlobalUint64(ZKProverModeFlagName),
 		ZKProverImpl:     ctx.GlobalUint64(ZKProverImplFlagName),
 		ThreadsPerShard:  ctx.GlobalUint64(ThreadsPerShardFlagName),
+		EmailEnabled:     ctx.GlobalBool(EmailEnabledFlagName),
 	}
 	return cfg
 }

@@ -57,7 +57,7 @@ func TestMining(t *testing.T) {
 		t.Fatalf("Failed to connect to the Ethereum client: %v", err)
 	}
 	storConfig := initStorageConfig(t, pClient, contract, minerAddr)
-	lastKv, err := pClient.GetStorageLastBlobIdx(rpc.LatestBlockNumber.Int64())
+	lastKv, err := pClient.GetStorageKvEntryCount(rpc.LatestBlockNumber.Int64())
 	if err != nil {
 		t.Fatalf("Failed to get lastKvIdx: %v", err)
 	}
@@ -423,7 +423,7 @@ func initMiningConfig(t *testing.T, client *eth.PollingClient) *miner.Config {
 	}
 	miningConfig.PrepaidAmount = new(big.Int).SetBytes(result)
 	proverPath, _ := filepath.Abs(prPath)
-	zkeyFull := filepath.Join(proverPath, prover.SnarkLib, zkey2Name)
+	zkeyFull := filepath.Join(proverPath, prover.SnarkLib, "zkey", zkey2Name)
 	if _, err := os.Stat(zkeyFull); os.IsNotExist(err) {
 		t.Fatalf("%s not found", zkeyFull)
 	}
@@ -432,7 +432,7 @@ func initMiningConfig(t *testing.T, client *eth.PollingClient) *miner.Config {
 	miningConfig.ZKProverMode = 2
 	miningConfig.ZKProverImpl = 2
 	miningConfig.ThreadsPerShard = 2
-	miningConfig.MinimumProfit = new(big.Int).SetInt64(-500000000000)
+	miningConfig.MinimumProfit = new(big.Int).SetInt64(-1000000000000000000)
 	return miningConfig
 }
 

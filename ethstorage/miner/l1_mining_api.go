@@ -112,7 +112,7 @@ func (m *l1MiningAPI) GetMiningInfo(ctx context.Context, contract common.Address
 func (m *l1MiningAPI) GetDataHashes(ctx context.Context, contract common.Address, kvIdxes []uint64) ([]common.Hash, error) {
 	metas, err := m.GetKvMetas(kvIdxes, rpc.LatestBlockNumber.Int64())
 	if err != nil {
-		m.lg.Error("Failed to get verioned hashs", "error", err)
+		m.lg.Error("Failed to get versioned hashs", "error", err)
 		return nil, err
 	}
 	var hashes []common.Hash
@@ -305,7 +305,7 @@ func (m *l1MiningAPI) suggestGasPrices(ctx context.Context, cfg Config) (*big.In
 
 type GasPriceChecker interface {
 	GetL1Fee(ctx context.Context, tx *types.Transaction) (*big.Int, error)
-	GetMiningReward(shardID uint64, blockNumber int64) (*big.Int, error)
+	GetMiningReward(shardID uint64, timestamp uint64) (*big.Int, error)
 }
 
 // Adjust the gas price based on the estimated rewards, costs, and default tx fee cap.
@@ -330,7 +330,7 @@ func checkGasPrice(
 			extraCost = l1fee
 		}
 	}
-	reward, err := checker.GetMiningReward(rst.startShardId, rst.blockNumber.Int64())
+	reward, err := checker.GetMiningReward(rst.startShardId, rst.timestamp)
 	if err != nil {
 		lg.Warn("Query mining reward failed", "error", err.Error())
 	}

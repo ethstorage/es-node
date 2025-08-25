@@ -137,14 +137,14 @@ func (d *dashboard) RefreshMetrics(ctx context.Context, sig eth.L1BlockRef) {
 }
 
 func (d *dashboard) RefreshBlobsMetrics(sig eth.L1BlockRef) {
-	lastKVIndex, err := d.source.GetStorageLastBlobIdx(int64(sig.Number))
+	kvEntryCnt, err := d.source.GetStorageKvEntryCount(int64(sig.Number))
 	if err != nil {
 		log.Warn("Refresh contract metrics (last kv index) failed", "err", err.Error())
 		return
 	}
-	maxShardIdx := lastKVIndex / d.kvEntries
-	d.m.SetLastKVIndexAndMaxShardId(d.chainID, d.contract, sig.Number, lastKVIndex, maxShardIdx)
-	d.logger.Info("RefreshBlobMetrics", "contract", d.contract, "blockNumber", sig.Number, "lastKvIndex", lastKVIndex, "maxShardIdx", maxShardIdx)
+	maxShardIdx := kvEntryCnt / d.kvEntries
+	d.m.SetLastKVIndexAndMaxShardId(d.chainID, d.contract, sig.Number, kvEntryCnt, maxShardIdx)
+	d.logger.Info("RefreshBlobMetrics", "contract", d.contract, "blockNumber", sig.Number, "kvEntryCnt", kvEntryCnt, "maxShardIdx", maxShardIdx)
 	d.maxShardIdx = maxShardIdx
 	if sig.Number > d.endBlock {
 		d.endBlock = sig.Number
