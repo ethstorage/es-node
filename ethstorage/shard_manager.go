@@ -6,7 +6,7 @@ package ethstorage
 import (
 	"fmt"
 	"math/bits"
-	"sort"
+	"slices"
 
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -78,9 +78,7 @@ func (sm *ShardManager) ShardIds() []uint64 {
 	for id := range sm.shardMap {
 		shardIds = append(shardIds, id)
 	}
-	sort.Slice(shardIds, func(i, j int) bool {
-		return shardIds[i] < shardIds[j]
-	})
+	slices.Sort(shardIds)
 	return shardIds
 }
 
