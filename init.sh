@@ -55,11 +55,11 @@ if [ $use_miner = 1 ]; then
   mkdir -p ./build/bin/snark_lib/zkey
   # download zkey if not yet
   zkey_name="blob_poseidon2.zkey"
-  zkey_size=560303266
+  zkey_size=560412712
   zkey_url="https://ethstorage-trusted-setup.s3.us-west-2.amazonaws.com/blob-poseidon-2-circuit_final.zkey"
   if [ "$zkp_mode" = 1 ]; then
     zkey_name="blob_poseidon.zkey"
-    zkey_size=280153702
+    zkey_size=280269776
     zkey_url="https://ethstorage-trusted-setup.s3.us-west-2.amazonaws.com/blob-poseidon-circuit_final.zkey"
   fi
   zkey_file="./build/bin/snark_lib/zkey/$zkey_name"
