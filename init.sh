@@ -5,7 +5,7 @@
 
 executable="./build/bin/es-node"
 if [ ! -f "$executable" ]; then
-  make build
+  make
 fi
 echo "========== build info =================="
 $executable --version
