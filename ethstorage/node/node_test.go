@@ -53,7 +53,7 @@ func test_InitDB(test *testing.T, dataDir string) {
 	}
 
 	n := &EsNode{
-		log:        log.New("unittest"),
+		lg:         log.New("unittest"),
 		appVersion: "unittest",
 		metrics:    metrics.NoopMetrics,
 	}

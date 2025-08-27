@@ -114,6 +114,9 @@ func TestZKProver_GenerateZKProofPerSample(t *testing.T) {
 					xInBig,
 					mask,
 				}
+
+				// printProof(proofRaw)
+
 				err = verifyProof1(t, pubs, proofRaw)
 				if (err != nil) != tt.wantErr {
 					t.Errorf("ZKProver.GenerateZKProofPerSample() verifyProof err: %v", err)
@@ -123,6 +126,38 @@ func TestZKProver_GenerateZKProofPerSample(t *testing.T) {
 			})
 		}
 	}
+}
+
+// Print the proof in the format required by the contract unit tests
+func printProof(proof []byte) {
+	var a, c [2][32]byte
+	var b [2][2][32]byte
+
+	if len(proof) < 256 {
+		fmt.Println("Invalid proof length")
+		return
+	}
+
+	copy(a[0][:], proof[0:32])
+	copy(a[1][:], proof[32:64])
+
+	copy(b[0][0][:], proof[64:96])
+	copy(b[0][1][:], proof[96:128])
+	copy(b[1][0][:], proof[128:160])
+	copy(b[1][1][:], proof[160:192])
+
+	copy(c[0][:], proof[192:224])
+	copy(c[1][:], proof[224:256])
+
+	fmt.Printf("[\n  [\n    \"%s\",\n    \"%s\"\n  ],\n  [\n    [\n      \"%s\",\n      \"%s\"\n    ],\n    [\n      \"%s\",\n      \"%s\"\n    ]\n  ],\n  [\n    \"%s\",\n    \"%s\"\n  ]\n]",
+		common.BytesToHash(a[0][:]).Hex(),
+		common.BytesToHash(a[1][:]).Hex(),
+		common.BytesToHash(b[0][0][:]).Hex(),
+		common.BytesToHash(b[0][1][:]).Hex(),
+		common.BytesToHash(b[1][0][:]).Hex(),
+		common.BytesToHash(b[1][1][:]).Hex(),
+		common.BytesToHash(c[0][:]).Hex(),
+		common.BytesToHash(c[1][:]).Hex())
 }
 
 func GenerateMask(encodingKey common.Hash, sampleIdx uint64) (*big.Int, error) {
