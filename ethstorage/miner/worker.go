@@ -426,7 +426,9 @@ func (w *worker) resultLoop() {
 						s.Failed++
 						errorCache = append(errorCache, miningError{result.startShardId, result.blockNumber, err})
 						var diff *big.Int
-						if strings.Contains(err.Error(), "diff not match") {
+						// error message "StorageContract: diff not match" change to custom error StorageContract_DifficultyNotMet()
+						// custom error selector: keccak256("StorageContract_DifficultyNotMet()")[0:4] = 0x4e14f6d5
+						if strings.Contains(err.Error(), "0x4e14f6d5") {
 							info, err := w.l1API.GetMiningInfo(
 								context.Background(),
 								w.storageMgr.ContractAddress(),

@@ -83,8 +83,8 @@ INFO [08-01|07:21:28.426] Composed calldata                        calldata=0xf9
 INFO [08-01|07:21:28.451] Query baseFee done                       baseFee=251
 INFO [08-01|07:21:28.477] Query gas tip cap done                   gasTipGap=1,000,000
 INFO [08-01|07:21:28.477] Suggested gas fee cap                    gasFeeCap=1,000,251
-ERROR[08-01|07:21:28.509] Estimate gas failed                      error="execution reverted: EthStorageContract2: invalid samples"
-ERROR[08-01|07:21:28.509] Failed to submit mined result            shard=1 block=8,887,319 error="failed to estimate gas: execution reverted: EthStorageContract2: invalid samples"
+ERROR[08-01|07:21:28.509] Estimate gas failed                      error="execution reverted: ErrorData: 0x2f640fbc"
+ERROR[08-01|07:21:28.509] Failed to submit mined result            shard=1 block=8,887,319 error="failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
 INFO [08-01|07:21:29.582] Don't find blob in the cache, will try to download directly blockNumber=9,584,593 start=9,584,593 end=9,584,593 toCache=true
 INFO [08-01|07:21:29.914] Downloaded and encoded                   blockNumber=9,584,593 kvIdx=11916
 INFO [08-01|07:21:29.964] Downloaded and encoded                   blockNumber=9,584,593 kvIdx=11917

@@ -5172,8 +5172,8 @@ t=2025-02-05T05:50:54+0000 lvl=info msg="Composed calldata"                     
 t=2025-02-05T05:50:54+0000 lvl=info msg="Query baseFee done"                    baseFee=251
 t=2025-02-05T05:50:54+0000 lvl=info msg="Query gas tip cap done"                gasTipGap=1,000,000
 t=2025-02-05T05:50:54+0000 lvl=info msg="Suggested gas fee cap"                 gasFeeCap=1,000,251
-t=2025-02-05T05:50:54+0000 lvl=eror msg="Estimate gas failed"                   error="execution reverted: StorageContract: diff not match"
-t=2025-02-05T05:50:54+0000 lvl=eror msg="Failed to submit mined result"         shard=1 block=7,643,065 difficulty=21,944,957 error="failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T05:50:54+0000 lvl=eror msg="Estimate gas failed"                   error="execution reverted: ErrorData: 0x4e14f6d5"
+t=2025-02-05T05:50:54+0000 lvl=eror msg="Failed to submit mined result"         shard=1 block=7,643,065 difficulty=21,944,957 error="failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T05:50:55+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,068 difficulty=21,944,957 lastMineTime=1,738,734,516 proofsSubmitted=25
 t=2025-02-05T05:50:55+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,068 difficulty=23,337,946 lastMineTime=1,738,734,528 proofsSubmitted=27
 t=2025-02-05T05:50:56+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.7s shard=0 block=7,643,068
@@ -5202,7 +5202,7 @@ t=2025-02-05T05:51:45+0000 lvl=info msg="Using snarkjs zk prover"
 t=2025-02-05T05:51:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T05:51:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=27 failed=0 dropped=2
 t=2025-02-05T05:51:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=25 failed=1 dropped=1
-t=2025-02-05T05:51:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T05:51:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T05:51:55+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,073 difficulty=21,944,957 lastMineTime=1,738,734,516 proofsSubmitted=25
 t=2025-02-05T05:51:55+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,073 difficulty=23,337,946 lastMineTime=1,738,734,528 proofsSubmitted=27
 t=2025-02-05T05:51:56+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.8s shard=1 block=7,643,073
@@ -5235,7 +5235,7 @@ t=2025-02-05T05:52:30+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-05T05:52:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T05:52:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=27 failed=0 dropped=2
 t=2025-02-05T05:52:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=26 failed=1 dropped=1
-t=2025-02-05T05:52:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T05:52:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T05:52:54+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,076 difficulty=22,630,736 lastMineTime=1,738,734,624 proofsSubmitted=26
 t=2025-02-05T05:52:54+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,076 difficulty=23,337,946 lastMineTime=1,738,734,528 proofsSubmitted=27
 t=2025-02-05T05:52:54+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.3s shard=0 block=7,643,076
@@ -5261,7 +5261,7 @@ t=2025-02-05T05:53:42+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-05T05:53:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T05:53:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=27 failed=0 dropped=2
 t=2025-02-05T05:53:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=26 failed=1 dropped=1
-t=2025-02-05T05:53:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T05:53:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T05:53:54+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,081 difficulty=22,630,736 lastMineTime=1,738,734,624 proofsSubmitted=26
 t=2025-02-05T05:53:54+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,081 difficulty=23,337,946 lastMineTime=1,738,734,528 proofsSubmitted=27
 t=2025-02-05T05:53:54+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.4s shard=1 block=7,643,081
@@ -5290,7 +5290,7 @@ t=2025-02-05T05:54:43+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-05T05:54:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T05:54:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=27 failed=0 dropped=2
 t=2025-02-05T05:54:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=26 failed=1 dropped=1
-t=2025-02-05T05:54:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T05:54:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T05:54:59+0000 lvl=info msg="Generate zk proof done"                sampleIdx="[3543 581]"  timeUsed(s)=28.036
 t=2025-02-05T05:54:59+0000 lvl=info msg="Got storage proof"                     shard=1 block=7,643,083 kvIdx="[15728 11948]" sampleIdxsInKv="[3543 581]"
 t=2025-02-05T05:54:59+0000 lvl=info msg="Set mining result"                     shard=1 block=7,643,083 nonce=664,236
@@ -5331,7 +5331,7 @@ t=2025-02-05T05:55:45+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-05T05:55:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T05:55:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=27 failed=0 dropped=2
 t=2025-02-05T05:55:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=27 failed=1 dropped=1
-t=2025-02-05T05:55:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T05:55:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T05:56:06+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,091 difficulty=23,337,946 lastMineTime=1,738,734,780 proofsSubmitted=27
 t=2025-02-05T05:56:06+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,091 difficulty=23,337,946 lastMineTime=1,738,734,528 proofsSubmitted=27
 t=2025-02-05T05:56:06+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.5s shard=1 block=7,643,091
@@ -5355,7 +5355,7 @@ t=2025-02-05T05:56:42+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-05T05:56:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T05:56:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=27 failed=0 dropped=2
 t=2025-02-05T05:56:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=27 failed=1 dropped=1
-t=2025-02-05T05:56:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T05:56:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T05:56:54+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,096 difficulty=23,337,946 lastMineTime=1,738,734,780 proofsSubmitted=27
 t=2025-02-05T05:56:54+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,096 difficulty=23,337,946 lastMineTime=1,738,734,528 proofsSubmitted=27
 t=2025-02-05T05:56:54+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.4s shard=1 block=7,643,096
@@ -5379,7 +5379,7 @@ t=2025-02-05T05:57:42+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-05T05:57:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T05:57:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=27 failed=0 dropped=2
 t=2025-02-05T05:57:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=27 failed=1 dropped=1
-t=2025-02-05T05:57:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T05:57:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T05:57:54+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,101 difficulty=23,337,946 lastMineTime=1,738,734,780 proofsSubmitted=27
 t=2025-02-05T05:57:54+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,101 difficulty=23,337,946 lastMineTime=1,738,734,528 proofsSubmitted=27
 t=2025-02-05T05:57:54+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.3s shard=0 block=7,643,101
@@ -5403,7 +5403,7 @@ t=2025-02-05T05:58:43+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-05T05:58:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T05:58:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=27 failed=0 dropped=2
 t=2025-02-05T05:58:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=27 failed=1 dropped=1
-t=2025-02-05T05:58:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T05:58:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T05:58:54+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,106 difficulty=23,337,946 lastMineTime=1,738,734,780 proofsSubmitted=27
 t=2025-02-05T05:58:54+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,106 difficulty=23,337,946 lastMineTime=1,738,734,528 proofsSubmitted=27
 t=2025-02-05T05:58:55+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.6s shard=1 block=7,643,106
@@ -5428,7 +5428,7 @@ t=2025-02-05T05:59:43+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-05T05:59:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T05:59:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=27 failed=1 dropped=1
 t=2025-02-05T05:59:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=27 failed=0 dropped=2
-t=2025-02-05T05:59:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T05:59:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T05:59:54+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,110 difficulty=23,337,946 lastMineTime=1,738,734,780 proofsSubmitted=27
 t=2025-02-05T05:59:54+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,110 difficulty=23,337,946 lastMineTime=1,738,734,528 proofsSubmitted=27
 t=2025-02-05T05:59:55+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.7s shard=1 block=7,643,110
@@ -5471,7 +5471,7 @@ t=2025-02-05T06:00:43+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-05T06:00:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T06:00:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=27 failed=0 dropped=2
 t=2025-02-05T06:00:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=28 failed=1 dropped=1
-t=2025-02-05T06:00:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T06:00:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T06:00:54+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,115 difficulty=24,067,256 lastMineTime=1,738,735,092 proofsSubmitted=28
 t=2025-02-05T06:00:54+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,115 difficulty=23,337,946 lastMineTime=1,738,734,528 proofsSubmitted=27
 t=2025-02-05T06:00:55+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.4s shard=0 block=7,643,115
@@ -5495,7 +5495,7 @@ t=2025-02-05T06:01:43+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-05T06:01:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T06:01:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=27 failed=0 dropped=2
 t=2025-02-05T06:01:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=28 failed=1 dropped=1
-t=2025-02-05T06:01:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T06:01:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T06:01:54+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,120 difficulty=23,337,946 lastMineTime=1,738,734,528 proofsSubmitted=27
 t=2025-02-05T06:01:54+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,120 difficulty=24,067,256 lastMineTime=1,738,735,092 proofsSubmitted=28
 t=2025-02-05T06:01:55+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.4s shard=1 block=7,643,120
@@ -5519,7 +5519,7 @@ t=2025-02-05T06:02:43+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-05T06:02:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T06:02:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=27 failed=0 dropped=2
 t=2025-02-05T06:02:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=28 failed=1 dropped=1
-t=2025-02-05T06:02:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T06:02:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T06:02:55+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,125 difficulty=24,067,256 lastMineTime=1,738,735,092 proofsSubmitted=28
 t=2025-02-05T06:02:55+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,125 difficulty=23,337,946 lastMineTime=1,738,734,528 proofsSubmitted=27
 t=2025-02-05T06:02:55+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.3s shard=1 block=7,643,125
@@ -5587,7 +5587,7 @@ t=2025-02-05T06:03:52+0000 lvl=info msg="Mining transaction details"            
 t=2025-02-05T06:03:52+0000 lvl=info msg="Mining transaction accounting (in ether)" reward=0.000180431 cost=0.000000482 profit=0.000179949
 t=2025-02-05T06:03:52+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=29 failed=0 dropped=2
 t=2025-02-05T06:03:52+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=28 failed=1 dropped=1
-t=2025-02-05T06:03:52+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T06:03:52+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T06:03:55+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,130 difficulty=24,067,256 lastMineTime=1,738,735,092 proofsSubmitted=28
 t=2025-02-05T06:03:55+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,130 difficulty=24,819,357 lastMineTime=1,738,735,320 proofsSubmitted=29
 t=2025-02-05T06:03:55+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.5s shard=0 block=7,643,130
@@ -5607,7 +5607,7 @@ t=2025-02-05T06:04:43+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-05T06:04:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T06:04:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=29 failed=0 dropped=2
 t=2025-02-05T06:04:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=28 failed=1 dropped=1
-t=2025-02-05T06:04:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T06:04:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T06:04:55+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,134 difficulty=24,819,357 lastMineTime=1,738,735,320 proofsSubmitted=29
 t=2025-02-05T06:04:55+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,134 difficulty=24,067,256 lastMineTime=1,738,735,092 proofsSubmitted=28
 t=2025-02-05T06:04:55+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.3s shard=0 block=7,643,134
@@ -5631,7 +5631,7 @@ t=2025-02-05T06:05:44+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-05T06:05:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T06:05:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=28 failed=1 dropped=1
 t=2025-02-05T06:05:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=29 failed=0 dropped=2
-t=2025-02-05T06:05:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T06:05:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T06:05:55+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,139 difficulty=24,067,256 lastMineTime=1,738,735,092 proofsSubmitted=28
 t=2025-02-05T06:05:55+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,139 difficulty=24,819,357 lastMineTime=1,738,735,320 proofsSubmitted=29
 t=2025-02-05T06:05:56+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.0s shard=0 block=7,643,139
@@ -5653,7 +5653,7 @@ t=2025-02-05T06:06:44+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-05T06:06:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T06:06:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=29 failed=0 dropped=2
 t=2025-02-05T06:06:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=28 failed=1 dropped=1
-t=2025-02-05T06:06:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T06:06:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T06:06:55+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,143 difficulty=24,819,357 lastMineTime=1,738,735,320 proofsSubmitted=29
 t=2025-02-05T06:06:55+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,143 difficulty=24,067,256 lastMineTime=1,738,735,092 proofsSubmitted=28
 t=2025-02-05T06:06:56+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.8s shard=0 block=7,643,143
@@ -5677,7 +5677,7 @@ t=2025-02-05T06:07:44+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-05T06:07:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T06:07:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=29 failed=0 dropped=2
 t=2025-02-05T06:07:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=28 failed=1 dropped=1
-t=2025-02-05T06:07:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T06:07:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T06:07:55+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,148 difficulty=24,067,256 lastMineTime=1,738,735,092 proofsSubmitted=28
 t=2025-02-05T06:07:55+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,148 difficulty=24,819,357 lastMineTime=1,738,735,320 proofsSubmitted=29
 t=2025-02-05T06:07:56+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.7s shard=0 block=7,643,148
@@ -5701,7 +5701,7 @@ t=2025-02-05T06:08:44+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-05T06:08:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T06:08:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=29 failed=0 dropped=2
 t=2025-02-05T06:08:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=28 failed=1 dropped=1
-t=2025-02-05T06:08:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T06:08:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T06:08:55+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,153 difficulty=24,067,256 lastMineTime=1,738,735,092 proofsSubmitted=28
 t=2025-02-05T06:08:55+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,153 difficulty=24,819,357 lastMineTime=1,738,735,320 proofsSubmitted=29
 t=2025-02-05T06:08:56+0000 lvl=info msg="Calculated a valid hash"               shard=1 block=7,643,153 timestamp=1,738,735,656 randao=0x5b3f2a22ac6b78811f958119225c940815d3255ff7f311fed4849eeab9544f0b nonce=678,142   hash0=0xc017b9bfa464585e925e4737db7b2c390850bb43214310b423ef5ce93c70e78c hash1=0x0000005147ef5579fe2fbb9c74cc4860bc33d8c54b1040bcfdff2c537ccad6c3 sampleIdxs="[40953740 55067453]"
@@ -5747,7 +5747,7 @@ t=2025-02-05T06:09:44+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-05T06:09:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T06:09:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=29 failed=0 dropped=2
 t=2025-02-05T06:09:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=29 failed=1 dropped=1
-t=2025-02-05T06:09:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T06:09:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T06:09:55+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,158 difficulty=24,819,357 lastMineTime=1,738,735,656 proofsSubmitted=29
 t=2025-02-05T06:09:55+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,158 difficulty=24,819,357 lastMineTime=1,738,735,320 proofsSubmitted=29
 t=2025-02-05T06:09:56+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.7s shard=0 block=7,643,158
@@ -5771,7 +5771,7 @@ t=2025-02-05T06:10:45+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-05T06:10:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T06:10:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=29 failed=0 dropped=2
 t=2025-02-05T06:10:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=29 failed=1 dropped=1
-t=2025-02-05T06:10:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T06:10:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T06:10:55+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,163 difficulty=24,819,357 lastMineTime=1,738,735,656 proofsSubmitted=29
 t=2025-02-05T06:10:55+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,163 difficulty=24,819,357 lastMineTime=1,738,735,320 proofsSubmitted=29
 t=2025-02-05T06:10:56+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.6s shard=1 block=7,643,163
@@ -5800,7 +5800,7 @@ t=2025-02-05T06:11:44+0000 lvl=info msg="Using snarkjs zk prover"
 t=2025-02-05T06:11:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T06:11:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=29 failed=0 dropped=2
 t=2025-02-05T06:11:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=29 failed=1 dropped=1
-t=2025-02-05T06:11:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T06:11:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T06:11:55+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,168 difficulty=24,819,357 lastMineTime=1,738,735,656 proofsSubmitted=29
 t=2025-02-05T06:11:55+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,168 difficulty=24,819,357 lastMineTime=1,738,735,320 proofsSubmitted=29
 t=2025-02-05T06:11:57+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.8s shard=0 block=7,643,168
@@ -5837,7 +5837,7 @@ t=2025-02-05T06:12:42+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-05T06:12:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T06:12:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=29 failed=1 dropped=1
 t=2025-02-05T06:12:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=30 failed=0 dropped=2
-t=2025-02-05T06:12:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T06:12:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T06:12:50+0000 lvl=info msg="Cleanup done"                          blockFinalized=1,936,267 blocksCleaned=0 blobsCleaned=0
 t=2025-02-05T06:12:50+0000 lvl=info msg="BlobDiskCache cleanup done"            took="20.639µs"
 t=2025-02-05T06:12:54+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,172 difficulty=24,819,357 lastMineTime=1,738,735,656 proofsSubmitted=29
@@ -5863,7 +5863,7 @@ t=2025-02-05T06:13:42+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-05T06:13:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T06:13:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=29 failed=1 dropped=1
 t=2025-02-05T06:13:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=30 failed=0 dropped=2
-t=2025-02-05T06:13:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T06:13:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T06:13:54+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,177 difficulty=24,819,357 lastMineTime=1,738,735,656 proofsSubmitted=29
 t=2025-02-05T06:13:54+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,177 difficulty=25,594,961 lastMineTime=1,738,735,824 proofsSubmitted=30
 t=2025-02-05T06:13:54+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.5s shard=0 block=7,643,177
@@ -5887,7 +5887,7 @@ t=2025-02-05T06:14:42+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-05T06:14:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T06:14:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=29 failed=1 dropped=1
 t=2025-02-05T06:14:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=30 failed=0 dropped=2
-t=2025-02-05T06:14:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T06:14:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T06:14:54+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,182 difficulty=24,819,357 lastMineTime=1,738,735,656 proofsSubmitted=29
 t=2025-02-05T06:14:54+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,182 difficulty=25,594,961 lastMineTime=1,738,735,824 proofsSubmitted=30
 t=2025-02-05T06:14:54+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.4s shard=1 block=7,643,182
@@ -5930,7 +5930,7 @@ t=2025-02-05T06:15:43+0000 lvl=info msg="Using snarkjs zk prover"
 t=2025-02-05T06:15:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T06:15:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=31 failed=0 dropped=2
 t=2025-02-05T06:15:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=29 failed=1 dropped=1
-t=2025-02-05T06:15:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T06:15:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T06:15:54+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,185 difficulty=24,819,357 lastMineTime=1,738,735,656 proofsSubmitted=29
 t=2025-02-05T06:15:54+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,185 difficulty=26,394,803 lastMineTime=1,738,736,016 proofsSubmitted=31
 t=2025-02-05T06:15:54+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.6s shard=0 block=7,643,185
@@ -5971,7 +5971,7 @@ t=2025-02-05T06:16:42+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-05T06:16:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T06:16:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=32 failed=0 dropped=2
 t=2025-02-05T06:16:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=29 failed=1 dropped=1
-t=2025-02-05T06:16:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T06:16:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T06:16:54+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,190 difficulty=24,819,357 lastMineTime=1,738,735,656 proofsSubmitted=29
 t=2025-02-05T06:16:54+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,190 difficulty=27,219,640 lastMineTime=1,738,736,040 proofsSubmitted=32
 t=2025-02-05T06:16:54+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.6s shard=1 block=7,643,190
@@ -5995,7 +5995,7 @@ t=2025-02-05T06:17:43+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-05T06:17:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T06:17:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=32 failed=0 dropped=2
 t=2025-02-05T06:17:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=29 failed=1 dropped=1
-t=2025-02-05T06:17:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T06:17:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T06:18:06+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,195 difficulty=24,819,357 lastMineTime=1,738,735,656 proofsSubmitted=29
 t=2025-02-05T06:18:06+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,195 difficulty=27,219,640 lastMineTime=1,738,736,040 proofsSubmitted=32
 t=2025-02-05T06:18:06+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.4s shard=1 block=7,643,195
@@ -6011,7 +6011,7 @@ t=2025-02-05T06:18:30+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-05T06:18:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T06:18:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=32 failed=0 dropped=2
 t=2025-02-05T06:18:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=29 failed=1 dropped=1
-t=2025-02-05T06:18:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T06:18:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T06:18:54+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,198 difficulty=24,819,357 lastMineTime=1,738,735,656 proofsSubmitted=29
 t=2025-02-05T06:18:54+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,198 difficulty=27,219,640 lastMineTime=1,738,736,040 proofsSubmitted=32
 t=2025-02-05T06:18:55+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.6s shard=0 block=7,643,198
@@ -6042,7 +6042,7 @@ t=2025-02-05T06:19:43+0000 lvl=info msg="Using snarkjs zk prover"
 t=2025-02-05T06:19:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T06:19:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=32 failed=0 dropped=2
 t=2025-02-05T06:19:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=29 failed=1 dropped=1
-t=2025-02-05T06:19:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T06:19:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T06:19:54+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,203 difficulty=24,819,357 lastMineTime=1,738,735,656 proofsSubmitted=29
 t=2025-02-05T06:19:54+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,203 difficulty=27,219,640 lastMineTime=1,738,736,040 proofsSubmitted=32
 t=2025-02-05T06:19:55+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.7s shard=1 block=7,643,203
@@ -6083,7 +6083,7 @@ t=2025-02-05T06:20:43+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-05T06:20:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T06:20:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=33 failed=0 dropped=2
 t=2025-02-05T06:20:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=29 failed=1 dropped=1
-t=2025-02-05T06:20:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T06:20:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T06:20:54+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,208 difficulty=28,070,253 lastMineTime=1,738,736,304 proofsSubmitted=33
 t=2025-02-05T06:20:54+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,208 difficulty=24,819,357 lastMineTime=1,738,735,656 proofsSubmitted=29
 t=2025-02-05T06:20:55+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.8s shard=0 block=7,643,208
@@ -6107,7 +6107,7 @@ t=2025-02-05T06:21:44+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-05T06:21:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T06:21:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=33 failed=0 dropped=2
 t=2025-02-05T06:21:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=29 failed=1 dropped=1
-t=2025-02-05T06:21:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T06:21:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T06:21:54+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,213 difficulty=24,819,357 lastMineTime=1,738,735,656 proofsSubmitted=29
 t=2025-02-05T06:21:54+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,213 difficulty=28,070,253 lastMineTime=1,738,736,304 proofsSubmitted=33
 t=2025-02-05T06:21:55+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.7s shard=1 block=7,643,213
@@ -6131,7 +6131,7 @@ t=2025-02-05T06:22:43+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-05T06:22:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T06:22:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=33 failed=0 dropped=2
 t=2025-02-05T06:22:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=29 failed=1 dropped=1
-t=2025-02-05T06:22:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T06:22:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T06:22:55+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,218 difficulty=24,819,357 lastMineTime=1,738,735,656 proofsSubmitted=29
 t=2025-02-05T06:22:55+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,218 difficulty=28,070,253 lastMineTime=1,738,736,304 proofsSubmitted=33
 t=2025-02-05T06:22:56+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.1s shard=0 block=7,643,218
@@ -6177,7 +6177,7 @@ t=2025-02-05T06:23:44+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-05T06:23:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T06:23:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=33 failed=0 dropped=2
 t=2025-02-05T06:23:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=30 failed=1 dropped=1
-t=2025-02-05T06:23:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T06:23:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T06:23:55+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,223 difficulty=25,594,961 lastMineTime=1,738,736,508 proofsSubmitted=30
 t=2025-02-05T06:23:55+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,223 difficulty=28,070,253 lastMineTime=1,738,736,304 proofsSubmitted=33
 t=2025-02-05T06:23:55+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.8s shard=0 block=7,643,223
@@ -6201,7 +6201,7 @@ t=2025-02-05T06:24:44+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-05T06:24:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T06:24:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=33 failed=0 dropped=2
 t=2025-02-05T06:24:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=30 failed=1 dropped=1
-t=2025-02-05T06:24:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T06:24:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T06:24:55+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,228 difficulty=25,594,961 lastMineTime=1,738,736,508 proofsSubmitted=30
 t=2025-02-05T06:24:55+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,228 difficulty=28,070,253 lastMineTime=1,738,736,304 proofsSubmitted=33
 t=2025-02-05T06:24:55+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.7s shard=0 block=7,643,228
@@ -6227,7 +6227,7 @@ t=2025-02-05T06:25:44+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-05T06:25:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T06:25:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=33 failed=0 dropped=2
 t=2025-02-05T06:25:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=30 failed=1 dropped=1
-t=2025-02-05T06:25:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T06:25:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T06:25:55+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,233 difficulty=25,594,961 lastMineTime=1,738,736,508 proofsSubmitted=30
 t=2025-02-05T06:25:55+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,233 difficulty=28,070,253 lastMineTime=1,738,736,304 proofsSubmitted=33
 t=2025-02-05T06:25:56+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.0s shard=1 block=7,643,233
@@ -6251,7 +6251,7 @@ t=2025-02-05T06:26:44+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-05T06:26:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T06:26:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=33 failed=0 dropped=2
 t=2025-02-05T06:26:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=30 failed=1 dropped=1
-t=2025-02-05T06:26:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T06:26:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T06:26:55+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,238 difficulty=25,594,961 lastMineTime=1,738,736,508 proofsSubmitted=30
 t=2025-02-05T06:26:55+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,238 difficulty=28,070,253 lastMineTime=1,738,736,304 proofsSubmitted=33
 t=2025-02-05T06:26:56+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.6s shard=1 block=7,643,238
@@ -6271,7 +6271,7 @@ t=2025-02-05T06:27:44+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-05T06:27:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T06:27:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=33 failed=0 dropped=2
 t=2025-02-05T06:27:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=30 failed=1 dropped=1
-t=2025-02-05T06:27:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T06:27:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T06:27:55+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,242 difficulty=25,594,961 lastMineTime=1,738,736,508 proofsSubmitted=30
 t=2025-02-05T06:27:55+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,242 difficulty=28,070,253 lastMineTime=1,738,736,304 proofsSubmitted=33
 t=2025-02-05T06:27:56+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.9s shard=0 block=7,643,242
@@ -6295,7 +6295,7 @@ t=2025-02-05T06:28:44+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-05T06:28:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T06:28:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=33 failed=0 dropped=2
 t=2025-02-05T06:28:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=30 failed=1 dropped=1
-t=2025-02-05T06:28:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T06:28:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T06:28:55+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,247 difficulty=25,594,961 lastMineTime=1,738,736,508 proofsSubmitted=30
 t=2025-02-05T06:28:55+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,247 difficulty=28,070,253 lastMineTime=1,738,736,304 proofsSubmitted=33
 t=2025-02-05T06:28:56+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.1s shard=1 block=7,643,247
@@ -6320,7 +6320,7 @@ t=2025-02-05T06:29:45+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-05T06:29:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T06:29:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=33 failed=0 dropped=2
 t=2025-02-05T06:29:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=30 failed=1 dropped=1
-t=2025-02-05T06:29:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T06:29:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T06:29:55+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,251 difficulty=25,594,961 lastMineTime=1,738,736,508 proofsSubmitted=30
 t=2025-02-05T06:29:55+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,251 difficulty=28,070,253 lastMineTime=1,738,736,304 proofsSubmitted=33
 t=2025-02-05T06:29:57+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.3s shard=1 block=7,643,251
@@ -6357,7 +6357,7 @@ t=2025-02-05T06:30:44+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-05T06:30:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T06:30:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=33 failed=0 dropped=2
 t=2025-02-05T06:30:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=31 failed=1 dropped=1
-t=2025-02-05T06:30:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T06:30:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T06:30:55+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,255 difficulty=26,394,803 lastMineTime=1,738,736,880 proofsSubmitted=31
 t=2025-02-05T06:30:55+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,255 difficulty=28,070,253 lastMineTime=1,738,736,304 proofsSubmitted=33
 t=2025-02-05T06:30:56+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.9s shard=1 block=7,643,255
@@ -6377,7 +6377,7 @@ t=2025-02-05T06:31:32+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-05T06:31:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T06:31:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=33 failed=0 dropped=2
 t=2025-02-05T06:31:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=31 failed=1 dropped=1
-t=2025-02-05T06:31:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T06:31:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T06:32:02+0000 lvl=info msg="Cleanup done"                          blockFinalized=1,936,267 blocksCleaned=0 blobsCleaned=0
 t=2025-02-05T06:32:02+0000 lvl=info msg="BlobDiskCache cleanup done"            took="35.256µs"
 t=2025-02-05T06:32:17+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,259 difficulty=26,394,803 lastMineTime=1,738,736,880 proofsSubmitted=31
@@ -6417,7 +6417,7 @@ t=2025-02-05T06:32:48+0000 lvl=info msg="Mining transaction accounting (in ether
 t=2025-02-05T06:32:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T06:32:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=33 failed=0 dropped=2
 t=2025-02-05T06:32:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=32 failed=1 dropped=1
-t=2025-02-05T06:32:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T06:32:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T06:32:54+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,262 difficulty=27,219,640 lastMineTime=1,738,737,024 proofsSubmitted=32
 t=2025-02-05T06:32:54+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,262 difficulty=28,070,253 lastMineTime=1,738,736,304 proofsSubmitted=33
 t=2025-02-05T06:32:54+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.6s shard=1 block=7,643,262
@@ -6468,7 +6468,7 @@ t=2025-02-05T06:33:50+0000 lvl=info msg="Mining transaction details"            
 t=2025-02-05T06:33:50+0000 lvl=info msg="Mining transaction accounting (in ether)" reward=0.006134631 cost=0.000000482 profit=0.006134149
 t=2025-02-05T06:33:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=34 failed=0 dropped=2
 t=2025-02-05T06:33:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=32 failed=1 dropped=1
-t=2025-02-05T06:33:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T06:33:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T06:33:54+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,267 difficulty=27,219,640 lastMineTime=1,738,737,024 proofsSubmitted=32
 t=2025-02-05T06:33:54+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,267 difficulty=28,947,448 lastMineTime=1,738,737,120 proofsSubmitted=34
 t=2025-02-05T06:33:54+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.3s shard=1 block=7,643,267
@@ -6509,7 +6509,7 @@ t=2025-02-05T06:34:42+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-05T06:34:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T06:34:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=35 failed=0 dropped=2
 t=2025-02-05T06:34:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=32 failed=1 dropped=1
-t=2025-02-05T06:34:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T06:34:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T06:34:54+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,272 difficulty=27,219,640 lastMineTime=1,738,737,024 proofsSubmitted=32
 t=2025-02-05T06:34:54+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,272 difficulty=29,852,055 lastMineTime=1,738,737,144 proofsSubmitted=35
 t=2025-02-05T06:34:54+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.5s shard=1 block=7,643,272
@@ -6551,7 +6551,7 @@ t=2025-02-05T06:35:36+0000 lvl=info msg="Mining transaction accounting (in ether
 t=2025-02-05T06:35:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T06:35:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=32 failed=1 dropped=1
 t=2025-02-05T06:35:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=36 failed=0 dropped=2
-t=2025-02-05T06:35:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T06:35:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T06:35:54+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,276 difficulty=27,219,640 lastMineTime=1,738,737,024 proofsSubmitted=32
 t=2025-02-05T06:35:54+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,276 difficulty=30,784,931 lastMineTime=1,738,737,228 proofsSubmitted=36
 t=2025-02-05T06:35:54+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.4s shard=1 block=7,643,276
@@ -6575,7 +6575,7 @@ t=2025-02-05T06:36:43+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-05T06:36:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T06:36:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=36 failed=0 dropped=2
 t=2025-02-05T06:36:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=32 failed=1 dropped=1
-t=2025-02-05T06:36:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T06:36:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T06:36:54+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,281 difficulty=27,219,640 lastMineTime=1,738,737,024 proofsSubmitted=32
 t=2025-02-05T06:36:54+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,281 difficulty=30,784,931 lastMineTime=1,738,737,228 proofsSubmitted=36
 t=2025-02-05T06:36:55+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.5s shard=0 block=7,643,281
@@ -6601,7 +6601,7 @@ t=2025-02-05T06:37:31+0000 lvl=info msg="Using snarkjs zk prover"
 t=2025-02-05T06:37:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T06:37:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=36 failed=0 dropped=2
 t=2025-02-05T06:37:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=32 failed=1 dropped=1
-t=2025-02-05T06:37:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T06:37:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T06:37:54+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,284 difficulty=27,219,640 lastMineTime=1,738,737,024 proofsSubmitted=32
 t=2025-02-05T06:37:54+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,284 difficulty=30,784,931 lastMineTime=1,738,737,228 proofsSubmitted=36
 t=2025-02-05T06:37:55+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.2s shard=1 block=7,643,284
@@ -6652,7 +6652,7 @@ t=2025-02-05T06:38:43+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-05T06:38:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T06:38:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=36 failed=0 dropped=2
 t=2025-02-05T06:38:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=33 failed=1 dropped=2
-t=2025-02-05T06:38:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T06:38:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T06:38:54+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,288 difficulty=28,070,253 lastMineTime=1,738,737,360 proofsSubmitted=33
 t=2025-02-05T06:38:54+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,288 difficulty=30,784,931 lastMineTime=1,738,737,228 proofsSubmitted=36
 t=2025-02-05T06:38:55+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.9s shard=1 block=7,643,288
@@ -6664,7 +6664,7 @@ t=2025-02-05T06:39:07+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-05T06:39:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T06:39:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=36 failed=0 dropped=2
 t=2025-02-05T06:39:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=33 failed=1 dropped=2
-t=2025-02-05T06:39:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T06:39:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T06:40:19+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,290 difficulty=28,070,253 lastMineTime=1,738,737,360 proofsSubmitted=33
 t=2025-02-05T06:40:19+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,290 difficulty=30,784,931 lastMineTime=1,738,737,228 proofsSubmitted=36
 t=2025-02-05T06:40:19+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.9s shard=0 block=7,643,290
@@ -6680,7 +6680,7 @@ t=2025-02-05T06:40:43+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-05T06:40:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T06:40:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=33 failed=1 dropped=2
 t=2025-02-05T06:40:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=36 failed=0 dropped=2
-t=2025-02-05T06:40:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T06:40:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T06:40:55+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,293 difficulty=28,070,253 lastMineTime=1,738,737,360 proofsSubmitted=33
 t=2025-02-05T06:40:55+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,293 difficulty=30,784,931 lastMineTime=1,738,737,228 proofsSubmitted=36
 t=2025-02-05T06:40:55+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.8s shard=1 block=7,643,293
@@ -6704,7 +6704,7 @@ t=2025-02-05T06:41:43+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-05T06:41:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T06:41:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=36 failed=0 dropped=2
 t=2025-02-05T06:41:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=33 failed=1 dropped=2
-t=2025-02-05T06:41:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T06:41:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T06:41:55+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,298 difficulty=30,784,931 lastMineTime=1,738,737,228 proofsSubmitted=36
 t=2025-02-05T06:41:55+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,298 difficulty=28,070,253 lastMineTime=1,738,737,360 proofsSubmitted=33
 t=2025-02-05T06:41:55+0000 lvl=info msg="Calculated a valid hash"               shard=0 block=7,643,298 timestamp=1,738,737,636 randao=0x283e9f892233d28ae0ab0fe15f0d0233191c93bcc2bbb1f983e868a48165412c nonce=435,980   hash0=0x969c4bfacc46039f8d720601b8dc54cfc12ea8278b4e701dc409b8482b288bed hash1=0x00000011a5ba0d4a04a6c5414c284eff584c45a95b5bc31b669ba3325f5f52c9 sampleIdxs="[19434477 28867203]"
@@ -6750,7 +6750,7 @@ t=2025-02-05T06:42:44+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-05T06:42:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T06:42:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=37 failed=0 dropped=2
 t=2025-02-05T06:42:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=33 failed=1 dropped=2
-t=2025-02-05T06:42:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T06:42:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T06:42:55+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,303 difficulty=28,070,253 lastMineTime=1,738,737,360 proofsSubmitted=33
 t=2025-02-05T06:42:55+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,303 difficulty=31,746,960 lastMineTime=1,738,737,636 proofsSubmitted=37
 t=2025-02-05T06:42:56+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.1s shard=0 block=7,643,303
@@ -6774,7 +6774,7 @@ t=2025-02-05T06:43:44+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-05T06:43:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T06:43:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=33 failed=1 dropped=2
 t=2025-02-05T06:43:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=37 failed=0 dropped=2
-t=2025-02-05T06:43:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T06:43:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T06:44:07+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,308 difficulty=28,070,253 lastMineTime=1,738,737,360 proofsSubmitted=33
 t=2025-02-05T06:44:07+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,308 difficulty=31,746,960 lastMineTime=1,738,737,636 proofsSubmitted=37
 t=2025-02-05T06:44:08+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.9s shard=1 block=7,643,308
@@ -6790,7 +6790,7 @@ t=2025-02-05T06:44:44+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-05T06:44:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T06:44:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=37 failed=0 dropped=2
 t=2025-02-05T06:44:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=33 failed=1 dropped=2
-t=2025-02-05T06:44:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T06:44:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T06:44:50+0000 lvl=info msg="Cleanup done"                          blockFinalized=1,936,267 blocksCleaned=0 blobsCleaned=0
 t=2025-02-05T06:44:50+0000 lvl=info msg="BlobDiskCache cleanup done"            took="507.778µs"
 t=2025-02-05T06:45:07+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,311 difficulty=28,070,253 lastMineTime=1,738,737,360 proofsSubmitted=33
@@ -6812,7 +6812,7 @@ t=2025-02-05T06:45:44+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-05T06:45:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T06:45:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=37 failed=0 dropped=2
 t=2025-02-05T06:45:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=33 failed=1 dropped=2
-t=2025-02-05T06:45:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T06:45:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T06:45:55+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,315 difficulty=28,070,253 lastMineTime=1,738,737,360 proofsSubmitted=33
 t=2025-02-05T06:45:55+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,315 difficulty=31,746,960 lastMineTime=1,738,737,636 proofsSubmitted=37
 t=2025-02-05T06:45:56+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.2s shard=0 block=7,643,315
@@ -6858,7 +6858,7 @@ t=2025-02-05T06:46:44+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-05T06:46:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T06:46:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=37 failed=0 dropped=2
 t=2025-02-05T06:46:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=34 failed=1 dropped=2
-t=2025-02-05T06:46:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T06:46:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T06:46:55+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,320 difficulty=28,947,448 lastMineTime=1,738,737,888 proofsSubmitted=34
 t=2025-02-05T06:46:55+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,320 difficulty=31,746,960 lastMineTime=1,738,737,636 proofsSubmitted=37
 t=2025-02-05T06:46:56+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.9s shard=0 block=7,643,320
@@ -6882,7 +6882,7 @@ t=2025-02-05T06:47:44+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-05T06:47:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T06:47:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=37 failed=0 dropped=2
 t=2025-02-05T06:47:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=34 failed=1 dropped=2
-t=2025-02-05T06:47:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T06:47:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T06:47:55+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,325 difficulty=28,947,448 lastMineTime=1,738,737,888 proofsSubmitted=34
 t=2025-02-05T06:47:55+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,325 difficulty=31,746,960 lastMineTime=1,738,737,636 proofsSubmitted=37
 t=2025-02-05T06:47:56+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.8s shard=1 block=7,643,325
@@ -6906,7 +6906,7 @@ t=2025-02-05T06:48:45+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-05T06:48:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T06:48:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=37 failed=0 dropped=2
 t=2025-02-05T06:48:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=34 failed=1 dropped=2
-t=2025-02-05T06:48:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T06:48:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T06:48:55+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,330 difficulty=31,746,960 lastMineTime=1,738,737,636 proofsSubmitted=37
 t=2025-02-05T06:48:55+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,330 difficulty=28,947,448 lastMineTime=1,738,737,888 proofsSubmitted=34
 t=2025-02-05T06:48:56+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.6s shard=1 block=7,643,330
@@ -6931,7 +6931,7 @@ t=2025-02-05T06:49:42+0000 lvl=info msg="Using snarkjs zk prover"
 t=2025-02-05T06:49:50+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=0 outbound=1
 t=2025-02-05T06:49:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=37 failed=0 dropped=2
 t=2025-02-05T06:49:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=34 failed=1 dropped=2
-t=2025-02-05T06:49:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: StorageContract: diff not match"
+t=2025-02-05T06:49:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7643065: failed to estimate gas: execution reverted: ErrorData: 0x4e14f6d5"
 t=2025-02-05T06:49:54+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,643,334 difficulty=31,746,960 lastMineTime=1,738,737,636 proofsSubmitted=37
 t=2025-02-05T06:49:54+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,643,334 difficulty=28,947,448 lastMineTime=1,738,737,888 proofsSubmitted=34
 t=2025-02-05T06:49:54+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.3s shard=0 block=7,643,334

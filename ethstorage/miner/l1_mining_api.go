@@ -148,8 +148,13 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 		Data:      calldata,
 	})
 	if err != nil {
-		m.lg.Error("Estimate gas failed", "error", err.Error())
-		return common.Hash{}, fmt.Errorf("failed to estimate gas: %w", err)
+		errMessage := err.Error()
+		if rpcErr, ok := err.(rpc.DataError); ok {
+			revertData := rpcErr.ErrorData()
+			errMessage = fmt.Sprintf("execution reverted: ErrorData: %v", revertData)
+		}
+		m.lg.Error("Estimate gas failed", "error", errMessage)
+		return common.Hash{}, fmt.Errorf("failed to estimate gas: %v", errMessage)
 	}
 	m.lg.Info("Estimated gas done", "gas", estimatedGas)
 
