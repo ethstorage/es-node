@@ -27,10 +27,7 @@ func (MerkleProver) GetProof(data []byte, nChunkBits, chunkIdx, chunkSize uint64
 		if off > uint64(len(data)) {
 			break
 		}
-		l := uint64(len(data)) - off
-		if l >= chunkSize {
-			l = chunkSize
-		}
+		l := min(uint64(len(data))-off, chunkSize)
 		nodes[i] = crypto.Keccak256Hash(data[off : off+l])
 	}
 	n, proofIdx := nChunks, uint64(0)
@@ -79,10 +76,7 @@ func (MerkleProver) GetRoot(data []byte, chunkPerKV, chunkSize uint64) common.Ha
 			// empty mean the leaf is zero
 			break
 		}
-		size := l - off
-		if size >= chunkSize {
-			size = chunkSize
-		}
+		size := min(l-off, chunkSize)
 		hash := crypto.Keccak256Hash(data[off : off+size])
 		nodes[i] = hash
 	}
