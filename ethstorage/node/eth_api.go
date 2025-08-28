@@ -18,7 +18,7 @@ import (
 type ethAPI struct {
 	rpcCfg  *RPCConfig
 	chainId *big.Int
-	lg     log.Logger
+	lg      log.Logger
 }
 
 const (
@@ -33,7 +33,7 @@ func NewETHAPI(config *RPCConfig, chainId *big.Int, lg log.Logger) *ethAPI {
 	return &ethAPI{
 		rpcCfg:  config,
 		chainId: chainId,
-		lg:     lg,
+		lg:      lg,
 	}
 }
 
