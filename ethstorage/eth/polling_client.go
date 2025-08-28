@@ -31,7 +31,7 @@ var ErrSubscriberClosed = errors.New("subscriber closed")
 type PollingClient struct {
 	*ethclient.Client
 	isHTTP      bool
-	lgr         log.Logger
+	lg          log.Logger
 	pollRate    time.Duration
 	ctx         context.Context
 	cancel      context.CancelFunc
@@ -53,16 +53,16 @@ type PollingClient struct {
 }
 
 // Dial connects a client to the given URL.
-func Dial(rawurl string, esContract common.Address, pollRate uint64, lgr log.Logger) (*PollingClient, error) {
-	return DialContext(context.Background(), rawurl, esContract, pollRate, lgr)
+func Dial(rawurl string, esContract common.Address, pollRate uint64, lg log.Logger) (*PollingClient, error) {
+	return DialContext(context.Background(), rawurl, esContract, pollRate, lg)
 }
 
-func DialContext(ctx context.Context, rawurl string, esContract common.Address, pollRate uint64, lgr log.Logger) (*PollingClient, error) {
+func DialContext(ctx context.Context, rawurl string, esContract common.Address, pollRate uint64, lg log.Logger) (*PollingClient, error) {
 	c, err := ethclient.DialContext(ctx, rawurl)
 	if err != nil {
 		return nil, err
 	}
-	return NewClient(ctx, c, httpRegex.MatchString(rawurl), esContract, pollRate, nil, lgr), nil
+	return NewClient(ctx, c, httpRegex.MatchString(rawurl), esContract, pollRate, nil, lg), nil
 }
 
 // NewClient creates a client that uses the given RPC client.
@@ -73,17 +73,17 @@ func NewClient(
 	esContract common.Address,
 	pollRate uint64,
 	qh func() (*types.Header, error),
-	lgr log.Logger,
+	lg log.Logger,
 ) *PollingClient {
 	ctx, cancel := context.WithCancel(ctx)
 	networkID, err := c.NetworkID(ctx)
 	if err != nil {
-		lgr.Crit("Failed to get network id", "err", err)
+		lg.Crit("Failed to get network id", "err", err)
 	}
 	res := &PollingClient{
 		Client:     c,
 		isHTTP:     isHTTP,
-		lgr:        lgr,
+		lg:         lg,
 		pollRate:   time.Duration(pollRate) * time.Second,
 		ctx:        ctx,
 		cancel:     cancel,
@@ -167,17 +167,17 @@ func (w *PollingClient) pollHeads() {
 			// after the pollRate elapses.
 			head, err := w.queryHeader()
 			if err != nil {
-				w.lgr.Info("Error getting latest header", "err", err)
+				w.lg.Info("Error getting latest header", "err", err)
 				reqPollAfter()
 				continue
 			}
 			if w.currHead != nil && w.currHead.Hash() == head.Hash() {
-				w.lgr.Trace("No change in head, skipping notifications")
+				w.lg.Trace("No change in head, skipping notifications")
 				reqPollAfter()
 				continue
 			}
 
-			w.lgr.Trace("Notifying subscribers of new head", "head", head.Hash())
+			w.lg.Trace("Notifying subscribers of new head", "head", head.Hash())
 			w.currHead = head
 			w.mtx.RLock()
 			for _, sub := range w.subs {
@@ -197,7 +197,7 @@ func (w *PollingClient) getLatestHeader() (*types.Header, error) {
 	defer cancel()
 	latest, err := w.BlockNumber(ctx)
 	if err != nil {
-		w.lgr.Error("Failed to get latest block number", "err", err)
+		w.lg.Error("Failed to get latest block number", "err", err)
 		return nil, err
 	}
 	// The latest blockhash could be empty

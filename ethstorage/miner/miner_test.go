@@ -47,7 +47,7 @@ func initStorageManager(t *testing.T, client *eth.PollingClient) *es.StorageMana
 	shardMgr := es.NewShardManager(contractAddr, kvSize, kvEntries, kvSize)
 	shardMgr.AddDataShard(shardID)
 	shardMgr.AddDataFile(df)
-	return es.NewStorageManager(shardMgr, client)
+	return es.NewStorageManager(shardMgr, client, lg)
 }
 
 func newMiner(t *testing.T, storageMgr *es.StorageManager, client *eth.PollingClient) *Miner {

@@ -30,19 +30,19 @@ func newWebsiteOnlineChecker(params map[string]string) (*WebsiteOnlineChecker, e
 	}, nil
 }
 
-func (c *WebsiteOnlineChecker) Check(logger log.Logger) (bool, string) {
+func (c *WebsiteOnlineChecker) Check(lg log.Logger) (bool, string) {
 	client := http.Client{
 		Timeout: 10 * time.Second,
 	}
 
 	resp, err := client.Get(c.URL)
 	if err != nil {
-		logger.Error("Failed to request web site", "alert", c.Name, "url", c.URL, "err", err)
+		lg.Error("Failed to request web site", "alert", c.Name, "url", c.URL, "err", err)
 		return true, fmt.Sprintf(errorContent, c.Name, err.Error())
 	}
 	defer resp.Body.Close()
 
-	logger.Info("Check last block", "alert", c.Name, "url", c.URL, "status", resp.StatusCode)
+	lg.Info("Check last block", "alert", c.Name, "url", c.URL, "status", resp.StatusCode)
 	// Check the HTTP status code
 	if resp.StatusCode == http.StatusOK {
 		return false, ""

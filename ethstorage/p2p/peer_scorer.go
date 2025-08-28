@@ -14,7 +14,7 @@ import (
 type scorer struct {
 	peerStore           Peerstore
 	metricer            GossipMetricer
-	log                 log.Logger
+	lg                  log.Logger
 	gater               PeerGater
 	bandScoreThresholds *BandScoreThresholds
 }
@@ -101,11 +101,11 @@ type Scorer interface {
 }
 
 // NewScorer returns a new peer scorer.
-func NewScorer(peerGater PeerGater, peerStore Peerstore, metricer GossipMetricer, bandScoreThresholds *BandScoreThresholds, log log.Logger) Scorer {
+func NewScorer(peerGater PeerGater, peerStore Peerstore, metricer GossipMetricer, bandScoreThresholds *BandScoreThresholds, lg log.Logger) Scorer {
 	return &scorer{
 		peerStore:           peerStore,
 		metricer:            metricer,
-		log:                 log,
+		lg:                  lg,
 		gater:               peerGater,
 		bandScoreThresholds: bandScoreThresholds,
 	}

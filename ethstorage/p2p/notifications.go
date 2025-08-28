@@ -34,38 +34,38 @@ func (*NoopNotificationsMetricer) DecStreamCount() {
 }
 
 type notifications struct {
-	log log.Logger
-	m   NotificationsMetricer
+	lg log.Logger
+	m  NotificationsMetricer
 }
 
 func (notif *notifications) Listen(n network.Network, a ma.Multiaddr) {
-	notif.log.Info("Started listening network address", "addr", a)
+	notif.lg.Info("Started listening network address", "addr", a)
 }
 func (notif *notifications) ListenClose(n network.Network, a ma.Multiaddr) {
-	notif.log.Info("Stopped listening network address", "addr", a)
+	notif.lg.Info("Stopped listening network address", "addr", a)
 }
 func (notif *notifications) Connected(n network.Network, v network.Conn) {
 	notif.m.IncPeerCount()
-	notif.log.Trace("Connected to peer", "peer", v.RemotePeer(), "Direction", v.Stat().Direction, "addr", v.RemoteMultiaddr())
+	notif.lg.Trace("Connected to peer", "peer", v.RemotePeer(), "Direction", v.Stat().Direction, "addr", v.RemoteMultiaddr())
 }
 func (notif *notifications) Disconnected(n network.Network, v network.Conn) {
 	notif.m.DecPeerCount()
-	notif.log.Trace("Disconnected from peer", "peer", v.RemotePeer(), "Direction", v.Stat().Direction, "addr", v.RemoteMultiaddr())
+	notif.lg.Trace("Disconnected from peer", "peer", v.RemotePeer(), "Direction", v.Stat().Direction, "addr", v.RemoteMultiaddr())
 }
 func (notif *notifications) OpenedStream(n network.Network, v network.Stream) {
 	notif.m.IncStreamCount()
 	c := v.Conn()
-	notif.log.Trace("Opened stream", "protocol", v.Protocol(), "peer", c.RemotePeer(), "addr", c.RemoteMultiaddr())
+	notif.lg.Trace("Opened stream", "protocol", v.Protocol(), "peer", c.RemotePeer(), "addr", c.RemoteMultiaddr())
 }
 func (notif *notifications) ClosedStream(n network.Network, v network.Stream) {
 	notif.m.DecStreamCount()
 	c := v.Conn()
-	notif.log.Trace("Opened stream", "protocol", v.Protocol(), "peer", c.RemotePeer(), "addr", c.RemoteMultiaddr())
+	notif.lg.Trace("Opened stream", "protocol", v.Protocol(), "peer", c.RemotePeer(), "addr", c.RemoteMultiaddr())
 }
 
-func NewNetworkNotifier(log log.Logger, m NotificationsMetricer) network.Notifiee {
+func NewNetworkNotifier(lg log.Logger, m NotificationsMetricer) network.Notifiee {
 	if m == nil {
 		m = &NoopNotificationsMetricer{}
 	}
-	return &notifications{log: log, m: m}
+	return &notifications{lg: lg, m: m}
 }

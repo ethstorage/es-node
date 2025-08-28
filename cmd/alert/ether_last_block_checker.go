@@ -31,11 +31,11 @@ func newLastBlockChecker(params map[string]string) (*LastBlockChecker, error) {
 	}, nil
 }
 
-func (c *LastBlockChecker) Check(logger log.Logger) (bool, string) {
+func (c *LastBlockChecker) Check(lg log.Logger) (bool, string) {
 	ctx := context.Background()
 	client, err := ethclient.Dial(c.RPC)
 	if err != nil {
-		logger.Error("Failed to create L1 source", "alert", c.Name, "err", err)
+		lg.Error("Failed to create L1 source", "alert", c.Name, "err", err)
 		return true, fmt.Sprintf(errorContent, c.Name, err.Error())
 	}
 
@@ -43,13 +43,13 @@ func (c *LastBlockChecker) Check(logger log.Logger) (bool, string) {
 		header, e := client.HeaderByNumber(ctx, nil)
 		if e != nil {
 			time.Sleep(time.Minute)
-			logger.Error("Get block fail", "alert", c.Name, "rpc", c.RPC, "error", e)
+			lg.Error("Get block fail", "alert", c.Name, "rpc", c.RPC, "error", e)
 			err = e
 			continue
 		}
 
 		lastMinedTime := time.Unix(int64(header.Time), 0)
-		logger.Info("Check last block", "alert", c.Name, "time", lastMinedTime, "block", header.Number, "rpc", c.RPC)
+		lg.Info("Check last block", "alert", c.Name, "time", lastMinedTime, "block", header.Number, "rpc", c.RPC)
 		targetTime := time.Now().Add(-10 * time.Minute)
 		if targetTime.After(lastMinedTime) {
 			content := fmt.Sprintf(noBlockIn10MinutesAlertContent, c.Name, header.Number, lastMinedTime, c.RPC)

@@ -62,6 +62,7 @@ var BuildInfo = func() string {
 }()
 
 func main() {
+	log.SetupDefaults()
 	app := cli.NewApp()
 	app.Version = BuildInfo
 	app.Flags = flags.Flags

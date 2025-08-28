@@ -37,7 +37,7 @@ type extraHost struct {
 	host.Host
 	gater   ConnectionGater
 	connMgr connmgr.ConnManager
-	log     log.Logger
+	lg      log.Logger
 
 	staticPeers []*peer.AddrInfo
 
@@ -68,14 +68,14 @@ func (e *extraHost) initStaticPeers() {
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 			defer cancel()
 			if err := e.dialStaticPeer(ctx, addr); err != nil {
-				e.log.Warn("Error dialing static peer", "peer", addr.ID, "err", err)
+				e.lg.Warn("Error dialing static peer", "peer", addr.ID, "err", err)
 			}
 		}(addr)
 	}
 }
 
 func (e *extraHost) dialStaticPeer(ctx context.Context, addr *peer.AddrInfo) error {
-	e.log.Info("Dialing static peer", "peer", addr.ID, "addrs", addr.Addrs)
+	e.lg.Info("Dialing static peer", "peer", addr.ID, "addrs", addr.Addrs)
 	if _, err := e.Network().DialPeer(ctx, addr.ID); err != nil {
 		return err
 	}
@@ -92,10 +92,10 @@ func (e *extraHost) monitorStaticPeers() {
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 			var wg sync.WaitGroup
 
-			e.log.Debug("Polling static peers", "peers", len(e.staticPeers))
+			e.lg.Debug("Polling static peers", "peers", len(e.staticPeers))
 			for _, addr := range e.staticPeers {
 				connectedness := e.Network().Connectedness(addr.ID)
-				e.log.Trace("Static peer connectedness", "peer", addr.ID, "connectedness", connectedness)
+				e.lg.Trace("Static peer connectedness", "peer", addr.ID, "connectedness", connectedness)
 
 				if connectedness == network.Connected {
 					continue
@@ -103,9 +103,9 @@ func (e *extraHost) monitorStaticPeers() {
 
 				wg.Add(1)
 				go func(addr *peer.AddrInfo) {
-					e.log.Warn("Static peer disconnected, reconnecting", "peer", addr.ID)
+					e.lg.Warn("Static peer disconnected, reconnecting", "peer", addr.ID)
 					if err := e.dialStaticPeer(ctx, addr); err != nil {
-						e.log.Warn("Error reconnecting to static peer", "peer", addr.ID, "err", err)
+						e.lg.Warn("Error reconnecting to static peer", "peer", addr.ID, "err", err)
 					}
 					wg.Done()
 				}(addr)
@@ -121,7 +121,7 @@ func (e *extraHost) monitorStaticPeers() {
 
 var _ ExtraHostFeatures = (*extraHost)(nil)
 
-func (conf *Config) Host(log log.Logger, reporter metrics.Reporter) (host.Host, error) {
+func (conf *Config) Host(lg log.Logger, reporter metrics.Reporter) (host.Host, error) {
 	if conf.DisableP2P {
 		return nil, nil
 	}
@@ -217,7 +217,7 @@ func (conf *Config) Host(log log.Logger, reporter metrics.Reporter) (host.Host, 
 	out := &extraHost{
 		Host:        h,
 		connMgr:     connMngr,
-		log:         log,
+		lg:          lg,
 		staticPeers: staticPeers,
 		quitC:       make(chan struct{}),
 	}

@@ -77,7 +77,7 @@ func TestMining(t *testing.T) {
 	if err != nil {
 		t.Fatalf("init shard manager error: %v", err)
 	}
-	storageManager := ethstorage.NewStorageManager(shardManager, pClient)
+	storageManager := ethstorage.NewStorageManager(shardManager, pClient, lg)
 
 	resourcesCtx, close := context.WithCancel(context.Background())
 	feed := new(event.Feed)

@@ -68,7 +68,7 @@ type Downloader struct {
 	dlLatestReq    chan struct{}
 	dlFinalizedReq chan struct{}
 
-	log  log.Logger
+	lg   log.Logger
 	done chan struct{}
 	wg   sync.WaitGroup
 	mu   sync.Mutex
@@ -107,7 +107,7 @@ func NewDownloader(
 	downloadDump string,
 	minDurationForBlobsRequest uint64,
 	downloadThreadNum int,
-	log log.Logger,
+	lg log.Logger,
 ) *Downloader {
 	sm.DownloadThreadNum = downloadThreadNum
 	return &Downloader{
@@ -121,7 +121,7 @@ func NewDownloader(
 		minDurationForBlobsRequest: minDurationForBlobsRequest,
 		dlLatestReq:                make(chan struct{}, 1),
 		dlFinalizedReq:             make(chan struct{}, 1),
-		log:                        log,
+		lg:                         lg,
 		done:                       make(chan struct{}),
 		lastDownloadBlock:          downloadStart,
 	}
@@ -139,11 +139,11 @@ func (s *Downloader) Start() error {
 				return err
 			} else {
 				s.lastDownloadBlock = header.Number.Int64()
-				s.log.Info("Downloader will use the latest finalized block to start for the first time", "block", s.lastDownloadBlock)
+				s.lg.Info("Downloader will use the latest finalized block to start for the first time", "block", s.lastDownloadBlock)
 			}
 		} else {
 			s.lastDownloadBlock = int64(binary.LittleEndian.Uint64(bs))
-			s.log.Info("Downloader will use the last download block to start", "block", s.lastDownloadBlock)
+			s.lg.Info("Downloader will use the last download block to start", "block", s.lastDownloadBlock)
 		}
 	} else if s.lastDownloadBlock < 0 {
 		if s.lastDownloadBlock == rpc.FinalizedBlockNumber.Int64() {
@@ -177,7 +177,7 @@ func (s *Downloader) Close() error {
 func (s *Downloader) OnL1Finalized(finalized uint64) {
 	s.mu.Lock()
 	if s.finalizedHead > int64(finalized) {
-		s.log.Warn("The tracking head is greater than new finalized", "tracking", s.finalizedHead, "new", finalized)
+		s.lg.Warn("The tracking head is greater than new finalized", "tracking", s.finalizedHead, "new", finalized)
 	}
 	s.finalizedHead = int64(finalized)
 	s.mu.Unlock()
@@ -194,7 +194,7 @@ func (s *Downloader) OnL1Finalized(finalized uint64) {
 func (s *Downloader) OnNewL1Head(head eth.L1BlockRef) {
 	s.mu.Lock()
 	if s.latestHead > int64(head.Number) {
-		s.log.Info("The tracking head is greater than new one, a reorg may happen", "tracking", s.latestHead, "new", head)
+		s.lg.Info("The tracking head is greater than new one, a reorg may happen", "tracking", s.latestHead, "new", head)
 	}
 	s.latestHead = int64(head.Number)
 	s.mu.Unlock()
@@ -210,7 +210,7 @@ func (s *Downloader) OnNewL1Head(head eth.L1BlockRef) {
 
 func (s *Downloader) eventLoop() {
 	defer s.wg.Done()
-	s.log.Info("Download loop started")
+	s.lg.Info("Download loop started")
 
 	for {
 		select {
@@ -243,7 +243,7 @@ func (s *Downloader) downloadToCache() {
 		_, err := s.downloadRange(start+1, rangeEnd, true)
 
 		if err != nil {
-			s.log.Error("DownloadRange failed", "err", err)
+			s.lg.Error("DownloadRange failed", "err", err)
 			return
 		}
 
@@ -261,7 +261,7 @@ func (s *Downloader) download() {
 		// TODO: @Qiang we can also enter into an recovery mode (e.g., scan local blobs to obtain a heal list, more complicated, will do later)
 		prompt := "Ethereum only keep blobs for one month, but it has been over one month since last blob download." +
 			"You may need to restart this node with full re-sync"
-		s.log.Error(prompt)
+		s.lg.Error(prompt)
 		return
 	}
 
@@ -282,9 +282,9 @@ func (s *Downloader) download() {
 			kvIdxToArrayIdx := make(map[uint64]int)
 
 			for _, blob := range blobs {
-				s.log.Info("Blob will be saved into disk", "kvIndex", blob.kvIndex.Uint64(), "hash", hex.EncodeToString(blob.hash[:]))
+				s.lg.Info("Blob will be saved into disk", "kvIndex", blob.kvIndex.Uint64(), "hash", hex.EncodeToString(blob.hash[:]))
 				if arrIdx, exists := kvIdxToArrayIdx[blob.kvIndex.Uint64()]; exists {
-					s.log.Info("Duplicate kvIndex found, will replace the previous one", "previous", kvIndices[arrIdx], "new", blob.kvIndex.Uint64())
+					s.lg.Info("Duplicate kvIndex found, will replace the previous one", "previous", kvIndices[arrIdx], "new", blob.kvIndex.Uint64())
 					dataBlobs[arrIdx] = blob.data
 					copy(metas[arrIdx][0:ethstorage.HashSizeInContract], blob.hash[0:ethstorage.HashSizeInContract])
 				} else {
@@ -301,7 +301,7 @@ func (s *Downloader) download() {
 			ts := time.Now()
 			err := s.sm.DownloadFinished(end, kvIndices, dataBlobs, metas)
 			if err != nil {
-				s.log.Error("Save blobs error", "err", err)
+				s.lg.Error("Save blobs error", "err", err)
 				return
 			}
 			if len(blobs) > 0 {
@@ -314,10 +314,10 @@ func (s *Downloader) download() {
 
 			err = s.db.Put(append(downloaderPrefix, lastDownloadKey...), bs)
 			if err != nil {
-				s.log.Error("Save lastDownloadedBlock into db error", "err", err)
+				s.lg.Error("Save lastDownloadedBlock into db error", "err", err)
 				return
 			}
-			s.log.Debug("LastDownloadedBlock saved into db", "lastDownloadedBlock", end)
+			s.lg.Debug("LastDownloadedBlock saved into db", "lastDownloadedBlock", end)
 
 			s.dumpBlobsIfNeeded(blobs)
 
@@ -354,10 +354,10 @@ func (s *Downloader) downloadRange(start int64, end int64, toCache bool) ([]blob
 		res := s.Cache.Blobs(elBlock.number)
 		if res != nil {
 			blobs = append(blobs, res...)
-			s.log.Info("Blob found in the cache, continue to the next block", "blockNumber", elBlock.number)
+			s.lg.Info("Blob found in the cache, continue to the next block", "blockNumber", elBlock.number)
 			continue
 		} else {
-			s.log.Info(
+			s.lg.Info(
 				"Don't find blob in the cache, will try to download directly",
 				"blockNumber", elBlock.number,
 				"start", start,
@@ -370,7 +370,7 @@ func (s *Downloader) downloadRange(start int64, end int64, toCache bool) ([]blob
 		if s.l1Beacon != nil {
 			clBlobs, err = s.l1Beacon.DownloadBlobs(s.l1Beacon.Timestamp2Slot(elBlock.timestamp))
 			if err != nil {
-				s.log.Error("L1 beacon download blob error", "err", err)
+				s.lg.Error("L1 beacon download blob error", "err", err)
 				return nil, err
 			}
 		} else if s.daClient != nil {
@@ -381,7 +381,7 @@ func (s *Downloader) downloadRange(start int64, end int64, toCache bool) ([]blob
 
 			clBlobs, err = s.daClient.DownloadBlobs(hashes)
 			if err != nil {
-				s.log.Error("DA client download blob error", "err", err)
+				s.lg.Error("DA client download blob error", "err", err)
 				return nil, err
 			}
 		} else {
@@ -391,24 +391,24 @@ func (s *Downloader) downloadRange(start int64, end int64, toCache bool) ([]blob
 		for _, elBlob := range elBlock.blobs {
 			clBlob, exists := clBlobs[elBlob.hash]
 			if !exists {
-				s.log.Error("Did not find the event specified blob in the CL")
+				s.lg.Error("Did not find the event specified blob in the CL")
 
 			}
 			// encode blobs so that miner can do sampling directly from cache
 			elBlob.data = s.sm.EncodeBlob(clBlob.Data, elBlob.hash, elBlob.kvIndex.Uint64(), s.sm.MaxKvSize())
 			blobs = append(blobs, *elBlob)
-			s.log.Info("Downloaded and encoded", "blockNumber", elBlock.number, "kvIdx", elBlob.kvIndex)
+			s.lg.Info("Downloaded and encoded", "blockNumber", elBlock.number, "kvIdx", elBlob.kvIndex)
 		}
 		if toCache {
 			if err := s.Cache.SetBlockBlobs(elBlock); err != nil {
-				s.log.Error("Failed to cache blobs", "block", elBlock.number, "err", err)
+				s.lg.Error("Failed to cache blobs", "block", elBlock.number, "err", err)
 				return nil, err
 			}
 		}
 	}
 
 	if len(blobs) > 0 {
-		s.log.Info("Download range", "cache", toCache, "start", start, "end", end, "blobNumber", len(blobs), "duration(ms)", time.Since(ts).Milliseconds())
+		s.lg.Info("Download range", "cache", toCache, "start", start, "end", end, "blobNumber", len(blobs), "duration(ms)", time.Since(ts).Milliseconds())
 	}
 
 	return blobs, nil
@@ -420,7 +420,7 @@ func (s *Downloader) dumpBlobsIfNeeded(blobs []blob) {
 			fileName := filepath.Join(s.dumpDir, fmt.Sprintf("%s.dat", hex.EncodeToString(blob.data[:5])))
 			f, err := os.Create(fileName)
 			if err != nil {
-				s.log.Warn("Error creating file", "filename", fileName, "err", err)
+				s.lg.Warn("Error creating file", "filename", fileName, "err", err)
 				return
 			}
 			defer f.Close()

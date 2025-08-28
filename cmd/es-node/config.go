@@ -31,7 +31,7 @@ import (
 )
 
 // NewConfig creates a Config from the provided flags or environment variables.
-func NewConfig(ctx *cli.Context, log log.Logger) (*node.Config, error) {
+func NewConfig(ctx *cli.Context, lg log.Logger) (*node.Config, error) {
 	if err := flags.CheckRequired(ctx); err != nil {
 		return nil, err
 	}
@@ -55,26 +55,26 @@ func NewConfig(ctx *cli.Context, log log.Logger) (*node.Config, error) {
 		return nil, fmt.Errorf("failed to load p2p config: %w", err)
 	}
 
-	l1Endpoint, client, err := NewL1EndpointConfig(ctx)
+	l1Endpoint, client, err := NewL1EndpointConfig(ctx, lg)
 	if err != nil {
 		return nil, err
 	}
-	log.Info("Read L1 config", flags.L1NodeAddr.Name, l1Endpoint.L1NodeAddr)
-	log.Info("Read L1 config", flags.L1BeaconAddr.Name, l1Endpoint.L1BeaconURL)
+	lg.Info("Read L1 config", flags.L1NodeAddr.Name, l1Endpoint.L1NodeAddr)
+	lg.Info("Read L1 config", flags.L1BeaconAddr.Name, l1Endpoint.L1BeaconURL)
 	defer client.Close()
 
-	storageConfig, err := NewStorageConfig(ctx, client)
+	storageConfig, err := NewStorageConfig(ctx, client, lg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load storage config: %w", err)
 	}
 
 	dlConfig := NewDownloaderConfig(ctx)
-	minerConfig, err := NewMinerConfig(ctx, client, storageConfig.L1Contract, storageConfig.Miner)
+	minerConfig, err := NewMinerConfig(ctx, client, storageConfig.L1Contract, storageConfig.Miner, lg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load miner config: %w", err)
 	}
 	archiverConfig := archiver.NewConfig(ctx)
-	// l2Endpoint, err := NewL2EndpointConfig(ctx, log)
+	// l2Endpoint, err := NewL2EndpointConfig(ctx, lg)
 	// if err != nil {
 	// 	return nil, fmt.Errorf("failed to load l2 endpoints info: %w", err)
 	// }
@@ -127,16 +127,16 @@ func NewConfig(ctx *cli.Context, log log.Logger) (*node.Config, error) {
 	return cfg, nil
 }
 
-func NewMinerConfig(ctx *cli.Context, client *ethclient.Client, l1Contract, minerAddr common.Address) (*miner.Config, error) {
+func NewMinerConfig(ctx *cli.Context, client *ethclient.Client, l1Contract, minerAddr common.Address, lg log.Logger) (*miner.Config, error) {
 	cliConfig := miner.ReadCLIConfig(ctx)
 	if !cliConfig.Enabled {
-		log.Info("Miner is not enabled.")
+		lg.Info("Miner is not enabled.")
 		return nil, nil
 	}
 	if minerAddr == (common.Address{}) {
 		return nil, fmt.Errorf("miner address cannot be empty")
 	}
-	log.Debug("Read mining config from cli", "config", fmt.Sprintf("%+v", cliConfig))
+	lg.Debug("Read mining config from cli", "config", fmt.Sprintf("%+v", cliConfig))
 	err := cliConfig.Check()
 	if err != nil {
 		return nil, fmt.Errorf("invalid miner flags: %w", err)
@@ -255,29 +255,29 @@ func NewRollupConfig(ctx *cli.Context) (*rollup.EsConfig, error) {
 	return &rollupConfig, nil
 }
 
-func NewStorageConfig(ctx *cli.Context, client *ethclient.Client) (*storage.StorageConfig, error) {
+func NewStorageConfig(ctx *cli.Context, client *ethclient.Client, lg log.Logger) (*storage.StorageConfig, error) {
 	l1Contract := common.HexToAddress(ctx.GlobalString(flags.StorageL1Contract.Name))
 	miner := common.HexToAddress(ctx.GlobalString(flags.StorageMiner.Name))
-	log.Info("Loaded storage config", "l1Contract", l1Contract, "miner", miner)
+	lg.Info("Loaded storage config", "l1Contract", l1Contract, "miner", miner)
 	storageCfg, err := initStorageConfig(context.Background(), client, l1Contract, miner)
 	if err != nil {
-		log.Error("Failed to load storage config from contract", "error", err)
+		lg.Error("Failed to load storage config from contract", "error", err)
 		return nil, err
 	}
 	storageCfg.Filenames = ctx.GlobalStringSlice(flags.StorageFiles.Name)
 	return storageCfg, nil
 }
 
-func NewL1EndpointConfig(ctx *cli.Context) (*eth.L1EndpointConfig, *ethclient.Client, error) {
+func NewL1EndpointConfig(ctx *cli.Context, lg log.Logger) (*eth.L1EndpointConfig, *ethclient.Client, error) {
 	l1NodeAddr := ctx.GlobalString(flags.L1NodeAddr.Name)
 	client, err := ethclient.DialContext(context.Background(), l1NodeAddr)
 	if err != nil {
-		log.Error("Failed to connect to the L1 RPC", "error", err, "l1Rpc", l1NodeAddr)
+		lg.Error("Failed to connect to the L1 RPC", "error", err, "l1Rpc", l1NodeAddr)
 		return nil, nil, err
 	}
 	chainid, err := client.ChainID(context.Background())
 	if err != nil {
-		log.Error("Failed to fetch chain id from the L1 RPC", "error", err, "l1Rpc", l1NodeAddr)
+		lg.Error("Failed to fetch chain id from the L1 RPC", "error", err, "l1Rpc", l1NodeAddr)
 		return nil, nil, err
 	}
 	return &eth.L1EndpointConfig{

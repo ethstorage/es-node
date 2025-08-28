@@ -35,28 +35,28 @@ func newESLastMinedBlockChecker(params map[string]string) (*ESLastMinedBlockChec
 	}, nil
 }
 
-func (c *ESLastMinedBlockChecker) Check(logger log.Logger) (bool, string) {
+func (c *ESLastMinedBlockChecker) Check(lg log.Logger) (bool, string) {
 
-	client, err := eth.Dial(c.RPC, c.Contract, 12, logger)
+	client, err := eth.Dial(c.RPC, c.Contract, 12, lg)
 	if err != nil {
-		logger.Error("Failed to create source", "alert", c.Name, "err", err)
+		lg.Error("Failed to create source", "alert", c.Name, "err", err)
 		return true, fmt.Sprintf(errorContent, c.Name, err.Error())
 	}
 	var (
 		ctx = context.Background()
-		api = miner.NewL1MiningAPI(client, nil, logger)
+		api = miner.NewL1MiningAPI(client, nil, lg)
 	)
 	for i := 0; i < 3; i++ {
 		info, e := api.GetMiningInfo(ctx, c.Contract, 0)
 		if e != nil {
 			time.Sleep(time.Minute)
-			logger.Error("Get mining info fail", "alert", c.Name, "error", e)
+			lg.Error("Get mining info fail", "alert", c.Name, "error", e)
 			err = e
 			continue
 		}
 
 		lastMinedTime := time.Unix(int64(info.LastMineTime), 0)
-		logger.Info("Check last mined block", "alert", c.Name, "time", lastMinedTime, "mined block", info.BlockMined, "rpc", c.RPC)
+		lg.Info("Check last mined block", "alert", c.Name, "time", lastMinedTime, "mined block", info.BlockMined, "rpc", c.RPC)
 		targetTime := time.Now().Add(-24 * time.Hour)
 		if targetTime.After(lastMinedTime) {
 			content := fmt.Sprintf(noMinedBlockAlertContent, c.Name, info.BlockMined, lastMinedTime, c.RPC)
