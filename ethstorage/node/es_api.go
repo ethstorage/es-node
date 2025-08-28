@@ -17,7 +17,7 @@ import (
 
 type esAPI struct {
 	rpcCfg *RPCConfig
-	lg    log.Logger
+	lg     log.Logger
 	sm     *ethstorage.StorageManager
 	dl     *downloader.Downloader
 }
@@ -35,7 +35,7 @@ func NewESAPI(config *RPCConfig, sm *ethstorage.StorageManager, dl *downloader.D
 		rpcCfg: config,
 		sm:     sm,
 		dl:     dl,
-		lg:    lg,
+		lg:     lg,
 	}
 }
 
