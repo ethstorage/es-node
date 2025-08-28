@@ -322,15 +322,6 @@ func (s *SyncClient) loadSyncStatus() {
 		s.tasks = append(s.tasks, t)
 	}
 
-	s.lg.Info("Task count", "lastKvIndex", lastKvIndex, "count", len(s.tasks))
-	for _, t := range s.tasks {
-		s.lg.Info("Sub Task count", "count", len(t.SubTasks))
-		s.lg.Info("Sub Empty Task count", "count", len(t.SubEmptyTasks))
-		for i, sTask := range t.SubEmptyTasks {
-			s.lg.Info("  Sub empty task", "index", i, "from", sTask.First, "to", sTask.Last)
-		}
-	}
-
 	sort.Slice(s.tasks, func(i, j int) bool {
 		return s.tasks[i].ShardId < s.tasks[j].ShardId
 	})
@@ -522,7 +513,6 @@ func (s *SyncClient) cleanTasks() {
 }
 
 func (s *SyncClient) Start() error {
-	s.lg.Info("Starting P2P sync client")
 	// Retrieve the previous sync status from LevelDB and abort if already synced
 	s.loadSyncStatus()
 	s.lock.Lock()
