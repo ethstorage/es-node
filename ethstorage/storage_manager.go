@@ -457,11 +457,8 @@ func (s *StorageManager) downloadMetaInRange(ctx context.Context, from, to, batc
 		kvEntryCount := s.kvEntryCount
 		s.mu.Unlock()
 
-		batchLimit := min(from+batchSize, to)
 		// In case remove is supported and kvEntryCount is decreased
-		if batchLimit > kvEntryCount {
-			batchLimit = kvEntryCount
-		}
+		batchLimit := min(min(from+batchSize, to), kvEntryCount)
 
 		kvIndices := []uint64{}
 		for i := from; i < batchLimit; i++ {
