@@ -45,9 +45,9 @@ type SetupP2P interface {
 	Check() error
 	Disabled() bool
 	// Host creates a libp2p host service. Returns nil, nil if p2p is disabled.
-	Host(log log.Logger, reporter metrics.Reporter) (host.Host, error)
+	Host(lg log.Logger, reporter metrics.Reporter) (host.Host, error)
 	// Discovery creates a disc-v5 service. Returns nil, nil, false, nil if discovery is disabled.
-	Discovery(log log.Logger, l1ChainID uint64, tcpPort uint16, fallbackIP net.IP) (*enode.LocalNode, *discover.UDPv5, bool, error)
+	Discovery(lg log.Logger, l1ChainID uint64, tcpPort uint16, fallbackIP net.IP) (*enode.LocalNode, *discover.UDPv5, bool, error)
 	TargetPeers() uint
 	SyncerParams() *protocol.SyncerParams
 	GossipSetupConfigurables

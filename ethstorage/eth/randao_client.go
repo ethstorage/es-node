@@ -29,7 +29,7 @@ type RandaoClient struct {
 	rc *ethclient.Client
 }
 
-func DialRandaoSource(ctx context.Context, randaoUrl, rawurl string, pollRate uint64, lgr log.Logger) (*RandaoClient, error) {
+func DialRandaoSource(ctx context.Context, randaoUrl, rawurl string, pollRate uint64, lg log.Logger) (*RandaoClient, error) {
 	rc, err := ethclient.DialContext(ctx, randaoUrl)
 	if err != nil {
 		return nil, err
@@ -38,8 +38,8 @@ func DialRandaoSource(ctx context.Context, randaoUrl, rawurl string, pollRate ui
 	if err != nil {
 		return nil, err
 	}
-	bq := &RandaoBlockQuerier{rc, cc, lgr}
-	p := NewClient(ctx, cc, httpRegex.MatchString(rawurl), common.Address{}, pollRate, bq.GetLatestHeader, lgr)
+	bq := &RandaoBlockQuerier{rc, cc, lg}
+	p := NewClient(ctx, cc, httpRegex.MatchString(rawurl), common.Address{}, pollRate, bq.GetLatestHeader, lg)
 	return NewRandaoClient(ctx, p, rc), nil
 }
 
@@ -53,7 +53,7 @@ func NewRandaoClient(ctx context.Context, p *PollingClient, c *ethclient.Client)
 }
 
 func (w *RandaoClient) HeaderByNumber(ctx context.Context, blockNumber *big.Int) (*types.Header, error) {
-	w.lgr.Debug("Fetching header by number by Randao client", "number", blockNumber)
+	w.lg.Debug("Fetching header by number by Randao client", "number", blockNumber)
 	return w.rc.HeaderByNumber(ctx, blockNumber)
 }
 
@@ -68,7 +68,7 @@ type RandaoBlockQuerier struct {
 	rc *ethclient.Client
 	// where contract is deployed
 	cc *ethclient.Client
-	l  log.Logger
+	lg log.Logger
 }
 
 func (q *RandaoBlockQuerier) getLatestNumber(ctx context.Context) (*big.Int, error) {
@@ -82,7 +82,7 @@ func (q *RandaoBlockQuerier) getLatestNumber(ctx context.Context) (*big.Int, err
 	}
 	// The latest blockhash could be empty
 	curBlock := new(big.Int).Sub(new(big.Int).SetBytes(ret), common.Big1)
-	q.l.Debug("Got latest block number by Randao querier", "number", curBlock)
+	q.lg.Debug("Got latest block number by Randao querier", "number", curBlock)
 	return curBlock, nil
 }
 
@@ -94,6 +94,6 @@ func (q *RandaoBlockQuerier) GetLatestHeader() (*types.Header, error) {
 	if err != nil {
 		return nil, err
 	}
-	q.l.Debug("Fetching header by number by Randao querier", "number", blockNumber)
+	q.lg.Debug("Fetching header by number by Randao querier", "number", blockNumber)
 	return q.rc.HeaderByNumber(ctx, blockNumber)
 }

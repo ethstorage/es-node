@@ -156,6 +156,7 @@ type LRU struct {
 	cache      *simplelru.LRU
 	future     uint64
 	futureItem interface{}
+	lg         log.Logger
 }
 
 // NewLRU create a new least-recently-used cache for either the verification caches
@@ -164,10 +165,11 @@ func NewLRU(what string, maxItems int, new func(epoch uint64) interface{}) *LRU 
 	if maxItems <= 0 {
 		maxItems = 1
 	}
+	lg := log.New("LRU")
 	cache, _ := simplelru.NewLRU(maxItems, func(key, value interface{}) {
-		log.Trace("Evicted ethash "+what, "epoch", key)
+		lg.Trace("Evicted ethash "+what, "epoch", key)
 	})
-	return &LRU{what: what, new: new, cache: cache}
+	return &LRU{what: what, new: new, cache: cache, lg: lg}
 }
 
 // Get retrieves or creates an item for the given epoch. The first return value is always
@@ -183,14 +185,14 @@ func (lru *LRU) Get(epoch uint64) (item, future interface{}) {
 		if lru.future > 0 && lru.future == epoch {
 			item = lru.futureItem
 		} else {
-			log.Trace("Requiring new ethash "+lru.what, "epoch", epoch)
+			lru.lg.Trace("Requiring new ethash "+lru.what, "epoch", epoch)
 			item = lru.new(epoch)
 		}
 		lru.cache.Add(epoch, item)
 	}
 	// Update the 'future item' if epoch is larger than previously seen.
 	if epoch < maxEpoch-1 && lru.future < epoch+1 {
-		log.Trace("Requiring new future ethash "+lru.what, "epoch", epoch+1)
+		lru.lg.Trace("Requiring new future ethash "+lru.what, "epoch", epoch+1)
 		future = lru.new(epoch + 1)
 		lru.future = epoch + 1
 		lru.futureItem = future
@@ -233,7 +235,7 @@ func (c *Cache) Generate(dir string, limit int, lock bool, test bool) {
 			endian = ".be"
 		}
 		path := filepath.Join(dir, fmt.Sprintf("cache-R%d-%x%s", algorithmRevision, seed[:8], endian))
-		logger := log.New("epoch", c.epoch)
+		lg := log.New("epoch", c.epoch)
 
 		// We're about to mmap the file, ensure that the mapping is cleaned up when the
 		// cache becomes unused.
@@ -243,15 +245,15 @@ func (c *Cache) Generate(dir string, limit int, lock bool, test bool) {
 		var err error
 		c.dump, c.mmap, c.Cache, err = memoryMap(path, lock)
 		if err == nil {
-			logger.Debug("Loaded old ethash cache from disk")
+			lg.Debug("Loaded old ethash cache from disk")
 			return
 		}
-		logger.Debug("Failed to load old ethash cache", "err", err)
+		lg.Debug("Failed to load old ethash cache", "err", err)
 
 		// No previous cache available, create a new cache file to fill
 		c.dump, c.mmap, c.Cache, err = memoryMapAndGenerate(path, size, lock, func(buffer []uint32) { generateCache(buffer, c.epoch, seed) })
 		if err != nil {
-			logger.Error("Failed to generate mapped ethash cache", "err", err)
+			lg.Error("Failed to generate mapped ethash cache", "err", err)
 
 			c.Cache = make([]uint32, size/4)
 			generateCache(c.Cache, c.epoch, seed)
@@ -319,7 +321,7 @@ func (d *dataset) generate(dir string, limit int, lock bool, test bool) {
 			endian = ".be"
 		}
 		path := filepath.Join(dir, fmt.Sprintf("full-R%d-%x%s", algorithmRevision, seed[:8], endian))
-		logger := log.New("epoch", d.epoch)
+		lg := log.New("epoch", d.epoch)
 
 		// We're about to mmap the file, ensure that the mapping is cleaned up when the
 		// cache becomes unused.
@@ -329,10 +331,10 @@ func (d *dataset) generate(dir string, limit int, lock bool, test bool) {
 		var err error
 		d.dump, d.mmap, d.dataset, err = memoryMap(path, lock)
 		if err == nil {
-			logger.Debug("Loaded old ethash dataset from disk")
+			lg.Debug("Loaded old ethash dataset from disk")
 			return
 		}
-		logger.Debug("Failed to load old ethash dataset", "err", err)
+		lg.Debug("Failed to load old ethash dataset", "err", err)
 
 		// No previous dataset available, create a new dataset file to fill
 		cache := make([]uint32, csize/4)
@@ -340,7 +342,7 @@ func (d *dataset) generate(dir string, limit int, lock bool, test bool) {
 
 		d.dump, d.mmap, d.dataset, err = memoryMapAndGenerate(path, dsize, lock, func(buffer []uint32) { generateDataset(buffer, d.epoch, cache) })
 		if err != nil {
-			logger.Error("Failed to generate mapped ethash dataset", "err", err)
+			lg.Error("Failed to generate mapped ethash dataset", "err", err)
 
 			d.dataset = make([]uint32, dsize/4)
 			generateDataset(d.dataset, d.epoch, cache)

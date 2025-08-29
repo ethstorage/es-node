@@ -74,13 +74,15 @@ type StorageManager struct {
 	kvEntryCount      uint64     // kvEntryCount in the most-recent-finalized L1 block
 	l1Source          Il1Source
 	blobMetas         map[uint64][32]byte
+	lg                log.Logger
 }
 
-func NewStorageManager(sm *ShardManager, l1Source Il1Source) *StorageManager {
+func NewStorageManager(sm *ShardManager, l1Source Il1Source, lg log.Logger) *StorageManager {
 	return &StorageManager{
 		shardManager: sm,
 		l1Source:     l1Source,
 		blobMetas:    map[uint64][32]byte{},
+		lg:           lg,
 	}
 }
 
@@ -218,7 +220,7 @@ func (s *StorageManager) CommitBlobs(kvIndices []uint64, blobs [][]byte, commits
 	for i := 0; i < len(kvIndices); i++ {
 		encodedBlob, success, err := s.shardManager.TryEncodeKV(kvIndices[i], blobs[i], commits[i])
 		if !success || err != nil {
-			log.Warn("Blob encode failed", "index", kvIndices[i], "err", err)
+			s.lg.Warn("Blob encode failed", "index", kvIndices[i], "err", err)
 			continue
 		}
 		encodedBlobs[i] = encodedBlob
@@ -240,7 +242,7 @@ func (s *StorageManager) CommitBlobs(kvIndices []uint64, blobs [][]byte, commits
 		}
 		err := s.commitEncodedBlob(kvIndices[i], encodedBlobs[i], commits[i], contractMeta)
 		if err != nil {
-			log.Warn("Commit blobs fail", "kvIndex", kvIndices[i], "err", err.Error())
+			s.lg.Warn("Commit blobs fail", "kvIndex", kvIndices[i], "err", err.Error())
 			continue
 		}
 		inserted = append(inserted, kvIndices[i])
@@ -262,7 +264,7 @@ func (s *StorageManager) CommitEmptyBlobs(start, limit uint64) (uint64, uint64, 
 	for i := start; i <= limit; i++ {
 		encodedBlob, success, err := s.shardManager.TryEncodeKV(i, emptyBs, hash)
 		if !success || err != nil {
-			log.Warn("Blob encode failed", "index", i, "err", err)
+			s.lg.Warn("Blob encode failed", "index", i, "err", err)
 			break
 		}
 		encodedBlobs = append(encodedBlobs, encodedBlob)
@@ -284,7 +286,7 @@ func (s *StorageManager) CommitEmptyBlobs(start, limit uint64) (uint64, uint64, 
 		} else {
 			var commitErr *CommitMismatchError
 			if !errors.As(err, &commitErr) {
-				log.Info("Commit blobs fail", "kvIndex", kvIndices[i], "err", err.Error())
+				s.lg.Info("Commit blobs fail", "kvIndex", kvIndices[i], "err", err.Error())
 				break
 			}
 		}
@@ -392,7 +394,7 @@ func (s *StorageManager) DownloadAllMetas(ctx context.Context, batchSize uint64)
 			continue
 		}
 
-		log.Info("Begin to download metas", "shard", sid, "first", first, "end", end, "limit", limit, "kvEntryCount", kvEntryCount)
+		s.lg.Info("Begin to download metas", "shard", sid, "first", first, "end", end, "limit", limit, "kvEntryCount", kvEntryCount)
 		ts := time.Now()
 
 		err := s.downloadMetaInParallel(ctx, first, end, batchSize)
@@ -400,7 +402,7 @@ func (s *StorageManager) DownloadAllMetas(ctx context.Context, batchSize uint64)
 			return err
 		}
 
-		log.Info("All the metas has been downloaded", "first", first, "end", end, "time", time.Since(ts).Seconds())
+		s.lg.Info("All the metas has been downloaded", "first", first, "end", end, "time", time.Since(ts).Seconds())
 	}
 
 	return nil
@@ -487,7 +489,7 @@ func (s *StorageManager) downloadMetaInRange(ctx context.Context, from, to, batc
 		}
 		s.mu.Unlock()
 
-		log.Info(
+		s.lg.Info(
 			"One batch metas has been downloaded", "first", from,
 			"batchLimit", batchLimit,
 			"to", to,
@@ -496,7 +498,7 @@ func (s *StorageManager) downloadMetaInRange(ctx context.Context, from, to, batc
 
 		select {
 		case <-ctx.Done():
-			log.Info("StorageManager res done, return")
+			s.lg.Info("StorageManager res done, return")
 			return nil
 		default:
 		}

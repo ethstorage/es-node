@@ -45,8 +45,8 @@ var (
 	contract = common.HexToAddress("0x0000000000000000000000000000000003330001")
 	empty    = make([]byte, 0)
 	params   = SyncerParams{MaxPeers: 30, InitRequestSize: uint64(4 * 1024 * 1024), SyncConcurrency: 16, FillEmptyConcurrency: 16, MetaDownloadBatchSize: 16}
-	testLog  = log.New("TestSync")
-	prover   = prv.NewKZGProver(testLog)
+	lg       = log.New("TestSync")
+	prover   = prv.NewKZGProver(lg)
 )
 
 type remotePeer struct {
@@ -112,7 +112,7 @@ func (l1 *mockL1Source) GetKvMetas(kvIndices []uint64, blockNumber int64) ([][32
 	for _, idx := range kvIndices {
 		meta, err := l1.getMetadata(idx)
 		if err != nil {
-			log.Debug("read meta fail", "err", err.Error())
+			lg.Debug("read meta fail", "err", err.Error())
 			continue
 		}
 		metas = append(metas, meta)
@@ -201,13 +201,13 @@ func createEthStorage(contract common.Address, shardIdxList []uint64, chunkSize,
 		startChunkId := shardIdx * chunkPerKv * kvEntries
 		_, err := ethstorage.Create(fileName, startChunkId, kvEntries*chunkPerKv, 0, kvSize, encodeType, miner, sm.ChunkSize())
 		if err != nil {
-			log.Crit("open failed", "error", err)
+			lg.Crit("open failed", "error", err)
 		}
 
 		var df *ethstorage.DataFile
 		df, err = ethstorage.OpenDataFile(fileName)
 		if err != nil {
-			log.Crit("open failed", "error", err)
+			lg.Crit("open failed", "error", err)
 		}
 		sm.AddDataFile(df)
 	}
@@ -331,17 +331,17 @@ func connect(t *testing.T, a, b host.Host, as, bs map[common.Address][]uint64) {
 	}
 }
 
-func createLocalHostAndSyncClient(t *testing.T, testLog log.Logger, rollupCfg *rollup.EsConfig, db ethdb.Database,
+func createLocalHostAndSyncClient(t *testing.T, rollupCfg *rollup.EsConfig, db ethdb.Database,
 	storageManager StorageManager, metrics SyncClientMetrics, mux *event.Feed) (host.Host, *SyncClient) {
 	localHost := getNetHost(t)
 
-	syncCl := NewSyncClient(testLog, rollupCfg, localHost.NewStream, storageManager, &params, db, metrics, mux)
+	syncCl := NewSyncClient(lg, rollupCfg, localHost.NewStream, storageManager, &params, db, metrics, mux)
 	localHost.Network().Notify(&network.NotifyBundle{
 		ConnectedF: func(nw network.Network, conn network.Conn) {
 			shards := make(map[common.Address][]uint64)
 			css, err := localHost.Peerstore().Get(conn.RemotePeer(), EthStorageENRKey)
 			if err != nil {
-				log.Warn("Get shards from peer failed", "error", err.Error())
+				lg.Warn("Get shards from peer failed", "error", err.Error())
 			} else {
 				shards = ConvertToShardList(css.([]*ContractShards))
 			}
@@ -360,7 +360,7 @@ func createLocalHostAndSyncClient(t *testing.T, testLog log.Logger, rollupCfg *r
 		shards := make(map[common.Address][]uint64)
 		css, err := localHost.Peerstore().Get(conn.RemotePeer(), EthStorageENRKey)
 		if err != nil {
-			log.Warn("Get shards from peer failed", "error", err.Error())
+			lg.Warn("Get shards from peer failed", "error", err.Error())
 		} else {
 			shards = ConvertToShardList(css.([]*ContractShards))
 		}
@@ -373,13 +373,13 @@ func createLocalHostAndSyncClient(t *testing.T, testLog log.Logger, rollupCfg *r
 }
 
 func createRemoteHost(t *testing.T, ctx context.Context, rollupCfg *rollup.EsConfig,
-	storageManager *mockStorageManagerReader, db ethdb.Database, metrics SyncServerMetrics, testLog log.Logger) host.Host {
+	storageManager *mockStorageManagerReader, db ethdb.Database, metrics SyncServerMetrics) host.Host {
 
 	remoteHost := getNetHost(t)
-	syncSrv := NewSyncServer(rollupCfg, storageManager, db, metrics)
-	blobByRangeHandler := MakeStreamHandler(ctx, testLog, syncSrv.HandleGetBlobsByRangeRequest)
+	syncSrv := NewSyncServer(rollupCfg, storageManager, db, metrics, lg)
+	blobByRangeHandler := MakeStreamHandler(ctx, lg, syncSrv.HandleGetBlobsByRangeRequest)
 	remoteHost.SetStreamHandler(GetProtocolID(RequestBlobsByRangeProtocolID, rollupCfg.L2ChainID), blobByRangeHandler)
-	blobByListHandler := MakeStreamHandler(ctx, testLog, syncSrv.HandleGetBlobsByListRequest)
+	blobByListHandler := MakeStreamHandler(ctx, lg, syncSrv.HandleGetBlobsByListRequest)
 	remoteHost.SetStreamHandler(GetProtocolID(RequestBlobsByListProtocolID, rollupCfg.L2ChainID), blobByListHandler)
 
 	return remoteHost
@@ -545,7 +545,7 @@ func TestSync_RequestL2Range(t *testing.T) {
 	data := makeKVStorage(contract, []uint64{0}, defaultChunkSize, kvSize, kvEntries, lastKvIndex, common.Address{}, defaultEncodeType, metafile)
 
 	l1 := NewMockL1Source(lastKvIndex, metafileName)
-	sm := ethstorage.NewStorageManager(shardManager, l1)
+	sm := ethstorage.NewStorageManager(shardManager, l1, lg)
 	smr := &mockStorageManagerReader{
 		kvEntries:       kvEntries,
 		maxKvSize:       kvSize,
@@ -557,7 +557,7 @@ func TestSync_RequestL2Range(t *testing.T) {
 	}
 
 	// create local and remote hosts, set up sync client and server
-	localHost, syncCl := createLocalHostAndSyncClient(t, testLog, rollupCfg, db, sm, m, mux)
+	localHost, syncCl := createLocalHostAndSyncClient(t, rollupCfg, db, sm, m, mux)
 	syncCl.loadSyncStatus()
 	sm.Reset(0)
 	err = sm.DownloadAllMetas(context.Background(), 16)
@@ -565,7 +565,7 @@ func TestSync_RequestL2Range(t *testing.T) {
 		t.Fatal("Download blob metadata failed", "error", err)
 		return
 	}
-	remoteHost := createRemoteHost(t, ctx, rollupCfg, smr, db, m, testLog)
+	remoteHost := createRemoteHost(t, ctx, rollupCfg, smr, db, m)
 	connect(t, localHost, remoteHost, shards, shards)
 
 	time.Sleep(2 * time.Second)
@@ -617,7 +617,7 @@ func TestSync_RequestL2List(t *testing.T) {
 	data := makeKVStorage(contract, []uint64{0}, defaultChunkSize, kvSize, kvEntries, lastKvIndex, common.Address{}, defaultEncodeType, metafile)
 
 	l1 := NewMockL1Source(lastKvIndex, metafileName)
-	sm := ethstorage.NewStorageManager(shardManager, l1)
+	sm := ethstorage.NewStorageManager(shardManager, l1, lg)
 	smr := &mockStorageManagerReader{
 		kvEntries:       kvEntries,
 		maxKvSize:       kvSize,
@@ -629,7 +629,7 @@ func TestSync_RequestL2List(t *testing.T) {
 	}
 
 	// create local and remote hosts, set up sync client and server
-	localHost, syncCl := createLocalHostAndSyncClient(t, testLog, rollupCfg, db, sm, m, mux)
+	localHost, syncCl := createLocalHostAndSyncClient(t, rollupCfg, db, sm, m, mux)
 	syncCl.loadSyncStatus()
 	sm.Reset(0)
 	err = sm.DownloadAllMetas(context.Background(), 16)
@@ -637,7 +637,7 @@ func TestSync_RequestL2List(t *testing.T) {
 		t.Fatal("Download blob metadata failed", "error", err)
 		return
 	}
-	remoteHost := createRemoteHost(t, ctx, rollupCfg, smr, db, m, testLog)
+	remoteHost := createRemoteHost(t, ctx, rollupCfg, smr, db, m)
 	connect(t, localHost, remoteHost, shards, shards)
 
 	indexes := make([]uint64, 0)
@@ -689,9 +689,9 @@ func TestSaveAndLoadSyncStatus(t *testing.T) {
 	}(files)
 
 	l1 := NewMockL1Source(lastKvIndex, metafileName)
-	sm := ethstorage.NewStorageManager(shardManager, l1)
+	sm := ethstorage.NewStorageManager(shardManager, l1, lg)
 	sm.Reset(0)
-	_, syncCl := createLocalHostAndSyncClient(t, testLog, rollupCfg, db, sm, m, mux)
+	_, syncCl := createLocalHostAndSyncClient(t, rollupCfg, db, sm, m, mux)
 	syncCl.loadSyncStatus()
 	indexes := []uint64{30, 5, 8}
 	syncCl.tasks[0].healTask.insert(indexes)
@@ -817,10 +817,10 @@ func testSync(t *testing.T, chunkSize, kvSize, kvEntries uint64, localShards []u
 	}(files)
 
 	l1 := NewMockL1Source(lastKvIndex, metafileName)
-	sm := ethstorage.NewStorageManager(shardManager, l1)
+	sm := ethstorage.NewStorageManager(shardManager, l1, lg)
 	sm.Reset(0)
 	data := makeKVStorage(contract, localShards, chunkSize, kvSize, kvEntries, lastKvIndex, common.Address{}, encodeType, metafile)
-	localHost, syncCl := createLocalHostAndSyncClient(t, testLog, rollupCfg, db, sm, m, mux)
+	localHost, syncCl := createLocalHostAndSyncClient(t, rollupCfg, db, sm, m, mux)
 	syncCl.Start()
 
 	finalExcludedList := remotePeers[0].excludedList
@@ -840,7 +840,7 @@ func testSync(t *testing.T, chunkSize, kvSize, kvEntries uint64, localShards []u
 		}
 		rShardMap := make(map[common.Address][]uint64)
 		rShardMap[contract] = rPeer.shards
-		remoteHost := createRemoteHost(t, ctx, rollupCfg, smr, db, m, testLog)
+		remoteHost := createRemoteHost(t, ctx, rollupCfg, smr, db, m)
 		connect(t, localHost, remoteHost, localShardMap, rShardMap)
 	}
 
@@ -1043,12 +1043,12 @@ func TestAddPeerDuringSyncing(t *testing.T) {
 
 	l1 := NewMockL1Source(lastKvIndex, metafileName)
 	data := makeKVStorage(contract, shards, defaultChunkSize, kvSize, kvEntries, lastKvIndex, common.Address{}, encodeType, metafile)
-	sm := ethstorage.NewStorageManager(shardManager, l1)
+	sm := ethstorage.NewStorageManager(shardManager, l1, lg)
 	sm.Reset(0)
 	// fill empty to excludedList for verify KVs
 	fillEmpty(shardManager, excludedList)
 
-	localHost, syncCl := createLocalHostAndSyncClient(t, testLog, rollupCfg, db, sm, m, mux)
+	localHost, syncCl := createLocalHostAndSyncClient(t, rollupCfg, db, sm, m, mux)
 	syncCl.Start()
 
 	pData := copyShardData(data[contract], shards, kvEntries, excludedList)
@@ -1061,7 +1061,7 @@ func TestAddPeerDuringSyncing(t *testing.T) {
 		shardMiner:      common.Address{},
 		blobPayloads:    pData,
 	}
-	remoteHost0 := createRemoteHost(t, ctx, rollupCfg, smr0, db, m, testLog)
+	remoteHost0 := createRemoteHost(t, ctx, rollupCfg, smr0, db, m)
 	connect(t, localHost, remoteHost0, shardMap, shardMap)
 	time.Sleep(3 * time.Second)
 
@@ -1079,7 +1079,7 @@ func TestAddPeerDuringSyncing(t *testing.T) {
 		shardMiner:      common.Address{},
 		blobPayloads:    data[contract],
 	}
-	remoteHost1 := createRemoteHost(t, ctx, rollupCfg, smr1, db, m, testLog)
+	remoteHost1 := createRemoteHost(t, ctx, rollupCfg, smr1, db, m)
 	connect(t, localHost, remoteHost1, shardMap, shardMap)
 	checkStall(t, 4, mux, cancel)
 
@@ -1125,9 +1125,9 @@ func TestCloseSyncWhileFillEmpty(t *testing.T) {
 	makeKVStorage(contract, shards, defaultChunkSize, kvSize, kvEntries, lastKvIndex, common.Address{}, defaultEncodeType, metafile)
 
 	l1 := NewMockL1Source(lastKvIndex, metafileName)
-	sm := ethstorage.NewStorageManager(shardManager, l1)
+	sm := ethstorage.NewStorageManager(shardManager, l1, lg)
 	sm.Reset(0)
-	_, syncCl := createLocalHostAndSyncClient(t, testLog, rollupCfg, db, sm, m, mux)
+	_, syncCl := createLocalHostAndSyncClient(t, rollupCfg, db, sm, m, mux)
 	syncCl.Start()
 	time.Sleep(10 * time.Millisecond)
 	syncCl.Close()
@@ -1180,12 +1180,12 @@ func TestAddPeerAfterSyncDone(t *testing.T) {
 	l1 := NewMockL1Source(lastKvIndex, metafileName)
 	data := makeKVStorage(contract, shards, defaultChunkSize, kvSize, kvEntries, lastKvIndex, common.Address{}, encodeType, metafile)
 
-	sm := ethstorage.NewStorageManager(shardManager, l1)
+	sm := ethstorage.NewStorageManager(shardManager, l1, lg)
 	sm.Reset(0)
 	// fill empty to excludedList for verify KVs
 	fillEmpty(shardManager, excludedList)
 
-	localHost, syncCl := createLocalHostAndSyncClient(t, testLog, rollupCfg, db, sm, m, mux)
+	localHost, syncCl := createLocalHostAndSyncClient(t, rollupCfg, db, sm, m, mux)
 	syncCl.Start()
 
 	smr0 := &mockStorageManagerReader{
@@ -1197,7 +1197,7 @@ func TestAddPeerAfterSyncDone(t *testing.T) {
 		shardMiner:      common.Address{},
 		blobPayloads:    data[contract],
 	}
-	remoteHost0 := createRemoteHost(t, ctx, rollupCfg, smr0, db, m, testLog)
+	remoteHost0 := createRemoteHost(t, ctx, rollupCfg, smr0, db, m)
 	connect(t, localHost, remoteHost0, shardMap, shardMap)
 	checkStall(t, 4, mux, cancel)
 
@@ -1215,7 +1215,7 @@ func TestAddPeerAfterSyncDone(t *testing.T) {
 		shardMiner:      common.Address{},
 		blobPayloads:    data[contract],
 	}
-	remoteHost1 := createRemoteHost(t, ctx, rollupCfg, smr1, db, m, testLog)
+	remoteHost1 := createRemoteHost(t, ctx, rollupCfg, smr1, db, m)
 	connect(t, localHost, remoteHost1, shardMap, shardMap)
 
 	time.Sleep(10 * time.Millisecond)
@@ -1259,9 +1259,9 @@ func TestFillEmpty(t *testing.T) {
 	makeKVStorage(contract, shards, defaultChunkSize, kvSize, kvEntries, lastKvIndex, common.Address{}, defaultEncodeType, metafile)
 
 	l1 := NewMockL1Source(lastKvIndex, metafileName)
-	sm := ethstorage.NewStorageManager(shardManager, l1)
+	sm := ethstorage.NewStorageManager(shardManager, l1, lg)
 	sm.Reset(0)
-	_, syncCl := createLocalHostAndSyncClient(t, testLog, rollupCfg, db, sm, m, mux)
+	_, syncCl := createLocalHostAndSyncClient(t, rollupCfg, db, sm, m, mux)
 	syncCl.Start()
 	for i := 0; i < 4; i++ {
 		time.Sleep(500 * time.Millisecond)

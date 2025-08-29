@@ -141,7 +141,7 @@ func BuildGlobalGossipParams(cfg *rollup.EsConfig) pubsub.GossipSubParams {
 
 // NewGossipSub configures a new pubsub instance with the specified parameters.
 // PubSub uses a GossipSubRouter as it's router under the hood.
-func NewGossipSub(p2pCtx context.Context, h host.Host, g ConnectionGater, cfg *rollup.EsConfig, gossipConf GossipSetupConfigurables, m GossipMetricer, log log.Logger) (*pubsub.PubSub, error) {
+func NewGossipSub(p2pCtx context.Context, h host.Host, g ConnectionGater, cfg *rollup.EsConfig, gossipConf GossipSetupConfigurables, m GossipMetricer, lg log.Logger) (*pubsub.PubSub, error) {
 	denyList, err := pubsub.NewTimeCachedBlacklist(30 * time.Second)
 	if err != nil {
 		return nil, err
@@ -160,7 +160,7 @@ func NewGossipSub(p2pCtx context.Context, h host.Host, g ConnectionGater, cfg *r
 		pubsub.WithBlacklist(denyList),
 		// pubsub.WithEventTracer(&gossipTracer{m: m}),
 	}
-	// gossipOpts = append(gossipOpts, ConfigurePeerScoring(h, g, gossipConf, m, log)...)
+	// gossipOpts = append(gossipOpts, ConfigurePeerScoring(h, g, gossipConf, m, lg)...)
 	// gossipOpts = append(gossipOpts, gossipConf.ConfigureGossip(cfg)...)
 	return pubsub.NewGossipSub(p2pCtx, h, gossipOpts...)
 }

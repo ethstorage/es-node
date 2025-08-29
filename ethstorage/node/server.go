@@ -25,7 +25,7 @@ type rpcServer struct {
 	httpServer *http.Server
 	appVersion string
 	listenAddr net.Addr
-	log        log.Logger
+	lg         log.Logger
 }
 
 func newRPCServer(
@@ -34,11 +34,11 @@ func newRPCServer(
 	l2ChainId *big.Int,
 	sm *ethstorage.StorageManager,
 	dl *downloader.Downloader,
-	log log.Logger,
+	lg log.Logger,
 	appVersion string,
 ) (*rpcServer, error) {
-	esAPI := NewESAPI(rpcCfg, sm, dl, log)
-	ethApi := NewETHAPI(rpcCfg, l2ChainId, log)
+	esAPI := NewESAPI(rpcCfg, sm, dl, lg)
+	ethApi := NewETHAPI(rpcCfg, l2ChainId, lg)
 
 	endpoint := net.JoinHostPort(rpcCfg.ListenAddr, strconv.Itoa(rpcCfg.ListenPort))
 	r := &rpcServer{
@@ -56,7 +56,7 @@ func newRPCServer(
 			},
 		},
 		appVersion: appVersion,
-		log:        log,
+		lg:         lg,
 	}
 	return r, nil
 }
@@ -86,7 +86,7 @@ func (s *rpcServer) Start() error {
 	s.httpServer = ophttp.NewHttpServer(mux)
 	go func() {
 		if err := s.httpServer.Serve(listener); err != nil && !errors.Is(err, http.ErrServerClosed) { // todo improve error handling
-			s.log.Error("Http server failed", "err", err)
+			s.lg.Error("Http server failed", "err", err)
 		}
 	}()
 	return nil

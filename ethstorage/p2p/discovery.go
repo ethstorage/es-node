@@ -48,7 +48,7 @@ const (
 	p2pVersion                   = 0
 )
 
-func (conf *Config) Discovery(log log.Logger, l2ChainID uint64, tcpPort uint16, fallbackIP net.IP) (*enode.LocalNode, *discover.UDPv5, bool, error) {
+func (conf *Config) Discovery(lg log.Logger, l2ChainID uint64, tcpPort uint16, fallbackIP net.IP) (*enode.LocalNode, *discover.UDPv5, bool, error) {
 	isIPSet := false
 	if conf.NoDiscovery {
 		return nil, nil, isIPSet, nil
@@ -108,7 +108,7 @@ func (conf *Config) Discovery(log log.Logger, l2ChainID uint64, tcpPort uint16, 
 		NetRestrict:  nil,
 		Bootnodes:    conf.Bootnodes,
 		Unhandled:    nil, // Not used in dv5
-		Log:          log,
+		Log:          lg,
 		ValidSchemes: enode.ValidSchemes,
 	}
 	udpV5, err := discover.ListenV5(conn, localNode, cfg)
@@ -116,7 +116,7 @@ func (conf *Config) Discovery(log log.Logger, l2ChainID uint64, tcpPort uint16, 
 		return nil, nil, isIPSet, err
 	}
 
-	log.Info("Started discovery service", "enr", localNode.Node(), "id", localNode.ID(), "port", udpV5.Self().UDP())
+	lg.Info("Started discovery service", "enr", localNode.Node(), "id", localNode.ID(), "port", udpV5.Self().UDP())
 
 	// TODO: periodically we can pull the external IP and TCP port from libp2p NAT service,
 	// and add it as a statement to keep the localNode accurate (if we trust the NAT device more than the discv5 statements)
@@ -141,7 +141,6 @@ func updateLocalNodeIPAndTCP(addrs []ma.Multiaddr, localNode *enode.LocalNode) b
 		tcpPort, _ := strconv.Atoi(tcpStr)
 		localNode.SetFallbackIP(ip)
 		localNode.Set(enr.TCP(tcpPort))
-		log.Debug("update LocalNode IP and TCP", "IP", localNode.Node().IP(), "tcp", localNode.Node().TCP())
 		return true
 	}
 	return false
@@ -198,23 +197,23 @@ func enrToAddrInfo(r *enode.Node) (*peer.AddrInfo, *crypto.Secp256k1PublicKey, e
 	}, pub, nil
 }
 
-func FilterEnodes(log log.Logger, chainID uint64) func(node *enode.Node) bool {
+func FilterEnodes(lg log.Logger, chainID uint64) func(node *enode.Node) bool {
 	return func(node *enode.Node) bool {
 		var dat protocol.EthStorageENRData
 		err := node.Load(&dat)
 		// if the entry does not exist, or if it is invalid, then ignore the node
 		if err != nil {
-			log.Trace("Discovered node record has no ethstorage info", "node", node.ID(), "err", err)
+			lg.Trace("Discovered node record has no ethstorage info", "node", node.ID(), "err", err)
 			return false
 		}
 		// check chain ID matches
 		if chainID != dat.ChainID {
-			log.Trace("Discovered node record has no matching chain ID", "node", node.ID(), "got", dat.ChainID, "expected", chainID)
+			lg.Trace("Discovered node record has no matching chain ID", "node", node.ID(), "got", dat.ChainID, "expected", chainID)
 			return false
 		}
 		// check Version matches
 		if dat.Version != p2pVersion {
-			log.Trace("Discovered node record has no matching Version", "node", node.ID(), "got", dat.Version, "expected", p2pVersion)
+			lg.Trace("Discovered node record has no matching Version", "node", node.ID(), "got", dat.Version, "expected", p2pVersion)
 			return false
 		}
 		shards := ethstorage.Shards()
@@ -237,12 +236,12 @@ func FilterEnodes(log log.Logger, chainID uint64) func(node *enode.Node) bool {
 // and connects to nodes in the peerstore that we are not already connected to.
 // Nodes from the peerstore will be shuffled, unsuccessful connection attempts will cause peers to be avoided,
 // and only nodes with addresses (under TTL) will be connected to.
-func (n *NodeP2P) DiscoveryProcess(ctx context.Context, log log.Logger, l2ChainID uint64, connectGoal uint) {
+func (n *NodeP2P) DiscoveryProcess(ctx context.Context, lg log.Logger, l2ChainID uint64, connectGoal uint) {
 	if n.dv5Udp == nil {
-		log.Warn("Peer discovery is disabled")
+		lg.Warn("Peer discovery is disabled")
 		return
 	}
-	filter := FilterEnodes(log, l2ChainID)
+	filter := FilterEnodes(lg, l2ChainID)
 	// We pull nodes from discv5 DHT in random order to find new peers.
 	// Eventually we'll find a peer record that matches our filter.
 	randomNodeIter := n.dv5Udp.RandomNodes()
@@ -278,12 +277,12 @@ func (n *NodeP2P) DiscoveryProcess(ctx context.Context, log log.Logger, l2ChainI
 				return
 			}
 			addrs := n.Host().Peerstore().Addrs(id)
-			log.Debug("Attempting connection", "peer", id, "Addr", addrs)
+			lg.Debug("Attempting connection", "peer", id, "Addr", addrs)
 			ctx, cancel := context.WithTimeout(ctx, time.Second*10)
 			err := n.Host().Connect(ctx, peer.AddrInfo{ID: id, Addrs: addrs})
 			cancel()
 			if err != nil {
-				log.Debug("Failed connection attempt", "peer", id, "Addr", addrs, "err", err)
+				lg.Debug("Failed connection attempt", "peer", id, "Addr", addrs, "err", err)
 			}
 		}
 	}
@@ -301,7 +300,7 @@ func (n *NodeP2P) DiscoveryProcess(ctx context.Context, log log.Logger, l2ChainI
 				if updateLocalNodeIPAndTCP(n.host.Addrs(), n.dv5Local) && !initialized {
 					initialized = true
 					updateLocalNodeTicker.Reset(refreshLocalNodeAddrInterval)
-					log.Info("Update local TCP IP address", "ip", n.dv5Local.Node().IP(), "udp", n.dv5Local.Node().UDP(),
+					lg.Info("Update local TCP IP address", "ip", n.dv5Local.Node().IP(), "udp", n.dv5Local.Node().UDP(),
 						"tcp", n.dv5Local.Node().TCP(), "seq", n.dv5Local.Seq(), "enr", n.dv5Local.Node().String())
 				}
 			case <-ctx.Done():
@@ -325,7 +324,7 @@ func (n *NodeP2P) DiscoveryProcess(ctx context.Context, log log.Logger, l2ChainI
 			select {
 			case <-discoverTicker.C:
 				if !randomNodeIter.Next() {
-					log.Info("Discv5 DHT iteration stopped, closing peer discovery now...")
+					lg.Info("Discv5 DHT iteration stopped, closing peer discovery now...")
 					return
 				}
 				found := randomNodeIter.Node()
@@ -366,13 +365,13 @@ func (n *NodeP2P) DiscoveryProcess(ctx context.Context, log log.Logger, l2ChainI
 	for {
 		select {
 		case <-ctx.Done():
-			log.Info("Stopped peer discovery")
+			lg.Info("Stopped peer discovery")
 			return // no ctx error, expected close
 		case found := <-randomNodesCh:
 			// get the most recent version of the node record in case it changes due to the remote node TCP or UDP port change.
 			node := n.dv5Udp.Resolve(found)
 			if node.Seq() != found.Seq() {
-				log.Debug("Remote node ENR changed", "ID", node.ID(), "remote IP", node.IP(), "ENR", node.String())
+				lg.Debug("Remote node ENR changed", "ID", node.ID(), "remote IP", node.IP(), "ENR", node.String())
 			}
 			var dat protocol.EthStorageENRData
 			if err := node.Load(&dat); err != nil { // we already filtered on chain ID and Version
@@ -387,7 +386,7 @@ func (n *NodeP2P) DiscoveryProcess(ctx context.Context, log log.Logger, l2ChainI
 			pstore.AddAddrs(info.ID, info.Addrs, discoveredAddrTTL)
 			err = pstore.Put(info.ID, protocol.EthStorageENRKey, dat.Shards)
 			if err != nil {
-				log.Info("Peerstore put EthStorageENRKey error", "err", err.Error())
+				lg.Info("Peerstore put EthStorageENRKey error", "err", err.Error())
 				continue
 			}
 			_ = pstore.AddPubKey(info.ID, pub)
@@ -395,10 +394,10 @@ func (n *NodeP2P) DiscoveryProcess(ctx context.Context, log log.Logger, l2ChainI
 			// or peers on different chains, or anyone we have not seen via discovery.
 			// There is no tag score decay yet, so just set it to 42.
 			n.ConnectionManager().TagPeer(info.ID, fmt.Sprintf("ethstorage-%d-%d", dat.ChainID, dat.Version), 42)
-			log.Debug("Discovered peer", "peer", info.ID, "nodeID", node.ID(), "addr", info.Addrs[0])
+			lg.Debug("Discovered peer", "peer", info.ID, "nodeID", node.ID(), "addr", info.Addrs[0])
 		case <-connectTicker.C:
 			connected := n.Host().Network().Peers()
-			log.Debug("Peering tick", "connected", len(connected),
+			lg.Debug("Peering tick", "connected", len(connected),
 				"advertisedUdp", n.dv5Local.Node().UDP(),
 				"advertisedTcp", n.dv5Local.Node().TCP(),
 				"advertisedIP", n.dv5Local.Node().IP())

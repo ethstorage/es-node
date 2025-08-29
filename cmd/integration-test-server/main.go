@@ -26,7 +26,6 @@ import (
 	itutils "github.com/ethstorage/go-ethstorage/cmd/integration-test-server/utils"
 	es "github.com/ethstorage/go-ethstorage/ethstorage"
 	"github.com/ethstorage/go-ethstorage/ethstorage/node"
-	prv "github.com/ethstorage/go-ethstorage/ethstorage/prover"
 )
 
 const (
@@ -55,8 +54,6 @@ var (
 	lastQueryTime    = time.Now()
 	lastRecord       *node.NodeState
 	hasConnectedPeer = false
-	testLog          = log.New("IntegrationTest")
-	prover           = prv.NewKZGProver(testLog)
 	contractAddress  = common.Address{}
 )
 

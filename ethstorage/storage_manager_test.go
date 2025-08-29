@@ -26,8 +26,8 @@ const (
 
 var (
 	contractAddress = common.HexToAddress("0x0000000000000000000000000000000003330001")
-	testLog         = log.New("TestStorageManager")
-	prover          = prv.NewKZGProver(testLog)
+	lg              = log.New("TestStorageManager")
+	prover          = prv.NewKZGProver(lg)
 	storageManager  *StorageManager
 )
 
@@ -53,7 +53,7 @@ func (l1 *mockL1Source) GetKvMetas(kvIndices []uint64, blockNumber int64) ([][32
 	for _, idx := range kvIndices {
 		meta, err := l1.getMetadata(idx)
 		if err != nil {
-			log.Debug("read meta fail", "err", err.Error())
+			lg.Debug("read meta fail", "err", err.Error())
 			continue
 		}
 		metas = append(metas, meta)
@@ -103,13 +103,13 @@ func createEthStorage(contract common.Address, shardIdxList []uint64, chunkSize,
 		startChunkId := shardIdx * chunkPerKv * kvEntries
 		_, err := Create(fileName, startChunkId, kvEntries*chunkPerKv, 0, kvSize, encodeType, miner, sm.ChunkSize())
 		if err != nil {
-			log.Crit("open failed", "error", err)
+			lg.Crit("open failed", "error", err)
 		}
 
 		var df *DataFile
 		df, err = OpenDataFile(fileName)
 		if err != nil {
-			log.Crit("open failed", "error", err)
+			lg.Crit("open failed", "error", err)
 		}
 		sm.AddDataFile(df)
 	}
@@ -162,7 +162,7 @@ func setup(t *testing.T) {
 		}
 	}(files)
 
-	storageManager = NewStorageManager(sm, l1)
+	storageManager = NewStorageManager(sm, l1, lg)
 	storageManager.DownloadThreadNum = 1
 
 	kvIndexes := []uint64{1, 2, 3}

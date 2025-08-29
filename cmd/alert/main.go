@@ -20,7 +20,7 @@ var (
 )
 
 type IChecker interface {
-	Check(logger log.Logger) (bool, string)
+	Check(lg log.Logger) (bool, string)
 }
 
 type AlertConfig struct {
@@ -28,17 +28,17 @@ type AlertConfig struct {
 	Params    map[string]string `json:"params"`
 }
 
-func LoadConfig(ruleFile string) []IChecker {
+func LoadConfig(ruleFile string, lg log.Logger) []IChecker {
 	file, err := os.Open(ruleFile)
 	if err != nil {
-		log.Crit("Failed to load rule file", "rule file", ruleFile, "err", err)
+		lg.Crit("Failed to load rule file", "rule file", ruleFile, "err", err)
 	}
 	defer file.Close()
 
 	var alerts []*AlertConfig
 	decoder := json.NewDecoder(file)
 	if err := decoder.Decode(&alerts); err != nil {
-		log.Crit("Failed to decode rule file", "rule file", ruleFile, "err", err)
+		lg.Crit("Failed to decode rule file", "rule file", ruleFile, "err", err)
 	}
 
 	checkers := make([]IChecker, 0)
@@ -47,23 +47,23 @@ func LoadConfig(ruleFile string) []IChecker {
 		case alert.AlertType == "ESLastMinedBlockChecker":
 			checker, err := newESLastMinedBlockChecker(alert.Params)
 			if err != nil {
-				log.Crit("Failed to load ESLastMinedBlockChecker", "params", alert.Params, "err", err)
+				lg.Crit("Failed to load ESLastMinedBlockChecker", "params", alert.Params, "err", err)
 			}
 			checkers = append(checkers, checker)
 		case alert.AlertType == "LastBlockChecker":
 			checker, err := newLastBlockChecker(alert.Params)
 			if err != nil {
-				log.Crit("Failed to load LastBlockChecker", "params", alert.Params, "err", err)
+				lg.Crit("Failed to load LastBlockChecker", "params", alert.Params, "err", err)
 			}
 			checkers = append(checkers, checker)
 		case alert.AlertType == "WebsiteOnlineChecker":
 			checker, err := newWebsiteOnlineChecker(alert.Params)
 			if err != nil {
-				log.Crit("Failed to load WebsiteOnlineChecker", "params", alert.Params, "err", err)
+				lg.Crit("Failed to load WebsiteOnlineChecker", "params", alert.Params, "err", err)
 			}
 			checkers = append(checkers, checker)
 		default:
-			log.Crit("Failed to load alert with unknown type", "type", alert.AlertType, "params", alert.Params)
+			lg.Crit("Failed to load alert with unknown type", "type", alert.AlertType, "params", alert.Params)
 		}
 	}
 
@@ -75,15 +75,15 @@ func main() {
 	log.SetDefault(log.NewLogger(log.NewTerminalHandlerWithLevel(os.Stderr, log.LevelInfo, true)))
 
 	var (
-		logger    = log.New("app", "alert")
+		lg        = log.New("app", "alert")
 		needAlert = false
 		contents  = ""
 	)
 
-	checkers := LoadConfig(*ruleFileFlag)
+	checkers := LoadConfig(*ruleFileFlag, lg)
 
 	for _, checker := range checkers {
-		res, content := checker.Check(logger)
+		res, content := checker.Check(lg)
 		if res {
 			needAlert = res
 			contents = contents + content + "\n"
@@ -91,20 +91,20 @@ func main() {
 	}
 
 	if needAlert {
-		writeHtmlFile(fmt.Sprintf(emailFormat, contents))
+		writeHtmlFile(fmt.Sprintf(emailFormat, contents), lg)
 		os.Exit(1)
 	}
 }
 
-func writeHtmlFile(content string) {
+func writeHtmlFile(content string, lg log.Logger) {
 	file, err := os.Create(*bodyFileFlag)
 	if err != nil {
-		log.Crit("Create html file fail", "error", err.Error())
+		lg.Crit("Create html file fail", "error", err.Error())
 	}
 	defer file.Close()
 
 	_, err = file.WriteString(content)
 	if err != nil {
-		log.Crit("Write html file fail", "error", err.Error())
+		lg.Crit("Write html file fail", "error", err.Error())
 	}
 }

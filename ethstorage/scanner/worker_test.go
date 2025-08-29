@@ -222,9 +222,9 @@ func TestGetKvsInBatch(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			logger := log.New()
+			lg := log.New()
 
-			kvs, total, batchEnd := getKvsInBatch(tt.shards, tt.kvEntries, tt.lastKvIdx, tt.batchSize, tt.batchStartIndex, logger)
+			kvs, total, batchEnd := getKvsInBatch(tt.shards, tt.kvEntries, tt.lastKvIdx, tt.batchSize, tt.batchStartIndex, lg)
 
 			assert.Equal(t, tt.expectedKvs, kvs, "KV indices do not match")
 			assert.Equal(t, tt.expectedTotal, total, "Total entries do not match")

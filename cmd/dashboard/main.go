@@ -40,7 +40,6 @@ var (
 	listenAddrFlag = flag.String("address", "0.0.0.0", "Listener address")
 	portFlag       = flag.Int("port", 8300, "Listener port for the devp2p connection")
 	dataPath       = flag.String("datadir", "./es-data", "Data directory for the databases")
-	logFlag        = flag.Int("loglevel", 3, "Log level to use for Ethereum and the faucet")
 )
 
 type miningEvent struct {
@@ -75,23 +74,22 @@ type dashboard struct {
 	startBlock  uint64
 	endBlock    uint64
 	db          ethdb.Database
-	logger      log.Logger
+	lg          log.Logger
 }
 
-func newDashboard(param *Param, db ethdb.Database, m metrics.Metricer) (*dashboard, error) {
+func newDashboard(param *Param, db ethdb.Database, m metrics.Metricer, lg log.Logger) (*dashboard, error) {
 	var (
-		logger   = log.New("app", "Dashboard")
 		ctx      = context.Background()
 		contract = common.HexToAddress(param.Contract)
 	)
 
 	if param.Type != l2Type && param.Type != l1Type {
-		log.Crit("Invalid source type for param", "name", param.Name)
+		lg.Crit("Invalid source type for param", "name", param.Name)
 	}
 
-	source, err := eth.Dial(param.Rpc, contract, 12, logger)
+	source, err := eth.Dial(param.Rpc, contract, 12, lg)
 	if err != nil {
-		log.Crit("Failed to create L1 source", "err", err)
+		lg.Crit("Failed to create L1 source", "err", err)
 	}
 
 	start := param.StartNumber
@@ -102,11 +100,11 @@ func newDashboard(param *Param, db ethdb.Database, m metrics.Metricer) (*dashboa
 	if start == 0 {
 		block, err := source.BlockByNumber(ctx, new(big.Int).SetInt64(ethRPC.LatestBlockNumber.Int64()))
 		if err != nil {
-			log.Crit("Failed to fetch start block", "err", err)
+			lg.Crit("Failed to fetch start block", "err", err)
 		}
 		start = block.NumberU64()
 		if start == 0 {
-			log.Crit("Start block should not be 0")
+			lg.Crit("Start block should not be 0")
 		}
 	}
 
@@ -127,7 +125,7 @@ func newDashboard(param *Param, db ethdb.Database, m metrics.Metricer) (*dashboa
 		db:         db,
 		startBlock: start,
 		endBlock:   start - 1,
-		logger:     logger,
+		lg:         lg,
 	}, nil
 }
 
@@ -139,12 +137,12 @@ func (d *dashboard) RefreshMetrics(ctx context.Context, sig eth.L1BlockRef) {
 func (d *dashboard) RefreshBlobsMetrics(sig eth.L1BlockRef) {
 	kvEntryCnt, err := d.source.GetStorageKvEntryCount(int64(sig.Number))
 	if err != nil {
-		log.Warn("Refresh contract metrics (last kv index) failed", "err", err.Error())
+		d.lg.Warn("Refresh contract metrics (last kv index) failed", "err", err.Error())
 		return
 	}
 	maxShardIdx := kvEntryCnt / d.kvEntries
 	d.m.SetLastKVIndexAndMaxShardId(d.chainID, d.contract, sig.Number, kvEntryCnt, maxShardIdx)
-	d.logger.Info("RefreshBlobMetrics", "contract", d.contract, "blockNumber", sig.Number, "kvEntryCnt", kvEntryCnt, "maxShardIdx", maxShardIdx)
+	d.lg.Info("RefreshBlobMetrics", "contract", d.contract, "blockNumber", sig.Number, "kvEntryCnt", kvEntryCnt, "maxShardIdx", maxShardIdx)
 	d.maxShardIdx = maxShardIdx
 	if sig.Number > d.endBlock {
 		d.endBlock = sig.Number
@@ -160,14 +158,14 @@ func (d *dashboard) RefreshMiningMetrics() {
 
 		events, next, err := d.FetchMiningEvents(start, end)
 		if err != nil {
-			log.Warn("FetchMiningEvents fail", "start", start, "end", end, "err", err.Error())
+			d.lg.Warn("FetchMiningEvents fail", "start", start, "end", end, "err", err.Error())
 			return
 		}
 
 		for _, event := range events {
 			d.m.SetMiningInfo(d.chainID, d.contract, event.ShardId, event.Difficulty.Uint64(), event.LastMineTime,
 				event.BlockMined.Uint64(), event.Miner, event.GasFee.Uint64(), event.Reward.Uint64())
-			d.logger.Info("Refresh mining info", "contract", d.contract, "txHash", event.TxHash.Hex(),
+			d.lg.Info("Refresh mining info", "contract", d.contract, "txHash", event.TxHash.Hex(),
 				"blockMined", event.BlockMined, "lastMineTime", event.LastMineTime, "difficulty", event.Difficulty,
 				"miner", event.Miner, "gasFee", event.GasFee, "reward", event.Reward)
 		}
@@ -278,36 +276,37 @@ func LoadConfig(ruleFile string) []*Param {
 }
 
 func main() {
-	// Parse the flags and set up the logger to print everything requested
+	// Parse the flags and set up the lg to print everything requested
 	flag.Parse()
 	log.SetDefault(log.NewLogger(log.NewTerminalHandlerWithLevel(os.Stderr, log.LevelInfo, true)))
+	lg := log.New("app", "Dashboard")
 
 	if *portFlag < 0 || *portFlag > math.MaxUint16 {
-		log.Crit("Invalid port")
+		lg.Crit("Invalid port")
 	}
 
 	m := metrics.NewMetrics("dashboard")
 	params := LoadConfig(*configFileFlag)
 	db, err := leveldb.New(*dataPath, 2048, 8196, "es-data/db/dashboard/", false)
 	if err != nil {
-		log.Crit("Failed to create db", "err", err)
+		lg.Crit("Failed to create db", "err", err)
 	}
 	for _, param := range params {
-		d, err := newDashboard(param, rawdb.NewDatabase(db), m)
+		d, err := newDashboard(param, rawdb.NewDatabase(db), m, lg)
 		if err != nil {
-			log.Crit("New dashboard fail", "err", err)
+			lg.Crit("New dashboard fail", "err", err)
 		}
 		err = d.InitMetrics()
 		if err != nil {
-			log.Crit("Init metrics value fail", "err", err.Error())
+			lg.Crit("Init metrics value fail", "err", err.Error())
 		}
 
 		d.RefreshMiningMetrics()
-		l1LatestBlockSub := eth.PollBlockChanges(d.ctx, d.logger, d.source, d.RefreshMetrics, ethRPC.LatestBlockNumber, epoch, epoch)
+		l1LatestBlockSub := eth.PollBlockChanges(d.ctx, d.lg, d.source, d.RefreshMetrics, ethRPC.LatestBlockNumber, epoch, epoch)
 		defer l1LatestBlockSub.Unsubscribe()
 	}
 
 	if err := m.Serve(context.Background(), *listenAddrFlag, *portFlag); err != nil {
-		log.Crit("Error starting metrics server", "err", err)
+		lg.Crit("Error starting metrics server", "err", err)
 	}
 }
