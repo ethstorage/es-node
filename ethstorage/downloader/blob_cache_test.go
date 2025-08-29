@@ -31,7 +31,9 @@ var (
 	kvSize    uint64 = 1 << 17
 	kvEntries uint64 = 16
 	shardID          = uint64(0)
-	lg               = log.NewLogger(log.CLIConfig{Level: "warn", Format: "text"})
+	lg               = log.NewLogger(log.CLIConfig{
+		Level: "warn",
+	})
 )
 
 func TestDiskBlobCache(t *testing.T) {

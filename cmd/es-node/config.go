@@ -154,58 +154,60 @@ func NewMinerConfig(ctx *cli.Context, client *ethclient.Client, l1Contract, mine
 	}
 
 	cctx := context.Background()
-	randomChecks, err := readUintFromContract(cctx, client, l1Contract, "randomChecks")
+	cr := newContractReader(cctx, client, l1Contract, lg)
+
+	randomChecks, err := cr.readUint("randomChecks")
 	if err != nil {
 		return nil, err
 	}
 	minerConfig.RandomChecks = randomChecks
-	nonceLimit, err := readUintFromContract(cctx, client, l1Contract, "nonceLimit")
+	nonceLimit, err := cr.readUint("nonceLimit")
 	if err != nil {
 		return nil, err
 	}
 	minerConfig.NonceLimit = nonceLimit
-	minimumDiff, err := readBigIntFromContract(cctx, client, l1Contract, "minimumDiff")
+	minimumDiff, err := cr.readBig("minimumDiff")
 	if err != nil {
 		return nil, err
 	}
 	minerConfig.MinimumDiff = minimumDiff
-	cutoff, err := readBigIntFromContract(cctx, client, l1Contract, "cutoff")
+	cutoff, err := cr.readBig("cutoff")
 	if err != nil {
 		return nil, err
 	}
 	minerConfig.Cutoff = cutoff
-	diffAdjDivisor, err := readBigIntFromContract(cctx, client, l1Contract, "diffAdjDivisor")
+	diffAdjDivisor, err := cr.readBig("diffAdjDivisor")
 	if err != nil {
 		return nil, err
 	}
 	minerConfig.DiffAdjDivisor = diffAdjDivisor
-	dcf, err := readBigIntFromContract(cctx, client, l1Contract, "dcfFactor")
+	dcf, err := cr.readBig("dcfFactor")
 	if err != nil {
 		return nil, err
 	}
 	minerConfig.DcfFactor = dcf
 
-	startTime, err := readUintFromContract(cctx, client, l1Contract, "startTime")
+	startTime, err := cr.readUint("startTime")
 	if err != nil {
 		return nil, err
 	}
 	minerConfig.StartTime = startTime
-	shardEntryBits, err := readUintFromContract(cctx, client, l1Contract, "shardEntryBits")
+	shardEntryBits, err := cr.readUint("shardEntryBits")
 	if err != nil {
 		return nil, err
 	}
 	minerConfig.ShardEntry = 1 << shardEntryBits
-	treasuryShare, err := readUintFromContract(cctx, client, l1Contract, "treasuryShare")
+	treasuryShare, err := cr.readUint("treasuryShare")
 	if err != nil {
 		return nil, err
 	}
 	minerConfig.TreasuryShare = treasuryShare
-	storageCost, err := readBigIntFromContract(cctx, client, l1Contract, "storageCost")
+	storageCost, err := cr.readBig("storageCost")
 	if err != nil {
 		return nil, err
 	}
 	minerConfig.StorageCost = storageCost
-	prepaidAmount, err := readBigIntFromContract(cctx, client, l1Contract, "prepaidAmount")
+	prepaidAmount, err := cr.readBig("prepaidAmount")
 	if err != nil {
 		return nil, err
 	}
@@ -259,7 +261,7 @@ func NewStorageConfig(ctx *cli.Context, client *ethclient.Client, lg log.Logger)
 	l1Contract := common.HexToAddress(ctx.GlobalString(flags.StorageL1Contract.Name))
 	miner := common.HexToAddress(ctx.GlobalString(flags.StorageMiner.Name))
 	lg.Info("Loaded storage config", "l1Contract", l1Contract, "miner", miner)
-	storageCfg, err := initStorageConfig(context.Background(), client, l1Contract, miner)
+	storageCfg, err := initStorageConfig(context.Background(), client, l1Contract, miner, lg)
 	if err != nil {
 		lg.Error("Failed to load storage config from contract", "error", err)
 		return nil, err

@@ -24,12 +24,12 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethstorage/go-ethstorage/ethstorage"
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
-	esLog "github.com/ethstorage/go-ethstorage/ethstorage/log"
+	"github.com/ethstorage/go-ethstorage/ethstorage/log"
 	"github.com/holiman/uint256"
 )
 
 var (
-	lg = esLog.NewLogger(esLog.DefaultCLIConfig())
+	lg = log.DefaultLogger()
 )
 
 func SendBlobTx(
