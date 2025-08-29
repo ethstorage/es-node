@@ -38,10 +38,6 @@ const (
 	esRpcFlagName        = "es_rpc"
 )
 
-var (
-	lg = defaultLog
-)
-
 type ContractReader struct {
 	ctx      context.Context
 	client   *ethclient.Client
