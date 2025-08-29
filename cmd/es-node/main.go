@@ -37,7 +37,7 @@ var (
 	BuildTime     = ""
 	systemVersion = fmt.Sprintf("%s/%s", runtime.GOARCH, runtime.GOOS)
 	golangVersion = runtime.Version()
-	defaultLog    = log.NewLogger(log.DefaultCLIConfig())
+	defaultLog    = log.DefaultLogger()
 )
 
 // VersionWithMeta holds the textual version string including the metadata.
@@ -152,12 +152,7 @@ func main() {
 func EsNodeMain(ctx *cli.Context) error {
 	lg := defaultLog
 	lg.Info("Configuring EthStorage Node")
-	logCfg := log.ReadCLIConfig(ctx)
-	if err := logCfg.Check(); err != nil {
-		lg.Error("Unable to create the log config", "error", err)
-		return err
-	}
-	lg = log.NewLogger(logCfg)
+	lg = log.NewLogger(log.ReadCLIConfig(ctx))
 	cfg, err := NewConfig(ctx, lg)
 	if err != nil {
 		lg.Error("Unable to create the rollup node config", "error", err)

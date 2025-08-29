@@ -6,14 +6,12 @@ import (
 	"context"
 	"fmt"
 	"math/big"
-	"os"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/core/types"
-	esLog "github.com/ethstorage/go-ethstorage/ethstorage/log"
+	"github.com/ethstorage/go-ethstorage/ethstorage/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"golang.org/x/term"
 )
 
 var gwei = new(big.Int).Exp(big.NewInt(10), big.NewInt(9), nil)
@@ -24,11 +22,7 @@ func Test_l1MiningAPI_checkGasPrice(t *testing.T) {
 		startShardId: 0,
 		timestamp:    0,
 	}
-	lgr := esLog.NewLogger(esLog.CLIConfig{
-		Level:  "debug",
-		Format: "text",
-		Color:  term.IsTerminal(int(os.Stdout.Fd())),
-	})
+	lgr := log.DefaultLogger()
 
 	estimatedGas := uint64(500000)
 	safeGas := uint64(600000)
