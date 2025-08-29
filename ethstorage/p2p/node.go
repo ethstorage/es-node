@@ -126,7 +126,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 				}
 				added := n.syncCl.AddPeer(remotePeerId, shards, conn.Stat().Direction)
 				if !added {
-					lg.Info("Close connection as AddPeer fail", "peer", remotePeerId)
+					lg.Debug("Close connection as AddPeer fail", "peer", remotePeerId)
 					conn.Close()
 				} else {
 					lg.Info("Connected to peer", "peer", remotePeerId, "Direction", conn.Stat().Direction, "addr", conn.RemoteMultiaddr().String())
