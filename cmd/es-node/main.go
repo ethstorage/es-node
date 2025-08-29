@@ -258,7 +258,7 @@ func EsNodeInit(ctx *cli.Context) error {
 	defer client.Close()
 
 	l1Contract := common.HexToAddress(contract)
-	storageCfg, err := initStorageConfig(cctx, client, l1Contract, common.HexToAddress(miner))
+	storageCfg, err := initStorageConfig(cctx, client, l1Contract, common.HexToAddress(miner), lg)
 	if err != nil {
 		lg.Error("Failed to load storage config", "error", err)
 		return err

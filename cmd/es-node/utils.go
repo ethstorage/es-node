@@ -21,6 +21,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/crypto/kzg4844"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rpc"
 	es "github.com/ethstorage/go-ethstorage/ethstorage"
 	"github.com/ethstorage/go-ethstorage/ethstorage/flags"
@@ -41,13 +42,63 @@ var (
 	lg = defaultLog
 )
 
-func initStorageConfig(ctx context.Context, client *ethclient.Client, l1Contract, miner common.Address) (*storage.StorageConfig, error) {
-	maxKvSizeBits, err := readUintFromContract(ctx, client, l1Contract, "maxKvSizeBits")
+type ContractReader struct {
+	ctx      context.Context
+	client   *ethclient.Client
+	contract common.Address
+	lg       log.Logger
+}
+
+func newContractReader(ctx context.Context, client *ethclient.Client, contract common.Address, logger log.Logger) *ContractReader {
+	return &ContractReader{
+		ctx:      ctx,
+		client:   client,
+		contract: contract,
+		lg:       logger,
+	}
+}
+
+func (c *ContractReader) readSlot(fieldName string) ([]byte, error) {
+	h := crypto.Keccak256Hash([]byte(fieldName + "()"))
+	msg := ethereum.CallMsg{
+		To:   &c.contract,
+		Data: h[0:4],
+	}
+	bs, err := c.client.CallContract(c.ctx, msg, nil)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to get %s from contract: %v", fieldName, err)
+	}
+	return bs, nil
+}
+
+func (c *ContractReader) readUint(fieldName string) (uint64, error) {
+	bs, err := c.readSlot(fieldName)
+	if err != nil {
+		return 0, err
+	}
+	value := new(big.Int).SetBytes(bs).Uint64()
+	c.lg.Info("Read uint from contract", "field", fieldName, "value", value)
+	return value, nil
+}
+
+func (c *ContractReader) readBig(fieldName string) (*big.Int, error) {
+	bs, err := c.readSlot(fieldName)
+	if err != nil {
+		return nil, err
+	}
+	value := new(big.Int).SetBytes(bs)
+	c.lg.Info("Read big int from contract", "field", fieldName, "value", value)
+	return new(big.Int).SetBytes(bs), nil
+}
+
+func initStorageConfig(ctx context.Context, client *ethclient.Client, l1Contract, miner common.Address, lg log.Logger) (*storage.StorageConfig, error) {
+	cr := newContractReader(ctx, client, l1Contract, lg)
+	maxKvSizeBits, err := cr.readUint("maxKvSizeBits")
 	if err != nil {
 		return nil, err
 	}
 	chunkSizeBits := maxKvSizeBits
-	shardEntryBits, err := readUintFromContract(ctx, client, l1Contract, "shardEntryBits")
+	shardEntryBits, err := cr.readUint("shardEntryBits")
 	if err != nil {
 		return nil, err
 	}
@@ -58,39 +109,6 @@ func initStorageConfig(ctx context.Context, client *ethclient.Client, l1Contract
 		ChunkSize:         1 << chunkSizeBits,
 		KvEntriesPerShard: 1 << shardEntryBits,
 	}, nil
-}
-
-func readSlotFromContract(ctx context.Context, client *ethclient.Client, l1Contract common.Address, fieldName string) ([]byte, error) {
-	h := crypto.Keccak256Hash([]byte(fieldName + "()"))
-	msg := ethereum.CallMsg{
-		To:   &l1Contract,
-		Data: h[0:4],
-	}
-	bs, err := client.CallContract(ctx, msg, nil)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to get %s from contract: %v", fieldName, err)
-	}
-	return bs, nil
-}
-
-func readUintFromContract(ctx context.Context, client *ethclient.Client, l1Contract common.Address, fieldName string) (uint64, error) {
-	bs, err := readSlotFromContract(ctx, client, l1Contract, fieldName)
-	if err != nil {
-		return 0, err
-	}
-	value := new(big.Int).SetBytes(bs).Uint64()
-	lg.Info("Read uint from contract", "field", fieldName, "value", value)
-	return value, nil
-}
-
-func readBigIntFromContract(ctx context.Context, client *ethclient.Client, l1Contract common.Address, fieldName string) (*big.Int, error) {
-	bs, err := readSlotFromContract(ctx, client, l1Contract, fieldName)
-	if err != nil {
-		return nil, err
-	}
-	value := new(big.Int).SetBytes(bs)
-	lg.Info("Read big int from contract", "field", fieldName, "value", value)
-	return new(big.Int).SetBytes(bs), nil
 }
 
 func getShardList(ctx context.Context, client *ethclient.Client, contract common.Address, shardLen int) ([]uint64, error) {
@@ -259,7 +277,7 @@ func initShardManager(ctx *cli.Context, l1Rpc string, l1contract common.Address)
 	}
 	defer client.Close()
 
-	storageCfg, err := initStorageConfig(cctx, client, l1contract, common.HexToAddress(miner))
+	storageCfg, err := initStorageConfig(cctx, client, l1contract, common.HexToAddress(miner), lg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load storage config: %w", err)
 	}
