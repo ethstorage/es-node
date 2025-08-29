@@ -514,7 +514,7 @@ func (s *SyncClient) Start() error {
 func (s *SyncClient) AddPeer(id peer.ID, shards map[common.Address][]uint64, direction network.Direction) bool {
 	s.lock.Lock()
 	if _, ok := s.peers[id]; ok {
-		s.lg.Debug("Cannot register peer for sync duties, peer was already registered", "peer", id)
+		s.lg.Debug("Peer was already registered", "peer", id)
 		s.lock.Unlock()
 		return true
 	}
@@ -523,7 +523,7 @@ func (s *SyncClient) AddPeer(id peer.ID, shards map[common.Address][]uint64, dir
 		return false
 	}
 	if !s.needThisPeer(shards) {
-		s.lg.Info("No need this peer, the connection would be closed later", "maxPeers", s.maxPeers,
+		s.lg.Debug("No need this peer, the connection would be closed later", "maxPeers", s.maxPeers,
 			"Peer count", len(s.peers), "peer", id.String(), "shards", shards)
 		s.metrics.IncDropPeerCount()
 		s.lock.Unlock()
