@@ -124,7 +124,7 @@ fi
 es_node_init="$executable init $shards \
   --datadir $data_dir \
   --l1.rpc http://65.108.230.142:8545 \
-  --storage.l1contract 0x804C520d3c084C805E37A35E90057Ac32831F96f \
+  --storage.l1contract 0xAb3d380A268d088BA21Eb313c1C23F3BEC5cfe93 \
 $remaining_args"
 
 # es-node will skip init if data files already exist
