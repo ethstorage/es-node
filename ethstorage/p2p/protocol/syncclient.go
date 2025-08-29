@@ -232,10 +232,7 @@ func NewSyncClient(lg log.Logger, cfg *rollup.EsConfig, newStream newStreamFn, s
 }
 
 func getMinPeersPerShard(maxPeers, shardCount int) int {
-	minPeersPerShard := (maxPeers + shardCount - 1) / shardCount
-	if minPeersPerShard < defaultMinPeersPerShard {
-		minPeersPerShard = defaultMinPeersPerShard
-	}
+	minPeersPerShard := max((maxPeers+shardCount-1)/shardCount, defaultMinPeersPerShard)
 	return minPeersPerShard
 }
 
@@ -364,16 +361,10 @@ func (s *SyncClient) createTask(sid uint64, lastKvIndex uint64) *task {
 	subTasks := make([]*subTask, 0)
 	// split subTask for a shard to 16 subtasks and if one batch is too small
 	// set to minSubTaskSize
-	maxTaskSize := (limit - first + s.syncerParams.SyncConcurrency - 1) / s.syncerParams.SyncConcurrency
-	if maxTaskSize < minSubTaskSize {
-		maxTaskSize = minSubTaskSize
-	}
+	maxTaskSize := max((limit-first+s.syncerParams.SyncConcurrency-1)/s.syncerParams.SyncConcurrency, minSubTaskSize)
 
 	for first < limit {
-		last := first + maxTaskSize
-		if last > limit {
-			last = limit
-		}
+		last := min(first+maxTaskSize, limit)
 		subTask := subTask{
 			task:  &task,
 			next:  first,
@@ -389,16 +380,10 @@ func (s *SyncClient) createTask(sid uint64, lastKvIndex uint64) *task {
 	subEmptyTasks := make([]*subEmptyTask, 0)
 	if limitForEmpty > 0 {
 		task.state.EmptyToFill = limitForEmpty - firstEmpty
-		maxEmptyTaskSize := (limitForEmpty - firstEmpty + uint64(maxFillEmptyTaskTreads) - 1) / uint64(maxFillEmptyTaskTreads)
-		if maxEmptyTaskSize < minSubTaskSize {
-			maxEmptyTaskSize = minSubTaskSize
-		}
+		maxEmptyTaskSize := max((limitForEmpty-firstEmpty+uint64(maxFillEmptyTaskTreads)-1)/uint64(maxFillEmptyTaskTreads), minSubTaskSize)
 
 		for firstEmpty < limitForEmpty {
-			last := firstEmpty + maxEmptyTaskSize
-			if last > limitForEmpty {
-				last = limitForEmpty
-			}
+			last := min(firstEmpty+maxEmptyTaskSize, limitForEmpty)
 			subTask := subEmptyTask{
 				task:  &task,
 				First: firstEmpty,
@@ -761,10 +746,7 @@ func (s *SyncClient) assignBlobRangeTasks() {
 				continue
 			}
 
-			last := st.next + maxRange
-			if last > st.Last {
-				last = st.Last
-			}
+			last := min(st.next+maxRange, st.Last)
 			req := &blobsByRangeRequest{
 				peer:     pr.ID(),
 				id:       rand.Uint64(),
