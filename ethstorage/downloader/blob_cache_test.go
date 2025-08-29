@@ -31,6 +31,7 @@ var (
 	kvSize    uint64 = 1 << 17
 	kvEntries uint64 = 16
 	shardID          = uint64(0)
+	lg               = log.NewLogger(log.CLIConfig{Level: "warn", Format: "text"})
 )
 
 func TestDiskBlobCache(t *testing.T) {
@@ -109,7 +110,7 @@ func TestEncoding(t *testing.T) {
 	shardMgr := ethstorage.NewShardManager(common.Address{}, kvSize, kvEntries, kvSize)
 	shardMgr.AddDataShard(shardID)
 	shardMgr.AddDataFile(df)
-	sm := ethstorage.NewStorageManager(shardMgr, nil)
+	sm := ethstorage.NewStorageManager(shardMgr, nil, lg)
 	defer func() {
 		sm.Close()
 		os.Remove(fileName)
@@ -252,10 +253,7 @@ func setup(t *testing.T) {
 		t.Fatalf("Failed to create datadir: %v", err)
 	}
 	t.Logf("datadir %s", datadir)
-	cache = NewBlobDiskCache(datadir, log.NewLogger(log.CLIConfig{
-		Level:  "warn",
-		Format: "text",
-	}))
+	cache = NewBlobDiskCache(datadir, lg)
 }
 
 func teardown(t *testing.T) {

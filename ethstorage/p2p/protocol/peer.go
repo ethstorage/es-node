@@ -27,7 +27,7 @@ type Peer struct {
 	tracker        *Tracker
 	resCtx         context.Context
 	resCancel      context.CancelFunc
-	logger         log.Logger // Contextual logger with the peer id injected
+	lg             log.Logger // Contextual lg with the peer id injected
 }
 
 // NewPeer create a wrapper for a network connection and negotiated  protocol version.
@@ -45,7 +45,7 @@ func NewPeer(version uint, chainId *big.Int, peerId peer.ID, newStream newStream
 		tracker:        NewTracker(peerId.String(), float64(initRequestSize)/(p2pReadWriteTimeout.Seconds()*rttEstimateFactor)),
 		resCtx:         ctx,
 		resCancel:      cancel,
-		logger:         log.New("peer", peerId[:8]),
+		lg:             log.New("peer", peerId[:8]),
 	}
 }
 
@@ -74,9 +74,9 @@ func (p *Peer) IsShardExist(contract common.Address, shardId uint64) bool {
 	return false
 }
 
-// Log overrides the P2P logger with the higher level one containing only the id.
+// Log overrides the P2P lg with the higher level one containing only the id.
 func (p *Peer) Log() log.Logger {
-	return p.logger
+	return p.lg
 }
 
 func (p *Peer) getRequestSize() uint64 {
@@ -86,7 +86,7 @@ func (p *Peer) getRequestSize() uint64 {
 // RequestBlobsByRange fetches a batch of kvs using a list of kv index
 func (p *Peer) RequestBlobsByRange(id uint64, contract common.Address, shardId uint64, origin uint64, limit uint64,
 	blobs *BlobsByRangePacket) (byte, error) {
-	p.logger.Trace("Fetching KVs", "reqId", id, "contract", contract,
+	p.lg.Trace("Fetching KVs", "reqId", id, "contract", contract,
 		"shardId", shardId, "origin", origin, "limit", limit)
 
 	ctx, cancel := context.WithTimeout(p.resCtx, NewStreamTimeout)
@@ -116,7 +116,7 @@ func (p *Peer) RequestBlobsByRange(id uint64, contract common.Address, shardId u
 // RequestBlobsByList fetches a batch of kvs using a list of kv index
 func (p *Peer) RequestBlobsByList(id uint64, contract common.Address, shardId uint64, kvList []uint64,
 	blobs *BlobsByListPacket) (byte, error) {
-	p.logger.Trace("Fetching KVs", "reqId", id, "contract", contract,
+	p.lg.Trace("Fetching KVs", "reqId", id, "contract", contract,
 		"shardId", shardId, "count", len(kvList))
 
 	ctx, cancel := context.WithTimeout(p.resCtx, NewStreamTimeout)

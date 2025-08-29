@@ -1,7 +1,6 @@
 package protocol
 
 import (
-	"github.com/ethereum/go-ethereum/log"
 	"math"
 	"sync"
 	"time"
@@ -97,8 +96,5 @@ func (t *Tracker) Update(elapsed time.Duration, items int) {
 		elapsed = 1 // +1 (ns) to ensure non-zero divisor
 	}
 	measured := float64(items) / (float64(elapsed) / float64(time.Second))
-
-	oldcap := t.capacity
 	t.capacity = (1-measurementImpact)*(t.capacity) + measurementImpact*measured
-	log.Debug("Update tracker", "peer id", t.peerID, "elapsed", elapsed, "items", items, "old capacity", oldcap, "capacity", t.capacity)
 }

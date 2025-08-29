@@ -72,13 +72,13 @@ type EsNode struct {
 	scanner *scanner.Scanner
 }
 
-func New(ctx context.Context, cfg *Config, log log.Logger, appVersion string, m metrics.Metricer) (*EsNode, error) {
+func New(ctx context.Context, cfg *Config, lg log.Logger, appVersion string, m metrics.Metricer) (*EsNode, error) {
 	if err := cfg.Check(); err != nil {
 		return nil, err
 	}
 
 	n := &EsNode{
-		lg:         log,
+		lg:         lg,
 		appVersion: appVersion,
 		metrics:    m,
 	}
@@ -272,7 +272,7 @@ func (n *EsNode) initStorageManager(ctx context.Context, cfg *Config) error {
 		"kvsPerShard", shardManager.KvEntries(),
 		"shards", shardManager.ShardIds())
 
-	n.storageManager = ethstorage.NewStorageManager(shardManager, n.l1Source)
+	n.storageManager = ethstorage.NewStorageManager(shardManager, n.l1Source, n.lg)
 	return nil
 }
 

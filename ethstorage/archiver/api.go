@@ -24,15 +24,15 @@ type API struct {
 	beaconClient *eth.BeaconClient
 	l1Source     *eth.PollingClient
 	storageMgr   *ethstorage.StorageManager
-	logger       log.Logger
+	lg           log.Logger
 }
 
-func NewAPI(storageMgr *ethstorage.StorageManager, beaconClient *eth.BeaconClient, l1Source *eth.PollingClient, logger log.Logger) *API {
+func NewAPI(storageMgr *ethstorage.StorageManager, beaconClient *eth.BeaconClient, l1Source *eth.PollingClient, lg log.Logger) *API {
 	return &API{
 		storageMgr:   storageMgr,
 		beaconClient: beaconClient,
 		l1Source:     l1Source,
-		logger:       logger,
+		lg:           lg,
 	}
 }
 
@@ -40,15 +40,15 @@ func (a *API) queryBlobSidecars(id string, indices []uint64) (*BlobSidecars, *ht
 	// query EL block
 	queryUrl, err := a.beaconClient.QueryUrlForV2BeaconBlock(id)
 	if err != nil {
-		a.logger.Error("Invalid beaconID", "beaconID", id, "err", err)
+		a.lg.Error("Invalid beaconID", "beaconID", id, "err", err)
 		return nil, errUnknownBlock
 	}
 	elBlock, kzgCommitsAll, hErr := a.queryElBlockNumberAndKzg(queryUrl)
 	if hErr != nil {
-		a.logger.Error("Failed to get execution block number", "beaconID", id, "err", err)
+		a.lg.Error("Failed to get execution block number", "beaconID", id, "err", err)
 		return nil, hErr
 	}
-	a.logger.Info("BeaconID to execution block number", "beaconID", id, "elBlock", elBlock)
+	a.lg.Info("BeaconID to execution block number", "beaconID", id, "elBlock", elBlock)
 
 	blobsInBeacon := len(kzgCommitsAll)
 	if indices != nil {
@@ -73,28 +73,28 @@ func (a *API) queryBlobSidecars(id string, indices []uint64) (*BlobSidecars, *ht
 	blockBN := big.NewInt(int64(elBlock))
 	events, err := a.l1Source.FilterLogsByBlockRange(blockBN, blockBN, eth.PutBlobEvent)
 	if err != nil {
-		a.logger.Error("Failed to get events", "err", err)
+		a.lg.Error("Failed to get events", "err", err)
 		return nil, errServerError
 	}
 	var res BlobSidecars
 	for i, event := range events {
 		blobHash := event.Topics[3]
-		a.logger.Info("Parsing event", "blobHash", blobHash, "event", fmt.Sprintf("%d of %d", i, len(events)))
+		a.lg.Info("Parsing event", "blobHash", blobHash, "event", fmt.Sprintf("%d of %d", i, len(events)))
 		// parse event to get kv_index with queried index
 		if index, ok := hashToIndex[blobHash]; ok {
 			kvIndex := big.NewInt(0).SetBytes(event.Topics[1][:]).Uint64()
-			a.logger.Info("Blobhash matched", "blobhash", blobHash, "index", index, "kvIndex", kvIndex)
+			a.lg.Info("Blobhash matched", "blobhash", blobHash, "index", index, "kvIndex", kvIndex)
 			sidecar, hErr := a.buildSidecar(kvIndex, common.FromHex(kzgCommitsAll[index]), blobHash)
 			if hErr != nil {
-				a.logger.Error("Failed to build sidecar", "err", hErr)
+				a.lg.Error("Failed to build sidecar", "err", hErr)
 				return nil, hErr
 			}
 			sidecar.Index = index
-			a.logger.Info("Sidecar built", "index", index, "sidecar", sidecar)
+			a.lg.Info("Sidecar built", "index", index, "sidecar", sidecar)
 			res.Data = append(res.Data, sidecar)
 		}
 	}
-	a.logger.Info("Query blob sidecars done", "blobs", len(res.Data))
+	a.lg.Info("Query blob sidecars done", "blobs", len(res.Data))
 	return &res, nil
 }
 
@@ -102,7 +102,7 @@ func (a *API) queryElBlockNumberAndKzg(queryUrl string) (uint64, []string, *http
 	start := time.Now()
 	defer func(start time.Time) {
 		dur := time.Since(start)
-		a.logger.Info("Query el block number and kzg", "took(s)", dur.Seconds())
+		a.lg.Info("Query el block number and kzg", "took(s)", dur.Seconds())
 	}(start)
 
 	resp, err := http.Get(queryUrl)
@@ -139,22 +139,22 @@ func (a *API) buildSidecar(kvIndex uint64, kzgCommitment []byte, blobHash common
 	start := time.Now()
 	defer func(start time.Time) {
 		dur := time.Since(start)
-		a.logger.Info("Build sidecar", "took(s)", dur.Seconds())
+		a.lg.Info("Build sidecar", "took(s)", dur.Seconds())
 	}(start)
 
 	blobData, found, err := a.storageMgr.TryRead(kvIndex, int(a.storageMgr.MaxKvSize()), blobHash)
 	if err != nil {
-		a.logger.Error("Failed to read blob", "err", err)
+		a.lg.Error("Failed to read blob", "err", err)
 		return nil, errServerError
 	}
 	if !found {
-		a.logger.Info("Blob not found by storage manager", "kvIndex", kvIndex, "blobHash", blobHash)
+		a.lg.Info("Blob not found by storage manager", "kvIndex", kvIndex, "blobHash", blobHash)
 		return nil, errBlobNotInES
 	}
 	blob := kzg4844.Blob(blobData)
 	kzgProof, err := kzg4844.ComputeBlobProof(&blob, kzg4844.Commitment(kzgCommitment))
 	if err != nil {
-		a.logger.Error("Failed to get kzg proof", "err", err)
+		a.lg.Error("Failed to get kzg proof", "err", err)
 		return nil, errServerError
 	}
 	return &BlobSidecar{

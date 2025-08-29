@@ -29,7 +29,6 @@ var (
 	listenAddrFlag  = flag.String("address", "0.0.0.0", "Listener address")
 	portFlag        = flag.Int("port", 8080, "Listener port for the es-node to report node status")
 	grafanaPortFlag = flag.Int("grafana", 9500, "Listener port for the metrics report")
-	logFlag         = flag.Int("loglevel", 3, "Log level to use for Ethereum and the faucet")
 	contractFlag    = flag.String("contract", "0x804C520d3c084C805E37A35E90057Ac32831F96f", "Default contract address used to compatible with older versions of es-node")
 )
 
@@ -39,11 +38,11 @@ type record struct {
 }
 
 type dashboard struct {
-	ctx    context.Context
-	lock   sync.Mutex
-	nodes  map[string]*record
-	m      *metrics.NetworkMetrics
-	logger log.Logger
+	ctx   context.Context
+	lock  sync.Mutex
+	nodes map[string]*record
+	m     *metrics.NetworkMetrics
+	lg    log.Logger
 }
 
 type statistics struct {
@@ -53,28 +52,27 @@ type statistics struct {
 	phasesOfShard map[uint64]map[string]int
 }
 
-func newDashboard() (*dashboard, error) {
+func newDashboard(lg log.Logger) (*dashboard, error) {
 	var (
-		m      = metrics.NewNetworkMetrics()
-		logger = log.New("app", "Dashboard")
-		ctx    = context.Background()
+		m   = metrics.NewNetworkMetrics()
+		ctx = context.Background()
 	)
 
 	return &dashboard{
-		ctx:    ctx,
-		nodes:  make(map[string]*record),
-		m:      m,
-		logger: logger,
+		ctx:   ctx,
+		nodes: make(map[string]*record),
+		m:     m,
+		lg:    lg,
 	}, nil
 }
 
 func (d *dashboard) HelloHandler(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		d.logger.Warn("Read Hello body failed", "err", err.Error())
+		d.lg.Warn("Read Hello body failed", "err", err.Error())
 		return
 	}
-	d.logger.Info("Get hello from node", "id", string(body))
+	d.lg.Info("Get hello from node", "id", string(body))
 	answer := `{"status":"ok"}`
 	w.Write([]byte(answer))
 }
@@ -84,17 +82,17 @@ func (d *dashboard) ReportStateHandler(w http.ResponseWriter, r *http.Request) {
 
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		d.logger.Warn("Read ReportState body failed", "err", err.Error())
+		d.lg.Warn("Read ReportState body failed", "err", err.Error())
 		return
 	}
 	err = json.Unmarshal(body, &state)
 	if err != nil {
-		log.Warn("Parse node state failed", "state", string(body), "error", err.Error())
+		d.lg.Warn("Parse node state failed", "state", string(body), "error", err.Error())
 		w.Write(fmt.Appendf(nil, `{"status":"error", "err message":"%s"}`, err.Error()))
 		return
 	}
 	if err = d.checkState(&state); err != nil {
-		log.Warn("check node state failed", "state", string(body), "error", err.Error())
+		d.lg.Warn("check node state failed", "state", string(body), "error", err.Error())
 		w.Write(fmt.Appendf(nil, `{"status":"error", "err message":"%s"}`, err.Error()))
 		return
 	}
@@ -103,7 +101,7 @@ func (d *dashboard) ReportStateHandler(w http.ResponseWriter, r *http.Request) {
 		state.Contract = *contractFlag
 	}
 
-	log.Info("Get state from peer", "peer id", state.Id, "state", string(body))
+	d.lg.Info("Get state from peer", "peer id", state.Id, "state", string(body))
 	d.lock.Lock()
 	d.nodes[state.Id] = &record{receivedTime: time.Now(), state: &state}
 	d.lock.Unlock()
@@ -222,25 +220,26 @@ func (d *dashboard) listenAndServe(port int) error {
 }
 
 func main() {
-	// Parse the flags and set up the logger to print everything requested
+	// Parse the flags and set up the lg to print everything requested
 	flag.Parse()
 	log.SetDefault(log.NewLogger(log.NewTerminalHandlerWithLevel(os.Stderr, log.LevelInfo, true)))
+	lg := log.New("app", "Dashboard")
 
 	if *portFlag < 0 || *portFlag > math.MaxUint16 {
-		log.Crit("Invalid port")
+		lg.Crit("Invalid port")
 	}
 
 	if *grafanaPortFlag < 0 || *grafanaPortFlag > math.MaxUint16 {
-		log.Crit("Invalid grafana port")
+		lg.Crit("Invalid grafana port")
 	}
-	d, err := newDashboard()
+	d, err := newDashboard(lg)
 	if err != nil {
-		log.Crit("New dashboard fail", "err", err)
+		lg.Crit("New dashboard fail", "err", err)
 	}
 
 	go d.listenAndServe(*portFlag)
 
 	if err := d.m.Serve(d.ctx, *listenAddrFlag, *grafanaPortFlag); err != nil {
-		log.Crit("Error starting metrics server", "err", err)
+		lg.Crit("Error starting metrics server", "err", err)
 	}
 }

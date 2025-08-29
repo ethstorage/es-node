@@ -16,7 +16,7 @@ import (
 	"github.com/ethstorage/go-ethstorage/ethstorage/storage"
 )
 
-func createSstorage(shardIdxList []uint64, cfg storage.StorageConfig) {
+func createSstorage(shardIdxList []uint64, cfg storage.StorageConfig, lg log.Logger) {
 	files := make([]string, 0)
 	for _, shardIdx := range shardIdxList {
 		fileName := fmt.Sprintf(".\\ss%d.dat", shardIdx)
@@ -26,7 +26,7 @@ func createSstorage(shardIdxList []uint64, cfg storage.StorageConfig) {
 		_, err := ethstorage.Create(fileName, startChunkId, chunkPerfile*cfg.KvEntriesPerShard, 0, cfg.KvSize,
 			ethstorage.ENCODE_ETHASH, cfg.Miner, cfg.ChunkSize)
 		if err != nil {
-			log.Crit("Open failed", "error", err)
+			lg.Crit("Open failed", "error", err)
 		}
 	}
 	cfg.Filenames = files
@@ -37,6 +37,7 @@ func test_InitDB(test *testing.T, dataDir string) {
 		key = []byte("key")
 		bs  = []byte("value to store")
 		val []byte
+		lg  = log.New("unittest")
 	)
 	storConfig := storage.StorageConfig{
 		KvSize:            uint64(131072),
@@ -45,7 +46,7 @@ func test_InitDB(test *testing.T, dataDir string) {
 		L1Contract:        common.HexToAddress("0x0000000000000000000000000000000003330001"),
 		Miner:             common.HexToAddress("0x0000000000000000000000000000000000000001"),
 	}
-	createSstorage([]uint64{0}, storConfig)
+	createSstorage([]uint64{0}, storConfig, lg)
 	cfg := Config{
 		DataDir:  dataDir,
 		DBConfig: db.DefaultDBConfig(),
@@ -53,7 +54,7 @@ func test_InitDB(test *testing.T, dataDir string) {
 	}
 
 	n := &EsNode{
-		lg:         log.New("unittest"),
+		lg:         lg,
 		appVersion: "unittest",
 		metrics:    metrics.NoopMetrics,
 	}

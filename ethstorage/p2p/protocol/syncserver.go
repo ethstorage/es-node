@@ -64,6 +64,7 @@ type SyncServerMetrics interface {
 }
 
 type SyncServer struct {
+	lg  log.Logger
 	cfg *rollup.EsConfig
 
 	providedBlobs  map[uint64]uint64
@@ -80,7 +81,7 @@ type SyncServer struct {
 	lock sync.Mutex
 }
 
-func NewSyncServer(cfg *rollup.EsConfig, storageManager StorageManagerReader, db ethdb.Database, m SyncServerMetrics) *SyncServer {
+func NewSyncServer(cfg *rollup.EsConfig, storageManager StorageManagerReader, db ethdb.Database, m SyncServerMetrics, lg log.Logger) *SyncServer {
 	// We should never allow over 1000 different peers to churn through quickly,
 	// so it's fine to prune rate-limit details past this.
 
@@ -94,11 +95,12 @@ func NewSyncServer(cfg *rollup.EsConfig, storageManager StorageManagerReader, db
 	var providedBlobs map[uint64]uint64
 	if status, _ := db.Get(ProvidedBlobsKey); status != nil {
 		if err := json.Unmarshal(status, &providedBlobs); err != nil {
-			log.Error("Failed to decode provided blobs", "err", err)
+			lg.Error("Failed to decode provided blobs", "err", err)
 		}
 	}
 
 	server := SyncServer{
+		lg:               lg,
 		cfg:              cfg,
 		storageManager:   storageManager,
 		db:               db,
@@ -128,7 +130,7 @@ func NewSyncServer(cfg *rollup.EsConfig, storageManager StorageManagerReader, db
 // Note that the same peer may open parallel streams.
 //
 // The caller must Close the stream.
-func (srv *SyncServer) HandleGetBlobsByRangeRequest(ctx context.Context, log log.Logger, stream network.Stream) {
+func (srv *SyncServer) HandleGetBlobsByRangeRequest(ctx context.Context, stream network.Stream) {
 	// We wait as long as necessary; we throttle the peer instead of disconnecting,
 	// unless the delay reaches a threshold that is unreasonable to wait for.
 	ctx, cancel := context.WithTimeout(ctx, maxThrottleDelay)
@@ -138,17 +140,17 @@ func (srv *SyncServer) HandleGetBlobsByRangeRequest(ctx context.Context, log log
 	cancel()
 
 	if err != nil {
-		log.Warn("Failed to serve p2p sync request", "err", err)
+		srv.lg.Warn("Failed to serve p2p sync request", "err", err)
 	}
 	err = WriteMsg(stream, &Msg{returnCode, data})
 	if err != nil {
-		log.Debug("write message fail", "err", err.Error())
+		srv.lg.Debug("write message fail", "err", err.Error())
 	} else {
-		log.Debug("Sent response for func HandleGetBlobsByRangeRequest", "returnCode", returnCode, "len(Bytes)", len(data), "peer", stream.Conn().RemotePeer().String())
+		srv.lg.Debug("Sent response for func HandleGetBlobsByRangeRequest", "returnCode", returnCode, "len(Bytes)", len(data), "peer", stream.Conn().RemotePeer().String())
 	}
 }
 
-func (srv *SyncServer) HandleGetBlobsByListRequest(ctx context.Context, log log.Logger, stream network.Stream) {
+func (srv *SyncServer) HandleGetBlobsByListRequest(ctx context.Context, stream network.Stream) {
 	// We wait as long as necessary; we throttle the peer instead of disconnecting,
 	// unless the delay reaches a threshold that is unreasonable to wait for.
 	ctx, cancel := context.WithTimeout(ctx, maxThrottleDelay)
@@ -158,13 +160,13 @@ func (srv *SyncServer) HandleGetBlobsByListRequest(ctx context.Context, log log.
 	cancel()
 
 	if err != nil {
-		log.Warn("Failed to serve p2p sync request", "err", err)
+		srv.lg.Warn("Failed to serve p2p sync request", "err", err)
 	}
 	err = WriteMsg(stream, &Msg{returnCode, data})
 	if err != nil {
-		log.Debug("write message fail", "err", err.Error())
+		srv.lg.Debug("write message fail", "err", err.Error())
 	} else {
-		log.Debug("Sent response for func HandleGetBlobsByListRequest", "returnCode", returnCode, "len(Bytes)", len(data), "peer", stream.Conn().RemotePeer().String())
+		srv.lg.Debug("Sent response for func HandleGetBlobsByListRequest", "returnCode", returnCode, "len(Bytes)", len(data), "peer", stream.Conn().RemotePeer().String())
 	}
 }
 
@@ -199,7 +201,7 @@ func (srv *SyncServer) handleGetBlobsByRangeRequest(ctx context.Context, stream 
 		payload, err := srv.BlobByIndex(id)
 		read++
 		if err != nil {
-			log.Debug("Get blob fail", "id", id, "error", err.Error())
+			srv.lg.Debug("Get blob fail", "id", id, "error", err.Error())
 			continue
 		}
 		sucRead++
@@ -255,7 +257,7 @@ func (srv *SyncServer) handleGetBlobsByListRequest(ctx context.Context, stream n
 		payload, err := srv.BlobByIndex(idx)
 		read++
 		if err != nil {
-			log.Debug("Get blob fail", "idx", idx, "error", err.Error())
+			srv.lg.Debug("Get blob fail", "idx", idx, "error", err.Error())
 			continue
 		}
 		sucRead++
@@ -339,19 +341,19 @@ func (srv *SyncServer) BlobByIndex(idx uint64) (*BlobPayload, error) {
 	}, nil
 }
 
-func (srv *SyncServer) HandleRequestShardList(ctx context.Context, log log.Logger, stream network.Stream) {
+func (srv *SyncServer) HandleRequestShardList(ctx context.Context, stream network.Stream) {
 	rCode := byte(0)
 	bs, err := rlp.EncodeToBytes(ConvertToContractShards(ethstorage.Shards()))
 	if err != nil {
-		log.Warn("Encode shard list fail", "err", err.Error())
+		srv.lg.Warn("Encode shard list fail", "err", err.Error())
 		rCode = returnCodeServerError
 	}
 
 	err = WriteMsg(stream, &Msg{rCode, bs})
 	if err != nil {
-		log.Warn("Write response failed for HandleRequestShardList", "err", err.Error())
+		srv.lg.Warn("Write response failed for HandleRequestShardList", "err", err.Error())
 	}
-	log.Debug("Write response done for HandleRequestShardList")
+	srv.lg.Debug("Write response done for HandleRequestShardList")
 }
 
 func (srv *SyncServer) saveProvidedBlobs() {
@@ -359,13 +361,13 @@ func (srv *SyncServer) saveProvidedBlobs() {
 	states, err := json.Marshal(srv.providedBlobs)
 	srv.lock.Unlock()
 	if err != nil {
-		log.Error("Failed to marshal provided blobs states", "err", err)
+		srv.lg.Error("Failed to marshal provided blobs states", "err", err)
 		return
 	}
 
 	err = srv.db.Put(ProvidedBlobsKey, states)
 	if err != nil {
-		log.Error("Failed to store provided blobs states", "err", err)
+		srv.lg.Error("Failed to store provided blobs states", "err", err)
 		return
 	}
 }
@@ -378,7 +380,7 @@ func (srv *SyncServer) SaveProvidedBlobs() {
 		case <-ticker.C:
 			srv.saveProvidedBlobs()
 		case <-srv.exitCh:
-			log.Info("Stopped P2P req-resp L2 block sync server")
+			srv.lg.Info("Stopped P2P req-resp L2 block sync server")
 			return
 		}
 	}

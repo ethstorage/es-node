@@ -87,8 +87,8 @@ func NewLogger(cfg CLIConfig) log.Logger {
 		panic(err)
 	}
 	h := log.NewTerminalHandlerWithLevel(os.Stdout, l, cfg.Color)
-	logger := log.NewLogger(h)
-	return logger
+	lg := log.NewLogger(h)
+	return lg
 }
 
 func DefaultCLIConfig() CLIConfig {
@@ -117,4 +117,8 @@ func ReadCLIConfig(ctx *cli.Context) CLIConfig {
 		cfg.Color = ctx.GlobalBool(ColorFlagName)
 	}
 	return cfg
+}
+
+func SetupDefaults() {
+	log.SetDefault(log.NewLogger(log.NewTerminalHandlerWithLevel(os.Stdout, log.LevelInfo, true)))
 }
