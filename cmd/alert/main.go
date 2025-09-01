@@ -123,12 +123,17 @@ func addToEmailList(emailList map[string]struct{}, emailToString string) {
 }
 
 func writeToGitHubEnv(emailList map[string]struct{}, lg log.Logger) {
-	key := "EMAIL_LIST"
-	emailTo := ""
-
-	for email, _ := range emailList {
-		emailTo = emailTo + "," + email
+	if len(emailList) == 0 {
+		lg.Error("The email list shoud not be empty")
+		return
 	}
+
+	emails := make([]string, 0, len(emailList))
+	for email := range emailList {
+		emails = append(emails, email)
+	}
+	emailTo := strings.Join(emails, ",")
+
 	githubEnv := os.Getenv("GITHUB_ENV")
 	if githubEnv == "" {
 		lg.Error("GITHUB_ENV not set, are you running inside GitHub Actions?", "email list", emailTo)
@@ -137,12 +142,12 @@ func writeToGitHubEnv(emailList map[string]struct{}, lg log.Logger) {
 
 	f, err := os.OpenFile(githubEnv, os.O_APPEND|os.O_WRONLY, 0600)
 	if err != nil {
-		panic(err)
+		lg.Crit("Open GITHUB_ENV fail", "error", err.Error())
 	}
 	defer f.Close()
 
-	_, err = f.WriteString(fmt.Sprintf("%s=%s\n", key, emailTo))
+	_, err = f.WriteString(fmt.Sprintf("EMAIL_LIST=%s\n", emailTo))
 	if err != nil {
-		panic(err)
+		lg.Crit("Write GITHUB_ENV fail", "error", err.Error())
 	}
 }
