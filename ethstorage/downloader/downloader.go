@@ -305,7 +305,7 @@ func (s *Downloader) download() {
 				return
 			}
 			if len(blobs) > 0 {
-				log.Info("DownloadFinished", "duration(ms)", time.Since(ts).Milliseconds(), "blobs", len(blobs))
+				s.lg.Info("DownloadFinished", "duration(ms)", time.Since(ts).Milliseconds(), "blobs", len(blobs))
 			}
 
 			// save lastDownloadedBlock into database
