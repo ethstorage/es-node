@@ -29,6 +29,11 @@ const (
 	resultQueueSize          = 10
 	slot                     = 12 // seconds
 	miningTransactionTimeout = 50 // seconds
+
+	// tx status codes
+	txStatusFailure = 0
+	txStatusSuccess = 1
+	txStatusTimeout = 2
 )
 
 var (
@@ -485,7 +490,7 @@ func (w *worker) reportMiningResult(rs *result, txHash common.Hash, err error) {
 		rs.startShardId,
 		rs.blockNumber,
 	)
-	var status bool
+	var status int
 	if err == errDropped {
 		msg += "However, it was dropped due to insufficient profit."
 		w.lg.Warn("Mining transaction dropped due to low profit.")
@@ -503,16 +508,18 @@ func (w *worker) reportMiningResult(rs *result, txHash common.Hash, err error) {
 	}
 	if w.config.EmailEnabled {
 		emailSubject := "EthStorage Proof Submission: "
-		if status {
+		if status == txStatusSuccess {
 			emailSubject += "✅ Success"
-		} else {
+		} else if status == txStatusFailure {
 			emailSubject += "❌ Failure"
+		} else {
+			emailSubject += "⚠️ Timeout"
 		}
 		email.SendEmail(emailSubject, msg, w.config.EmailConfig, w.lg)
 	}
 }
 
-func (w *worker) checkTxStatusRepeatedly(txHash common.Hash, msg *string) bool {
+func (w *worker) checkTxStatusRepeatedly(txHash common.Hash, msg *string) int {
 	// waiting for tx confirmation or timeout
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
@@ -524,16 +531,20 @@ func (w *worker) checkTxStatusRepeatedly(txHash common.Hash, msg *string) bool {
 			w.lg.Info("Mining transaction confirmed", "txHash", txHash)
 			success, ret := w.checkTxStatus(txHash)
 			*msg += ret
-			return success
+			if success {
+				return txStatusSuccess
+			} else {
+				return txStatusFailure
+			}
 		}
 		checked++
 		if checked > miningTransactionTimeout {
 			*msg += "However, waiting for the transaction confirmation timed out. You can check the transaction status on the block explorer."
 			w.lg.Warn("Waiting for mining transaction confirm timed out", "txHash", txHash)
-			break
+			return txStatusTimeout
 		}
 	}
-	return false
+	return txStatusTimeout
 }
 
 func (w *worker) checkTxStatus(txHash common.Hash) (bool, string) {
