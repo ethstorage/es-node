@@ -28,7 +28,7 @@ done
 start_flags=" --network devnet \
   --datadir $data_dir \
   $file_flags \
-  --storage.l1contract 0x804C520d3c084C805E37A35E90057Ac32831F96f \
+  --storage.l1contract 0xAb3d380A268d088BA21Eb313c1C23F3BEC5cfe93 \
   --l1.rpc http://65.108.230.142:8545 \
   --l1.beacon http://65.108.230.142:3500 \
   --miner.enabled \
@@ -37,7 +37,7 @@ start_flags=" --network devnet \
   --state.upload.url http://metrics.ethstorage.io:8080 \
   --p2p.listen.udp 30305 \
   --p2p.sync.concurrency 32 \
-  --p2p.bootnodes enr:-Lq4QJJ0yRKf_npK6crMuzouNwyDNpp6Ie9ifD5eeDHwaLQ7eVeXuAm9rlpeLiPq6rckjhInQiNQQU6G0_yJ3MHiRZyGAZb2ocJvimV0aHN0b3JhZ2Xdgg0FgNjXlIBMUg08CEyAXjejXpAFesMoMflvwYCCaWSCdjSCaXCEQW1FWolzZWNwMjU2azGhA9HWWqvQhIuPuMrmVCI4q3xPTFejTEz4YPYrUdLxaU9sg3RjcIIkBoN1ZHCCdmE \
+  --p2p.bootnodes enr:-Lq4QD3MMwVIPhlMy2m6ArsSIfqBmhpk83j5M5a5n9OswlrKFniuZAblPyBRdTKaZaLJNOk8liD8jEmEZKiZQa8k0sSGAZjz0_ohimV0aHN0b3JhZ2Xdgg0FgNjXlKs9OAomjQiLoh6zE8HCPzvsXP6TwYCCaWSCdjSCaXCEF1hGrolzZWNwMjU2azGhAx_7n1-PG2kRC7W3rG8-r4tt1xQKDoNf_ybIcWhNaSddg3RjcIIkB4N1ZHCCdmE \
 $@"
 
 exec $executable $start_flags
