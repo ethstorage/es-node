@@ -45,10 +45,10 @@ type MiningState struct {
 }
 
 type SubmissionState struct {
-	Succeeded         int   `json:"succeeded_submission"`
+	Submitted         int   `json:"succeeded_submission"`
 	Failed            int   `json:"failed_submission"`
 	Dropped           int   `json:"dropped_submission"`
-	LastSucceededTime int64 `json:"last_succeeded_time"`
+	LastSubmittedTime int64 `json:"last_succeeded_time"`
 }
 
 type task struct {
@@ -164,7 +164,7 @@ func newWorker(
 				continue
 			}
 		}
-		worker.submissionStates[shardId] = &SubmissionState{Succeeded: 0, Failed: 0, Dropped: 0, LastSucceededTime: 0}
+		worker.submissionStates[shardId] = &SubmissionState{Submitted: 0, Failed: 0, Dropped: 0, LastSubmittedTime: 0}
 	}
 	worker.wg.Add(2)
 	go worker.newWorkLoop()
@@ -447,8 +447,8 @@ func (w *worker) resultLoop() {
 						}
 					}
 				} else {
-					s.Succeeded++
-					s.LastSucceededTime = time.Now().UnixMilli()
+					s.Submitted++
+					s.LastSubmittedTime = time.Now().UnixMilli()
 				}
 			}
 			w.reportMiningResult(result, txHash, err)
@@ -456,7 +456,7 @@ func (w *worker) resultLoop() {
 			w.notifyResultLoop()
 		case <-ticker.C:
 			for shardId, s := range w.submissionStates {
-				w.lg.Info("Mining stats", "shard", shardId, "succeeded", s.Succeeded, "failed", s.Failed, "dropped", s.Dropped)
+				w.lg.Info("Mining stats", "shard", shardId, "submitted", s.Submitted, "failed", s.Failed, "dropped", s.Dropped)
 			}
 			if len(errorCache) > 0 {
 				w.lg.Error("Mining stats", "lastError", errorCache[len(errorCache)-1])
