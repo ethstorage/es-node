@@ -16,7 +16,7 @@ done
 start_flags=" sync \
   --datadir $data_dir \
   $file_flags \
-  --storage.l1contract 0x804C520d3c084C805E37A35E90057Ac32831F96f \
+  --storage.l1contract 0xAb3d380A268d088BA21Eb313c1C23F3BEC5cfe93 \
   --l1.rpc http://65.108.230.142:8545 \
   --es_rpc http://65.108.230.142:9545 \
   $@"
