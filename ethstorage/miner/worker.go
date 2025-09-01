@@ -456,10 +456,11 @@ func (w *worker) resultLoop() {
 			w.notifyResultLoop()
 		case <-ticker.C:
 			for shardId, s := range w.submissionStates {
-				w.lg.Info("Mining stats", "shard", shardId, "submitted", s.Submitted, "failed", s.Failed, "dropped", s.Dropped)
+				// statistics of the status of mining transaction submission, not the transaction result status on chain
+				w.lg.Info("Mining tx submission stats", "shard", shardId, "submitted", s.Submitted, "failed", s.Failed, "dropped", s.Dropped)
 			}
 			if len(errorCache) > 0 {
-				w.lg.Error("Mining stats", "lastError", errorCache[len(errorCache)-1])
+				w.lg.Error("Mining tx submission stats", "lastError", errorCache[len(errorCache)-1])
 			}
 		case <-saveStatesTicker.C:
 			w.saveStates()
