@@ -11,8 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
-	esLog "github.com/ethstorage/go-ethstorage/ethstorage/log"
-	"golang.org/x/term"
+	"github.com/ethstorage/go-ethstorage/ethstorage/log"
 )
 
 var (
@@ -21,11 +20,7 @@ var (
 	privateKey = os.Getenv("ES_NODE_SIGNER_PRIVATE_KEY")
 	minerAddr  = common.HexToAddress(os.Getenv("ES_NODE_STORAGE_MINER"))
 	prPath     = "../build/bin"
-	lg         = esLog.NewLogger(esLog.CLIConfig{
-		Level:  "debug",
-		Format: "text",
-		Color:  term.IsTerminal(int(os.Stdout.Fd())),
-	})
+	lg         = log.DefaultLogger()
 )
 
 func callVerify(calldata []byte, contract common.Address) error {
