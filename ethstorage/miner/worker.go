@@ -29,6 +29,11 @@ const (
 	resultQueueSize          = 10
 	slot                     = 12 // seconds
 	miningTransactionTimeout = 50 // seconds
+
+	// tx status codes
+	txStatusFailure = 0
+	txStatusSuccess = 1
+	txStatusTimeout = 2
 )
 
 var (
@@ -45,10 +50,10 @@ type MiningState struct {
 }
 
 type SubmissionState struct {
-	Succeeded         int   `json:"succeeded_submission"`
+	Submitted         int   `json:"succeeded_submission"`
 	Failed            int   `json:"failed_submission"`
 	Dropped           int   `json:"dropped_submission"`
-	LastSucceededTime int64 `json:"last_succeeded_time"`
+	LastSubmittedTime int64 `json:"last_succeeded_time"`
 }
 
 type task struct {
@@ -164,7 +169,7 @@ func newWorker(
 				continue
 			}
 		}
-		worker.submissionStates[shardId] = &SubmissionState{Succeeded: 0, Failed: 0, Dropped: 0, LastSucceededTime: 0}
+		worker.submissionStates[shardId] = &SubmissionState{Submitted: 0, Failed: 0, Dropped: 0, LastSubmittedTime: 0}
 	}
 	worker.wg.Add(2)
 	go worker.newWorkLoop()
@@ -447,19 +452,22 @@ func (w *worker) resultLoop() {
 						}
 					}
 				} else {
-					s.Succeeded++
-					s.LastSucceededTime = time.Now().UnixMilli()
+					s.Submitted++
+					s.LastSubmittedTime = time.Now().UnixMilli()
 				}
 			}
 			w.reportMiningResult(result, txHash, err)
 			// optimistically check next result if exists
 			w.notifyResultLoop()
 		case <-ticker.C:
-			for shardId, s := range w.submissionStates {
-				w.lg.Info("Mining stats", "shard", shardId, "succeeded", s.Succeeded, "failed", s.Failed, "dropped", s.Dropped)
-			}
-			if len(errorCache) > 0 {
-				w.lg.Error("Mining stats", "lastError", errorCache[len(errorCache)-1])
+			if w.isRunning() {
+				for shardId, s := range w.submissionStates {
+					// statistics of the status of mining transaction submission, not the transaction result status on chain
+					w.lg.Info("Mining tx submission stats", "shard", shardId, "submitted", s.Submitted, "failed", s.Failed, "dropped", s.Dropped)
+				}
+				if len(errorCache) > 0 {
+					w.lg.Error("Mining tx submission stats", "lastError", errorCache[len(errorCache)-1])
+				}
 			}
 		case <-saveStatesTicker.C:
 			w.saveStates()
@@ -484,7 +492,9 @@ func (w *worker) reportMiningResult(rs *result, txHash common.Hash, err error) {
 		rs.startShardId,
 		rs.blockNumber,
 	)
-	var status bool
+	msg += fmt.Sprintf("Miner: %s\r\n", rs.miner.Hex())
+
+	var status int
 	if err == errDropped {
 		msg += "However, it was dropped due to insufficient profit."
 		w.lg.Warn("Mining transaction dropped due to low profit.")
@@ -495,23 +505,24 @@ func (w *worker) reportMiningResult(rs *result, txHash common.Hash, err error) {
 		msg += "However, the mining transaction failed to submit for unclear reasons."
 		w.lg.Error("Failed to submit mining transaction.")
 	} else {
-		msg += fmt.Sprintf("Miner: %s\r\n", rs.miner.Hex())
 		msg += fmt.Sprintf("Transaction hash: %s\r\n\r\n", txHash.Hex())
 		w.lg.Info("Mining transaction submitted", "txHash", txHash)
 		status = w.checkTxStatusRepeatedly(txHash, &msg)
 	}
 	if w.config.EmailEnabled {
 		emailSubject := "EthStorage Proof Submission: "
-		if status {
+		if status == txStatusSuccess {
 			emailSubject += "✅ Success"
-		} else {
+		} else if status == txStatusFailure {
 			emailSubject += "❌ Failure"
+		} else {
+			emailSubject += "⚠️ Timeout"
 		}
 		email.SendEmail(emailSubject, msg, w.config.EmailConfig, w.lg)
 	}
 }
 
-func (w *worker) checkTxStatusRepeatedly(txHash common.Hash, msg *string) bool {
+func (w *worker) checkTxStatusRepeatedly(txHash common.Hash, msg *string) int {
 	// waiting for tx confirmation or timeout
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
@@ -523,16 +534,20 @@ func (w *worker) checkTxStatusRepeatedly(txHash common.Hash, msg *string) bool {
 			w.lg.Info("Mining transaction confirmed", "txHash", txHash)
 			success, ret := w.checkTxStatus(txHash)
 			*msg += ret
-			return success
+			if success {
+				return txStatusSuccess
+			} else {
+				return txStatusFailure
+			}
 		}
 		checked++
 		if checked > miningTransactionTimeout {
 			*msg += "However, waiting for the transaction confirmation timed out. You can check the transaction status on the block explorer."
 			w.lg.Warn("Waiting for mining transaction confirm timed out", "txHash", txHash)
-			break
+			return txStatusTimeout
 		}
 	}
-	return false
+	return txStatusTimeout
 }
 
 func (w *worker) checkTxStatus(txHash common.Hash) (bool, string) {

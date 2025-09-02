@@ -114,8 +114,8 @@ func (d *dashboard) ReportStateHandler(w http.ResponseWriter, r *http.Request) {
 			d.m.SetMiningState(state.Id, state.Contract, state.Version, state.Address, shard.ShardId, shard.Miner, mining.MiningPower, mining.SamplingTime)
 		}
 		if submission != nil {
-			d.m.SetSubmissionState(state.Id, state.Contract, state.Version, state.Address, shard.ShardId, shard.Miner, submission.Succeeded,
-				submission.Failed, submission.Dropped, submission.LastSucceededTime)
+			d.m.SetSubmissionState(state.Id, state.Contract, state.Version, state.Address, shard.ShardId, shard.Miner, submission.Submitted,
+				submission.Failed, submission.Dropped, submission.LastSubmittedTime)
 		}
 	}
 
@@ -184,7 +184,7 @@ func (d *dashboard) Report() {
 			}
 			if s.SyncState.SyncProgress < 10000 || s.SyncState.FillEmptyProgress < 10000 {
 				sd.phasesOfShard[shard]["syncing"] = sd.phasesOfShard[shard]["syncing"] + 1
-			} else if s.SubmissionState != nil && s.SubmissionState.Succeeded > 0 {
+			} else if s.SubmissionState != nil && s.SubmissionState.Submitted > 0 {
 				sd.phasesOfShard[shard]["mined"] = sd.phasesOfShard[shard]["mined"] + 1
 			} else if s.SubmissionState != nil {
 				sd.phasesOfShard[shard]["mining"] = sd.phasesOfShard[shard]["mining"] + 1

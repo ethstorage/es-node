@@ -158,7 +158,7 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 	}
 	m.lg.Info("Estimated gas done", "gas", estimatedGas)
 
-	nonce, err := m.NonceAt(ctx, cfg.SignerAddr, big.NewInt(rpc.LatestBlockNumber.Int64()))
+	nonce, err := m.PendingNonceAt(ctx, cfg.SignerAddr)
 	if err != nil {
 		m.lg.Error("Query nonce failed", "error", err.Error())
 		return common.Hash{}, err

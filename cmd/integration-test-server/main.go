@@ -170,7 +170,7 @@ func checkFinalState(state *node.NodeState) {
 		if shardState.MiningState.SamplingTime == 0 || shardState.MiningState.MiningPower == 0 {
 			addErrorMessage("Mining should be start after sync done.")
 		}
-		if shardState.SubmissionState.LastSucceededTime == 0 || shardState.SubmissionState.Succeeded == 0 {
+		if shardState.SubmissionState.LastSubmittedTime == 0 || shardState.SubmissionState.Submitted == 0 {
 			addErrorMessage("At lease one block should be mined successfully during the test.")
 		}
 		if shardState.SubmissionState.Failed > 0 {
@@ -189,8 +189,8 @@ func checkFinalState(state *node.NodeState) {
 		log.Info("Final state", "id", state.Id, "shard", shardState.ShardId, "miner", shardState.Miner, "sync progress",
 			shardState.SyncState.SyncProgress, "fill progress", shardState.SyncState.FillEmptyProgress, "mining power",
 			shardState.MiningState.MiningPower, "sampling time", shardState.MiningState.SamplingTime, "succeeded submission",
-			shardState.SubmissionState.Succeeded, "failed submission", shardState.SubmissionState.Failed, "dropped submission",
-			shardState.SubmissionState.Dropped, "last succeeded time", shardState.SubmissionState.LastSucceededTime)
+			shardState.SubmissionState.Submitted, "failed submission", shardState.SubmissionState.Failed, "dropped submission",
+			shardState.SubmissionState.Dropped, "last succeeded time", shardState.SubmissionState.LastSubmittedTime)
 	}
 }
 
