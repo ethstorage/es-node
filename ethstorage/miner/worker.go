@@ -460,12 +460,14 @@ func (w *worker) resultLoop() {
 			// optimistically check next result if exists
 			w.notifyResultLoop()
 		case <-ticker.C:
-			for shardId, s := range w.submissionStates {
-				// statistics of the status of mining transaction submission, not the transaction result status on chain
-				w.lg.Info("Mining tx submission stats", "shard", shardId, "submitted", s.Submitted, "failed", s.Failed, "dropped", s.Dropped)
-			}
-			if len(errorCache) > 0 {
-				w.lg.Error("Mining tx submission stats", "lastError", errorCache[len(errorCache)-1])
+			if w.isRunning() {
+				for shardId, s := range w.submissionStates {
+					// statistics of the status of mining transaction submission, not the transaction result status on chain
+					w.lg.Info("Mining tx submission stats", "shard", shardId, "submitted", s.Submitted, "failed", s.Failed, "dropped", s.Dropped)
+				}
+				if len(errorCache) > 0 {
+					w.lg.Error("Mining tx submission stats", "lastError", errorCache[len(errorCache)-1])
+				}
 			}
 		case <-saveStatesTicker.C:
 			w.saveStates()
