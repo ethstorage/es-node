@@ -490,6 +490,8 @@ func (w *worker) reportMiningResult(rs *result, txHash common.Hash, err error) {
 		rs.startShardId,
 		rs.blockNumber,
 	)
+	msg += fmt.Sprintf("Miner: %s\r\n", rs.miner.Hex())
+
 	var status int
 	if err == errDropped {
 		msg += "However, it was dropped due to insufficient profit."
@@ -501,7 +503,6 @@ func (w *worker) reportMiningResult(rs *result, txHash common.Hash, err error) {
 		msg += "However, the mining transaction failed to submit for unclear reasons."
 		w.lg.Error("Failed to submit mining transaction.")
 	} else {
-		msg += fmt.Sprintf("Miner: %s\r\n", rs.miner.Hex())
 		msg += fmt.Sprintf("Transaction hash: %s\r\n\r\n", txHash.Hex())
 		w.lg.Info("Mining transaction submitted", "txHash", txHash)
 		status = w.checkTxStatusRepeatedly(txHash, &msg)
