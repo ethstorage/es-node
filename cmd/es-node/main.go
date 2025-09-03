@@ -32,12 +32,12 @@ import (
 var (
 	GitCommit     = ""
 	GitDate       = ""
-	Version       = "v0.2.2"
+	Version       = "v0.2.3"
 	Meta          = "dev"
 	BuildTime     = ""
 	systemVersion = fmt.Sprintf("%s/%s", runtime.GOARCH, runtime.GOOS)
 	golangVersion = runtime.Version()
-	defaultLog    = log.NewLogger(log.DefaultCLIConfig())
+	lg            = log.DefaultLogger()
 )
 
 // VersionWithMeta holds the textual version string including the metadata.
@@ -129,15 +129,15 @@ func main() {
 				if err != nil {
 					return err
 				}
-				defaultLog.Info("Email configuration", "username", emailConfig.Username)
-				defaultLog.Info("Email configuration", "host", emailConfig.Host)
-				defaultLog.Info("Email configuration", "port", strconv.FormatUint(emailConfig.Port, 10))
-				defaultLog.Info("Email configuration", "to", emailConfig.To)
-				defaultLog.Info("Email configuration", "from", emailConfig.From)
+				lg.Info("Email configuration", "username", emailConfig.Username)
+				lg.Info("Email configuration", "host", emailConfig.Host)
+				lg.Info("Email configuration", "port", strconv.FormatUint(emailConfig.Port, 10))
+				lg.Info("Email configuration", "to", emailConfig.To)
+				lg.Info("Email configuration", "from", emailConfig.From)
 
 				subject := "Test Email from EthStorage"
 				body := "This is a test email sent from the EthStorage node CLI."
-				email.SendEmail(subject, body, *emailConfig, defaultLog)
+				email.SendEmail(subject, body, *emailConfig, lg)
 				return nil
 			},
 		},
@@ -145,20 +145,14 @@ func main() {
 
 	err := app.Run(os.Args)
 	if err != nil {
-		defaultLog.Crit("Application failed", "message", err)
+		lg.Crit("Application failed", "message", err)
 	}
 }
 
 func EsNodeMain(ctx *cli.Context) error {
-	lg := defaultLog
 	lg.Info("Configuring EthStorage Node")
-	logCfg := log.ReadCLIConfig(ctx)
-	if err := logCfg.Check(); err != nil {
-		lg.Error("Unable to create the log config", "error", err)
-		return err
-	}
-	lg = log.NewLogger(logCfg)
-	cfg, err := NewConfig(ctx, lg)
+	clog := log.NewLogger(log.ReadCLIConfig(ctx))
+	cfg, err := NewConfig(ctx, clog)
 	if err != nil {
 		lg.Error("Unable to create the rollup node config", "error", err)
 		return err
@@ -168,15 +162,15 @@ func EsNodeMain(ctx *cli.Context) error {
 	if cfg.Metrics.Enabled {
 		m = metrics.NewMetrics("default")
 	}
-	n, err := node.New(context.Background(), cfg, lg, VersionWithMeta, m)
+	n, err := node.New(context.Background(), cfg, clog, VersionWithMeta, m)
 	if err != nil {
-		lg.Error("Unable to create the storage node", "error", err)
+		clog.Error("Unable to create the storage node", "error", err)
 		return err
 	}
-	lg.Info("Starting storage node", "version", VersionWithMeta)
+	clog.Info("Starting storage node", "version", VersionWithMeta)
 
 	if err := n.Start(context.Background(), cfg); err != nil {
-		lg.Error("Unable to start rollup node", "error", err)
+		clog.Error("Unable to start rollup node", "error", err)
 		return err
 	}
 	defer n.Close()
@@ -187,15 +181,15 @@ func EsNodeMain(ctx *cli.Context) error {
 	if cfg.Pprof.Enabled {
 		pprofCtx, pprofCancel := context.WithCancel(context.Background())
 		go func() {
-			lg.Info("pprof server started", "addr", net.JoinHostPort(cfg.Pprof.ListenAddr, strconv.Itoa(cfg.Pprof.ListenPort)))
+			clog.Info("pprof server started", "addr", net.JoinHostPort(cfg.Pprof.ListenAddr, strconv.Itoa(cfg.Pprof.ListenPort)))
 			if err := oppprof.ListenAndServe(pprofCtx, cfg.Pprof.ListenAddr, cfg.Pprof.ListenPort); err != nil {
-				lg.Error("error starting pprof", "err", err)
+				clog.Error("error starting pprof", "err", err)
 			}
 		}()
 		defer pprofCancel()
 	}
 
-	lg.Info("Storage node started")
+	clog.Info("Storage node started")
 
 	// Run simple sync test
 	start := ctx.GlobalUint64(flags.TestSimpleSyncStartFlag.Name)
@@ -214,12 +208,11 @@ func EsNodeMain(ctx *cli.Context) error {
 	}...)
 	<-interruptChannel
 
-	lg.Info("Storage node exited")
+	clog.Info("Storage node exited")
 	return nil
 }
 
 func EsNodeInit(ctx *cli.Context) error {
-	lg := defaultLog
 	lg.Info("Will create data files for storage node")
 	l1Rpc := readRequiredFlag(ctx, flags.L1NodeAddr)
 	contract := readRequiredFlag(ctx, flags.StorageL1Contract)
@@ -263,7 +256,7 @@ func EsNodeInit(ctx *cli.Context) error {
 	defer client.Close()
 
 	l1Contract := common.HexToAddress(contract)
-	storageCfg, err := initStorageConfig(cctx, client, l1Contract, common.HexToAddress(miner))
+	storageCfg, err := initStorageConfig(cctx, client, l1Contract, common.HexToAddress(miner), lg)
 	if err != nil {
 		lg.Error("Failed to load storage config", "error", err)
 		return err
@@ -308,7 +301,6 @@ func EsNodeInit(ctx *cli.Context) error {
 }
 
 func EsNodeSync(ctx *cli.Context) error {
-	lg := defaultLog
 	lg.Info("Sync data for specified kv")
 	if !ctx.IsSet(kvIndexFlagName) {
 		return fmt.Errorf("kv_index must be specified")

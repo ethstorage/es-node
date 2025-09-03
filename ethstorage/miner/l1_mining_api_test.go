@@ -6,14 +6,12 @@ import (
 	"context"
 	"fmt"
 	"math/big"
-	"os"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/core/types"
-	esLog "github.com/ethstorage/go-ethstorage/ethstorage/log"
+	"github.com/ethstorage/go-ethstorage/ethstorage/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"golang.org/x/term"
 )
 
 var gwei = new(big.Int).Exp(big.NewInt(10), big.NewInt(9), nil)
@@ -24,11 +22,7 @@ func Test_l1MiningAPI_checkGasPrice(t *testing.T) {
 		startShardId: 0,
 		timestamp:    0,
 	}
-	lgr := esLog.NewLogger(esLog.CLIConfig{
-		Level:  "debug",
-		Format: "text",
-		Color:  term.IsTerminal(int(os.Stdout.Fd())),
-	})
+	lg := log.DefaultLogger()
 
 	estimatedGas := uint64(500000)
 	safeGas := uint64(600000)
@@ -227,7 +221,7 @@ func Test_l1MiningAPI_checkGasPrice(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := context.Background()
-			mockAPI := &MockMiningAPI{l1MiningAPI: l1MiningAPI{lg: lgr}}
+			mockAPI := &MockMiningAPI{l1MiningAPI: l1MiningAPI{lg: lg}}
 			mockAPI.On("GetL1Fee", ctx, unsignedTx).Return(tc.l1Fee, tc.l1FeeErr)
 			mockAPI.On("GetMiningReward", mockResult.startShardId, mockResult.timestamp).Return(tc.reward, tc.rewardErr)
 
@@ -243,7 +237,7 @@ func Test_l1MiningAPI_checkGasPrice(t *testing.T) {
 				safeGas,
 				tc.useL2,
 				tc.useConfig,
-				lgr,
+				lg,
 			)
 			if tc.wantDropped {
 				assert.ErrorIs(t, gotErr, errDropped, "expected an dropped error, but got none")
