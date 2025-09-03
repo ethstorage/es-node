@@ -1,6 +1,7 @@
 [
   {
     "alert-type":"ESLastMinedBlockChecker",
+    "email-to": "molaokp@gmail.com,lundeng@quarkchain.org,qzhu@quarkchain.org,pingke@quarkchain.org,limingpeng@quarkchain.org",
     "params":{
       "name":"Sepolia Last Mined Block Alert",
       "contract":"0x804C520d3c084C805E37A35E90057Ac32831F96f",
@@ -9,6 +10,7 @@
   },
   {
     "alert-type":"ESLastMinedBlockChecker",
+    "email-to": "molaokp@gmail.com,lundeng@quarkchain.org,qzhu@quarkchain.org,pingke@quarkchain.org,limingpeng@quarkchain.org",
     "params":{
       "name":"L2 Last Mined Block Alert",
       "contract":"0x64003adbdf3014f7E38FC6BE752EB047b95da89A",
@@ -17,6 +19,7 @@
   },
   {
     "alert-type":"WebsiteOnlineChecker",
+    "email-to": "molaokp@gmail.com,pingke@quarkchain.org",
     "params":{
       "name":"grafana.ethstorage.io online Alert",
       "url":"https://grafana.ethstorage.io/"
@@ -25,6 +28,7 @@
 
   {
     "alert-type":"LastBlockChecker",
+    "email-to": "molaokp@gmail.com,lundeng@quarkchain.org,qzhu@quarkchain.org,pingke@quarkchain.org,limingpeng@quarkchain.org",
     "params":{
       "name":"Quarkchain Shard 0 Last Block Alert",
       "rpc":"https://mainnet-s0-ethapi.quarkchain.io"
@@ -32,6 +36,7 @@
   },
   {
     "alert-type":"LastBlockChecker",
+    "email-to": "molaokp@gmail.com,lundeng@quarkchain.org,qzhu@quarkchain.org,pingke@quarkchain.org,limingpeng@quarkchain.org",
     "params":{
       "name":"Quarkchain Shard 1 Last Block Alert",
       "rpc":"https://mainnet-s1-ethapi.quarkchain.io"
@@ -39,6 +44,7 @@
   },
   {
     "alert-type":"LastBlockChecker",
+    "email-to": "molaokp@gmail.com,lundeng@quarkchain.org,qzhu@quarkchain.org,pingke@quarkchain.org,limingpeng@quarkchain.org",
     "params":{
       "name":"Quarkchain Shard 2 Last Block Alert",
       "rpc":"https://mainnet-s2-ethapi.quarkchain.io"
@@ -46,6 +52,7 @@
   },
   {
     "alert-type":"LastBlockChecker",
+    "email-to": "molaokp@gmail.com,lundeng@quarkchain.org,qzhu@quarkchain.org,pingke@quarkchain.org,limingpeng@quarkchain.org",
     "params":{
       "name":"Quarkchain Shard 3 Last Block Alert",
       "rpc":"https://mainnet-s3-ethapi.quarkchain.io"
@@ -53,6 +60,7 @@
   },
   {
     "alert-type":"LastBlockChecker",
+    "email-to": "molaokp@gmail.com,lundeng@quarkchain.org,qzhu@quarkchain.org,pingke@quarkchain.org,limingpeng@quarkchain.org",
     "params":{
       "name":"Quarkchain Shard 4 Last Block Alert",
       "rpc":"http://eth-jrpc.mainnet.quarkchain.io:39004"
@@ -60,6 +68,7 @@
   },
   {
     "alert-type":"LastBlockChecker",
+    "email-to": "molaokp@gmail.com,lundeng@quarkchain.org,qzhu@quarkchain.org,pingke@quarkchain.org,limingpeng@quarkchain.org",
     "params":{
       "name":"Quarkchain Shard 5 Last Block Alert",
       "rpc":"http://eth-jrpc.mainnet.quarkchain.io:39005"
@@ -67,6 +76,7 @@
   },
   {
     "alert-type":"LastBlockChecker",
+    "email-to": "molaokp@gmail.com,lundeng@quarkchain.org,qzhu@quarkchain.org,pingke@quarkchain.org,limingpeng@quarkchain.org",
     "params":{
       "name":"Quarkchain Shard 6 Last Block Alert",
       "rpc":"http://eth-jrpc.mainnet.quarkchain.io:39006"
@@ -74,6 +84,7 @@
   },
   {
     "alert-type":"LastBlockChecker",
+    "email-to": "molaokp@gmail.com,lundeng@quarkchain.org,qzhu@quarkchain.org,pingke@quarkchain.org,limingpeng@quarkchain.org",
     "params":{
       "name":"Quarkchain Shard 7 Last Block Alert",
       "rpc":"http://eth-jrpc.mainnet.quarkchain.io:39007"
@@ -81,6 +92,7 @@
   },
   {
     "alert-type":"WebsiteOnlineChecker",
+    "email-to": "molaokp@gmail.com,lundeng@quarkchain.org,qzhu@quarkchain.org,pingke@quarkchain.org,limingpeng@quarkchain.org",
     "params":{
       "name":"Quarkchain explorer online Alert",
       "url":"https://mainnet.quarkchain.io/"
@@ -88,6 +100,7 @@
   },
   {
     "alert-type":"WebsiteOnlineChecker",
+    "email-to": "molaokp@gmail.com,lundeng@quarkchain.org,qzhu@quarkchain.org,pingke@quarkchain.org,limingpeng@quarkchain.org",
     "params":{
       "name":"quarkchain.io online Alert",
       "url":"https://quarkchain.io/"
@@ -95,6 +108,7 @@
   },
   {
     "alert-type":"WebsiteOnlineChecker",
+    "email-to": "molaokp@gmail.com,pingke@quarkchain.org",
     "params":{
       "name":"grafana.quarkchain.io online Alert",
       "url":"https://grafana.quarkchain.io/"

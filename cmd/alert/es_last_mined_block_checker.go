@@ -18,11 +18,12 @@ const (
 
 type ESLastMinedBlockChecker struct {
 	Name     string         `json:"name"`
+	EmailTo  string         `json:"email-to"`
 	Contract common.Address `json:"contract"`
 	RPC      string         `json:"rpc"`
 }
 
-func newESLastMinedBlockChecker(params map[string]string) (*ESLastMinedBlockChecker, error) {
+func newESLastMinedBlockChecker(params map[string]string, emailTo string) (*ESLastMinedBlockChecker, error) {
 	name, contract, rpc := params["name"], params["contract"], params["rpc"]
 	if name == "" || contract == "" || rpc == "" {
 		return nil, errors.New("invalid params to load ESLastMinedBlockChecker")
@@ -30,17 +31,17 @@ func newESLastMinedBlockChecker(params map[string]string) (*ESLastMinedBlockChec
 
 	return &ESLastMinedBlockChecker{
 		Name:     name,
+		EmailTo:  emailTo,
 		Contract: common.HexToAddress(contract),
 		RPC:      rpc,
 	}, nil
 }
 
-func (c *ESLastMinedBlockChecker) Check(lg log.Logger) (bool, string) {
-
+func (c *ESLastMinedBlockChecker) Check(lg log.Logger) (bool, string, string) {
 	client, err := eth.Dial(c.RPC, c.Contract, 12, lg)
 	if err != nil {
 		lg.Error("Failed to create source", "alert", c.Name, "err", err)
-		return true, fmt.Sprintf(errorContent, c.Name, err.Error())
+		return true, fmt.Sprintf(errorContent, c.Name, err.Error()), c.EmailTo
 	}
 	var (
 		ctx = context.Background()
@@ -60,10 +61,10 @@ func (c *ESLastMinedBlockChecker) Check(lg log.Logger) (bool, string) {
 		targetTime := time.Now().Add(-24 * time.Hour)
 		if targetTime.After(lastMinedTime) {
 			content := fmt.Sprintf(noMinedBlockAlertContent, c.Name, info.BlockMined, lastMinedTime, c.RPC)
-			return true, content
+			return true, content, c.EmailTo
 		}
-		return false, ""
+		return false, "", c.EmailTo
 	}
 
-	return true, fmt.Sprintf(errorContent, c.Name, err.Error())
+	return true, fmt.Sprintf(errorContent, c.Name, err.Error()), c.EmailTo
 }
