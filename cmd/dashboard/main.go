@@ -225,11 +225,11 @@ func (d *dashboard) RefreshMiningMetrics() {
 				"miner", event.Miner, "gasFee", event.GasFee, "reward", event.Reward)
 		}
 		d.startBlock = next
-	}
-	d.db.Put(fmt.Appendf(nil, "%s-%d-%s", dbKey_Prefix_LastShard, d.chainID, d.contract.Hex()), new(big.Int).SetUint64(d.lastShardIdx).Bytes())
-	d.db.Put(fmt.Appendf(nil, "%s-%d-%s", dbKey_Prefix_LastBlock, d.chainID, d.contract.Hex()), new(big.Int).SetUint64(d.startBlock).Bytes())
-	for shardId, lastMined := range d.lastMinedMap {
-		d.db.Put(fmt.Appendf(nil, "%s-%d-%s-%d", dbKey_Prefix_LastMined, d.chainID, d.contract.Hex(), shardId), new(big.Int).SetUint64(lastMined).Bytes())
+		d.db.Put(fmt.Appendf(nil, "%s-%d-%s", dbKey_Prefix_LastShard, d.chainID, d.contract.Hex()), new(big.Int).SetUint64(d.lastShardIdx).Bytes())
+		d.db.Put(fmt.Appendf(nil, "%s-%d-%s", dbKey_Prefix_LastBlock, d.chainID, d.contract.Hex()), new(big.Int).SetUint64(d.startBlock).Bytes())
+		for shardId, lastMined := range d.lastMinedMap {
+			d.db.Put(fmt.Appendf(nil, "%s-%d-%s-%d", dbKey_Prefix_LastMined, d.chainID, d.contract.Hex(), shardId), new(big.Int).SetUint64(lastMined).Bytes())
+		}
 	}
 }
 
