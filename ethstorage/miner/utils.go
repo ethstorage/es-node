@@ -111,9 +111,10 @@ func parseErr(err error) string {
 	if dataHex == "" {
 		return fmt.Sprintf("%s: no revert data", errMsg)
 	}
+	errMsg += fmt.Sprintf(": ErrorData: %v", dataHex)
 	data, _ := hex.DecodeString(strings.TrimPrefix(dataHex, "0x"))
 	if len(data) < 4 {
-		return fmt.Sprintf("%s: invalid revert data: %s", errMsg, dataHex)
+		return fmt.Sprintf("%s: invalid revert data", errMsg)
 	}
 	sel := [4]byte{data[0], data[1], data[2], data[3]}
 	abiErr, err1 := ab.ErrorByID(sel)
