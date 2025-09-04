@@ -15,7 +15,7 @@ import (
 )
 
 /*
-	This ABI is generated via the following cmd under the root dir of storage contract repo:
+	This ABI is generated via the following cmd under the root dir of storage-contracts-v1 repo:
 	```bash
 		find out -name '*.json' -type f -print0 \
 		| xargs -0 jq -r -s 'map(.abi // []) | add
@@ -26,6 +26,7 @@ import (
 	```
 */
 
+// From storage contract version 0.2.0-9eeaf63
 const errorABI = `[
   {"name":"AccessControlBadConfirmation","type":"error","inputs":[]},
   {"name":"AccessControlUnauthorizedAccount","type":"error","inputs":[{"name":"account","type":"address","internalType":"address"},{"name":"neededRole","type":"bytes32","internalType":"bytes32"}]},
