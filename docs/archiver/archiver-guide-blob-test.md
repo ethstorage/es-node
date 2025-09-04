@@ -4,14 +4,16 @@
 
 1. [Introduction](#introduction)  
 2. [Environment Setup](#environment-setup)  
-   2.1. [Running a Proxy for the Ethereum Beacon API](#running-a-proxy-for-the-ethereum-beacon-api)  
-   2.2. [Running an es-node with the Archive Service Enabled](#running-an-es-node-with-the-archive-service-enabled)  
-   2.3. [Set Environment Variables](#set-environment-variables)  
+   2.1. [Tools Installation](#tools-installation)  
+   2.2. [Running a Proxy for the Ethereum Beacon API](#running-a-proxy-for-the-ethereum-beacon-api)  
+   2.3. [Running an es-node with the Archive Service Enabled](#running-an-es-node-with-the-archive-service-enabled)  
+   2.4. [Set Environment Variables](#set-environment-variables)  
 3. [Testing EthStorage Archive Service](#testing-ethstorage-archive-service)  
    3.1. [Upload a Blob](#upload-a-blob)  
    3.2. [Query the Blob Info](#query-the-blob-info)  
-   3.3. [Load the Expired Blob from EthStorage](#load-the-expired-blob-from-ethstorage)  
-   3.4. [Verify the Blob](#verify-the-blob)  
+   3.3. [Waiting for the Blob Expires on the Beacon](#waiting-for-the-blob-expires-on-the-beacon)  
+   3.4. [Load the Expired Blob from EthStorage](#load-the-expired-blob-from-ethstorage)  
+   3.5. [Verify the Blob](#verify-the-blob)  
 4. [Conclusion](#conclusion)  
 
 ## Introduction
@@ -20,14 +22,12 @@ This document outlines the testing strategy and details for the blob archiver se
 
 ## Environment Setup
 
-The tests will be conducted in an environment with the following services operational:
+### Tools Installation
 
-- An Ethereum L1 (Sepolia) RPC from an Execution Client running in archive mode.
-- An Ethereum L1 (Sepolia) Beacon API URL.
-- A proxy for the Ethereum Beacon API to simulate a short blob retention period.
-- An EthStorage node (es-node) with the archive service enabled.
+Required tools and installation links:
 
-The following sections detail the setup of the Beacon proxy and the es-node.
+- eth-blob-uploader (https://www.npmjs.com/package/eth-blob-uploader)
+- foundry cast (https://getfoundry.sh/introduction/installation/)
 
 ### Running a Proxy for the Ethereum Beacon API
 
@@ -64,10 +64,12 @@ For additional details and options for running an es-node, please refer to the [
 Set the following environment variables for later use:
 
 ```bash
-export RPC_URL="http://65.108.230.142:8545"
+# Ethereum L1 (Sepolia) RPC from an Execution Client running in archive mode
+export RPC_URL="http://65.108.230.142:8545" 
+# Ethereum L1 (Sepolia) Beacon API URL
 export BEACON_API="http://65.108.230.142:3500"
 export BEACON_API_MOCK="http://localhost:3600"
-export ARCHIVE_SERVICE="http://65.108.236.27:9645"
+export ARCHIVE_SERVICE="http://65.109.50.145:9645"
 ```
 
 ## Testing EthStorage Archive Service
@@ -88,7 +90,7 @@ To upload a local file (`hello.txt`) to the EthStorage testnet as an EIP-4844 bl
 eth-blob-uploader -r $RPC_URL \
 -p <private-key> \
 -f hello.txt \
--t 0x804C520d3c084C805E37A35E90057Ac32831F96f \
+-t 0xAb3d380A268d088BA21Eb313c1C23F3BEC5cfe93 \
 -v 1500000000000000 \
 -d 0x4581a9201c8aff950685c2ed4bc3174f3472287b56d9517b9c948127319a09a7a36deac800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000020000
 
@@ -195,4 +197,4 @@ curl -s "$ARCHIVE_SERVICE/eth/v1/beacon/blob_sidecars/$SLOT" | jq -r '.data[].kz
 
 ## Conclusion
 
-This document describes a test procedure for storing a blob, retrieving it after expiration from the Beacon Client, and verifying the accuracy of the blob. 
+This document describes a test procedure for storing a blob, retrieving it after expiration from the Beacon Client, and verifying the accuracy of the blob.
