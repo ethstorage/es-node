@@ -309,9 +309,9 @@ func (n *EsNode) initMiner(ctx context.Context, cfg *Config) error {
 		return nil
 	}
 	l1api := miner.NewL1MiningAPI(n.l1Source, n.randaoSource, n.lg)
-	if err := l1api.CheckMinerRole(ctx, cfg.Storage.L1Contract, cfg.Storage.Miner); err != nil {
-		n.lg.Crit("Check miner role", "err", err)
-	}
+	// if err := l1api.CheckMinerRole(ctx, cfg.Storage.L1Contract, cfg.Storage.Miner); err != nil {
+	// 	n.lg.Crit("Check miner role", "err", err)
+	// }
 	pvr := prover.NewKZGPoseidonProver(
 		cfg.Mining.ZKWorkingDir,
 		cfg.Mining.ZKeyFile,
