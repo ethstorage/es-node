@@ -29,9 +29,8 @@ import (
 const (
 	dbKey_Prefix_LastBlock  = "lb"
 	dbKey_Prefix_Event      = "ev"
-	dbKey_Prefix_LastShard  = "ls"
+	dbKey_Prefix_ShardCount = "sc"
 	dbKey_Prefix_LastMined  = "lm"
-	dbKey_Prefix_FirstMined = "fm"
 	step                    = 500
 	epoch                   = 12 * time.Second
 	l1Type                  = "l1"
@@ -158,7 +157,7 @@ func (d *dashboard) RefreshBlobsMetrics(sig eth.L1BlockRef) {
 
 func (d *dashboard) LoadMiningMetricsFromDB() {
 	count := uint64(0)
-	if data, err := d.db.Get(fmt.Appendf(nil, "%s-%d-%s", dbKey_Prefix_LastShard, d.chainID, d.contract.Hex())); data != nil {
+	if data, err := d.db.Get(fmt.Appendf(nil, "%s-%d-%s", dbKey_Prefix_ShardCount, d.chainID, d.contract.Hex())); data != nil {
 		count = new(big.Int).SetBytes(data).Uint64()
 	} else {
 		d.lg.Info("No LastShard metrics found from DB", "chainID", d.chainID, "contract", d.contract.Hex(), "err", err)
@@ -212,7 +211,7 @@ func (d *dashboard) RefreshMiningMetrics() {
 			} else {
 				d.db.Put(fmt.Appendf(nil, "%s-%d-%s-%d-%d", dbKey_Prefix_Event, d.chainID, common.Bytes2Hex(d.contract[:8]),
 					event.ShardId, event.BlockMined.Uint64()), data)
-				d.lg.Info("Saved event", "chainID", d.chainID, "contract", common.Bytes2Hex(d.contract[:8]),
+				d.lg.Debug("Saved event", "chainID", d.chainID, "contract", common.Bytes2Hex(d.contract[:8]),
 					"shardID", event.ShardId, "mined", event.BlockMined.Uint64())
 			}
 			d.lastMinedMap[event.ShardId] = max(event.BlockMined.Uint64(), d.lastMinedMap[event.ShardId])
@@ -226,13 +225,13 @@ func (d *dashboard) RefreshMiningMetrics() {
 		d.startBlock = next
 
 		if len(events) > 0 {
-			d.db.Put(fmt.Appendf(nil, "%s-%d-%s", dbKey_Prefix_LastShard, d.chainID, d.contract.Hex()), new(big.Int).SetUint64(uint64(len(d.lastMinedMap))).Bytes())
+			d.db.Put(fmt.Appendf(nil, "%s-%d-%s", dbKey_Prefix_ShardCount, d.chainID, d.contract.Hex()), new(big.Int).SetUint64(uint64(len(d.lastMinedMap))).Bytes())
 			for shardId, lastMined := range d.lastMinedMap {
 				d.db.Put(fmt.Appendf(nil, "%s-%d-%s-%d", dbKey_Prefix_LastMined, d.chainID, d.contract.Hex(), shardId), new(big.Int).SetUint64(lastMined).Bytes())
 			}
 			d.db.Put(fmt.Appendf(nil, "%s-%d-%s", dbKey_Prefix_LastBlock, d.chainID, d.contract.Hex()), new(big.Int).SetUint64(d.startBlock).Bytes())
 
-			d.lg.Info("Saved info to DB", "chainID", d.chainID, "contract", d.contract.Hex(), "shard count", len(d.lastMinedMap), "lastMined", d.lastMinedMap)
+			d.lg.Debug("Saved info to DB", "chainID", d.chainID, "contract", d.contract.Hex(), "shard count", len(d.lastMinedMap), "lastMined", d.lastMinedMap)
 		}
 	}
 }
