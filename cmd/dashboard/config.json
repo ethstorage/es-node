@@ -1,14 +1,14 @@
 [
   {
-    "name":"EthStorage",
+    "name":"EthStorage Testnet",
     "type": "l1",
     "rpc":"http://65.108.230.142:8545",
-    "chainID": 3335,
+    "chainID": 3333,
     "contract":"0xAb3d380A268d088BA21Eb313c1C23F3BEC5cfe93",
     "startNumber": 9074314
   },
   {
-    "name":"EthStorage L2 ",
+    "name":"EthStorage L2 Testnet",
     "type": "l2",
     "rpc":"http://5.9.87.214:8545",
     "chainID": 3337,
