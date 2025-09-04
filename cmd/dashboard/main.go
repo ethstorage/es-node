@@ -162,7 +162,7 @@ func (d *dashboard) LoadMiningMetricsFromDB() {
 	if data, _ := d.db.Get(fmt.Appendf(nil, "%s-%d-%s", dbKey_Prefix_LastShard, d.chainID, d.contract.Hex())); data != nil {
 		d.lastShardIdx = new(big.Int).SetBytes(data).Uint64()
 	} else {
-		d.lg.Info("No LastShard metrics found from DB")
+		d.lg.Info("No LastShard metrics found from DB", "chainID", d.chainID, "contract", d.contract.Hex())
 	}
 	for shardId := uint64(0); shardId <= d.lastShardIdx; shardId++ {
 		if data, _ := d.db.Get(fmt.Appendf(nil, "%s-%d-%s", dbKey_Prefix_LastMined, d.chainID, d.contract.Hex())); data != nil {
@@ -187,7 +187,7 @@ func (d *dashboard) LoadMiningMetricsFromDB() {
 				}
 			}
 		} else {
-			d.lg.Warn("Load LastMined info from DB fail")
+			d.lg.Warn("Load LastMined info from DB fail", "chainID", d.chainID, "contract", d.contract.Hex())
 		}
 
 	}
@@ -214,6 +214,8 @@ func (d *dashboard) RefreshMiningMetrics() {
 			} else {
 				d.db.Put(fmt.Appendf(nil, "%s-%d-%s-%d-%d", dbKey_Prefix_Event, d.chainID, common.Bytes2Hex(d.contract[:8]),
 					event.ShardId, event.BlockMined.Uint64()), data)
+				d.lg.Info("Saved event", "chainID", d.chainID, "contract", common.Bytes2Hex(d.contract[:8]),
+					"shardID", event.ShardId, "mined", event.BlockMined.Uint64())
 			}
 			d.lastMinedMap[event.ShardId] = max(event.BlockMined.Uint64(), d.lastMinedMap[event.ShardId])
 			d.lastShardIdx = max(event.ShardId, d.lastShardIdx)
@@ -225,11 +227,17 @@ func (d *dashboard) RefreshMiningMetrics() {
 				"miner", event.Miner, "gasFee", event.GasFee, "reward", event.Reward)
 		}
 		d.startBlock = next
-		d.db.Put(fmt.Appendf(nil, "%s-%d-%s", dbKey_Prefix_LastShard, d.chainID, d.contract.Hex()), new(big.Int).SetUint64(d.lastShardIdx).Bytes())
-		d.db.Put(fmt.Appendf(nil, "%s-%d-%s", dbKey_Prefix_LastBlock, d.chainID, d.contract.Hex()), new(big.Int).SetUint64(d.startBlock).Bytes())
+
+		err = d.db.Put(fmt.Appendf(nil, "%s-%d-%s", dbKey_Prefix_LastShard, d.chainID, d.contract.Hex()), new(big.Int).SetUint64(d.lastShardIdx).Bytes())
+		if err != nil {
+			d.lg.Warn("Failed to save last shard info", "err", err.Error())
+		}
 		for shardId, lastMined := range d.lastMinedMap {
 			d.db.Put(fmt.Appendf(nil, "%s-%d-%s-%d", dbKey_Prefix_LastMined, d.chainID, d.contract.Hex(), shardId), new(big.Int).SetUint64(lastMined).Bytes())
 		}
+		d.db.Put(fmt.Appendf(nil, "%s-%d-%s", dbKey_Prefix_LastBlock, d.chainID, d.contract.Hex()), new(big.Int).SetUint64(d.startBlock).Bytes())
+
+		d.lg.Info("Saved info to DB", "chainID", d.chainID, "contract", d.contract.Hex(), "lastShardIdx", d.lastShardIdx, "lastMined", d.lastMinedMap)
 	}
 }
 
