@@ -20,17 +20,21 @@ import (
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/ethdb/leveldb"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/rlp"
 	ethRPC "github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
 	"github.com/ethstorage/go-ethstorage/ethstorage/metrics"
 )
 
 const (
-	dbKey_Prefix_LastBlock = "lastBlock"
-	step                   = 500
-	epoch                  = 12 * time.Second
-	l1Type                 = "l1"
-	l2Type                 = "l2"
+	dbKey_Prefix_LastBlock  = "lb"
+	dbKey_Prefix_Event      = "ev"
+	dbKey_Prefix_ShardCount = "sc"
+	dbKey_Prefix_LastMined  = "lm"
+	step                    = 500
+	epoch                   = 12 * time.Second
+	l1Type                  = "l1"
+	l2Type                  = "l2"
 )
 
 var divisor = new(big.Int).SetUint64(10000000000)
@@ -63,18 +67,19 @@ type Param struct {
 }
 
 type dashboard struct {
-	ctx         context.Context
-	sourceType  string
-	source      *eth.PollingClient
-	m           metrics.Metricer
-	chainID     uint64
-	contract    common.Address
-	kvEntries   uint64
-	maxShardIdx uint64
-	startBlock  uint64
-	endBlock    uint64
-	db          ethdb.Database
-	lg          log.Logger
+	ctx          context.Context
+	sourceType   string
+	source       *eth.PollingClient
+	m            metrics.Metricer
+	chainID      uint64
+	contract     common.Address
+	kvEntries    uint64
+	maxShardIdx  uint64
+	startBlock   uint64
+	endBlock     uint64
+	lastMinedMap map[uint64]uint64
+	db           ethdb.Database
+	lg           log.Logger
 }
 
 func newDashboard(param *Param, db ethdb.Database, m metrics.Metricer, lg log.Logger) (*dashboard, error) {
@@ -93,7 +98,7 @@ func newDashboard(param *Param, db ethdb.Database, m metrics.Metricer, lg log.Lo
 	}
 
 	start := param.StartNumber
-	if status, _ := db.Get(fmt.Appendf(nil, "%s-%s", dbKey_Prefix_LastBlock, contract.Hex())); status != nil {
+	if status, _ := db.Get(fmt.Appendf(nil, "%s-%d-%s", dbKey_Prefix_LastBlock, param.ChainID, contract.Hex())); status != nil {
 		start = new(big.Int).SetBytes(status).Uint64()
 	}
 
@@ -115,17 +120,18 @@ func newDashboard(param *Param, db ethdb.Database, m metrics.Metricer, lg log.Lo
 	shardEntryBits := new(big.Int).SetBytes(result).Uint64()
 
 	return &dashboard{
-		ctx:        ctx,
-		sourceType: param.Type,
-		source:     source,
-		m:          m,
-		chainID:    param.ChainID,
-		contract:   contract,
-		kvEntries:  1 << shardEntryBits,
-		db:         db,
-		startBlock: start,
-		endBlock:   start - 1,
-		lg:         lg,
+		ctx:          ctx,
+		sourceType:   param.Type,
+		source:       source,
+		m:            m,
+		chainID:      param.ChainID,
+		contract:     contract,
+		kvEntries:    1 << shardEntryBits,
+		db:           db,
+		startBlock:   start,
+		endBlock:     start - 1,
+		lastMinedMap: make(map[uint64]uint64),
+		lg:           lg,
 	}, nil
 }
 
@@ -149,6 +155,42 @@ func (d *dashboard) RefreshBlobsMetrics(sig eth.L1BlockRef) {
 	}
 }
 
+func (d *dashboard) LoadMiningMetricsFromDB() {
+	count := uint64(0)
+	if data, err := d.db.Get(fmt.Appendf(nil, "%s-%d-%s", dbKey_Prefix_ShardCount, d.chainID, d.contract.Hex())); data != nil {
+		count = new(big.Int).SetBytes(data).Uint64()
+	} else {
+		d.lg.Info("No LastShard metrics found from DB", "chainID", d.chainID, "contract", d.contract.Hex(), "err", err)
+		return
+	}
+	for shardId := uint64(0); shardId < count; shardId++ {
+		if data, _ := d.db.Get(fmt.Appendf(nil, "%s-%d-%s-%d", dbKey_Prefix_LastMined, d.chainID, d.contract.Hex(), shardId)); data != nil {
+			lastMined := new(big.Int).SetBytes(data).Uint64()
+			d.lastMinedMap[shardId] = lastMined
+			for mined := uint64(0); mined <= lastMined; mined++ {
+				if eventData, _ := d.db.Get(fmt.Appendf(nil, "%s-%d-%s-%d-%d", dbKey_Prefix_Event, d.chainID, common.Bytes2Hex(d.contract[:8]),
+					shardId, mined)); eventData != nil {
+					var event miningEvent
+					err := rlp.DecodeBytes(eventData, &event)
+					if err != nil {
+						d.lg.Warn("Failed to decode mining event", "chainID", d.chainID, "contract", d.contract, "shard", shardId, "mined", mined, "err", err)
+						continue
+					}
+					d.m.SetMiningInfo(d.chainID, d.contract, event.ShardId, event.Difficulty.Uint64(), event.LastMineTime,
+						event.BlockMined.Uint64(), event.Miner, event.GasFee.Uint64(), event.Reward.Uint64())
+					d.lg.Info("Load mining info from DB", "contract", d.contract, "txHash", event.TxHash.Hex(),
+						"blockMined", event.BlockMined, "lastMineTime", event.LastMineTime, "difficulty", event.Difficulty,
+						"miner", event.Miner, "gasFee", event.GasFee, "reward", event.Reward)
+				} else {
+					d.lg.Info("No event data found", "chainID", d.chainID, "contract", d.contract, "shard", shardId, "mined", mined)
+				}
+			}
+		} else {
+			d.lg.Warn("Load LastMined info from DB fail", "chainID", d.chainID, "contract", d.contract.Hex())
+		}
+	}
+}
+
 func (d *dashboard) RefreshMiningMetrics() {
 	for d.startBlock <= d.endBlock {
 		start, end := d.startBlock, d.endBlock
@@ -163,6 +205,17 @@ func (d *dashboard) RefreshMiningMetrics() {
 		}
 
 		for _, event := range events {
+			data, err := rlp.EncodeToBytes(event)
+			if err != nil {
+				d.lg.Warn("Failed to encode event", "event", event, "err", err.Error())
+			} else {
+				d.db.Put(fmt.Appendf(nil, "%s-%d-%s-%d-%d", dbKey_Prefix_Event, d.chainID, common.Bytes2Hex(d.contract[:8]),
+					event.ShardId, event.BlockMined.Uint64()), data)
+				d.lg.Debug("Saved event", "chainID", d.chainID, "contract", common.Bytes2Hex(d.contract[:8]),
+					"shardID", event.ShardId, "mined", event.BlockMined.Uint64())
+			}
+			d.lastMinedMap[event.ShardId] = max(event.BlockMined.Uint64(), d.lastMinedMap[event.ShardId])
+
 			d.m.SetMiningInfo(d.chainID, d.contract, event.ShardId, event.Difficulty.Uint64(), event.LastMineTime,
 				event.BlockMined.Uint64(), event.Miner, event.GasFee.Uint64(), event.Reward.Uint64())
 			d.lg.Info("Refresh mining info", "contract", d.contract, "txHash", event.TxHash.Hex(),
@@ -170,8 +223,17 @@ func (d *dashboard) RefreshMiningMetrics() {
 				"miner", event.Miner, "gasFee", event.GasFee, "reward", event.Reward)
 		}
 		d.startBlock = next
+
+		if len(events) > 0 {
+			d.db.Put(fmt.Appendf(nil, "%s-%d-%s", dbKey_Prefix_ShardCount, d.chainID, d.contract.Hex()), new(big.Int).SetUint64(uint64(len(d.lastMinedMap))).Bytes())
+			for shardId, lastMined := range d.lastMinedMap {
+				d.db.Put(fmt.Appendf(nil, "%s-%d-%s-%d", dbKey_Prefix_LastMined, d.chainID, d.contract.Hex(), shardId), new(big.Int).SetUint64(lastMined).Bytes())
+			}
+			d.db.Put(fmt.Appendf(nil, "%s-%d-%s", dbKey_Prefix_LastBlock, d.chainID, d.contract.Hex()), new(big.Int).SetUint64(d.startBlock).Bytes())
+
+			d.lg.Debug("Saved info to DB", "chainID", d.chainID, "contract", d.contract.Hex(), "shard count", len(d.lastMinedMap), "lastMined", d.lastMinedMap)
+		}
 	}
-	d.db.Put(fmt.Appendf(nil, "%s-%s", dbKey_Prefix_LastBlock, d.contract.Hex()), new(big.Int).SetUint64(d.startBlock).Bytes())
 }
 
 func (d *dashboard) FetchMiningEvents(start, end uint64) ([]*miningEvent, uint64, error) {
@@ -301,6 +363,7 @@ func main() {
 			lg.Crit("Init metrics value fail", "err", err.Error())
 		}
 
+		d.LoadMiningMetricsFromDB()
 		d.RefreshMiningMetrics()
 		l1LatestBlockSub := eth.PollBlockChanges(d.ctx, d.lg, d.source, d.RefreshMetrics, ethRPC.LatestBlockNumber, epoch, epoch)
 		defer l1LatestBlockSub.Unsubscribe()

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -17,23 +18,30 @@ const (
 )
 
 type ESLastMinedBlockChecker struct {
-	Name     string         `json:"name"`
-	EmailTo  string         `json:"email-to"`
-	Contract common.Address `json:"contract"`
-	RPC      string         `json:"rpc"`
+	Name      string         `json:"name"`
+	EmailTo   string         `json:"email-to"`
+	Contract  common.Address `json:"contract"`
+	RPC       string         `json:"rpc"`
+	Threshold time.Duration  `json:"threshold-in-hours"`
 }
 
 func newESLastMinedBlockChecker(params map[string]string, emailTo string) (*ESLastMinedBlockChecker, error) {
-	name, contract, rpc := params["name"], params["contract"], params["rpc"]
-	if name == "" || contract == "" || rpc == "" {
+	name, contract, rpc, threshold := params["name"], params["contract"], params["rpc"], params["threshold-in-hours"]
+	if name == "" || contract == "" || rpc == "" || threshold == "" {
 		return nil, errors.New("invalid params to load ESLastMinedBlockChecker")
 	}
 
+	thresholdInHours, err := strconv.Atoi(threshold)
+	if err != nil {
+		return nil, errors.New(fmt.Sprintf("invalid threshold in ESLastMinedBlockChecker config, checker name: %s", name))
+	}
+
 	return &ESLastMinedBlockChecker{
-		Name:     name,
-		EmailTo:  emailTo,
-		Contract: common.HexToAddress(contract),
-		RPC:      rpc,
+		Name:      name,
+		EmailTo:   emailTo,
+		Contract:  common.HexToAddress(contract),
+		RPC:       rpc,
+		Threshold: time.Duration(thresholdInHours) * time.Hour,
 	}, nil
 }
 
@@ -58,7 +66,7 @@ func (c *ESLastMinedBlockChecker) Check(lg log.Logger) (bool, string, string) {
 
 		lastMinedTime := time.Unix(int64(info.LastMineTime), 0)
 		lg.Info("Check last mined block", "alert", c.Name, "time", lastMinedTime, "mined block", info.BlockMined, "rpc", c.RPC)
-		targetTime := time.Now().Add(-24 * time.Hour)
+		targetTime := time.Now().Add(-c.Threshold)
 		if targetTime.After(lastMinedTime) {
 			content := fmt.Sprintf(noMinedBlockAlertContent, c.Name, info.BlockMined, lastMinedTime, c.RPC)
 			return true, content, c.EmailTo
