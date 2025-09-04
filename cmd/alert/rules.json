@@ -3,18 +3,20 @@
     "alert-type":"ESLastMinedBlockChecker",
     "email-to": "molaokp@gmail.com,lundeng@quarkchain.org,qzhu@quarkchain.org,pingke@quarkchain.org,limingpeng@quarkchain.org",
     "params":{
-      "name":"Sepolia Last Mined Block Alert",
-      "contract":"0x804C520d3c084C805E37A35E90057Ac32831F96f",
-      "rpc":"http://65.108.230.142:8545"
+      "name":"EthStorage Testnet Last Mined Block Alert",
+      "contract":"0xAb3d380A268d088BA21Eb313c1C23F3BEC5cfe93",
+      "rpc":"http://65.108.230.142:8545",
+      "threshold-in-hours": "24"
     }
   },
   {
     "alert-type":"ESLastMinedBlockChecker",
     "email-to": "molaokp@gmail.com,lundeng@quarkchain.org,qzhu@quarkchain.org,pingke@quarkchain.org,limingpeng@quarkchain.org",
     "params":{
-      "name":"L2 Last Mined Block Alert",
+      "name":"EthStorage L2 Testnet Last Mined Block Alert",
       "contract":"0x64003adbdf3014f7E38FC6BE752EB047b95da89A",
-      "rpc":"http://5.9.87.214:8545"
+      "rpc":"http://5.9.87.214:8545",
+      "threshold-in-hours": "24"
     }
   },
   {
