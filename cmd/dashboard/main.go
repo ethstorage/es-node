@@ -228,16 +228,18 @@ func (d *dashboard) RefreshMiningMetrics() {
 		}
 		d.startBlock = next
 
-		err = d.db.Put(fmt.Appendf(nil, "%s-%d-%s", dbKey_Prefix_LastShard, d.chainID, d.contract.Hex()), new(big.Int).SetUint64(d.lastShardIdx).Bytes())
-		if err != nil {
-			d.lg.Warn("Failed to save last shard info", "err", err.Error())
-		}
-		for shardId, lastMined := range d.lastMinedMap {
-			d.db.Put(fmt.Appendf(nil, "%s-%d-%s-%d", dbKey_Prefix_LastMined, d.chainID, d.contract.Hex(), shardId), new(big.Int).SetUint64(lastMined).Bytes())
-		}
-		d.db.Put(fmt.Appendf(nil, "%s-%d-%s", dbKey_Prefix_LastBlock, d.chainID, d.contract.Hex()), new(big.Int).SetUint64(d.startBlock).Bytes())
+		if len(events) > 0 {
+			err = d.db.Put(fmt.Appendf(nil, "%s-%d-%s", dbKey_Prefix_LastShard, d.chainID, d.contract.Hex()), new(big.Int).SetUint64(d.lastShardIdx).Bytes())
+			if err != nil {
+				d.lg.Warn("Failed to save last shard info", "err", err.Error())
+			}
+			for shardId, lastMined := range d.lastMinedMap {
+				d.db.Put(fmt.Appendf(nil, "%s-%d-%s-%d", dbKey_Prefix_LastMined, d.chainID, d.contract.Hex(), shardId), new(big.Int).SetUint64(lastMined).Bytes())
+			}
+			d.db.Put(fmt.Appendf(nil, "%s-%d-%s", dbKey_Prefix_LastBlock, d.chainID, d.contract.Hex()), new(big.Int).SetUint64(d.startBlock).Bytes())
 
-		d.lg.Info("Saved info to DB", "chainID", d.chainID, "contract", d.contract.Hex(), "lastShardIdx", d.lastShardIdx, "lastMined", d.lastMinedMap)
+			d.lg.Info("Saved info to DB", "chainID", d.chainID, "contract", d.contract.Hex(), "lastShardIdx", d.lastShardIdx, "lastMined", d.lastMinedMap)
+		}
 	}
 }
 
