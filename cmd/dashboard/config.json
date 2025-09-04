@@ -1,14 +1,14 @@
 [
   {
-    "name":"Sepolia",
+    "name":"EthStorage Testnet",
     "type": "l1",
     "rpc":"http://65.108.230.142:8545",
     "chainID": 3333,
-    "contract":"0x804C520d3c084C805E37A35E90057Ac32831F96f",
-    "startNumber": 5528000
+    "contract":"0xAb3d380A268d088BA21Eb313c1C23F3BEC5cfe93",
+    "startNumber": 9074314
   },
   {
-    "name":"QKC L2 ",
+    "name":"EthStorage L2 Testnet",
     "type": "l2",
     "rpc":"http://5.9.87.214:8545",
     "chainID": 3337,
