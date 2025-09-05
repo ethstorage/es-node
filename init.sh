@@ -3,6 +3,11 @@
 # usage:
 # env ES_NODE_STORAGE_MINER=<miner> ./init.sh
 
+if [[ -z "${ES_NODE_STORAGE_MINER:-}" ]]; then
+  echo "Missing ES_NODE_STORAGE_MINER."
+  exit 1
+fi
+
 executable="./build/bin/es-node"
 if [ ! -f "$executable" ]; then
   make

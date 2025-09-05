@@ -7,6 +7,11 @@
 # usage example 3 (overriding zk options, make sure to use the same configuration when running both init.sh and run.sh):
 # env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> ./run.sh --miner.zk-prover-impl 2 --miner.zk-prover-mode 1
 
+if [[ -z "${ES_NODE_STORAGE_MINER:-}" || -z "${ES_NODE_SIGNER_PRIVATE_KEY:-}" ]]; then
+  echo "Missing ES_NODE_STORAGE_MINER or ES_NODE_SIGNER_PRIVATE_KEY."
+  exit 1
+fi
+
 # The following is the default zkey file path downloaded by `init.sh`, which is compatible with zk mode 2. 
 # You can override the zkey file by using the `--miner.zkey` flag. Just ensure that the provided zkey file is compatible with the zkey mode.
 zkey_file="./build/bin/snark_lib/zkey/blob_poseidon2.zkey"
@@ -17,6 +22,25 @@ $executable --version
 echo "========================================"
 
 data_dir="./es-data"
+# Parse --datadir from CLI (support --datadir <dir> and --datadir=<dir>)
+forward_args=()
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --datadir)
+      data_dir="$2"
+      shift 2
+      ;;
+    --datadir=*)
+      data_dir="${1#*=}"
+      shift
+      ;;
+    *)
+      forward_args+=("$1")
+      shift
+      ;;
+  esac
+done
+
 file_flags=""
 
 for file in ${data_dir}/shard-[0-9]*.dat; do 
@@ -24,6 +48,16 @@ for file in ${data_dir}/shard-[0-9]*.dat; do
         file_flags+=" --storage.files $file"
     fi
 done
+
+if [ -z "$file_flags" ]; then
+  cat <<EOF
+No shard data files found in "$data_dir".
+- Run ./init.sh to prepare shard files and dependencies.
+- Or pass your data directory: ./run.sh --datadir <dir>
+- Expected file pattern: ${data_dir}/shard-<index>.dat
+EOF
+  exit 1
+fi
 
 start_flags=" --network devnet \
   --datadir $data_dir \
