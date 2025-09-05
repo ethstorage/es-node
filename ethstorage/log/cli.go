@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethstorage/go-ethstorage/ethstorage/rollup"
+	"github.com/ethstorage/go-ethstorage/ethstorage/flags/utils"
 	"github.com/urfave/cli"
 )
 
@@ -19,6 +19,10 @@ const (
 	ColorFlagName  = "log.color"
 )
 
+func logEnv(name string) string {
+	return utils.PrefixEnvVar("LOG_" + name)
+}
+
 var (
 	defaultCLIConfig = CLIConfig{
 		Level:  "info",
@@ -27,25 +31,25 @@ var (
 	}
 )
 
-func CLIFlags(envPrefix string) []cli.Flag {
+func CLIFlags() []cli.Flag {
 	return []cli.Flag{
 		cli.StringFlag{
 			Name:   LevelFlagName,
 			Usage:  "The lowest log level that will be output",
 			Value:  defaultCLIConfig.Level,
-			EnvVar: rollup.PrefixEnvVar(envPrefix, "LOG_LEVEL"),
+			EnvVar: logEnv("LEVEL"),
 		},
 		cli.StringFlag{
 			Name:   FormatFlagName,
 			Usage:  "Format the log output. Supported formats: 'text', 'terminal', 'logfmt', 'json', 'json-pretty',",
 			Value:  defaultCLIConfig.Format,
-			EnvVar: rollup.PrefixEnvVar(envPrefix, "LOG_FORMAT"),
+			EnvVar: logEnv("FORMAT"),
 		},
 		cli.BoolTFlag{
 			Name:  ColorFlagName,
 			Usage: "Color the log output if in terminal mode (defaults to true if terminal is detected)",
 			// BoolTFlag is true by default
-			EnvVar: rollup.PrefixEnvVar(envPrefix, "LOG_COLOR"),
+			EnvVar: logEnv("COLOR"),
 		},
 	}
 }

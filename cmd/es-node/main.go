@@ -123,7 +123,7 @@ func main() {
 			Name:    "email",
 			Aliases: []string{"mail"},
 			Usage:   "Send a test email using the configured SMTP settings",
-			Flags:   email.CLIFlags("ES_NODE"),
+			Flags:   email.CLIFlags(),
 			Action: func(ctx *cli.Context) error {
 				emailConfig, err := email.GetEmailConfig(ctx)
 				if err != nil {

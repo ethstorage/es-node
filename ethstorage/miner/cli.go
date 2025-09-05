@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 
 	"github.com/ethstorage/go-ethstorage/ethstorage/flags/types"
+	"github.com/ethstorage/go-ethstorage/ethstorage/flags/utils"
 	"github.com/ethstorage/go-ethstorage/ethstorage/prover"
-	"github.com/ethstorage/go-ethstorage/ethstorage/rollup"
 	"github.com/urfave/cli"
 )
 
@@ -29,60 +29,63 @@ const (
 	EmailEnabledFlagName = "miner.email-enabled"
 )
 
-func CLIFlags(envPrefix string) []cli.Flag {
-	envPrefix += "_MINER"
+func minerEnv(name string) string {
+	return utils.PrefixEnvVar("MINER_" + name)
+}
+
+func CLIFlags() []cli.Flag {
 	flag := []cli.Flag{
 		cli.BoolFlag{
 			Name:   EnabledFlagName,
 			Usage:  "Storage mining enabled",
-			EnvVar: rollup.PrefixEnvVar(envPrefix, "ENABLED"),
+			EnvVar: minerEnv("ENABLED"),
 		},
 		&types.BigFlag{
 			Name:   GasPriceFlagName,
 			Usage:  "Gas price for mining transactions",
 			Value:  DefaultConfig.GasPrice,
-			EnvVar: rollup.PrefixEnvVar(envPrefix, "GAS_PRICE"),
+			EnvVar: minerEnv("GAS_PRICE"),
 		},
 		&types.BigFlag{
 			Name:   PriorityGasPriceFlagName,
 			Usage:  "Priority gas price for mining transactions",
 			Value:  DefaultConfig.PriorityGasPrice,
-			EnvVar: rollup.PrefixEnvVar(envPrefix, "PRIORITY_GAS_PRICE"),
+			EnvVar: minerEnv("PRIORITY_GAS_PRICE"),
 		},
 		&types.BigFlag{
 			Name:   MinimumProfitFlagName,
 			Usage:  "Minimum profit for mining transactions in wei",
 			Value:  DefaultConfig.MinimumProfit,
-			EnvVar: rollup.PrefixEnvVar(envPrefix, "MIN_PROFIT"),
+			EnvVar: minerEnv("MIN_PROFIT"),
 		},
 		cli.StringFlag{
 			Name:   ZKeyFileNameFlagName,
 			Usage:  "zkey file name with path",
 			Value:  DefaultConfig.ZKeyFile,
-			EnvVar: rollup.PrefixEnvVar(envPrefix, "ZKEY_FILE"),
+			EnvVar: minerEnv("ZKEY_FILE"),
 		},
 		cli.Uint64Flag{
 			Name:   ZKProverModeFlagName,
 			Usage:  "ZK prover mode, 1: one proof per sample, 2: one proof for multiple samples",
 			Value:  DefaultConfig.ZKProverMode,
-			EnvVar: rollup.PrefixEnvVar(envPrefix, "ZK_PROVER_MODE"),
+			EnvVar: minerEnv("ZK_PROVER_MODE"),
 		},
 		cli.Uint64Flag{
 			Name:   ZKProverImplFlagName,
 			Usage:  "ZK prover implementation, 1: snarkjs, 2: go-rapidsnark",
 			Value:  DefaultConfig.ZKProverImpl,
-			EnvVar: rollup.PrefixEnvVar(envPrefix, "ZK_PROVER_IMPL"),
+			EnvVar: minerEnv("ZK_PROVER_IMPL"),
 		},
 		cli.Uint64Flag{
 			Name:   ThreadsPerShardFlagName,
 			Usage:  "Number of threads per shard",
 			Value:  DefaultConfig.ThreadsPerShard,
-			EnvVar: rollup.PrefixEnvVar(envPrefix, "THREADS_PER_SHARD"),
+			EnvVar: minerEnv("THREADS_PER_SHARD"),
 		},
 		cli.BoolFlag{
 			Name:   EmailEnabledFlagName,
 			Usage:  "Enable proof submission notifications via email",
-			EnvVar: rollup.PrefixEnvVar(envPrefix, "EMAIL_ENABLED"),
+			EnvVar: minerEnv("EMAIL_ENABLED"),
 		},
 	}
 	return flag
