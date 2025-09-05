@@ -44,7 +44,8 @@ func (a *APIService) blobSidecarHandler(w http.ResponseWriter, r *http.Request) 
 		a.lg.Info("Blob archiver API request handled", "took(s)", dur.Seconds())
 	}(start)
 
-	a.lg.Info("Blob archiver API request", "url", r.RequestURI)
+	a.lg.Info("Blob archiver API request", "from", readUserIP(r), "url", r.RequestURI)
+
 	id := mux.Vars(r)["id"]
 	if hErr := validateBlockID(id); hErr != nil {
 		hErr.write(w)
