@@ -98,18 +98,9 @@ func New(ctx context.Context, cfg *Config, lg log.Logger, appVersion string, m m
 }
 
 func (n *EsNode) init(ctx context.Context, cfg *Config) error {
-	// if err := n.initTracer(ctx, cfg); err != nil {
-	// 	return err
-	// }
 	if err := n.initL1(ctx, cfg); err != nil {
 		return err
 	}
-	// if err := n.initRuntimeConfig(ctx, cfg); err != nil {
-	// 	return err
-	// }
-	// if err := n.initRPCSync(ctx, cfg); err != nil {
-	// 	return err
-	// }
 	if err := n.initDatabase(cfg); err != nil {
 		return err
 	}
@@ -232,13 +223,13 @@ func (n *EsNode) startL1(cfg *Config) {
 
 func (n *EsNode) initP2P(ctx context.Context, cfg *Config) error {
 	if cfg.P2P != nil {
-		p2pNode, err := p2p.NewNodeP2P(n.resourcesCtx, &cfg.Rollup, n.lg, cfg.P2P, n.storageManager, n.db, n.metrics, n.feed)
+		p2pNode, err := p2p.NewNodeP2P(n.resourcesCtx, cfg.ChainID, n.lg, cfg.P2P, n.storageManager, n.db, n.metrics, n.feed)
 		if err != nil || p2pNode == nil {
 			return err
 		}
 		n.p2pNode = p2pNode
 		if n.p2pNode.Dv5Udp() != nil {
-			go n.p2pNode.DiscoveryProcess(n.resourcesCtx, n.lg, cfg.Rollup.L2ChainID.Uint64(), cfg.P2P.TargetPeers())
+			go n.p2pNode.DiscoveryProcess(n.resourcesCtx, n.lg, cfg.ChainID.Uint64(), cfg.P2P.TargetPeers())
 		}
 	}
 	return nil
@@ -277,7 +268,7 @@ func (n *EsNode) initStorageManager(ctx context.Context, cfg *Config) error {
 }
 
 func (n *EsNode) initRPCServer(ctx context.Context, cfg *Config) error {
-	server, err := newRPCServer(ctx, &cfg.RPC, cfg.Rollup.L2ChainID, n.storageManager, n.downloader, n.lg, n.appVersion)
+	server, err := newRPCServer(ctx, &cfg.RPC, cfg.ChainID, n.storageManager, n.downloader, n.lg, n.appVersion)
 	if err != nil {
 		return err
 	}

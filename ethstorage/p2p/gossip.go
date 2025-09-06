@@ -4,11 +4,11 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/binary"
+	"math/big"
 	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethstorage/go-ethstorage/ethstorage/rollup"
 	"github.com/golang/snappy"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pb "github.com/libp2p/go-libp2p-pubsub/pb"
@@ -46,15 +46,15 @@ type GossipIn interface {
 }
 
 // TODO:
-func blocksTopicV1(cfg *rollup.EsConfig) string {
-	// return fmt.Sprintf("/optimism/%s/0/blocks", cfg.L2ChainID.String())
+func blocksTopicV1(chainID *big.Int) string {
+	// return fmt.Sprintf("/optimism/%s/0/blocks", cfg.ChainID.String())
 	return ""
 }
 
 // BuildSubscriptionFilter builds a simple subscription filter,
 // to help protect against peers spamming useless subscriptions.
-func BuildSubscriptionFilter(cfg *rollup.EsConfig) pubsub.SubscriptionFilter {
-	return pubsub.NewAllowlistSubscriptionFilter(blocksTopicV1(cfg)) // add more topics here in the future, if any.
+func BuildSubscriptionFilter(chainID *big.Int) pubsub.SubscriptionFilter {
+	return pubsub.NewAllowlistSubscriptionFilter(blocksTopicV1(chainID)) // add more topics here in the future, if any.
 }
 
 var msgBufPool = sync.Pool{New: func() any {
@@ -72,7 +72,7 @@ type GossipMetricer interface {
 
 // BuildMsgIdFn builds a generic message ID function for gossipsub that can handle compressed payloads,
 // mirroring the eth2 p2p gossip spec.
-func BuildMsgIdFn(cfg *rollup.EsConfig) pubsub.MsgIdFunction {
+func BuildMsgIdFn(chainID *big.Int) pubsub.MsgIdFunction {
 	return func(pmsg *pb.Message) string {
 		valid := false
 		var data []byte
@@ -109,8 +109,8 @@ func BuildMsgIdFn(cfg *rollup.EsConfig) pubsub.MsgIdFunction {
 	}
 }
 
-func (c *Config) ConfigureGossip(rollupCfg *rollup.EsConfig) []pubsub.Option {
-	params := BuildGlobalGossipParams(rollupCfg)
+func (c *Config) ConfigureGossip(chainID *big.Int) []pubsub.Option {
+	params := BuildGlobalGossipParams(chainID)
 
 	// override with CLI changes
 	params.D = c.MeshD
@@ -125,7 +125,7 @@ func (c *Config) ConfigureGossip(rollupCfg *rollup.EsConfig) []pubsub.Option {
 	}
 }
 
-func BuildGlobalGossipParams(cfg *rollup.EsConfig) pubsub.GossipSubParams {
+func BuildGlobalGossipParams(chainID *big.Int) pubsub.GossipSubParams {
 	params := pubsub.DefaultGossipSubParams()
 	params.D = DefaultMeshD                    // topic stable mesh target count
 	params.Dlo = DefaultMeshDlo                // topic stable mesh low watermark
@@ -141,17 +141,17 @@ func BuildGlobalGossipParams(cfg *rollup.EsConfig) pubsub.GossipSubParams {
 
 // NewGossipSub configures a new pubsub instance with the specified parameters.
 // PubSub uses a GossipSubRouter as it's router under the hood.
-func NewGossipSub(p2pCtx context.Context, h host.Host, g ConnectionGater, cfg *rollup.EsConfig, gossipConf GossipSetupConfigurables, m GossipMetricer, lg log.Logger) (*pubsub.PubSub, error) {
+func NewGossipSub(p2pCtx context.Context, h host.Host, g ConnectionGater, chainID *big.Int, gossipConf GossipSetupConfigurables, m GossipMetricer, lg log.Logger) (*pubsub.PubSub, error) {
 	denyList, err := pubsub.NewTimeCachedBlacklist(30 * time.Second)
 	if err != nil {
 		return nil, err
 	}
 	gossipOpts := []pubsub.Option{
 		pubsub.WithMaxMessageSize(maxGossipSize),
-		pubsub.WithMessageIdFn(BuildMsgIdFn(cfg)),
+		pubsub.WithMessageIdFn(BuildMsgIdFn(chainID)),
 		pubsub.WithNoAuthor(),
 		pubsub.WithMessageSignaturePolicy(pubsub.StrictNoSign),
-		pubsub.WithSubscriptionFilter(BuildSubscriptionFilter(cfg)),
+		pubsub.WithSubscriptionFilter(BuildSubscriptionFilter(chainID)),
 		pubsub.WithValidateQueueSize(maxValidateQueue),
 		pubsub.WithPeerOutboundQueueSize(maxOutboundQueue),
 		pubsub.WithValidateThrottle(globalValidateThrottle),

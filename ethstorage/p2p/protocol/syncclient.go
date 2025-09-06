@@ -24,7 +24,6 @@ import (
 	"github.com/ethstorage/go-ethstorage/ethstorage"
 	"github.com/ethstorage/go-ethstorage/ethstorage/metrics"
 	prv "github.com/ethstorage/go-ethstorage/ethstorage/prover"
-	"github.com/ethstorage/go-ethstorage/ethstorage/rollup"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/protocol"
@@ -63,8 +62,8 @@ var (
 	requestTimeoutInMillisecond = 1000 * time.Millisecond // Millisecond
 )
 
-func GetProtocolID(format string, l2ChainID *big.Int) protocol.ID {
-	return protocol.ID(fmt.Sprintf(format, l2ChainID))
+func GetProtocolID(format string, chainID *big.Int) protocol.ID {
+	return protocol.ID(fmt.Sprintf(format, chainID))
 }
 
 type requestHandlerFn func(ctx context.Context, stream network.Stream)
@@ -159,7 +158,7 @@ type StorageManager interface {
 type SyncClient struct {
 	lg          log.Logger
 	mux         *event.Feed // Event multiplexer to announce sync operation events
-	cfg         *rollup.EsConfig
+	chainID     *big.Int
 	db          ethdb.Database
 	metrics     SyncClientMetrics
 	newStreamFn newStreamFn
@@ -194,7 +193,7 @@ type SyncClient struct {
 	storageManager StorageManager
 }
 
-func NewSyncClient(lg log.Logger, cfg *rollup.EsConfig, newStream newStreamFn, storageManager StorageManager, params *SyncerParams,
+func NewSyncClient(lg log.Logger, chainID *big.Int, newStream newStreamFn, storageManager StorageManager, params *SyncerParams,
 	db ethdb.Database, m SyncClientMetrics, mux *event.Feed) *SyncClient {
 	ctx, cancel := context.WithCancel(context.Background())
 	if params.FillEmptyConcurrency > 0 {
@@ -211,7 +210,7 @@ func NewSyncClient(lg log.Logger, cfg *rollup.EsConfig, newStream newStreamFn, s
 	c := &SyncClient{
 		lg:                         lg,
 		mux:                        mux,
-		cfg:                        cfg,
+		chainID:                    chainID,
 		db:                         db,
 		metrics:                    m,
 		newStreamFn:                newStream,
@@ -530,7 +529,7 @@ func (s *SyncClient) AddPeer(id peer.ID, shards map[common.Address][]uint64, dir
 		return false
 	}
 	// add new peer routine
-	pr := NewPeer(0, s.cfg.L2ChainID, id, s.newStreamFn, direction, s.syncerParams.InitRequestSize, s.storageManager.MaxKvSize(), shards)
+	pr := NewPeer(0, s.chainID, id, s.newStreamFn, direction, s.syncerParams.InitRequestSize, s.storageManager.MaxKvSize(), shards)
 	s.peers[id] = pr
 
 	s.idlerPeers[id] = struct{}{}

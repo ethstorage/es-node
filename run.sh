@@ -25,8 +25,7 @@ for file in ${data_dir}/shard-[0-9]*.dat; do
     fi
 done
 
-start_flags=" --network devnet \
-  --datadir $data_dir \
+start_flags=" --datadir $data_dir \
   $file_flags \
   --storage.l1contract 0xAb3d380A268d088BA21Eb313c1C23F3BEC5cfe93 \
   --l1.rpc http://65.108.230.142:8545 \
