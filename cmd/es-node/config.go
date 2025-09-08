@@ -73,6 +73,9 @@ func NewConfig(ctx *cli.Context, lg log.Logger) (*node.Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to load miner config: %w", err)
 	}
+	if minerConfig != nil {
+		minerConfig.ChainID = rollupConfig.L2ChainID
+	}
 	archiverConfig := archiver.NewConfig(ctx)
 	// l2Endpoint, err := NewL2EndpointConfig(ctx, lg)
 	// if err != nil {
