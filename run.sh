@@ -7,11 +7,6 @@
 # usage example 3 (overriding zk options, make sure to use the same configuration when running both init.sh and run.sh):
 # env ES_NODE_STORAGE_MINER=<miner> ES_NODE_SIGNER_PRIVATE_KEY=<private_key> ./run.sh --miner.zk-prover-impl 2 --miner.zk-prover-mode 1
 
-if [[ -z "${ES_NODE_STORAGE_MINER:-}" || -z "${ES_NODE_SIGNER_PRIVATE_KEY:-}" ]]; then
-  echo "Missing ES_NODE_STORAGE_MINER or ES_NODE_SIGNER_PRIVATE_KEY."
-  exit 1
-fi
-
 # The following is the default zkey file path downloaded by `init.sh`, which is compatible with zk mode 2. 
 # You can override the zkey file by using the `--miner.zkey` flag. Just ensure that the provided zkey file is compatible with the zkey mode.
 zkey_file="./build/bin/snark_lib/zkey/blob_poseidon2.zkey"
@@ -71,6 +66,6 @@ start_flags=" --datadir $data_dir \
   --p2p.listen.udp 30305 \
   --p2p.sync.concurrency 32 \
   --p2p.bootnodes enr:-Lq4QD3MMwVIPhlMy2m6ArsSIfqBmhpk83j5M5a5n9OswlrKFniuZAblPyBRdTKaZaLJNOk8liD8jEmEZKiZQa8k0sSGAZjz0_ohimV0aHN0b3JhZ2Xdgg0FgNjXlKs9OAomjQiLoh6zE8HCPzvsXP6TwYCCaWSCdjSCaXCEF1hGrolzZWNwMjU2azGhAx_7n1-PG2kRC7W3rG8-r4tt1xQKDoNf_ybIcWhNaSddg3RjcIIkB4N1ZHCCdmE \
-$@"
+"
 
-exec $executable $start_flags
+exec $executable $start_flags "${forward_args[@]}"
