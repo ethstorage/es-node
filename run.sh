@@ -17,6 +17,25 @@ $executable --version
 echo "========================================"
 
 data_dir="./es-data"
+# Parse --datadir from CLI (support --datadir <dir> and --datadir=<dir>)
+forward_args=()
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --datadir)
+      data_dir="$2"
+      shift 2
+      ;;
+    --datadir=*)
+      data_dir="${1#*=}"
+      shift
+      ;;
+    *)
+      forward_args+=("$1")
+      shift
+      ;;
+  esac
+done
+
 file_flags=""
 
 for file in ${data_dir}/shard-[0-9]*.dat; do 
@@ -24,6 +43,16 @@ for file in ${data_dir}/shard-[0-9]*.dat; do
         file_flags+=" --storage.files $file"
     fi
 done
+
+if [ -z "$file_flags" ]; then
+  cat <<EOF
+No shard data files found in "$data_dir".
+- Run ./init.sh to prepare shard files and dependencies.
+- Or pass your data directory: ./run.sh --datadir <dir>
+- Expected file pattern: ${data_dir}/shard-<index>.dat
+EOF
+  exit 1
+fi
 
 start_flags=" --datadir $data_dir \
   $file_flags \
@@ -37,6 +66,6 @@ start_flags=" --datadir $data_dir \
   --p2p.listen.udp 30305 \
   --p2p.sync.concurrency 32 \
   --p2p.bootnodes enr:-Lq4QD3MMwVIPhlMy2m6ArsSIfqBmhpk83j5M5a5n9OswlrKFniuZAblPyBRdTKaZaLJNOk8liD8jEmEZKiZQa8k0sSGAZjz0_ohimV0aHN0b3JhZ2Xdgg0FgNjXlKs9OAomjQiLoh6zE8HCPzvsXP6TwYCCaWSCdjSCaXCEF1hGrolzZWNwMjU2azGhAx_7n1-PG2kRC7W3rG8-r4tt1xQKDoNf_ybIcWhNaSddg3RjcIIkB4N1ZHCCdmE \
-$@"
+"
 
-exec $executable $start_flags
+exec $executable $start_flags "${forward_args[@]}"
