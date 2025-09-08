@@ -18,7 +18,6 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethstorage/go-ethstorage/ethstorage"
 	"github.com/ethstorage/go-ethstorage/ethstorage/metrics"
-	"github.com/ethstorage/go-ethstorage/ethstorage/rollup"
 	"github.com/hashicorp/golang-lru/v2/simplelru"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
@@ -64,8 +63,7 @@ type SyncServerMetrics interface {
 }
 
 type SyncServer struct {
-	lg  log.Logger
-	cfg *rollup.EsConfig
+	lg log.Logger
 
 	providedBlobs  map[uint64]uint64
 	storageManager StorageManagerReader
@@ -81,7 +79,7 @@ type SyncServer struct {
 	lock sync.Mutex
 }
 
-func NewSyncServer(cfg *rollup.EsConfig, storageManager StorageManagerReader, db ethdb.Database, m SyncServerMetrics, lg log.Logger) *SyncServer {
+func NewSyncServer(storageManager StorageManagerReader, db ethdb.Database, m SyncServerMetrics, lg log.Logger) *SyncServer {
 	// We should never allow over 1000 different peers to churn through quickly,
 	// so it's fine to prune rate-limit details past this.
 
@@ -101,7 +99,6 @@ func NewSyncServer(cfg *rollup.EsConfig, storageManager StorageManagerReader, db
 
 	server := SyncServer{
 		lg:               lg,
-		cfg:              cfg,
 		storageManager:   storageManager,
 		db:               db,
 		providedBlobs:    make(map[uint64]uint64),

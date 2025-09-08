@@ -31,14 +31,14 @@ type rpcServer struct {
 func newRPCServer(
 	ctx context.Context,
 	rpcCfg *RPCConfig,
-	l2ChainId *big.Int,
+	chainId *big.Int,
 	sm *ethstorage.StorageManager,
 	dl *downloader.Downloader,
 	lg log.Logger,
 	appVersion string,
 ) (*rpcServer, error) {
 	esAPI := NewESAPI(rpcCfg, sm, dl, lg)
-	ethApi := NewETHAPI(rpcCfg, l2ChainId, lg)
+	ethApi := NewETHAPI(rpcCfg, chainId, lg)
 
 	endpoint := net.JoinHostPort(rpcCfg.ListenAddr, strconv.Itoa(rpcCfg.ListenPort))
 	r := &rpcServer{

@@ -1048,8 +1048,8 @@ t=2025-01-13T03:48:38+0000 lvl=info msg="Composed calldata"                     
 t=2025-01-13T03:48:38+0000 lvl=info msg="Query baseFee done"                    baseFee=251
 t=2025-01-13T03:48:38+0000 lvl=info msg="Query gas tip cap done"                gasTipGap=1,000,000
 t=2025-01-13T03:48:38+0000 lvl=info msg="Suggested gas fee cap"                 gasFeeCap=1,000,251
-t=2025-01-13T03:48:38+0000 lvl=eror msg="Estimate gas failed"                   error="execution reverted: ErrorData: 0x2f640fbc"
-t=2025-01-13T03:48:38+0000 lvl=eror msg="Failed to submit mined result"         shard=1 block=7,479,891 error="failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T03:48:38+0000 lvl=eror msg="Estimate gas failed"                   error="execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
+t=2025-01-13T03:48:38+0000 lvl=eror msg="Failed to submit mined result"         shard=1 block=7,479,891 error="failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T03:48:38+0000 lvl=info msg="Generate zk proof done"                sampleIdx="[3420 2751]" timeUsed(s)=41.745
 t=2025-01-13T03:48:38+0000 lvl=info msg="Got storage proof"                     shard=1 block=7,479,891 kvIdx="[8743 11363]"  sampleIdxsInKv="[3420 2751]"
 t=2025-01-13T03:48:38+0000 lvl=info msg="Set mining result"                     shard=1 block=7,479,891 nonce=855,035
@@ -1082,7 +1082,7 @@ t=2025-01-13T03:48:47+0000 lvl=info msg="Downloaded and encoded"                
 t=2025-01-13T03:48:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T03:48:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=3 failed=0 dropped=0
 t=2025-01-13T03:48:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=5 failed=1 dropped=1
-t=2025-01-13T03:48:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T03:48:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T03:48:47+0000 lvl=info msg="Downloaded and encoded"                blockNumber=941,812 kvIdx=11168
 t=2025-01-13T03:48:47+0000 lvl=info msg="Downloaded and encoded"                blockNumber=941,812 kvIdx=11169
 t=2025-01-13T03:48:47+0000 lvl=info msg="Downloaded and encoded"                blockNumber=941,812 kvIdx=11170
@@ -1183,7 +1183,7 @@ t=2025-01-13T03:49:46+0000 lvl=info msg="Download range"                        
 t=2025-01-13T03:49:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T03:49:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=4 failed=0 dropped=0
 t=2025-01-13T03:49:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=5 failed=1 dropped=1
-t=2025-01-13T03:49:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T03:49:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T03:49:54+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,479,901 difficulty=11,859,210 lastMineTime=1,736,739,996 proofsSubmitted=5
 t=2025-01-13T03:49:54+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,479,901 difficulty=11,499,840 lastMineTime=1,736,740,044 proofsSubmitted=4
 t=2025-01-13T03:49:54+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.3s shard=1 block=7,479,901
@@ -1271,7 +1271,7 @@ t=2025-01-13T03:50:46+0000 lvl=info msg="Download range"                        
 t=2025-01-13T03:50:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T03:50:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=4 failed=0 dropped=0
 t=2025-01-13T03:50:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=5 failed=1 dropped=1
-t=2025-01-13T03:50:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T03:50:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T03:50:54+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,479,906 difficulty=11,859,210 lastMineTime=1,736,739,996 proofsSubmitted=5
 t=2025-01-13T03:50:54+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,479,906 difficulty=11,499,840 lastMineTime=1,736,740,044 proofsSubmitted=4
 t=2025-01-13T03:50:55+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.0s shard=0 block=7,479,906
@@ -1371,7 +1371,7 @@ t=2025-01-13T03:51:43+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T03:51:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T03:51:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=5 failed=0 dropped=1
 t=2025-01-13T03:51:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=5 failed=1 dropped=1
-t=2025-01-13T03:51:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T03:51:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T03:51:47+0000 lvl=info msg="Don't find blob in the cache, will try to download directly" blockNumber=941,902 start=941,902 end=941,902 toCache=true
 t=2025-01-13T03:51:48+0000 lvl=info msg="Downloaded and encoded"                blockNumber=941,902 kvIdx=11274
 t=2025-01-13T03:51:48+0000 lvl=info msg="Downloaded and encoded"                blockNumber=941,902 kvIdx=11275
@@ -1473,7 +1473,7 @@ t=2025-01-13T03:52:44+0000 lvl=info msg="Download range"                        
 t=2025-01-13T03:52:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T03:52:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=5 failed=1 dropped=1
 t=2025-01-13T03:52:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=5 failed=0 dropped=1
-t=2025-01-13T03:52:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T03:52:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T03:52:50+0000 lvl=info msg="Generate zk proof done"                sampleIdx="[495 3183]"  timeUsed(s)=30.872
 t=2025-01-13T03:52:50+0000 lvl=info msg="Got storage proof"                     shard=0 block=7,479,913 kvIdx="[7188 4976]"   sampleIdxsInKv="[495 3183]"
 t=2025-01-13T03:52:50+0000 lvl=info msg="Set mining result"                     shard=0 block=7,479,913 nonce=744,084
@@ -1615,7 +1615,7 @@ t=2025-01-13T03:53:43+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T03:53:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T03:53:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=7 failed=0 dropped=1
 t=2025-01-13T03:53:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=7 failed=1 dropped=1
-t=2025-01-13T03:53:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T03:53:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T03:53:52+0000 lvl=info msg="Don't find blob in the cache, will try to download directly" blockNumber=941,965 start=941,965 end=941,965 toCache=true
 t=2025-01-13T03:53:52+0000 lvl=info msg="Downloaded and encoded"                blockNumber=941,965 kvIdx=11346
 t=2025-01-13T03:53:52+0000 lvl=info msg="Downloaded and encoded"                blockNumber=941,965 kvIdx=11347
@@ -1703,7 +1703,7 @@ t=2025-01-13T03:54:45+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T03:54:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T03:54:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=7 failed=1 dropped=1
 t=2025-01-13T03:54:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=7 failed=0 dropped=1
-t=2025-01-13T03:54:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T03:54:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T03:54:55+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,479,926 difficulty=12,611,991 lastMineTime=1,736,740,308 proofsSubmitted=7
 t=2025-01-13T03:54:55+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,479,926 difficulty=12,611,991 lastMineTime=1,736,740,284 proofsSubmitted=7
 t=2025-01-13T03:54:55+0000 lvl=info msg="Generate zk proof done"                sampleIdx="[3396 1208]" timeUsed(s)=35.168
@@ -1810,7 +1810,7 @@ t=2025-01-13T03:55:44+0000 lvl=info msg="Download range"                        
 t=2025-01-13T03:55:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T03:55:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=8 failed=0 dropped=2
 t=2025-01-13T03:55:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=7 failed=1 dropped=1
-t=2025-01-13T03:55:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T03:55:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T03:55:54+0000 lvl=info msg="Don't find blob in the cache, will try to download directly" blockNumber=942,026 start=942,026 end=942,026 toCache=true
 t=2025-01-13T03:55:54+0000 lvl=info msg="Downloaded and encoded"                blockNumber=942,026 kvIdx=11418
 t=2025-01-13T03:55:54+0000 lvl=info msg="Downloaded and encoded"                blockNumber=942,026 kvIdx=11419
@@ -1893,7 +1893,7 @@ t=2025-01-13T03:56:44+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T03:56:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T03:56:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=7 failed=1 dropped=1
 t=2025-01-13T03:56:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=8 failed=0 dropped=2
-t=2025-01-13T03:56:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T03:56:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T03:56:54+0000 lvl=info msg="Don't find blob in the cache, will try to download directly" blockNumber=942,056 start=942,056 end=942,056 toCache=true
 t=2025-01-13T03:56:55+0000 lvl=info msg="Downloaded and encoded"                blockNumber=942,056 kvIdx=11454
 t=2025-01-13T03:56:55+0000 lvl=info msg="Downloaded and encoded"                blockNumber=942,056 kvIdx=11455
@@ -1998,7 +1998,7 @@ t=2025-01-13T03:57:45+0000 lvl=info msg="Download range"                        
 t=2025-01-13T03:57:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T03:57:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=7 failed=1 dropped=1
 t=2025-01-13T03:57:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=9 failed=0 dropped=2
-t=2025-01-13T03:57:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T03:57:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T03:57:48+0000 lvl=info msg="Generate zk proof done"                sampleIdx="[446 1380]"  timeUsed(s)=28.340
 t=2025-01-13T03:57:48+0000 lvl=info msg="Got storage proof"                     shard=1 block=7,479,938 kvIdx="[12519 11077]" sampleIdxsInKv="[446 1380]"
 t=2025-01-13T03:57:48+0000 lvl=info msg="Set mining result"                     shard=1 block=7,479,938 nonce=364,298
@@ -2112,7 +2112,7 @@ t=2025-01-13T03:58:47+0000 lvl=info msg="Download range"                        
 t=2025-01-13T03:58:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T03:58:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=10 failed=0 dropped=2
 t=2025-01-13T03:58:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=8  failed=1 dropped=1
-t=2025-01-13T03:58:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T03:58:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T03:58:55+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,479,946 difficulty=13,006,115 lastMineTime=1,736,740,560 proofsSubmitted=8
 t=2025-01-13T03:58:55+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,479,946 difficulty=13,831,698 lastMineTime=1,736,740,584 proofsSubmitted=10
 t=2025-01-13T03:58:55+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.5s shard=0 block=7,479,946
@@ -2200,7 +2200,7 @@ t=2025-01-13T03:59:45+0000 lvl=info msg="Download range"                        
 t=2025-01-13T03:59:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T03:59:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=10 failed=0 dropped=2
 t=2025-01-13T03:59:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=8  failed=1 dropped=1
-t=2025-01-13T03:59:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T03:59:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T03:59:55+0000 lvl=info msg="Don't find blob in the cache, will try to download directly" blockNumber=942,146 start=942,146 end=942,146 toCache=true
 t=2025-01-13T03:59:55+0000 lvl=info msg="Downloaded and encoded"                blockNumber=942,146 kvIdx=11562
 t=2025-01-13T03:59:55+0000 lvl=info msg="Downloaded and encoded"                blockNumber=942,146 kvIdx=11563
@@ -2313,7 +2313,7 @@ t=2025-01-13T04:00:45+0000 lvl=info msg="Download range"                        
 t=2025-01-13T04:00:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:00:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=9  failed=1 dropped=1
 t=2025-01-13T04:00:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=11 failed=0 dropped=2
-t=2025-01-13T04:00:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:00:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:00:55+0000 lvl=info msg="Don't find blob in the cache, will try to download directly" blockNumber=942,176 start=942,176 end=942,176 toCache=true
 t=2025-01-13T04:00:55+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,479,956 difficulty=13,412,556 lastMineTime=1,736,740,704 proofsSubmitted=9
 t=2025-01-13T04:00:55+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,479,956 difficulty=14,263,938 lastMineTime=1,736,740,704 proofsSubmitted=11
@@ -2443,7 +2443,7 @@ t=2025-01-13T04:01:45+0000 lvl=info msg="Download range"                        
 t=2025-01-13T04:01:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:01:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=12 failed=0 dropped=2
 t=2025-01-13T04:01:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=11 failed=1 dropped=1
-t=2025-01-13T04:01:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:01:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:01:52+0000 lvl=info msg="Generate zk proof done"                sampleIdx="[2107 2165]" timeUsed(s)=31.409
 t=2025-01-13T04:01:52+0000 lvl=info msg="Got storage proof"                     shard=1 block=7,479,958 kvIdx="[16228 10046]" sampleIdxsInKv="[2107 2165]"
 t=2025-01-13T04:01:52+0000 lvl=info msg="Set mining result"                     shard=1 block=7,479,958 nonce=34212
@@ -2554,7 +2554,7 @@ t=2025-01-13T04:02:47+0000 lvl=info msg="Downloaded and encoded"                
 t=2025-01-13T04:02:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:02:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=13 failed=0 dropped=2
 t=2025-01-13T04:02:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=12 failed=1 dropped=1
-t=2025-01-13T04:02:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:02:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:02:47+0000 lvl=info msg="Downloaded and encoded"                blockNumber=942,232 kvIdx=11654
 t=2025-01-13T04:02:47+0000 lvl=info msg="Downloaded and encoded"                blockNumber=942,232 kvIdx=11655
 t=2025-01-13T04:02:47+0000 lvl=info msg="Downloaded and encoded"                blockNumber=942,232 kvIdx=11656
@@ -2652,7 +2652,7 @@ t=2025-01-13T04:03:47+0000 lvl=info msg="Don't find blob in the cache, will try 
 t=2025-01-13T04:03:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:03:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=14 failed=0 dropped=2
 t=2025-01-13T04:03:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=12 failed=1 dropped=1
-t=2025-01-13T04:03:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:03:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:03:47+0000 lvl=info msg="Downloaded and encoded"                blockNumber=942,262 kvIdx=11688
 t=2025-01-13T04:03:47+0000 lvl=info msg="Downloaded and encoded"                blockNumber=942,262 kvIdx=11689
 t=2025-01-13T04:03:47+0000 lvl=info msg="Downloaded and encoded"                blockNumber=942,262 kvIdx=11690
@@ -2740,7 +2740,7 @@ t=2025-01-13T04:04:46+0000 lvl=info msg="Download range"                        
 t=2025-01-13T04:04:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:04:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=14 failed=0 dropped=2
 t=2025-01-13T04:04:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=12 failed=1 dropped=1
-t=2025-01-13T04:04:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:04:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:04:54+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,479,976 difficulty=14,709,686 lastMineTime=1,736,740,800 proofsSubmitted=12
 t=2025-01-13T04:04:54+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,479,976 difficulty=15,643,405 lastMineTime=1,736,740,908 proofsSubmitted=14
 t=2025-01-13T04:04:54+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.6s shard=1 block=7,479,976
@@ -2818,7 +2818,7 @@ t=2025-01-13T04:05:42+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T04:05:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:05:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=14 failed=0 dropped=2
 t=2025-01-13T04:05:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=12 failed=1 dropped=1
-t=2025-01-13T04:05:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:05:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:05:51+0000 lvl=info msg="Don't find blob in the cache, will try to download directly" blockNumber=942,324 start=942,324 end=942,324 toCache=true
 t=2025-01-13T04:05:51+0000 lvl=info msg="Downloaded and encoded"                blockNumber=942,324 kvIdx=11766
 t=2025-01-13T04:05:52+0000 lvl=info msg="Downloaded and encoded"                blockNumber=942,324 kvIdx=11767
@@ -2905,7 +2905,7 @@ t=2025-01-13T04:06:46+0000 lvl=info msg="Download range"                        
 t=2025-01-13T04:06:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:06:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=14 failed=0 dropped=2
 t=2025-01-13T04:06:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=12 failed=1 dropped=1
-t=2025-01-13T04:06:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:06:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:06:54+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,479,986 difficulty=14,709,686 lastMineTime=1,736,740,800 proofsSubmitted=12
 t=2025-01-13T04:06:54+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,479,986 difficulty=15,643,405 lastMineTime=1,736,740,908 proofsSubmitted=14
 t=2025-01-13T04:06:54+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.5s shard=1 block=7,479,986
@@ -2983,7 +2983,7 @@ t=2025-01-13T04:07:44+0000 lvl=info msg="Download range"                        
 t=2025-01-13T04:07:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:07:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=14 failed=0 dropped=2
 t=2025-01-13T04:07:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=12 failed=1 dropped=1
-t=2025-01-13T04:07:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:07:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:07:54+0000 lvl=info msg="Don't find blob in the cache, will try to download directly" blockNumber=942,386 start=942,385 end=942,386 toCache=true
 t=2025-01-13T04:07:54+0000 lvl=info msg="Downloaded and encoded"                blockNumber=942,386 kvIdx=11844
 t=2025-01-13T04:07:54+0000 lvl=info msg="Downloaded and encoded"                blockNumber=942,386 kvIdx=11845
@@ -3088,7 +3088,7 @@ t=2025-01-13T04:08:46+0000 lvl=info msg="Download range"                        
 t=2025-01-13T04:08:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:08:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=15 failed=0 dropped=2
 t=2025-01-13T04:08:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=12 failed=1 dropped=1
-t=2025-01-13T04:08:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:08:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:08:54+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,479,996 difficulty=14,709,686 lastMineTime=1,736,740,800 proofsSubmitted=12
 t=2025-01-13T04:08:54+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,479,996 difficulty=16,132,261 lastMineTime=1,736,741,196 proofsSubmitted=15
 t=2025-01-13T04:08:55+0000 lvl=info msg="Calculated a valid hash"               shard=0 block=7,479,996 timestamp=1,736,741,256 randao=0x207c7f9559bedb95d098349ba5569d02d67a4753cfd60ca11de10ae49de58c57 nonce=233,253   hash0=0xf49c121b1b1ccb766fb6bb0998126f807e79ed0f6c835b39ed7cf02b097581fe hash1=0x0000006945223dcb2983d4f22fd1162a22fa4d39925cb7de3b525036c8ec6f5e sampleIdxs="[24478206 460248]"
@@ -3196,7 +3196,7 @@ t=2025-01-13T04:09:43+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T04:09:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:09:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=13 failed=1 dropped=1
 t=2025-01-13T04:09:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=16 failed=0 dropped=2
-t=2025-01-13T04:09:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:09:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:09:52+0000 lvl=info msg="Don't find blob in the cache, will try to download directly" blockNumber=942,445 start=942,445 end=942,445 toCache=true
 t=2025-01-13T04:09:52+0000 lvl=info msg="Downloaded and encoded"                blockNumber=942,445 kvIdx=11910
 t=2025-01-13T04:09:52+0000 lvl=info msg="Downloaded and encoded"                blockNumber=942,445 kvIdx=11911
@@ -3284,7 +3284,7 @@ t=2025-01-13T04:10:43+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T04:10:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:10:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=16 failed=0 dropped=2
 t=2025-01-13T04:10:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=13 failed=1 dropped=1
-t=2025-01-13T04:10:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:10:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:10:47+0000 lvl=info msg="Cleanup done"                          blockFinalized=940,746 blocksCleaned=0 blobsCleaned=0
 t=2025-01-13T04:10:47+0000 lvl=info msg="BlobDiskCache cleanup done"            took="57.668µs"
 t=2025-01-13T04:10:50+0000 lvl=info msg="Don't find blob in the cache, will try to download directly" blockNumber=942,474 start=942,474 end=942,474 toCache=true
@@ -3398,7 +3398,7 @@ t=2025-01-13T04:11:44+0000 lvl=info msg="Download range"                        
 t=2025-01-13T04:11:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:11:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=17 failed=0 dropped=2
 t=2025-01-13T04:11:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=14 failed=1 dropped=1
-t=2025-01-13T04:11:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:11:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:11:54+0000 lvl=info msg="Don't find blob in the cache, will try to download directly" blockNumber=942,506 start=942,506 end=942,506 toCache=true
 t=2025-01-13T04:11:54+0000 lvl=info msg="Downloaded and encoded"                blockNumber=942,506 kvIdx=11982
 t=2025-01-13T04:11:54+0000 lvl=info msg="Downloaded and encoded"                blockNumber=942,506 kvIdx=11983
@@ -3481,7 +3481,7 @@ t=2025-01-13T04:12:45+0000 lvl=info msg="Download range"                        
 t=2025-01-13T04:12:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:12:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=17 failed=0 dropped=2
 t=2025-01-13T04:12:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=14 failed=1 dropped=1
-t=2025-01-13T04:12:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:12:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:12:49+0000 lvl=info msg="Generate zk proof done"                sampleIdx="[920 1614]"  timeUsed(s)=29.512
 t=2025-01-13T04:12:49+0000 lvl=info msg="Got storage proof"                     shard=1 block=7,480,012 kvIdx="[15252 13252]" sampleIdxsInKv="[920 1614]"
 t=2025-01-13T04:12:49+0000 lvl=info msg="Set mining result"                     shard=1 block=7,480,012 nonce=41020
@@ -3598,7 +3598,7 @@ t=2025-01-13T04:13:50+0000 lvl=info msg="Mining transaction details"            
 t=2025-01-13T04:13:50+0000 lvl=info msg="Mining transaction accounting (in ether)" reward=0.001353245 cost=0.000000482 profit=0.001352763
 t=2025-01-13T04:13:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=18 failed=0 dropped=2
 t=2025-01-13T04:13:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=15 failed=1 dropped=1
-t=2025-01-13T04:13:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:13:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:13:54+0000 lvl=info msg="Don't find blob in the cache, will try to download directly" blockNumber=942,566 start=942,566 end=942,566 toCache=true
 t=2025-01-13T04:13:54+0000 lvl=info msg="Downloaded and encoded"                blockNumber=942,566 kvIdx=12054
 t=2025-01-13T04:13:54+0000 lvl=info msg="Downloaded and encoded"                blockNumber=942,566 kvIdx=12055
@@ -3676,7 +3676,7 @@ t=2025-01-13T04:14:43+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T04:14:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:14:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=18 failed=0 dropped=2
 t=2025-01-13T04:14:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=15 failed=1 dropped=1
-t=2025-01-13T04:14:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:14:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:14:52+0000 lvl=info msg="Don't find blob in the cache, will try to download directly" blockNumber=942,595 start=942,595 end=942,595 toCache=true
 t=2025-01-13T04:14:52+0000 lvl=info msg="Downloaded and encoded"                blockNumber=942,595 kvIdx=12090
 t=2025-01-13T04:14:52+0000 lvl=info msg="Downloaded and encoded"                blockNumber=942,595 kvIdx=12091
@@ -3754,7 +3754,7 @@ t=2025-01-13T04:15:43+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T04:15:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:15:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=18 failed=0 dropped=2
 t=2025-01-13T04:15:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=15 failed=1 dropped=1
-t=2025-01-13T04:15:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:15:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:15:50+0000 lvl=info msg="Don't find blob in the cache, will try to download directly" blockNumber=942,624 start=942,624 end=942,624 toCache=true
 t=2025-01-13T04:15:50+0000 lvl=info msg="Downloaded and encoded"                blockNumber=942,624 kvIdx=12126
 t=2025-01-13T04:15:51+0000 lvl=info msg="Downloaded and encoded"                blockNumber=942,624 kvIdx=12127
@@ -3841,7 +3841,7 @@ t=2025-01-13T04:16:47+0000 lvl=info msg="Download range"                        
 t=2025-01-13T04:16:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:16:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=18 failed=0 dropped=2
 t=2025-01-13T04:16:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=15 failed=1 dropped=1
-t=2025-01-13T04:16:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:16:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:16:55+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,036 difficulty=16,132,261 lastMineTime=1,736,741,448 proofsSubmitted=15
 t=2025-01-13T04:16:55+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,036 difficulty=17,692,414 lastMineTime=1,736,741,520 proofsSubmitted=18
 t=2025-01-13T04:16:55+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.6s shard=1 block=7,480,036
@@ -3921,7 +3921,7 @@ t=2025-01-13T04:17:45+0000 lvl=info msg="Download range"                        
 t=2025-01-13T04:17:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:17:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=18 failed=0 dropped=2
 t=2025-01-13T04:17:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=15 failed=1 dropped=1
-t=2025-01-13T04:17:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:17:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:17:55+0000 lvl=info msg="Don't find blob in the cache, will try to download directly" blockNumber=942,686 start=942,686 end=942,686 toCache=true
 t=2025-01-13T04:17:55+0000 lvl=info msg="Downloaded and encoded"                blockNumber=942,686 kvIdx=12204
 t=2025-01-13T04:17:55+0000 lvl=info msg="Downloaded and encoded"                blockNumber=942,686 kvIdx=12205
@@ -3999,7 +3999,7 @@ t=2025-01-13T04:18:44+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T04:18:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:18:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=18 failed=0 dropped=2
 t=2025-01-13T04:18:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=15 failed=1 dropped=1
-t=2025-01-13T04:18:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:18:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:18:53+0000 lvl=info msg="Don't find blob in the cache, will try to download directly" blockNumber=942,715 start=942,715 end=942,715 toCache=true
 t=2025-01-13T04:18:53+0000 lvl=info msg="Downloaded and encoded"                blockNumber=942,715 kvIdx=12240
 t=2025-01-13T04:18:53+0000 lvl=info msg="Downloaded and encoded"                blockNumber=942,715 kvIdx=12241
@@ -4099,7 +4099,7 @@ t=2025-01-13T04:19:44+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T04:19:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:19:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=19 failed=0 dropped=2
 t=2025-01-13T04:19:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=15 failed=1 dropped=1
-t=2025-01-13T04:19:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:19:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:19:53+0000 lvl=info msg="Don't find blob in the cache, will try to download directly" blockNumber=942,745 start=942,745 end=942,745 toCache=true
 t=2025-01-13T04:19:53+0000 lvl=info msg="Downloaded and encoded"                blockNumber=942,745 kvIdx=12276
 t=2025-01-13T04:19:53+0000 lvl=info msg="Downloaded and encoded"                blockNumber=942,745 kvIdx=12277
@@ -4141,7 +4141,7 @@ t=2025-01-13T04:20:44+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T04:20:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:20:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=19 failed=0 dropped=2
 t=2025-01-13T04:20:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=15 failed=1 dropped=1
-t=2025-01-13T04:20:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:20:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:20:55+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,056 difficulty=18,245,301 lastMineTime=1,736,741,856 proofsSubmitted=19
 t=2025-01-13T04:20:55+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,056 difficulty=16,132,261 lastMineTime=1,736,741,448 proofsSubmitted=15
 t=2025-01-13T04:20:56+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.5s shard=0 block=7,480,056
@@ -4187,7 +4187,7 @@ t=2025-01-13T04:21:44+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T04:21:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:21:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=16 failed=1 dropped=1
 t=2025-01-13T04:21:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=19 failed=0 dropped=2
-t=2025-01-13T04:21:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:21:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:21:55+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,061 difficulty=18,245,301 lastMineTime=1,736,741,856 proofsSubmitted=19
 t=2025-01-13T04:21:55+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,061 difficulty=16,636,394 lastMineTime=1,736,741,976 proofsSubmitted=16
 t=2025-01-13T04:21:56+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.8s shard=1 block=7,480,061
@@ -4211,7 +4211,7 @@ t=2025-01-13T04:22:44+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T04:22:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:22:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=19 failed=0 dropped=2
 t=2025-01-13T04:22:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=16 failed=1 dropped=1
-t=2025-01-13T04:22:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:22:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:22:55+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,066 difficulty=16,636,394 lastMineTime=1,736,741,976 proofsSubmitted=16
 t=2025-01-13T04:22:55+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,066 difficulty=18,245,301 lastMineTime=1,736,741,856 proofsSubmitted=19
 t=2025-01-13T04:22:56+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.0s shard=1 block=7,480,066
@@ -4237,7 +4237,7 @@ t=2025-01-13T04:23:43+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T04:23:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:23:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=16 failed=1 dropped=1
 t=2025-01-13T04:23:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=19 failed=0 dropped=2
-t=2025-01-13T04:23:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:23:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:23:53+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,071 difficulty=16,636,394 lastMineTime=1,736,741,976 proofsSubmitted=16
 t=2025-01-13T04:23:53+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,071 difficulty=18,245,301 lastMineTime=1,736,741,856 proofsSubmitted=19
 t=2025-01-13T04:23:54+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.4s shard=1 block=7,480,071
@@ -4261,7 +4261,7 @@ t=2025-01-13T04:24:43+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T04:24:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:24:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=19 failed=0 dropped=2
 t=2025-01-13T04:24:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=16 failed=1 dropped=1
-t=2025-01-13T04:24:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:24:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:24:54+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,076 difficulty=18,245,301 lastMineTime=1,736,741,856 proofsSubmitted=19
 t=2025-01-13T04:24:54+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,076 difficulty=16,636,394 lastMineTime=1,736,741,976 proofsSubmitted=16
 t=2025-01-13T04:24:54+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.4s shard=0 block=7,480,076
@@ -4329,7 +4329,7 @@ t=2025-01-13T04:25:48+0000 lvl=info msg="Mining transaction details"            
 t=2025-01-13T04:25:48+0000 lvl=info msg="Mining transaction accounting (in ether)" reward=0.002886920 cost=0.000000482 profit=0.002886438
 t=2025-01-13T04:25:48+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=20 failed=0 dropped=2
 t=2025-01-13T04:25:48+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=17 failed=1 dropped=1
-t=2025-01-13T04:25:48+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:25:48+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:25:54+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,081 difficulty=17,156,281 lastMineTime=1,736,742,216 proofsSubmitted=17
 t=2025-01-13T04:25:54+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,081 difficulty=18,815,466 lastMineTime=1,736,742,240 proofsSubmitted=20
 t=2025-01-13T04:25:54+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.5s shard=1 block=7,480,081
@@ -4353,7 +4353,7 @@ t=2025-01-13T04:26:42+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T04:26:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:26:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=20 failed=0 dropped=2
 t=2025-01-13T04:26:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=17 failed=1 dropped=1
-t=2025-01-13T04:26:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:26:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:26:54+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,086 difficulty=18,815,466 lastMineTime=1,736,742,240 proofsSubmitted=20
 t=2025-01-13T04:26:54+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,086 difficulty=17,156,281 lastMineTime=1,736,742,216 proofsSubmitted=17
 t=2025-01-13T04:26:54+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.7s shard=0 block=7,480,086
@@ -4399,7 +4399,7 @@ t=2025-01-13T04:27:48+0000 lvl=info msg="Mining transaction details"            
 t=2025-01-13T04:27:48+0000 lvl=info msg="Mining transaction accounting (in ether)" reward=0.001082594 cost=0.000000442 profit=0.001082152
 t=2025-01-13T04:27:48+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=20 failed=0 dropped=2
 t=2025-01-13T04:27:48+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=18 failed=1 dropped=1
-t=2025-01-13T04:27:48+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:27:48+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:27:54+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,091 difficulty=18,815,466 lastMineTime=1,736,742,240 proofsSubmitted=20
 t=2025-01-13T04:27:54+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,091 difficulty=17,692,414 lastMineTime=1,736,742,360 proofsSubmitted=18
 t=2025-01-13T04:27:54+0000 lvl=info msg="Calculated a valid hash"               shard=0 block=7,480,091 timestamp=1,736,742,396 randao=0xcb7b19a6a46bd1d7a5308eefeec0cc4a5f7beaecbc537a2c4a884e469ece845d nonce=40297     hash0=0x22e7f7ec82da9c21766f145162a7888f61351f3d57f68e1548a4563c20ac6949 hash1=0x00000083934470b45e5cf1af6136c6ee7054ddafd649fa4a52cfc5eb0ab6811e sampleIdxs="[11299145 24088242]"
@@ -4445,7 +4445,7 @@ t=2025-01-13T04:28:43+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T04:28:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:28:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=21 failed=0 dropped=2
 t=2025-01-13T04:28:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=18 failed=1 dropped=1
-t=2025-01-13T04:28:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:28:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:28:54+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,096 difficulty=17,692,414 lastMineTime=1,736,742,360 proofsSubmitted=18
 t=2025-01-13T04:28:54+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,096 difficulty=19,403,449 lastMineTime=1,736,742,396 proofsSubmitted=21
 t=2025-01-13T04:28:55+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.0s shard=1 block=7,480,096
@@ -4469,7 +4469,7 @@ t=2025-01-13T04:29:43+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T04:29:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:29:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=18 failed=1 dropped=1
 t=2025-01-13T04:29:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=21 failed=0 dropped=2
-t=2025-01-13T04:29:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:29:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:29:54+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,101 difficulty=17,692,414 lastMineTime=1,736,742,360 proofsSubmitted=18
 t=2025-01-13T04:29:54+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,101 difficulty=19,403,449 lastMineTime=1,736,742,396 proofsSubmitted=21
 t=2025-01-13T04:29:55+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.7s shard=0 block=7,480,101
@@ -4500,7 +4500,7 @@ t=2025-01-13T04:30:43+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T04:30:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:30:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=18 failed=1 dropped=1
 t=2025-01-13T04:30:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=21 failed=0 dropped=2
-t=2025-01-13T04:30:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:30:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:30:54+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,106 difficulty=19,403,449 lastMineTime=1,736,742,396 proofsSubmitted=21
 t=2025-01-13T04:30:54+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,106 difficulty=17,692,414 lastMineTime=1,736,742,360 proofsSubmitted=18
 t=2025-01-13T04:30:55+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.0s shard=0 block=7,480,106
@@ -4546,7 +4546,7 @@ t=2025-01-13T04:31:43+0000 lvl=info msg="Using snarkjs zk prover"
 t=2025-01-13T04:31:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:31:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=22 failed=0 dropped=2
 t=2025-01-13T04:31:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=18 failed=1 dropped=1
-t=2025-01-13T04:31:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:31:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:31:54+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,111 difficulty=17,692,414 lastMineTime=1,736,742,360 proofsSubmitted=18
 t=2025-01-13T04:31:54+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,111 difficulty=20,009,806 lastMineTime=1,736,742,552 proofsSubmitted=22
 t=2025-01-13T04:31:56+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.3s shard=0 block=7,480,111
@@ -4587,7 +4587,7 @@ t=2025-01-13T04:32:43+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T04:32:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:32:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=22 failed=0 dropped=2
 t=2025-01-13T04:32:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=19 failed=1 dropped=1
-t=2025-01-13T04:32:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:32:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:32:54+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,116 difficulty=18,245,301 lastMineTime=1,736,742,624 proofsSubmitted=19
 t=2025-01-13T04:32:54+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,116 difficulty=20,009,806 lastMineTime=1,736,742,552 proofsSubmitted=22
 t=2025-01-13T04:32:55+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.6s shard=1 block=7,480,116
@@ -4638,7 +4638,7 @@ t=2025-01-13T04:33:44+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T04:33:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:33:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=22 failed=0 dropped=2
 t=2025-01-13T04:33:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=20 failed=1 dropped=1
-t=2025-01-13T04:33:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:33:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:33:50+0000 lvl=info msg="Generate zk proof done"                sampleIdx="[3917 2324]" timeUsed(s)=29.684
 t=2025-01-13T04:33:50+0000 lvl=info msg="Got storage proof"                     shard=0 block=7,480,118 kvIdx="[6996 7386]"   sampleIdxsInKv="[3917 2324]"
 t=2025-01-13T04:33:50+0000 lvl=info msg="Set mining result"                     shard=0 block=7,480,118 nonce=183,965
@@ -4701,7 +4701,7 @@ t=2025-01-13T04:34:43+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T04:34:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:34:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=23 failed=0 dropped=2
 t=2025-01-13T04:34:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=21 failed=1 dropped=1
-t=2025-01-13T04:34:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:34:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:34:55+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,126 difficulty=20,635,112 lastMineTime=1,736,742,720 proofsSubmitted=23
 t=2025-01-13T04:34:55+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,126 difficulty=19,403,449 lastMineTime=1,736,742,756 proofsSubmitted=21
 t=2025-01-13T04:34:55+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.7s shard=1 block=7,480,126
@@ -4725,7 +4725,7 @@ t=2025-01-13T04:35:43+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T04:35:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:35:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=23 failed=0 dropped=2
 t=2025-01-13T04:35:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=21 failed=1 dropped=1
-t=2025-01-13T04:35:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:35:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:35:55+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,131 difficulty=20,635,112 lastMineTime=1,736,742,720 proofsSubmitted=23
 t=2025-01-13T04:35:55+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,131 difficulty=19,403,449 lastMineTime=1,736,742,756 proofsSubmitted=21
 t=2025-01-13T04:35:55+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.5s shard=1 block=7,480,131
@@ -4773,7 +4773,7 @@ t=2025-01-13T04:36:44+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T04:36:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:36:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=23 failed=0 dropped=2
 t=2025-01-13T04:36:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=22 failed=1 dropped=1
-t=2025-01-13T04:36:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:36:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:36:55+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,136 difficulty=20,009,806 lastMineTime=1,736,742,876 proofsSubmitted=22
 t=2025-01-13T04:36:55+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,136 difficulty=20,635,112 lastMineTime=1,736,742,720 proofsSubmitted=23
 t=2025-01-13T04:36:55+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.5s shard=0 block=7,480,136
@@ -4819,7 +4819,7 @@ t=2025-01-13T04:37:44+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T04:37:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:37:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=22 failed=1 dropped=1
 t=2025-01-13T04:37:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=24 failed=0 dropped=2
-t=2025-01-13T04:37:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:37:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:37:55+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,141 difficulty=20,009,806 lastMineTime=1,736,742,876 proofsSubmitted=22
 t=2025-01-13T04:37:55+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,141 difficulty=21,279,959 lastMineTime=1,736,742,948 proofsSubmitted=24
 t=2025-01-13T04:37:55+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.5s shard=0 block=7,480,141
@@ -4843,7 +4843,7 @@ t=2025-01-13T04:38:44+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T04:38:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:38:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=24 failed=0 dropped=2
 t=2025-01-13T04:38:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=22 failed=1 dropped=1
-t=2025-01-13T04:38:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:38:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:38:55+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,146 difficulty=20,009,806 lastMineTime=1,736,742,876 proofsSubmitted=22
 t=2025-01-13T04:38:55+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,146 difficulty=21,279,959 lastMineTime=1,736,742,948 proofsSubmitted=24
 t=2025-01-13T04:38:56+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.5s shard=1 block=7,480,146
@@ -4867,7 +4867,7 @@ t=2025-01-13T04:39:44+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T04:39:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:39:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=24 failed=0 dropped=2
 t=2025-01-13T04:39:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=22 failed=1 dropped=1
-t=2025-01-13T04:39:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:39:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:39:55+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,151 difficulty=20,009,806 lastMineTime=1,736,742,876 proofsSubmitted=22
 t=2025-01-13T04:39:55+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,151 difficulty=21,279,959 lastMineTime=1,736,742,948 proofsSubmitted=24
 t=2025-01-13T04:39:55+0000 lvl=info msg="Calculated a valid hash"               shard=0 block=7,480,151 timestamp=1,736,743,116 randao=0x96f9c95384e6d8b8c2c3b1c99d02ecfb7e499a342f6bd623a5aa3298819930a5 nonce=186,992   hash0=0x0e8f5fa3af0bfd12c669e1289837e78acd772af754abf7fbbb2c2801fd736523 hash1=0x000000c1ff20302b209c47c4b895da81b86a507949df373178b798d05ac288e9 sampleIdxs="[24339747 23634695]"
@@ -4913,7 +4913,7 @@ t=2025-01-13T04:40:44+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T04:40:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:40:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=25 failed=0 dropped=2
 t=2025-01-13T04:40:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=22 failed=1 dropped=1
-t=2025-01-13T04:40:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:40:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:40:55+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,156 difficulty=21,944,957 lastMineTime=1,736,743,116 proofsSubmitted=25
 t=2025-01-13T04:40:55+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,156 difficulty=20,009,806 lastMineTime=1,736,742,876 proofsSubmitted=22
 t=2025-01-13T04:40:56+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.4s shard=1 block=7,480,156
@@ -4937,7 +4937,7 @@ t=2025-01-13T04:41:44+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T04:41:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:41:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=25 failed=0 dropped=2
 t=2025-01-13T04:41:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=22 failed=1 dropped=1
-t=2025-01-13T04:41:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:41:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:41:55+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,161 difficulty=20,009,806 lastMineTime=1,736,742,876 proofsSubmitted=22
 t=2025-01-13T04:41:55+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,161 difficulty=21,944,957 lastMineTime=1,736,743,116 proofsSubmitted=25
 t=2025-01-13T04:41:56+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.6s shard=0 block=7,480,161
@@ -4961,7 +4961,7 @@ t=2025-01-13T04:42:44+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T04:42:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:42:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=25 failed=0 dropped=2
 t=2025-01-13T04:42:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=22 failed=1 dropped=1
-t=2025-01-13T04:42:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:42:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:42:47+0000 lvl=info msg="Cleanup done"                          blockFinalized=940,746 blocksCleaned=0 blobsCleaned=0
 t=2025-01-13T04:42:47+0000 lvl=info msg="BlobDiskCache cleanup done"            took="35.156µs"
 t=2025-01-13T04:42:55+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,166 difficulty=20,009,806 lastMineTime=1,736,742,876 proofsSubmitted=22
@@ -4987,7 +4987,7 @@ t=2025-01-13T04:43:42+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T04:43:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:43:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=25 failed=0 dropped=2
 t=2025-01-13T04:43:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=22 failed=1 dropped=1
-t=2025-01-13T04:43:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:43:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:43:54+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,171 difficulty=20,009,806 lastMineTime=1,736,742,876 proofsSubmitted=22
 t=2025-01-13T04:43:54+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,171 difficulty=21,944,957 lastMineTime=1,736,743,116 proofsSubmitted=25
 t=2025-01-13T04:43:54+0000 lvl=info msg="Calculated a valid hash"               shard=0 block=7,480,171 timestamp=1,736,743,356 randao=0x061713f0a22c59d5e69e4a6a42277409528ffb428d9bcbfc58965173fb2ed422 nonce=787,861   hash0=0x9fb37a6cf04b133f453ea4b63382b752941bb5aabc590066c77d0c17acfffd64 hash1=0x0000006e761f57d46ed2c1e3362d23dc803782d9dd65ec549e2a065203369aab sampleIdxs="[16776548 31586573]"
@@ -5033,7 +5033,7 @@ t=2025-01-13T04:44:42+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T04:44:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:44:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=26 failed=0 dropped=2
 t=2025-01-13T04:44:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=22 failed=1 dropped=1
-t=2025-01-13T04:44:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:44:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:44:54+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,176 difficulty=20,009,806 lastMineTime=1,736,742,876 proofsSubmitted=22
 t=2025-01-13T04:44:54+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,176 difficulty=22,630,736 lastMineTime=1,736,743,356 proofsSubmitted=26
 t=2025-01-13T04:44:54+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.8s shard=1 block=7,480,176
@@ -5062,7 +5062,7 @@ t=2025-01-13T04:45:43+0000 lvl=info msg="Using snarkjs zk prover"
 t=2025-01-13T04:45:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:45:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=26 failed=0 dropped=2
 t=2025-01-13T04:45:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=22 failed=1 dropped=1
-t=2025-01-13T04:45:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:45:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:45:54+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,181 difficulty=20,009,806 lastMineTime=1,736,742,876 proofsSubmitted=22
 t=2025-01-13T04:45:54+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,181 difficulty=22,630,736 lastMineTime=1,736,743,356 proofsSubmitted=26
 t=2025-01-13T04:45:55+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.9s shard=1 block=7,480,181
@@ -5147,7 +5147,7 @@ t=2025-01-13T04:46:48+0000 lvl=info msg="Mining transaction details"            
 t=2025-01-13T04:46:48+0000 lvl=info msg="Mining transaction accounting (in ether)" reward=0.000270648 cost=0.000000385 profit=0.000270263
 t=2025-01-13T04:46:48+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=24 failed=1 dropped=1
 t=2025-01-13T04:46:48+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=27 failed=0 dropped=2
-t=2025-01-13T04:46:48+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:46:48+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:46:54+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,186 difficulty=21,279,959 lastMineTime=1,736,743,500 proofsSubmitted=24
 t=2025-01-13T04:46:54+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,186 difficulty=23,337,946 lastMineTime=1,736,743,476 proofsSubmitted=27
 t=2025-01-13T04:46:54+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.5s shard=1 block=7,480,186
@@ -5171,7 +5171,7 @@ t=2025-01-13T04:47:43+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T04:47:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:47:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=27 failed=0 dropped=2
 t=2025-01-13T04:47:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=24 failed=1 dropped=1
-t=2025-01-13T04:47:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:47:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:47:54+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,191 difficulty=21,279,959 lastMineTime=1,736,743,500 proofsSubmitted=24
 t=2025-01-13T04:47:54+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,191 difficulty=23,337,946 lastMineTime=1,736,743,476 proofsSubmitted=27
 t=2025-01-13T04:47:54+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.5s shard=0 block=7,480,191
@@ -5195,7 +5195,7 @@ t=2025-01-13T04:48:43+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T04:48:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:48:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=27 failed=0 dropped=2
 t=2025-01-13T04:48:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=24 failed=1 dropped=1
-t=2025-01-13T04:48:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:48:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:48:54+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,196 difficulty=21,279,959 lastMineTime=1,736,743,500 proofsSubmitted=24
 t=2025-01-13T04:48:54+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,196 difficulty=23,337,946 lastMineTime=1,736,743,476 proofsSubmitted=27
 t=2025-01-13T04:48:54+0000 lvl=info msg="Calculated a valid hash"               shard=1 block=7,480,196 timestamp=1,736,743,656 randao=0x39d3e2dc9115186b18397819c25e0edb79dd816ad71ca6cd6e0b9890973ed8ad nonce=594,752   hash0=0x03ee4ccda1a7c58e6c237eea8d3f94026bec9ade817860bcbf3ab8143665ab99 hash1=0x0000004c3bd50f0f10e42c9f96e1780d4096f8b0415d03098cf9af8dac76c80e sampleIdxs="[40217497 50883278]"
@@ -5248,7 +5248,7 @@ t=2025-01-13T04:49:43+0000 lvl=info msg="Using snarkjs zk prover"
 t=2025-01-13T04:49:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:49:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=27 failed=0 dropped=2
 t=2025-01-13T04:49:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=25 failed=1 dropped=1
-t=2025-01-13T04:49:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:49:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:49:54+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,201 difficulty=21,944,957 lastMineTime=1,736,743,656 proofsSubmitted=25
 t=2025-01-13T04:49:54+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,201 difficulty=23,337,946 lastMineTime=1,736,743,476 proofsSubmitted=27
 t=2025-01-13T04:49:56+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.4s shard=1 block=7,480,201
@@ -5289,7 +5289,7 @@ t=2025-01-13T04:50:43+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T04:50:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:50:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=26 failed=1 dropped=1
 t=2025-01-13T04:50:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=27 failed=0 dropped=2
-t=2025-01-13T04:50:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:50:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:50:54+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,206 difficulty=22,630,736 lastMineTime=1,736,743,704 proofsSubmitted=26
 t=2025-01-13T04:50:54+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,206 difficulty=23,337,946 lastMineTime=1,736,743,476 proofsSubmitted=27
 t=2025-01-13T04:50:55+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.8s shard=1 block=7,480,206
@@ -5318,7 +5318,7 @@ t=2025-01-13T04:51:43+0000 lvl=info msg="Using snarkjs zk prover"
 t=2025-01-13T04:51:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:51:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=27 failed=0 dropped=2
 t=2025-01-13T04:51:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=26 failed=1 dropped=1
-t=2025-01-13T04:51:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:51:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:51:54+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,211 difficulty=22,630,736 lastMineTime=1,736,743,704 proofsSubmitted=26
 t=2025-01-13T04:51:54+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,211 difficulty=23,337,946 lastMineTime=1,736,743,476 proofsSubmitted=27
 t=2025-01-13T04:51:55+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.0s shard=1 block=7,480,211
@@ -5359,7 +5359,7 @@ t=2025-01-13T04:52:43+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T04:52:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:52:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=27 failed=0 dropped=2
 t=2025-01-13T04:52:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=27 failed=1 dropped=1
-t=2025-01-13T04:52:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:52:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:52:54+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,216 difficulty=23,337,946 lastMineTime=1,736,743,824 proofsSubmitted=27
 t=2025-01-13T04:52:54+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,216 difficulty=23,337,946 lastMineTime=1,736,743,476 proofsSubmitted=27
 t=2025-01-13T04:52:55+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.6s shard=1 block=7,480,216
@@ -5383,7 +5383,7 @@ t=2025-01-13T04:53:44+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T04:53:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:53:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=27 failed=0 dropped=2
 t=2025-01-13T04:53:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=27 failed=1 dropped=1
-t=2025-01-13T04:53:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:53:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:53:55+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,221 difficulty=23,337,946 lastMineTime=1,736,743,824 proofsSubmitted=27
 t=2025-01-13T04:53:55+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,221 difficulty=23,337,946 lastMineTime=1,736,743,476 proofsSubmitted=27
 t=2025-01-13T04:53:55+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.3s shard=1 block=7,480,221
@@ -5429,7 +5429,7 @@ t=2025-01-13T04:54:46+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T04:54:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:54:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=28 failed=0 dropped=2
 t=2025-01-13T04:54:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=27 failed=1 dropped=1
-t=2025-01-13T04:54:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:54:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:54:57+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,226 difficulty=23,337,946 lastMineTime=1,736,743,824 proofsSubmitted=27
 t=2025-01-13T04:54:57+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,226 difficulty=24,067,256 lastMineTime=1,736,743,968 proofsSubmitted=28
 t=2025-01-13T04:54:58+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.6s shard=0 block=7,480,226
@@ -5460,7 +5460,7 @@ t=2025-01-13T04:55:46+0000 lvl=info msg="Using snarkjs zk prover"
 t=2025-01-13T04:55:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:55:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=28 failed=0 dropped=2
 t=2025-01-13T04:55:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=27 failed=1 dropped=1
-t=2025-01-13T04:55:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:55:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:55:57+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,231 difficulty=23,337,946 lastMineTime=1,736,743,824 proofsSubmitted=27
 t=2025-01-13T04:55:57+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,231 difficulty=24,067,256 lastMineTime=1,736,743,968 proofsSubmitted=28
 t=2025-01-13T04:55:58+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.2s shard=0 block=7,480,231
@@ -5528,7 +5528,7 @@ t=2025-01-13T04:56:46+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T04:56:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:56:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=29 failed=0 dropped=2
 t=2025-01-13T04:56:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=28 failed=1 dropped=1
-t=2025-01-13T04:56:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:56:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:56:52+0000 lvl=info msg="Generate zk proof done"                sampleIdx="[409 1564]"  timeUsed(s)=29.177
 t=2025-01-13T04:56:52+0000 lvl=info msg="Got storage proof"                     shard=1 block=7,480,233 kvIdx="[14042 9593]"  sampleIdxsInKv="[409 1564]"
 t=2025-01-13T04:56:52+0000 lvl=info msg="Set mining result"                     shard=1 block=7,480,233 nonce=285,969
@@ -5569,7 +5569,7 @@ t=2025-01-13T04:57:46+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T04:57:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:57:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=29 failed=0 dropped=2
 t=2025-01-13T04:57:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=29 failed=1 dropped=1
-t=2025-01-13T04:57:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:57:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:57:57+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,241 difficulty=24,819,357 lastMineTime=1,736,744,100 proofsSubmitted=29
 t=2025-01-13T04:57:57+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,241 difficulty=24,819,357 lastMineTime=1,736,744,064 proofsSubmitted=29
 t=2025-01-13T04:57:58+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.8s shard=1 block=7,480,241
@@ -5593,7 +5593,7 @@ t=2025-01-13T04:58:46+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T04:58:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:58:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=29 failed=0 dropped=2
 t=2025-01-13T04:58:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=29 failed=1 dropped=1
-t=2025-01-13T04:58:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:58:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:58:57+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,246 difficulty=24,819,357 lastMineTime=1,736,744,100 proofsSubmitted=29
 t=2025-01-13T04:58:57+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,246 difficulty=24,819,357 lastMineTime=1,736,744,064 proofsSubmitted=29
 t=2025-01-13T04:58:58+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.3s shard=1 block=7,480,246
@@ -5617,7 +5617,7 @@ t=2025-01-13T04:59:47+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T04:59:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T04:59:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=29 failed=0 dropped=2
 t=2025-01-13T04:59:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=29 failed=1 dropped=1
-t=2025-01-13T04:59:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T04:59:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T04:59:55+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,251 difficulty=24,819,357 lastMineTime=1,736,744,100 proofsSubmitted=29
 t=2025-01-13T04:59:55+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,251 difficulty=24,819,357 lastMineTime=1,736,744,064 proofsSubmitted=29
 t=2025-01-13T04:59:56+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.6s shard=1 block=7,480,251
@@ -5651,7 +5651,7 @@ t=2025-01-13T05:00:45+0000 lvl=info msg="Using snarkjs zk prover"
 t=2025-01-13T05:00:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T05:00:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=29 failed=0 dropped=2
 t=2025-01-13T05:00:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=29 failed=1 dropped=1
-t=2025-01-13T05:00:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T05:00:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T05:00:50+0000 lvl=info msg="Generate zk proof done"                sampleIdx="[1339 263]"  timeUsed(s)=29.074
 t=2025-01-13T05:00:50+0000 lvl=info msg="Got storage proof"                     shard=0 block=7,480,253 kvIdx="[4821 3074]"   sampleIdxsInKv="[1339 263]"
 t=2025-01-13T05:00:50+0000 lvl=info msg="Set mining result"                     shard=0 block=7,480,253 nonce=461,418
@@ -5709,7 +5709,7 @@ t=2025-01-13T05:01:45+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T05:01:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T05:01:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=30 failed=0 dropped=2
 t=2025-01-13T05:01:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=30 failed=1 dropped=1
-t=2025-01-13T05:01:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T05:01:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T05:01:56+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,261 difficulty=25,594,961 lastMineTime=1,736,744,364 proofsSubmitted=30
 t=2025-01-13T05:01:56+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,261 difficulty=25,594,961 lastMineTime=1,736,744,340 proofsSubmitted=30
 t=2025-01-13T05:01:57+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.9s shard=1 block=7,480,261
@@ -5735,7 +5735,7 @@ t=2025-01-13T05:02:44+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T05:02:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T05:02:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=30 failed=1 dropped=1
 t=2025-01-13T05:02:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=30 failed=0 dropped=2
-t=2025-01-13T05:02:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T05:02:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T05:02:56+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,266 difficulty=25,594,961 lastMineTime=1,736,744,340 proofsSubmitted=30
 t=2025-01-13T05:02:56+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,266 difficulty=25,594,961 lastMineTime=1,736,744,364 proofsSubmitted=30
 t=2025-01-13T05:02:57+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.9s shard=1 block=7,480,266
@@ -5764,7 +5764,7 @@ t=2025-01-13T05:03:46+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T05:03:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T05:03:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=30 failed=0 dropped=2
 t=2025-01-13T05:03:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=30 failed=1 dropped=1
-t=2025-01-13T05:03:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T05:03:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T05:03:56+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,271 difficulty=25,594,961 lastMineTime=1,736,744,364 proofsSubmitted=30
 t=2025-01-13T05:03:56+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,271 difficulty=25,594,961 lastMineTime=1,736,744,340 proofsSubmitted=30
 t=2025-01-13T05:03:57+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.9s shard=0 block=7,480,271
@@ -5805,7 +5805,7 @@ t=2025-01-13T05:04:45+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T05:04:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T05:04:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=30 failed=0 dropped=2
 t=2025-01-13T05:04:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=31 failed=1 dropped=1
-t=2025-01-13T05:04:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T05:04:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T05:04:56+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,276 difficulty=26,394,803 lastMineTime=1,736,744,532 proofsSubmitted=31
 t=2025-01-13T05:04:56+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,276 difficulty=25,594,961 lastMineTime=1,736,744,340 proofsSubmitted=30
 t=2025-01-13T05:04:57+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.8s shard=1 block=7,480,276
@@ -5829,7 +5829,7 @@ t=2025-01-13T05:05:45+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T05:05:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T05:05:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=30 failed=0 dropped=2
 t=2025-01-13T05:05:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=31 failed=1 dropped=1
-t=2025-01-13T05:05:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T05:05:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T05:05:56+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,281 difficulty=26,394,803 lastMineTime=1,736,744,532 proofsSubmitted=31
 t=2025-01-13T05:05:56+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,281 difficulty=25,594,961 lastMineTime=1,736,744,340 proofsSubmitted=30
 t=2025-01-13T05:05:57+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.6s shard=1 block=7,480,281
@@ -5853,7 +5853,7 @@ t=2025-01-13T05:06:45+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T05:06:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T05:06:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=31 failed=1 dropped=1
 t=2025-01-13T05:06:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=30 failed=0 dropped=2
-t=2025-01-13T05:06:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T05:06:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T05:06:56+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,286 difficulty=26,394,803 lastMineTime=1,736,744,532 proofsSubmitted=31
 t=2025-01-13T05:06:56+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,286 difficulty=25,594,961 lastMineTime=1,736,744,340 proofsSubmitted=30
 t=2025-01-13T05:06:57+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.4s shard=1 block=7,480,286
@@ -5877,7 +5877,7 @@ t=2025-01-13T05:07:45+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T05:07:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T05:07:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=30 failed=0 dropped=2
 t=2025-01-13T05:07:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=31 failed=1 dropped=1
-t=2025-01-13T05:07:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T05:07:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T05:07:56+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,291 difficulty=26,394,803 lastMineTime=1,736,744,532 proofsSubmitted=31
 t=2025-01-13T05:07:56+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,291 difficulty=25,594,961 lastMineTime=1,736,744,340 proofsSubmitted=30
 t=2025-01-13T05:07:57+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.7s shard=1 block=7,480,291
@@ -5903,7 +5903,7 @@ t=2025-01-13T05:08:45+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T05:08:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T05:08:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=30 failed=0 dropped=2
 t=2025-01-13T05:08:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=31 failed=1 dropped=1
-t=2025-01-13T05:08:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T05:08:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T05:08:56+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,296 difficulty=26,394,803 lastMineTime=1,736,744,532 proofsSubmitted=31
 t=2025-01-13T05:08:56+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,296 difficulty=25,594,961 lastMineTime=1,736,744,340 proofsSubmitted=30
 t=2025-01-13T05:08:57+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.7s shard=0 block=7,480,296
@@ -5927,7 +5927,7 @@ t=2025-01-13T05:09:45+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T05:09:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T05:09:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=30 failed=0 dropped=2
 t=2025-01-13T05:09:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=31 failed=1 dropped=1
-t=2025-01-13T05:09:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T05:09:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T05:09:56+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,301 difficulty=26,394,803 lastMineTime=1,736,744,532 proofsSubmitted=31
 t=2025-01-13T05:09:56+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,301 difficulty=25,594,961 lastMineTime=1,736,744,340 proofsSubmitted=30
 t=2025-01-13T05:09:57+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.4s shard=1 block=7,480,301
@@ -5951,7 +5951,7 @@ t=2025-01-13T05:10:45+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T05:10:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T05:10:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=30 failed=0 dropped=2
 t=2025-01-13T05:10:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=31 failed=1 dropped=1
-t=2025-01-13T05:10:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T05:10:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T05:10:57+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,306 difficulty=26,394,803 lastMineTime=1,736,744,532 proofsSubmitted=31
 t=2025-01-13T05:10:57+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,306 difficulty=25,594,961 lastMineTime=1,736,744,340 proofsSubmitted=30
 t=2025-01-13T05:10:57+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.8s shard=0 block=7,480,306
@@ -5975,7 +5975,7 @@ t=2025-01-13T05:11:45+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T05:11:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T05:11:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=30 failed=0 dropped=2
 t=2025-01-13T05:11:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=31 failed=1 dropped=1
-t=2025-01-13T05:11:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T05:11:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T05:11:57+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,311 difficulty=26,394,803 lastMineTime=1,736,744,532 proofsSubmitted=31
 t=2025-01-13T05:11:57+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,311 difficulty=25,594,961 lastMineTime=1,736,744,340 proofsSubmitted=30
 t=2025-01-13T05:11:57+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.6s shard=0 block=7,480,311
@@ -6004,7 +6004,7 @@ t=2025-01-13T05:12:46+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T05:12:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T05:12:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=30 failed=0 dropped=2
 t=2025-01-13T05:12:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=31 failed=1 dropped=1
-t=2025-01-13T05:12:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T05:12:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T05:12:49+0000 lvl=info msg="Generate zk proof done"                sampleIdx="[1731 2337]" timeUsed(s)=26.809
 t=2025-01-13T05:12:49+0000 lvl=info msg="Got storage proof"                     shard=1 block=7,480,313 kvIdx="[15420 15737]" sampleIdxsInKv="[1731 2337]"
 t=2025-01-13T05:12:49+0000 lvl=info msg="Set mining result"                     shard=1 block=7,480,313 nonce=670,124
@@ -6045,7 +6045,7 @@ t=2025-01-13T05:13:46+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T05:13:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T05:13:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=30 failed=0 dropped=2
 t=2025-01-13T05:13:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=32 failed=1 dropped=1
-t=2025-01-13T05:13:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T05:13:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T05:13:57+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,321 difficulty=27,219,640 lastMineTime=1,736,745,060 proofsSubmitted=32
 t=2025-01-13T05:13:57+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,321 difficulty=25,594,961 lastMineTime=1,736,744,340 proofsSubmitted=30
 t=2025-01-13T05:13:58+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.8s shard=1 block=7,480,321
@@ -6069,7 +6069,7 @@ t=2025-01-13T05:14:45+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T05:14:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T05:14:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=30 failed=0 dropped=2
 t=2025-01-13T05:14:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=32 failed=1 dropped=1
-t=2025-01-13T05:14:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T05:14:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T05:14:47+0000 lvl=info msg="Cleanup done"                          blockFinalized=940,746 blocksCleaned=0 blobsCleaned=0
 t=2025-01-13T05:14:47+0000 lvl=info msg="BlobDiskCache cleanup done"            took="28.343µs"
 t=2025-01-13T05:14:57+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,326 difficulty=27,219,640 lastMineTime=1,736,745,060 proofsSubmitted=32
@@ -6095,7 +6095,7 @@ t=2025-01-13T05:15:46+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T05:15:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T05:15:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=30 failed=0 dropped=2
 t=2025-01-13T05:15:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=32 failed=1 dropped=1
-t=2025-01-13T05:15:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T05:15:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T05:15:57+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,331 difficulty=27,219,640 lastMineTime=1,736,745,060 proofsSubmitted=32
 t=2025-01-13T05:15:57+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,331 difficulty=25,594,961 lastMineTime=1,736,744,340 proofsSubmitted=30
 t=2025-01-13T05:15:57+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.4s shard=0 block=7,480,331
@@ -6124,7 +6124,7 @@ t=2025-01-13T05:16:46+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T05:16:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T05:16:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=32 failed=1 dropped=1
 t=2025-01-13T05:16:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=30 failed=0 dropped=2
-t=2025-01-13T05:16:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T05:16:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T05:16:57+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,336 difficulty=27,219,640 lastMineTime=1,736,745,060 proofsSubmitted=32
 t=2025-01-13T05:16:57+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,336 difficulty=25,594,961 lastMineTime=1,736,744,340 proofsSubmitted=30
 t=2025-01-13T05:16:59+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.5s shard=1 block=7,480,336
@@ -6187,7 +6187,7 @@ t=2025-01-13T05:17:46+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T05:17:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T05:17:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=32 failed=0 dropped=2
 t=2025-01-13T05:17:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=32 failed=1 dropped=1
-t=2025-01-13T05:17:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T05:17:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T05:17:57+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,341 difficulty=27,219,640 lastMineTime=1,736,745,060 proofsSubmitted=32
 t=2025-01-13T05:17:57+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,341 difficulty=27,219,640 lastMineTime=1,736,745,348 proofsSubmitted=32
 t=2025-01-13T05:17:58+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.7s shard=0 block=7,480,341
@@ -6211,7 +6211,7 @@ t=2025-01-13T05:18:47+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T05:18:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T05:18:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=32 failed=0 dropped=2
 t=2025-01-13T05:18:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=32 failed=1 dropped=1
-t=2025-01-13T05:18:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T05:18:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T05:18:57+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,346 difficulty=27,219,640 lastMineTime=1,736,745,060 proofsSubmitted=32
 t=2025-01-13T05:18:57+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,346 difficulty=27,219,640 lastMineTime=1,736,745,348 proofsSubmitted=32
 t=2025-01-13T05:18:58+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.5s shard=1 block=7,480,346
@@ -6240,7 +6240,7 @@ t=2025-01-13T05:19:47+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T05:19:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T05:19:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=32 failed=0 dropped=2
 t=2025-01-13T05:19:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=32 failed=1 dropped=1
-t=2025-01-13T05:19:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T05:19:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T05:19:51+0000 lvl=info msg="Generate zk proof done"                sampleIdx="[67 3073]"   timeUsed(s)=28.937
 t=2025-01-13T05:19:51+0000 lvl=info msg="Got storage proof"                     shard=1 block=7,480,348 kvIdx="[14126 8305]"  sampleIdxsInKv="[67 3073]"
 t=2025-01-13T05:19:51+0000 lvl=info msg="Set mining result"                     shard=1 block=7,480,348 nonce=916,547
@@ -6286,7 +6286,7 @@ t=2025-01-13T05:20:45+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T05:20:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T05:20:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=32 failed=0 dropped=2
 t=2025-01-13T05:20:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=33 failed=1 dropped=1
-t=2025-01-13T05:20:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T05:20:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T05:20:56+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,356 difficulty=27,219,640 lastMineTime=1,736,745,348 proofsSubmitted=32
 t=2025-01-13T05:20:56+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,356 difficulty=28,070,253 lastMineTime=1,736,745,480 proofsSubmitted=33
 t=2025-01-13T05:20:57+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.2s shard=0 block=7,480,356
@@ -6329,7 +6329,7 @@ t=2025-01-13T05:21:44+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T05:21:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T05:21:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=32 failed=0 dropped=2
 t=2025-01-13T05:21:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=34 failed=1 dropped=1
-t=2025-01-13T05:21:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T05:21:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T05:21:56+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,361 difficulty=28,947,448 lastMineTime=1,736,745,552 proofsSubmitted=34
 t=2025-01-13T05:21:56+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,361 difficulty=27,219,640 lastMineTime=1,736,745,348 proofsSubmitted=32
 t=2025-01-13T05:21:56+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.8s shard=1 block=7,480,361
@@ -6353,7 +6353,7 @@ t=2025-01-13T05:22:44+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T05:22:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T05:22:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=32 failed=0 dropped=2
 t=2025-01-13T05:22:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=34 failed=1 dropped=1
-t=2025-01-13T05:22:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T05:22:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T05:22:56+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,366 difficulty=27,219,640 lastMineTime=1,736,745,348 proofsSubmitted=32
 t=2025-01-13T05:22:56+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,366 difficulty=28,947,448 lastMineTime=1,736,745,552 proofsSubmitted=34
 t=2025-01-13T05:22:56+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.4s shard=0 block=7,480,366
@@ -6377,7 +6377,7 @@ t=2025-01-13T05:23:44+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T05:23:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T05:23:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=32 failed=0 dropped=2
 t=2025-01-13T05:23:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=34 failed=1 dropped=1
-t=2025-01-13T05:23:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T05:23:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T05:23:56+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,371 difficulty=28,947,448 lastMineTime=1,736,745,552 proofsSubmitted=34
 t=2025-01-13T05:23:56+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,371 difficulty=27,219,640 lastMineTime=1,736,745,348 proofsSubmitted=32
 t=2025-01-13T05:23:56+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.4s shard=1 block=7,480,371
@@ -6401,7 +6401,7 @@ t=2025-01-13T05:24:45+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T05:24:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T05:24:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=32 failed=0 dropped=2
 t=2025-01-13T05:24:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=34 failed=1 dropped=1
-t=2025-01-13T05:24:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T05:24:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T05:24:56+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,376 difficulty=28,947,448 lastMineTime=1,736,745,552 proofsSubmitted=34
 t=2025-01-13T05:24:56+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,376 difficulty=27,219,640 lastMineTime=1,736,745,348 proofsSubmitted=32
 t=2025-01-13T05:24:56+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.4s shard=1 block=7,480,376
@@ -6425,7 +6425,7 @@ t=2025-01-13T05:25:45+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T05:25:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T05:25:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=32 failed=0 dropped=2
 t=2025-01-13T05:25:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=34 failed=1 dropped=1
-t=2025-01-13T05:25:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T05:25:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T05:25:56+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,381 difficulty=27,219,640 lastMineTime=1,736,745,348 proofsSubmitted=32
 t=2025-01-13T05:25:56+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,381 difficulty=28,947,448 lastMineTime=1,736,745,552 proofsSubmitted=34
 t=2025-01-13T05:25:56+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.5s shard=0 block=7,480,381
@@ -6454,7 +6454,7 @@ t=2025-01-13T05:26:45+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T05:26:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T05:26:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=34 failed=1 dropped=1
 t=2025-01-13T05:26:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=32 failed=0 dropped=2
-t=2025-01-13T05:26:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T05:26:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T05:26:50+0000 lvl=info msg="Generate zk proof done"                sampleIdx="[3412 1908]" timeUsed(s)=29.701
 t=2025-01-13T05:26:50+0000 lvl=info msg="Got storage proof"                     shard=1 block=7,480,383 kvIdx="[14603 15085]" sampleIdxsInKv="[3412 1908]"
 t=2025-01-13T05:26:50+0000 lvl=info msg="Set mining result"                     shard=1 block=7,480,383 nonce=338,039
@@ -6551,7 +6551,7 @@ t=2025-01-13T05:27:48+0000 lvl=info msg="Mining transaction details"            
 t=2025-01-13T05:27:48+0000 lvl=info msg="Mining transaction accounting (in ether)" reward=0.004510786 cost=0.000000482 profit=0.004510304
 t=2025-01-13T05:27:48+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=33 failed=0 dropped=2
 t=2025-01-13T05:27:48+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=36 failed=1 dropped=1
-t=2025-01-13T05:27:48+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T05:27:48+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T05:27:56+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,391 difficulty=30,784,931 lastMineTime=1,736,745,936 proofsSubmitted=36
 t=2025-01-13T05:27:56+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,391 difficulty=28,070,253 lastMineTime=1,736,745,948 proofsSubmitted=33
 t=2025-01-13T05:27:57+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.1s shard=1 block=7,480,391
@@ -6609,7 +6609,7 @@ t=2025-01-13T05:28:45+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T05:28:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T05:28:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=34 failed=0 dropped=2
 t=2025-01-13T05:28:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=37 failed=1 dropped=1
-t=2025-01-13T05:28:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T05:28:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T05:28:56+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,396 difficulty=31,746,960 lastMineTime=1,736,745,972 proofsSubmitted=37
 t=2025-01-13T05:28:56+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,396 difficulty=28,947,448 lastMineTime=1,736,745,960 proofsSubmitted=34
 t=2025-01-13T05:28:57+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.6s shard=1 block=7,480,396
@@ -6633,7 +6633,7 @@ t=2025-01-13T05:29:45+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T05:29:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T05:29:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=34 failed=0 dropped=2
 t=2025-01-13T05:29:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=37 failed=1 dropped=1
-t=2025-01-13T05:29:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T05:29:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T05:29:56+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,401 difficulty=31,746,960 lastMineTime=1,736,745,972 proofsSubmitted=37
 t=2025-01-13T05:29:56+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,401 difficulty=28,947,448 lastMineTime=1,736,745,960 proofsSubmitted=34
 t=2025-01-13T05:29:57+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.4s shard=1 block=7,480,401
@@ -6657,7 +6657,7 @@ t=2025-01-13T05:30:45+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T05:30:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T05:30:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=34 failed=0 dropped=2
 t=2025-01-13T05:30:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=37 failed=1 dropped=1
-t=2025-01-13T05:30:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T05:30:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T05:30:56+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,406 difficulty=31,746,960 lastMineTime=1,736,745,972 proofsSubmitted=37
 t=2025-01-13T05:30:56+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,406 difficulty=28,947,448 lastMineTime=1,736,745,960 proofsSubmitted=34
 t=2025-01-13T05:30:57+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.4s shard=1 block=7,480,406
@@ -6681,7 +6681,7 @@ t=2025-01-13T05:31:45+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T05:31:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T05:31:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=37 failed=1 dropped=1
 t=2025-01-13T05:31:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=34 failed=0 dropped=2
-t=2025-01-13T05:31:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T05:31:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T05:31:57+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,411 difficulty=31,746,960 lastMineTime=1,736,745,972 proofsSubmitted=37
 t=2025-01-13T05:31:57+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,411 difficulty=28,947,448 lastMineTime=1,736,745,960 proofsSubmitted=34
 t=2025-01-13T05:31:57+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.6s shard=1 block=7,480,411
@@ -6705,7 +6705,7 @@ t=2025-01-13T05:32:45+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T05:32:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T05:32:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=34 failed=0 dropped=2
 t=2025-01-13T05:32:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=37 failed=1 dropped=1
-t=2025-01-13T05:32:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T05:32:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T05:32:57+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,416 difficulty=31,746,960 lastMineTime=1,736,745,972 proofsSubmitted=37
 t=2025-01-13T05:32:57+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,416 difficulty=28,947,448 lastMineTime=1,736,745,960 proofsSubmitted=34
 t=2025-01-13T05:32:57+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.6s shard=0 block=7,480,416
@@ -6729,7 +6729,7 @@ t=2025-01-13T05:33:46+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T05:33:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T05:33:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=37 failed=1 dropped=1
 t=2025-01-13T05:33:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=34 failed=0 dropped=2
-t=2025-01-13T05:33:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T05:33:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T05:33:57+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,421 difficulty=28,947,448 lastMineTime=1,736,745,960 proofsSubmitted=34
 t=2025-01-13T05:33:57+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,421 difficulty=31,746,960 lastMineTime=1,736,745,972 proofsSubmitted=37
 t=2025-01-13T05:33:57+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.7s shard=1 block=7,480,421
@@ -6755,7 +6755,7 @@ t=2025-01-13T05:34:46+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T05:34:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T05:34:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=34 failed=0 dropped=2
 t=2025-01-13T05:34:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=37 failed=1 dropped=1
-t=2025-01-13T05:34:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T05:34:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T05:34:57+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,426 difficulty=31,746,960 lastMineTime=1,736,745,972 proofsSubmitted=37
 t=2025-01-13T05:34:57+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,426 difficulty=28,947,448 lastMineTime=1,736,745,960 proofsSubmitted=34
 t=2025-01-13T05:34:57+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.5s shard=1 block=7,480,426
@@ -6784,7 +6784,7 @@ t=2025-01-13T05:35:46+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T05:35:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T05:35:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=37 failed=1 dropped=1
 t=2025-01-13T05:35:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=34 failed=0 dropped=2
-t=2025-01-13T05:35:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T05:35:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T05:35:57+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,431 difficulty=31,746,960 lastMineTime=1,736,745,972 proofsSubmitted=37
 t=2025-01-13T05:35:57+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,431 difficulty=28,947,448 lastMineTime=1,736,745,960 proofsSubmitted=34
 t=2025-01-13T05:35:58+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.9s shard=1 block=7,480,431
@@ -6825,7 +6825,7 @@ t=2025-01-13T05:36:46+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T05:36:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T05:36:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=35 failed=0 dropped=2
 t=2025-01-13T05:36:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=37 failed=1 dropped=1
-t=2025-01-13T05:36:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T05:36:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T05:36:57+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,436 difficulty=29,852,055 lastMineTime=1,736,746,452 proofsSubmitted=35
 t=2025-01-13T05:36:57+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,436 difficulty=31,746,960 lastMineTime=1,736,745,972 proofsSubmitted=37
 t=2025-01-13T05:36:58+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.7s shard=0 block=7,480,436
@@ -6849,7 +6849,7 @@ t=2025-01-13T05:37:46+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T05:37:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T05:37:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=35 failed=0 dropped=2
 t=2025-01-13T05:37:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=37 failed=1 dropped=1
-t=2025-01-13T05:37:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T05:37:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T05:37:57+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,441 difficulty=31,746,960 lastMineTime=1,736,745,972 proofsSubmitted=37
 t=2025-01-13T05:37:57+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,441 difficulty=29,852,055 lastMineTime=1,736,746,452 proofsSubmitted=35
 t=2025-01-13T05:37:58+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.7s shard=1 block=7,480,441
@@ -6873,7 +6873,7 @@ t=2025-01-13T05:38:46+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T05:38:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T05:38:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=35 failed=0 dropped=2
 t=2025-01-13T05:38:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=37 failed=1 dropped=1
-t=2025-01-13T05:38:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T05:38:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T05:38:57+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,446 difficulty=31,746,960 lastMineTime=1,736,745,972 proofsSubmitted=37
 t=2025-01-13T05:38:57+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,446 difficulty=29,852,055 lastMineTime=1,736,746,452 proofsSubmitted=35
 t=2025-01-13T05:38:58+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.9s shard=0 block=7,480,446
@@ -6897,7 +6897,7 @@ t=2025-01-13T05:39:46+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T05:39:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T05:39:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=35 failed=0 dropped=2
 t=2025-01-13T05:39:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=37 failed=1 dropped=1
-t=2025-01-13T05:39:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T05:39:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T05:39:57+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,451 difficulty=31,746,960 lastMineTime=1,736,745,972 proofsSubmitted=37
 t=2025-01-13T05:39:57+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,451 difficulty=29,852,055 lastMineTime=1,736,746,452 proofsSubmitted=35
 t=2025-01-13T05:39:58+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.6s shard=1 block=7,480,451
@@ -6923,7 +6923,7 @@ t=2025-01-13T05:40:46+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T05:40:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T05:40:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=35 failed=0 dropped=2
 t=2025-01-13T05:40:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=37 failed=1 dropped=1
-t=2025-01-13T05:40:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T05:40:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T05:40:57+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,456 difficulty=31,746,960 lastMineTime=1,736,745,972 proofsSubmitted=37
 t=2025-01-13T05:40:57+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,456 difficulty=29,852,055 lastMineTime=1,736,746,452 proofsSubmitted=35
 t=2025-01-13T05:40:58+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.9s shard=1 block=7,480,456
@@ -6947,7 +6947,7 @@ t=2025-01-13T05:41:44+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T05:41:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T05:41:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=35 failed=0 dropped=2
 t=2025-01-13T05:41:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=37 failed=1 dropped=1
-t=2025-01-13T05:41:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T05:41:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T05:41:56+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,461 difficulty=31,746,960 lastMineTime=1,736,745,972 proofsSubmitted=37
 t=2025-01-13T05:41:56+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,461 difficulty=29,852,055 lastMineTime=1,736,746,452 proofsSubmitted=35
 t=2025-01-13T05:41:56+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.6s shard=0 block=7,480,461
@@ -6971,7 +6971,7 @@ t=2025-01-13T05:42:44+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T05:42:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T05:42:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=35 failed=0 dropped=2
 t=2025-01-13T05:42:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=37 failed=1 dropped=1
-t=2025-01-13T05:42:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T05:42:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T05:42:56+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,466 difficulty=31,746,960 lastMineTime=1,736,745,972 proofsSubmitted=37
 t=2025-01-13T05:42:56+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,466 difficulty=29,852,055 lastMineTime=1,736,746,452 proofsSubmitted=35
 t=2025-01-13T05:42:56+0000 lvl=info msg="Calculated a valid hash"               shard=0 block=7,480,466 timestamp=1,736,746,896 randao=0xfb9e024092b23097284855c7da45a132361b9fb374bae28f02a28514c00c15b6 nonce=53260     hash0=0xf7baea2e0dc63f74fd33552a0fb3e6da3a679b1b00057c3bd94a472d78b48881 hash1=0x00000030fabc9b073bd818389066095d56d9ba976d5ca13201c812726ed66f21 sampleIdxs="[11831425 28850687]"
@@ -7017,7 +7017,7 @@ t=2025-01-13T05:43:44+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T05:43:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T05:43:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=36 failed=0 dropped=2
 t=2025-01-13T05:43:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=37 failed=1 dropped=1
-t=2025-01-13T05:43:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T05:43:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T05:43:56+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,471 difficulty=31,746,960 lastMineTime=1,736,745,972 proofsSubmitted=37
 t=2025-01-13T05:43:56+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,471 difficulty=30,784,931 lastMineTime=1,736,746,896 proofsSubmitted=36
 t=2025-01-13T05:43:56+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.4s shard=1 block=7,480,471
@@ -7041,7 +7041,7 @@ t=2025-01-13T05:44:44+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T05:44:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T05:44:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=36 failed=0 dropped=2
 t=2025-01-13T05:44:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=37 failed=1 dropped=1
-t=2025-01-13T05:44:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T05:44:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T05:44:56+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,476 difficulty=31,746,960 lastMineTime=1,736,745,972 proofsSubmitted=37
 t=2025-01-13T05:44:56+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,476 difficulty=30,784,931 lastMineTime=1,736,746,896 proofsSubmitted=36
 t=2025-01-13T05:44:56+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.3s shard=0 block=7,480,476
@@ -7065,7 +7065,7 @@ t=2025-01-13T05:45:44+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T05:45:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T05:45:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=36 failed=0 dropped=2
 t=2025-01-13T05:45:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=37 failed=1 dropped=1
-t=2025-01-13T05:45:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T05:45:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T05:45:56+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,481 difficulty=31,746,960 lastMineTime=1,736,745,972 proofsSubmitted=37
 t=2025-01-13T05:45:56+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,481 difficulty=30,784,931 lastMineTime=1,736,746,896 proofsSubmitted=36
 t=2025-01-13T05:45:56+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.2s shard=0 block=7,480,481
@@ -7089,7 +7089,7 @@ t=2025-01-13T05:46:44+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T05:46:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T05:46:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=36 failed=0 dropped=2
 t=2025-01-13T05:46:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=37 failed=1 dropped=1
-t=2025-01-13T05:46:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T05:46:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T05:46:47+0000 lvl=info msg="Cleanup done"                          blockFinalized=940,746 blocksCleaned=0 blobsCleaned=0
 t=2025-01-13T05:46:47+0000 lvl=info msg="BlobDiskCache cleanup done"            took="25.077µs"
 t=2025-01-13T05:46:56+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,486 difficulty=30,784,931 lastMineTime=1,736,746,896 proofsSubmitted=36
@@ -7115,7 +7115,7 @@ t=2025-01-13T05:47:45+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T05:47:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T05:47:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=36 failed=0 dropped=2
 t=2025-01-13T05:47:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=37 failed=1 dropped=1
-t=2025-01-13T05:47:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T05:47:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T05:47:56+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,491 difficulty=31,746,960 lastMineTime=1,736,745,972 proofsSubmitted=37
 t=2025-01-13T05:47:56+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,491 difficulty=30,784,931 lastMineTime=1,736,746,896 proofsSubmitted=36
 t=2025-01-13T05:47:56+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.4s shard=1 block=7,480,491
@@ -7139,7 +7139,7 @@ t=2025-01-13T05:48:45+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T05:48:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T05:48:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=36 failed=0 dropped=2
 t=2025-01-13T05:48:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=37 failed=1 dropped=1
-t=2025-01-13T05:48:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T05:48:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T05:48:56+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,496 difficulty=31,746,960 lastMineTime=1,736,745,972 proofsSubmitted=37
 t=2025-01-13T05:48:56+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,496 difficulty=30,784,931 lastMineTime=1,736,746,896 proofsSubmitted=36
 t=2025-01-13T05:48:56+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.2s shard=1 block=7,480,496
@@ -7163,7 +7163,7 @@ t=2025-01-13T05:49:45+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T05:49:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T05:49:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=36 failed=0 dropped=2
 t=2025-01-13T05:49:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=37 failed=1 dropped=1
-t=2025-01-13T05:49:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T05:49:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T05:49:56+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,501 difficulty=31,746,960 lastMineTime=1,736,745,972 proofsSubmitted=37
 t=2025-01-13T05:49:56+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,501 difficulty=30,784,931 lastMineTime=1,736,746,896 proofsSubmitted=36
 t=2025-01-13T05:49:57+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.5s shard=0 block=7,480,501
@@ -7187,7 +7187,7 @@ t=2025-01-13T05:50:45+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T05:50:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T05:50:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=36 failed=0 dropped=2
 t=2025-01-13T05:50:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=37 failed=1 dropped=1
-t=2025-01-13T05:50:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T05:50:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T05:50:56+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,506 difficulty=31,746,960 lastMineTime=1,736,745,972 proofsSubmitted=37
 t=2025-01-13T05:50:56+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,506 difficulty=30,784,931 lastMineTime=1,736,746,896 proofsSubmitted=36
 t=2025-01-13T05:50:57+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.3s shard=1 block=7,480,506
@@ -7211,7 +7211,7 @@ t=2025-01-13T05:51:45+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T05:51:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T05:51:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=36 failed=0 dropped=2
 t=2025-01-13T05:51:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=37 failed=1 dropped=1
-t=2025-01-13T05:51:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T05:51:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T05:51:57+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,511 difficulty=31,746,960 lastMineTime=1,736,745,972 proofsSubmitted=37
 t=2025-01-13T05:51:57+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,511 difficulty=30,784,931 lastMineTime=1,736,746,896 proofsSubmitted=36
 t=2025-01-13T05:51:57+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.4s shard=0 block=7,480,511
@@ -7235,7 +7235,7 @@ t=2025-01-13T05:52:45+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-01-13T05:52:47+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-01-13T05:52:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=36 failed=0 dropped=2
 t=2025-01-13T05:52:47+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=37 failed=1 dropped=1
-t=2025-01-13T05:52:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x2f640fbc"
+t=2025-01-13T05:52:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7479891: failed to estimate gas: execution reverted: ErrorData: 0x658bc057: EthStorageContractM2_InvalidSamples()"
 t=2025-01-13T05:52:57+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,480,516 difficulty=31,746,960 lastMineTime=1,736,745,972 proofsSubmitted=37
 t=2025-01-13T05:52:57+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,480,516 difficulty=30,784,931 lastMineTime=1,736,746,896 proofsSubmitted=36
 t=2025-01-13T05:52:57+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.4s shard=1 block=7,480,516

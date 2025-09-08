@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/big"
 	"net"
 	"strconv"
 	"time"
@@ -17,7 +18,6 @@ import (
 	"github.com/ethstorage/go-ethstorage/ethstorage"
 	"github.com/ethstorage/go-ethstorage/ethstorage/metrics"
 	"github.com/ethstorage/go-ethstorage/ethstorage/p2p/protocol"
-	"github.com/ethstorage/go-ethstorage/ethstorage/rollup"
 	"github.com/hashicorp/go-multierror"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/connmgr"
@@ -47,13 +47,13 @@ type NodeP2P struct {
 
 // NewNodeP2P creates a new p2p node, and returns a reference to it. If the p2p is disabled, it returns nil.
 // If metrics are configured, a bandwidth monitor will be spawned in a goroutine.
-func NewNodeP2P(resourcesCtx context.Context, rollupCfg *rollup.EsConfig, lg log.Logger, setup SetupP2P,
+func NewNodeP2P(resourcesCtx context.Context, chainID *big.Int, lg log.Logger, setup SetupP2P,
 	storageManager *ethstorage.StorageManager, db ethdb.Database, m metrics.Metricer, feed *event.Feed) (*NodeP2P, error) {
 	if setup == nil {
 		return nil, errors.New("p2p node cannot be created without setup")
 	}
 	var n NodeP2P
-	if err := n.init(resourcesCtx, rollupCfg, lg, setup, storageManager, db, m, feed); err != nil {
+	if err := n.init(resourcesCtx, chainID, lg, setup, storageManager, db, m, feed); err != nil {
 		closeErr := n.Close()
 		if closeErr != nil {
 			lg.Error("Failed to close p2p after starting with err", "closeErr", closeErr, "err", err)
@@ -66,7 +66,7 @@ func NewNodeP2P(resourcesCtx context.Context, rollupCfg *rollup.EsConfig, lg log
 	return &n, nil
 }
 
-func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig, lg log.Logger, setup SetupP2P,
+func (n *NodeP2P) init(resourcesCtx context.Context, chainID *big.Int, lg log.Logger, setup SetupP2P,
 	storageManager *ethstorage.StorageManager, db ethdb.Database, m metrics.Metricer, feed *event.Feed) error {
 	bwc := p2pmetrics.NewBandwidthCounter()
 	n.storageManager = storageManager
@@ -91,7 +91,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 		}
 
 		// Activate the P2P req-resp sync
-		n.syncCl = protocol.NewSyncClient(lg, rollupCfg, n.host.NewStream, storageManager, setup.SyncerParams(), db, m, feed)
+		n.syncCl = protocol.NewSyncClient(lg, chainID, n.host.NewStream, storageManager, setup.SyncerParams(), db, m, feed)
 		n.host.Network().Notify(&network.NotifyBundle{
 			ConnectedF: func(nw network.Network, conn network.Conn) {
 				var (
@@ -160,12 +160,12 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 			}
 		}
 		go n.syncCl.ReportPeerSummary()
-		n.syncSrv = protocol.NewSyncServer(rollupCfg, storageManager, db, m, lg)
+		n.syncSrv = protocol.NewSyncServer(storageManager, db, m, lg)
 
 		blobByRangeHandler := protocol.MakeStreamHandler(resourcesCtx, lg.New("serve", "blobs_by_range"), n.syncSrv.HandleGetBlobsByRangeRequest)
-		n.host.SetStreamHandler(protocol.GetProtocolID(protocol.RequestBlobsByRangeProtocolID, rollupCfg.L2ChainID), blobByRangeHandler)
+		n.host.SetStreamHandler(protocol.GetProtocolID(protocol.RequestBlobsByRangeProtocolID, chainID), blobByRangeHandler)
 		blobByListHandler := protocol.MakeStreamHandler(resourcesCtx, lg.New("serve", "blobs_by_list"), n.syncSrv.HandleGetBlobsByListRequest)
-		n.host.SetStreamHandler(protocol.GetProtocolID(protocol.RequestBlobsByListProtocolID, rollupCfg.L2ChainID), blobByListHandler)
+		n.host.SetStreamHandler(protocol.GetProtocolID(protocol.RequestBlobsByListProtocolID, chainID), blobByListHandler)
 		requestShardListHandler := protocol.MakeStreamHandler(resourcesCtx, lg.New("serve", "get_shard_list"), n.syncSrv.HandleRequestShardList)
 		n.host.SetStreamHandler(protocol.RequestShardList, requestShardListHandler)
 
@@ -173,7 +173,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 		// TODO: use metric
 		n.host.Network().Notify(NewNetworkNotifier(lg, nil))
 		// note: the IDDelta functionality was removed from libP2P, and no longer needs to be explicitly disabled.
-		n.gs, err = NewGossipSub(resourcesCtx, n.host, n.gater, rollupCfg, setup, m, lg)
+		n.gs, err = NewGossipSub(resourcesCtx, n.host, n.gater, chainID, setup, m, lg)
 		if err != nil {
 			return fmt.Errorf("failed to start gossipsub router: %w", err)
 		}
@@ -186,7 +186,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.EsConfig,
 		}
 
 		// All nil if disabled.
-		n.dv5Local, n.dv5Udp, n.isIPSet, err = setup.Discovery(lg.New("p2p", "discv5"), rollupCfg.L2ChainID.Uint64(), tcpPort, GetLocalPublicIPv4())
+		n.dv5Local, n.dv5Udp, n.isIPSet, err = setup.Discovery(lg.New("p2p", "discv5"), chainID.Uint64(), tcpPort, GetLocalPublicIPv4())
 		if err != nil {
 			return fmt.Errorf("failed to start discv5: %w", err)
 		}

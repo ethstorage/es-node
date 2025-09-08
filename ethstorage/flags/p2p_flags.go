@@ -3,12 +3,13 @@ package flags
 import (
 	"time"
 
+	"github.com/ethstorage/go-ethstorage/ethstorage/flags/utils"
 	"github.com/ethstorage/go-ethstorage/ethstorage/p2p"
 	"github.com/urfave/cli"
 )
 
-func p2pEnv(v string) string {
-	return prefixEnvVar("P2P_" + v)
+func p2pEnv(name string) string {
+	return utils.PrefixEnvVar("P2P_" + name)
 }
 
 var (
