@@ -151,7 +151,9 @@ func main() {
 
 func EsNodeMain(ctx *cli.Context) error {
 	lg.Info("Configuring EthStorage Node")
-	clog := log.NewLogger(log.ReadCLIConfig(ctx))
+	lgCfg := log.ReadCLIConfig(ctx)
+	lg.Info("Loading log config", "config", lgCfg)
+	clog := log.NewLogger(lgCfg)
 	cfg, err := NewConfig(ctx, clog)
 	if err != nil {
 		lg.Error("Unable to create the rollup node config", "error", err)
