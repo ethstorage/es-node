@@ -3,11 +3,6 @@
 # usage:
 # env ES_NODE_STORAGE_MINER=<miner> ./init.sh
 
-if [[ -z "${ES_NODE_STORAGE_MINER:-}" ]]; then
-  echo "Missing ES_NODE_STORAGE_MINER."
-  exit 1
-fi
-
 executable="./build/bin/es-node"
 if [ ! -f "$executable" ]; then
   make
@@ -50,6 +45,12 @@ while [ $# -gt 0 ]; do
         shift
     fi
 done
+
+# Require ES_NODE_STORAGE_MINER if not an RPC
+if [[ "$use_miner" -eq 1 && -z "${ES_NODE_STORAGE_MINER:-}" ]]; then
+  echo "Missing ES_NODE_STORAGE_MINER."
+  exit 1
+fi
 
 if [ -n "$zkp_mode" ] && [ "$zkp_mode" != 1 ] && [ "$zkp_mode" != 2 ]; then
   echo "Error: zk prover mode can only be 1 or 2."
