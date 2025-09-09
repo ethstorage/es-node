@@ -12,6 +12,7 @@ services:
       - ES_NODE_STORAGE_MINER=${ES_NODE_STORAGE_MINER}
       - ES_NODE_SIGNER_PRIVATE_KEY=${ES_NODE_SIGNER_PRIVATE_KEY}
       - SCRIPT_NAME=${SCRIPT_NAME:-run.sh}
-    command: ["bash", "-c", "/es-node/${SCRIPT_NAME}"]
+      - EXTRA_ARGS=${EXTRA_ARGS:-}
+    command: ["bash", "-c", "/es-node/${SCRIPT_NAME} ${EXTRA_ARGS}"]
     container_name: es
     tty: true
