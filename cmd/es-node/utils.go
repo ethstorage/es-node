@@ -62,7 +62,10 @@ func (c *ContractReader) readSlot(fieldName string) ([]byte, error) {
 	}
 	bs, err := c.client.CallContract(c.ctx, msg, nil)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to get %s from contract: %v", fieldName, err)
+		return nil, fmt.Errorf("failed to get %s from contract: %v", fieldName, err)
+	}
+	if len(bs) == 0 {
+		return nil, fmt.Errorf("contract %s does not exist or returned empty result for field %s", c.contract.Hex(), fieldName)
 	}
 	return bs, nil
 }
