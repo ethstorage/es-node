@@ -64,9 +64,6 @@ func (c *ContractReader) readSlot(fieldName string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get %s from contract: %v", fieldName, err)
 	}
-	if len(bs) == 0 {
-		return nil, fmt.Errorf("contract %s does not exist or returned empty result for field %s", c.contract.Hex(), fieldName)
-	}
 	return bs, nil
 }
 
@@ -90,8 +87,23 @@ func (c *ContractReader) readBig(fieldName string) (*big.Int, error) {
 	return new(big.Int).SetBytes(bs), nil
 }
 
+func (c *ContractReader) contractExists() (bool, error) {
+	code, err := c.client.CodeAt(c.ctx, c.contract, nil)
+	if err != nil {
+		return false, fmt.Errorf("failed to get code at %s: %v", c.contract.Hex(), err)
+	}
+	return len(code) > 0, nil
+}
+
 func initStorageConfig(ctx context.Context, client *ethclient.Client, l1Contract, miner common.Address, lg log.Logger) (*storage.StorageConfig, error) {
 	cr := newContractReader(ctx, client, l1Contract, lg)
+	exist, err := cr.contractExists()
+	if err != nil {
+		return nil, err
+	}
+	if !exist {
+		return nil, fmt.Errorf("contract does not exist")
+	}
 	maxKvSizeBits, err := cr.readUint("maxKvSizeBits")
 	if err != nil {
 		return nil, err
