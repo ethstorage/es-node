@@ -1,32 +1,19 @@
 # Running an op-node to Derive Blocks from Sepolia through EthStorage
 
 ## Table of Contents
-1. **[Introduction](#introduction)**
 
-2. **[Prerequisites](#prerequisites)**
-
-3. **[Running op-geth](#running-op-geth)**
+1. [Introduction](#introduction)
+2. [Prerequisites](#prerequisites)
+3. [Running op-geth](#running-op-geth)
    - 3.1 [Building op-geth](#building-op-geth)
-   - 3.2 [Creating a JWT Secret](#creating-a-jwt-secret)
-   - 3.3 [Setting Environment Variables](#setting-environment-variables)
-   - 3.4 [Initializing op-geth](#initializing-op-geth)
-   - 3.5 [Starting op-geth](#starting-op-geth)
-
-4. **[Running op-node](#running-op-node)**
+   - 3.2 [Starting op-geth](#starting-op-geth)
+4. [Running op-node](#running-op-node)
    - 4.1 [Getting the Code](#getting-the-code)
-   - 4.2 [Building the op-node](#building-the-op-node)
-   - 4.3 [Copying the JWT Secret](#copying-the-jwt-secret)
-   - 4.4 [Downloading the Configuration File](#downloading-the-configuration-file)
-   - 4.5 [Starting the op-node](#starting-the-op-node)
-
-5. **[Verifying the Derivation Process](#verifying-the-derivation-process)**
+   - 4.2 [Starting the op-node](#starting-the-op-node)
+5. [Verifying the Derivation Process](#verifying-the-derivation-process)
    - 5.1 [Observing the Logs](#observing-the-logs)
-     - 5.1.1 [op-geth logs](#op-geth-logs)
-     - 5.1.2 [op-node logs](#op-node-logs)
-     - 5.1.3 [es-node logs](#es-node-logs)
    - 5.2 [Comparing Blocks](#comparing-blocks)
-
-6. **[Conclusion](#conclusion)**
+6. [Conclusion](#conclusion)
 
 
 ## Introduction
@@ -38,9 +25,8 @@ This document outlines the process for running an op-node from source code, usin
 Before proceeding, ensure your environment meets the following requirements:
 
 - **Sepolia L1 RPC** provided by an execution client running in archive mode
-- **Sepolia L1 Beacon URL**
 - **An es-node** running with the archive service enabled
-- A [deployed BatchInbox contract](https://sepolia.etherscan.io/address/0x27504265a9bc4330e3fe82061a60cd8b6369b4dc) on Sepolia L1
+- A [deployed BatchInbox contract](https://sepolia.etherscan.io/address/0x3fe221a447f350551ff208951098517252018007) on Sepolia L1
 - An OP Stack L2 that utilizes EIP-4844 blobs to submit batches to the BatchInbox
 
 It is assumed that the above services and components are functioning properly.
@@ -49,38 +35,15 @@ It is assumed that the above services and components are functioning properly.
 
 ### Building op-geth
 
-Clone the `op-geth` repository and build the execution client:
+Clone the `op-geth` repository, build and initialize op-geth:
 
 ```bash
-git clone https://github.com/ethstorage/op-geth.git
-cd op-geth
-git checkout testnet
-make geth
-```
+git clone -b gamma_testnet https://github.com/QuarkChain/op-geth.git
+cd op-geth && make geth
 
-### Creating a JWT Secret
-
-Generate a JWT secret to secure communications between the op-geth and the op-node:
-
-```bash
+curl -LO https://raw.githubusercontent.com/QuarkChain/pm/main/L2/assets/gamma_testnet_genesis.json
+./build/bin/geth init --datadir=datadir --state.scheme hash gamma_testnet_genesis.json
 openssl rand -hex 32 > jwt.txt
-```
-
-### Setting Environment Variables
-
-Set the data directory for `op-geth`:
-
-```bash
-export DATADIR=./datadir
-```
-
-### Initializing op-geth
-
-Download the genesis file and initialize the client:
-
-```bash
-curl -o genesis.json https://raw.githubusercontent.com/ethstorage/pm/refs/heads/main/L2/assets/testnet_genesis.json
-./build/bin/geth init --state.scheme=hash --datadir=$DATADIR ./genesis.json
 ```
 
 ### Starting op-geth
@@ -89,27 +52,24 @@ Start the client with the following command:
 
 ```bash
 ./build/bin/geth \
-  --datadir $DATADIR \
+  --datadir ./datadir \
   --http \
   --http.corsdomain="*" \
   --http.vhosts="*" \
   --http.addr=0.0.0.0 \
-  --http.port=9515 \
-  --http.api=web3,debug,eth,txpool,net,engine \
+  --http.api=web3,eth,txpool,net \
   --ws \
   --ws.addr=0.0.0.0 \
-  --ws.port=9516 \
+  --ws.port=8546 \
   --ws.origins="*" \
-  --ws.api=debug,eth,txpool,net,engine \
+  --ws.api=eth,txpool,net \
   --syncmode=full \
   --gcmode=archive \
   --nodiscover \
   --maxpeers=0 \
-  --networkid=42069 \
-  --port=30903 \
+  --networkid=110011 \
   --authrpc.vhosts="*" \
-  --authrpc.addr=0.0.0.0 \
-  --authrpc.port=9551 \
+  --authrpc.port=8551 \
   --authrpc.jwtsecret=./jwt.txt \
   --rollup.disabletxpoolgossip=true
 ```
@@ -117,57 +77,41 @@ Start the client with the following command:
 ## Running op-node
 
 ### Getting the Code
-Clone the Optimism monorepo and check out the `testnet` branch:
+Clone the Optimism monorepo and build, initialize op-node:
 
 ```bash
-git clone https://github.com/ethstorage/optimism.git
-cd optimism
-git checkout testnet
+git clone -b gamma_testnet https://github.com/QuarkChain/optimism.git
+pushd optimism && make op-node && popd
+
+cp op-geth/jwt.txt optimism/op-node 
+cd optimism/op-node
+
+curl -LO https://raw.githubusercontent.com/QuarkChain/pm/main/L2/assets/gamma_testnet_rollup.json
+mkdir safedb
+
 ```
-
-### Building the op-node
-
-Build the `op-node` component:
-
-```bash
-make op-node
-```
-
-### Copying the JWT Secret
-
-Copy the JWT file created in the `op-geth` repository to the `op-node` folder:
-
-```bash
-cp ../op-geth/jwt.txt ./op-node
-```
-
-### Downloading the Configuration File
-
-Download the rollup configuration file for the op-node:
-
-```bash
-curl -o rollup.json https://raw.githubusercontent.com/ethstorage/pm/refs/heads/main/L2/assets/testnet_rollup.json
-```
-
 ### Starting the op-node
 
 To start the op-node, execute the following command:
 
 ```bash
-./op-node/bin/op-node \
-  --l2=http://localhost:9551 \
-  --l2.jwt-secret=./op-node/jwt.txt \
-  --sequencer.enabled=false \
-  --p2p.disable \
+
+export L1_RPC_URL=http://65.108.230.142:8545
+export L1_BEACON_URL=http://65.108.230.142:3500
+
+./bin/op-node \
+  --l2=http://localhost:8551 \
+  --l2.jwt-secret=./jwt.txt \
   --verifier.l1-confs=4 \
-  --rollup.config=./rollup.json \
-  --rpc.addr=0.0.0.0 \
-  --rpc.port=9595 \
+  --rollup.config=./gamma_testnet_rollup.json \
+  --rpc.port=8547 \
+  --p2p.disable \
   --rpc.enable-admin \
-  --l1=http://65.108.230.142:8545 \
-  --l1.beacon=http://65.108.230.142:3500 \
+  --l1=$L1_RPC_URL \
+  --l1.beacon=$L1_BEACON_URL \
   --l1.rpckind=basic \
-  --l1.beacon-archiver=http://65.108.236.27:9645
+  --l1.beacon-archiver=http://65.109.50.145:9645 \
+  --safedb.path=safedb | tee -a node.log -i
 ```
 
 **Note:**
@@ -221,8 +165,8 @@ From the logs, we can see that the op-node keeps converting batches into payload
 You can also verify the correctness of the derived rollup blocks by comparing the results of the following commands:
 
 ```bash
-cast block 51019 -f hash -r http://127.0.0.1:9515
-cast block 51019 -f hash -r http://65.109.20.29:8545
+cast block 51019 -f hash -r http://127.0.0.1:8545
+cast block 51019 -f hash -r https://rpc.gamma.testnet.l2.quarkchain.io:8545
 ```
 
 ## Conclusion
