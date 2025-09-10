@@ -18,7 +18,7 @@ start_flags=" sync \
   $file_flags \
   --storage.l1contract 0xAb3d380A268d088BA21Eb313c1C23F3BEC5cfe93 \
   --l1.rpc http://65.108.230.142:8545 \
-  --es_rpc http://65.108.230.142:9545 \
+  --es_rpc https://rpc.testnet.ethstorage.io:9546 \
   $@"
 
 exec $executable $start_flags
