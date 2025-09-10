@@ -59,6 +59,11 @@ func NewConfig(ctx *cli.Context, lg log.Logger) (*node.Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to load miner config: %w", err)
 	}
+	chainId := new(big.Int).SetUint64(ctx.GlobalUint64(flags.ChainId.Name))
+	lg.Info("Read chain ID of EthStorage network", "chainID", chainId)
+	if minerConfig != nil {
+		minerConfig.ChainID = chainId
+	}
 	archiverConfig := archiver.NewConfig(ctx)
 	// l2Endpoint, err := NewL2EndpointConfig(ctx, lg)
 	// if err != nil {
@@ -68,7 +73,7 @@ func NewConfig(ctx *cli.Context, lg log.Logger) (*node.Config, error) {
 	// l2SyncEndpoint := NewL2SyncEndpointConfig(ctx)
 	cfg := &node.Config{
 		L1:         *l1Endpoint,
-		ChainID:    new(big.Int).SetUint64(ctx.GlobalUint64(flags.ChainId.Name)),
+		ChainID:    chainId,
 		Downloader: *dlConfig,
 
 		DataDir:        datadir,
