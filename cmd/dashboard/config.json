@@ -1,7 +1,15 @@
 [
   {
+    "name":"EthStorage Mainnet",
+    "type":"l1",
+    "rpc": "<ETH_RPC>",
+    "chainID": 333,
+    "contract":"0xf0193d6E8fc186e77b6E63af4151db07524f6a7A",
+    "startNumber": 23331316
+  },
+  {
     "name":"EthStorage Testnet",
-    "type": "l1",
+    "type":"l1",
     "rpc":"http://65.108.230.142:8545",
     "chainID": 3333,
     "contract":"0xAb3d380A268d088BA21Eb313c1C23F3BEC5cfe93",
@@ -9,7 +17,7 @@
   },
   {
     "name":"EthStorage L2 Testnet",
-    "type": "l2",
+    "type":"l2",
     "rpc":"http://5.9.87.214:8545",
     "chainID": 3337,
     "contract":"0x64003adbdf3014f7E38FC6BE752EB047b95da89A",
