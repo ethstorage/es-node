@@ -5,10 +5,8 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"math/big"
-	"os"
 
 	oppprof "github.com/ethereum-optimism/optimism/op-service/pprof"
 	"github.com/ethereum/go-ethereum/common"
@@ -23,7 +21,6 @@ import (
 	"github.com/ethstorage/go-ethstorage/ethstorage/miner"
 	"github.com/ethstorage/go-ethstorage/ethstorage/node"
 	p2pcli "github.com/ethstorage/go-ethstorage/ethstorage/p2p/cli"
-	"github.com/ethstorage/go-ethstorage/ethstorage/rollup"
 	"github.com/ethstorage/go-ethstorage/ethstorage/scanner"
 	"github.com/ethstorage/go-ethstorage/ethstorage/signer"
 	"github.com/ethstorage/go-ethstorage/ethstorage/storage"
@@ -37,17 +34,6 @@ func NewConfig(ctx *cli.Context, lg log.Logger) (*node.Config, error) {
 	}
 
 	datadir := ctx.GlobalString(flags.DataDir.Name)
-	rollupConfig, err := NewRollupConfig(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	// driverConfig := NewDriverConfig(ctx)
-
-	// p2pSignerSetup, err := p2pcli.LoadSignerSetup(ctx)
-	// if err != nil {
-	// 	return nil, fmt.Errorf("failed to load p2p signer: %w", err)
-	// }
 
 	// TODO: blocktime is set to zero, need to update the value
 	p2pConfig, err := p2pcli.NewConfig(ctx, 0)
@@ -73,6 +59,11 @@ func NewConfig(ctx *cli.Context, lg log.Logger) (*node.Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to load miner config: %w", err)
 	}
+	chainId := new(big.Int).SetUint64(ctx.GlobalUint64(flags.ChainId.Name))
+	lg.Info("Read chain ID of EthStorage network", "chainID", chainId)
+	if minerConfig != nil {
+		minerConfig.ChainID = chainId
+	}
 	archiverConfig := archiver.NewConfig(ctx)
 	// l2Endpoint, err := NewL2EndpointConfig(ctx, lg)
 	// if err != nil {
@@ -81,10 +72,8 @@ func NewConfig(ctx *cli.Context, lg log.Logger) (*node.Config, error) {
 
 	// l2SyncEndpoint := NewL2SyncEndpointConfig(ctx)
 	cfg := &node.Config{
-		L1: *l1Endpoint,
-		// 	L2:     l2Endpoint,
-		// 	L2Sync: l2SyncEndpoint,
-		Rollup:     *rollupConfig,
+		L1:         *l1Endpoint,
+		ChainID:    chainId,
 		Downloader: *dlConfig,
 
 		DataDir:        datadir,
@@ -109,7 +98,7 @@ func NewConfig(ctx *cli.Context, lg log.Logger) (*node.Config, error) {
 			ListenPort: ctx.GlobalInt(flags.PprofPortFlag.Name),
 		},
 		P2P: p2pConfig,
-		// 	P2PSigner:           p2pSignerSetup,
+
 		L1EpochPollInterval: ctx.GlobalDuration(flags.L1EpochPollIntervalFlag.Name),
 		// 	Heartbeat: node.HeartbeatConfig{
 		// 		Enabled: ctx.GlobalBool(flags.HeartbeatEnabledFlag.Name),
@@ -227,34 +216,6 @@ func NewSignerConfig(ctx *cli.Context) (signer.SignerFactory, common.Address, er
 		return nil, common.Address{}, fmt.Errorf("invalid siger flags: %w", err)
 	}
 	return signer.SignerFactoryFromConfig(signerConfig)
-}
-
-func NewRollupConfig(ctx *cli.Context) (*rollup.EsConfig, error) {
-	network := ctx.GlobalString(flags.Network.Name)
-	if network != "" {
-		// config, err := chaincfg.GetRollupConfig(network)
-		// if err != nil {
-		// 	return nil, err
-		// }
-		config := rollup.EsConfig{
-			L2ChainID: new(big.Int).SetUint64(ctx.GlobalUint64(flags.L2ChainId.Name)),
-		}
-
-		return &config, nil
-	}
-
-	rollupConfigPath := ctx.GlobalString(flags.RollupConfig.Name)
-	file, err := os.Open(rollupConfigPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read rollup config: %w", err)
-	}
-	defer file.Close()
-
-	var rollupConfig rollup.EsConfig
-	if err := json.NewDecoder(file).Decode(&rollupConfig); err != nil {
-		return nil, fmt.Errorf("failed to decode rollup config: %w", err)
-	}
-	return &rollupConfig, nil
 }
 
 func NewStorageConfig(ctx *cli.Context, client *ethclient.Client, lg log.Logger) (*storage.StorageConfig, error) {

@@ -251,6 +251,8 @@ func (w *worker) newWorkLoop() {
 			if w.config.EmailEnabled {
 				emailSubject := fmt.Sprintf("EthStorage Mining Task Started: Shard %d", shardIdx)
 				msg := fmt.Sprintf("A new mining task has been initiated for shard %d on es-node.\r\n\r\n", shardIdx)
+				msg += fmt.Sprintf("Chain ID: %d\r\n", w.config.ChainID)
+				msg += fmt.Sprintf("Contract: %s\r\n", w.storageMgr.ContractAddress().Hex())
 				msg += fmt.Sprintf("Miner: %s\r\n", miner.Hex())
 				msg += fmt.Sprintf("Threads per shard: %d\r\n", w.config.ThreadsPerShard)
 				msg += fmt.Sprintf("Minimum profit: %s\r\n", w.config.MinimumProfit)
@@ -431,9 +433,7 @@ func (w *worker) resultLoop() {
 						s.Failed++
 						errorCache = append(errorCache, miningError{result.startShardId, result.blockNumber, err})
 						var diff *big.Int
-						// error message "StorageContract: diff not match" change to custom error StorageContract_DifficultyNotMet()
-						// custom error selector: keccak256("StorageContract_DifficultyNotMet()")[0:4] = 0x4e14f6d5
-						if strings.Contains(err.Error(), "0x4e14f6d5") {
+						if strings.Contains(err.Error(), "StorageContract_DifficultyNotMet") {
 							info, err := w.l1API.GetMiningInfo(
 								context.Background(),
 								w.storageMgr.ContractAddress(),
@@ -492,7 +492,6 @@ func (w *worker) reportMiningResult(rs *result, txHash common.Hash, err error) {
 		rs.startShardId,
 		rs.blockNumber,
 	)
-	msg += fmt.Sprintf("Miner: %s\r\n", rs.miner.Hex())
 
 	var status int
 	if err == errDropped {
@@ -509,6 +508,11 @@ func (w *worker) reportMiningResult(rs *result, txHash common.Hash, err error) {
 		w.lg.Info("Mining transaction submitted", "txHash", txHash)
 		status = w.checkTxStatusRepeatedly(txHash, &msg)
 	}
+	msg += "\r\n"
+	msg += fmt.Sprintf("Chain: %d\r\n", w.config.ChainID)
+	msg += fmt.Sprintf("Contract: %s\r\n", w.storageMgr.ContractAddress().Hex())
+	msg += fmt.Sprintf("Miner: %s\r\n", rs.miner.Hex())
+
 	if w.config.EmailEnabled {
 		emailSubject := "EthStorage Proof Submission: "
 		if status == txStatusSuccess {

@@ -6,7 +6,7 @@ package scanner
 import (
 	"fmt"
 
-	"github.com/ethstorage/go-ethstorage/ethstorage/rollup"
+	"github.com/ethstorage/go-ethstorage/ethstorage/flags/utils"
 	"github.com/urfave/cli"
 )
 
@@ -22,31 +22,34 @@ const (
 	IntervalFlagName  = "scanner.interval"
 )
 
+func scannerEnv(name string) string {
+	return utils.PrefixEnvVar("SCANNER_" + name)
+}
+
 type Config struct {
 	Mode      int
 	BatchSize int
 	Interval  int
 }
 
-func CLIFlags(envPrefix string) []cli.Flag {
-	envPrefix += "_SCANNER"
+func CLIFlags() []cli.Flag {
 	flags := []cli.Flag{
 		cli.IntFlag{
 			Name:   ModeFlagName,
 			Usage:  "Data scan mode, 0: disabled, 1: check meta, 2: check blob",
-			EnvVar: rollup.PrefixEnvVar(envPrefix, "MODE"),
+			EnvVar: scannerEnv("MODE"),
 			Value:  1,
 		},
 		cli.IntFlag{
 			Name:   BatchSizeFlagName,
 			Usage:  "Data scan batch size",
-			EnvVar: rollup.PrefixEnvVar(envPrefix, "BATCH_SIZE"),
+			EnvVar: scannerEnv("BATCH_SIZE"),
 			Value:  8192,
 		},
 		cli.IntFlag{
 			Name:   IntervalFlagName,
 			Usage:  "Data scan interval in minutes",
-			EnvVar: rollup.PrefixEnvVar(envPrefix, "INTERVAL"),
+			EnvVar: scannerEnv("INTERVAL"),
 			Value:  3,
 		},
 	}

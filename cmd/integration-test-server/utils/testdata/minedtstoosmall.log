@@ -2208,8 +2208,8 @@ t=2025-02-21T03:32:00+0000 lvl=info msg="Composed calldata"                     
 t=2025-02-21T03:32:00+0000 lvl=info msg="Query baseFee done"                    baseFee=251
 t=2025-02-21T03:32:00+0000 lvl=info msg="Query gas tip cap done"                gasTipGap=1,000,000
 t=2025-02-21T03:32:00+0000 lvl=info msg="Suggested gas fee cap"                 gasFeeCap=1,000,251
-t=2025-02-21T03:32:00+0000 lvl=eror msg="Estimate gas failed"                   error="execution reverted: ErrorData: 0x7f2a3c87"
-t=2025-02-21T03:32:00+0000 lvl=eror msg="Failed to submit mined result"         shard=1 block=7,752,130 error="failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T03:32:00+0000 lvl=eror msg="Estimate gas failed"                   error="execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
+t=2025-02-21T03:32:00+0000 lvl=eror msg="Failed to submit mined result"         shard=1 block=7,752,130 error="failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T03:32:09+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,138 difficulty=12,229,810 lastMineTime=1,740,108,564 proofsSubmitted=6
 t=2025-02-21T03:32:09+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,138 difficulty=14,709,686 lastMineTime=1,740,107,940 proofsSubmitted=12
 t=2025-02-21T03:32:10+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.4s shard=0 block=7,752,138
@@ -2248,7 +2248,7 @@ t=2025-02-21T03:32:46+0000 lvl=info msg="Downloaded and encoded"                
 t=2025-02-21T03:32:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T03:32:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=6  failed=1 dropped=0
 t=2025-02-21T03:32:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=12 failed=0 dropped=1
-t=2025-02-21T03:32:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T03:32:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T03:32:47+0000 lvl=info msg="Downloaded and encoded"                blockNumber=2,626,131 kvIdx=11456
 t=2025-02-21T03:32:47+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.8s shard=1 block=7,752,141
 t=2025-02-21T03:32:47+0000 lvl=info msg="Downloaded and encoded"                blockNumber=2,626,131 kvIdx=11457
@@ -2331,7 +2331,7 @@ t=2025-02-21T03:33:45+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T03:33:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T03:33:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=6  failed=1 dropped=0
 t=2025-02-21T03:33:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=13 failed=0 dropped=1
-t=2025-02-21T03:33:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T03:33:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T03:33:46+0000 lvl=info msg="Blobs from cache"                      block=2,625,160
 t=2025-02-21T03:33:46+0000 lvl=info msg="Blob found in the cache, continue to the next block" blockNumber=2,625,160
 t=2025-02-21T03:33:46+0000 lvl=info msg="Blobs from cache"                      block=2,625,168
@@ -2748,7 +2748,7 @@ t=2025-02-21T03:34:46+0000 lvl=info msg="Mining info retrieved"                 
 t=2025-02-21T03:34:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T03:34:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=6  failed=1 dropped=0
 t=2025-02-21T03:34:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=14 failed=0 dropped=1
-t=2025-02-21T03:34:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T03:34:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T03:34:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.8s shard=1 block=7,752,151
 t=2025-02-21T03:34:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.8s shard=0 block=7,752,151
 t=2025-02-21T03:34:48+0000 lvl=info msg="Don't find blob in the cache, will try to download directly" blockNumber=2,626,193 start=2,626,193 end=2,626,193 toCache=true
@@ -2830,7 +2830,7 @@ t=2025-02-21T03:35:43+0000 lvl=info msg="Download range"                        
 t=2025-02-21T03:35:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T03:35:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=7  failed=1 dropped=0
 t=2025-02-21T03:35:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=14 failed=0 dropped=1
-t=2025-02-21T03:35:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T03:35:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T03:35:46+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,156 difficulty=12,611,991 lastMineTime=1,740,108,780 proofsSubmitted=7
 t=2025-02-21T03:35:46+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,156 difficulty=15,643,405 lastMineTime=1,740,108,732 proofsSubmitted=14
 t=2025-02-21T03:35:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.5s shard=0 block=7,752,156
@@ -2900,7 +2900,7 @@ t=2025-02-21T03:36:36+0000 lvl=info msg="Download range"                        
 t=2025-02-21T03:36:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T03:36:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=7  failed=1 dropped=0
 t=2025-02-21T03:36:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=15 failed=0 dropped=1
-t=2025-02-21T03:36:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T03:36:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T03:36:46+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,161 difficulty=12,611,991 lastMineTime=1,740,108,780 proofsSubmitted=7
 t=2025-02-21T03:36:46+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,161 difficulty=16,132,261 lastMineTime=1,740,108,828 proofsSubmitted=15
 t=2025-02-21T03:36:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.1s shard=0 block=7,752,161
@@ -2961,7 +2961,7 @@ t=2025-02-21T03:37:37+0000 lvl=info msg="Download range"                        
 t=2025-02-21T03:37:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T03:37:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=7  failed=1 dropped=0
 t=2025-02-21T03:37:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=15 failed=0 dropped=1
-t=2025-02-21T03:37:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T03:37:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T03:37:47+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,165 difficulty=12,611,991 lastMineTime=1,740,108,780 proofsSubmitted=7
 t=2025-02-21T03:37:47+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,165 difficulty=16,132,261 lastMineTime=1,740,108,828 proofsSubmitted=15
 t=2025-02-21T03:37:49+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=2.0s shard=1 block=7,752,165
@@ -3036,7 +3036,7 @@ t=2025-02-21T03:38:37+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T03:38:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T03:38:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=7  failed=1 dropped=0
 t=2025-02-21T03:38:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=16 failed=0 dropped=1
-t=2025-02-21T03:38:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T03:38:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T03:38:47+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,170 difficulty=12,611,991 lastMineTime=1,740,108,780 proofsSubmitted=7
 t=2025-02-21T03:38:47+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,170 difficulty=16,636,394 lastMineTime=1,740,108,960 proofsSubmitted=16
 t=2025-02-21T03:38:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.3s shard=1 block=7,752,170
@@ -3120,7 +3120,7 @@ t=2025-02-21T03:39:46+0000 lvl=info msg="Download range"                        
 t=2025-02-21T03:39:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T03:39:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=16 failed=0 dropped=1
 t=2025-02-21T03:39:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=8  failed=1 dropped=0
-t=2025-02-21T03:39:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T03:39:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T03:39:47+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,175 difficulty=16,636,394 lastMineTime=1,740,108,960 proofsSubmitted=16
 t=2025-02-21T03:39:47+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,175 difficulty=13,006,115 lastMineTime=1,740,109,020 proofsSubmitted=8
 t=2025-02-21T03:39:49+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=2.1s shard=0 block=7,752,175
@@ -3199,7 +3199,7 @@ t=2025-02-21T03:40:46+0000 lvl=info msg="Mining info retrieved"                 
 t=2025-02-21T03:40:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T03:40:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=8  failed=1 dropped=0
 t=2025-02-21T03:40:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=17 failed=0 dropped=1
-t=2025-02-21T03:40:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T03:40:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T03:40:47+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.4s shard=0 block=7,752,180
 t=2025-02-21T03:40:47+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.7s shard=1 block=7,752,180
 t=2025-02-21T03:40:55+0000 lvl=info msg="Don't find blob in the cache, will try to download directly" blockNumber=2,626,376 start=2,626,376 end=2,626,376 toCache=true
@@ -3271,7 +3271,7 @@ t=2025-02-21T03:41:46+0000 lvl=info msg="Mining info retrieved"                 
 t=2025-02-21T03:41:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T03:41:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=9  failed=1 dropped=0
 t=2025-02-21T03:41:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=17 failed=0 dropped=1
-t=2025-02-21T03:41:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T03:41:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T03:41:46+0000 lvl=info msg="Downloaded and encoded"                blockNumber=2,626,402 kvIdx=11641
 t=2025-02-21T03:41:47+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.0s shard=1 block=7,752,185
 t=2025-02-21T03:41:47+0000 lvl=info msg="Downloaded and encoded"                blockNumber=2,626,402 kvIdx=11642
@@ -3327,7 +3327,7 @@ t=2025-02-21T03:42:36+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T03:42:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T03:42:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=9  failed=1 dropped=0
 t=2025-02-21T03:42:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=17 failed=0 dropped=1
-t=2025-02-21T03:42:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T03:42:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T03:42:46+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,190 difficulty=13,412,556 lastMineTime=1,740,109,140 proofsSubmitted=9
 t=2025-02-21T03:42:46+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,190 difficulty=17,156,281 lastMineTime=1,740,109,068 proofsSubmitted=17
 t=2025-02-21T03:42:47+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.2s shard=1 block=7,752,190
@@ -3392,7 +3392,7 @@ t=2025-02-21T03:43:39+0000 lvl=info msg="Download range"                        
 t=2025-02-21T03:43:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T03:43:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=17 failed=0 dropped=1
 t=2025-02-21T03:43:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=9  failed=1 dropped=0
-t=2025-02-21T03:43:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T03:43:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T03:43:46+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,195 difficulty=17,156,281 lastMineTime=1,740,109,068 proofsSubmitted=17
 t=2025-02-21T03:43:46+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,195 difficulty=13,412,556 lastMineTime=1,740,109,140 proofsSubmitted=9
 t=2025-02-21T03:43:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.8s shard=1 block=7,752,195
@@ -3467,7 +3467,7 @@ t=2025-02-21T03:44:37+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T03:44:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T03:44:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=17 failed=0 dropped=1
 t=2025-02-21T03:44:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=10 failed=1 dropped=0
-t=2025-02-21T03:44:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T03:44:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T03:44:47+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,200 difficulty=17,156,281 lastMineTime=1,740,109,068 proofsSubmitted=17
 t=2025-02-21T03:44:47+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,200 difficulty=13,831,698 lastMineTime=1,740,109,308 proofsSubmitted=10
 t=2025-02-21T03:44:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.6s shard=0 block=7,752,200
@@ -3547,7 +3547,7 @@ t=2025-02-21T03:45:37+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T03:45:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T03:45:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=10 failed=1 dropped=0
 t=2025-02-21T03:45:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=18 failed=0 dropped=1
-t=2025-02-21T03:45:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T03:45:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T03:45:47+0000 lvl=info msg="Don't find blob in the cache, will try to download directly" blockNumber=2,626,522 start=2,626,522 end=2,626,522 toCache=true
 t=2025-02-21T03:45:47+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,205 difficulty=13,831,698 lastMineTime=1,740,109,308 proofsSubmitted=10
 t=2025-02-21T03:45:47+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,205 difficulty=17,692,414 lastMineTime=1,740,109,356 proofsSubmitted=18
@@ -3659,7 +3659,7 @@ t=2025-02-21T03:46:46+0000 lvl=info msg="Mining info retrieved"                 
 t=2025-02-21T03:46:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T03:46:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=10 failed=1 dropped=0
 t=2025-02-21T03:46:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=20 failed=0 dropped=1
-t=2025-02-21T03:46:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T03:46:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T03:46:47+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.8s shard=1 block=7,752,210
 t=2025-02-21T03:46:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.9s shard=0 block=7,752,210
 t=2025-02-21T03:46:58+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,211 difficulty=13,831,698 lastMineTime=1,740,109,308 proofsSubmitted=10
@@ -3741,7 +3741,7 @@ t=2025-02-21T03:47:40+0000 lvl=info msg="Download range"                        
 t=2025-02-21T03:47:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T03:47:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=11 failed=1 dropped=1
 t=2025-02-21T03:47:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=20 failed=0 dropped=1
-t=2025-02-21T03:47:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T03:47:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T03:47:46+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,215 difficulty=14,263,938 lastMineTime=1,740,109,488 proofsSubmitted=11
 t=2025-02-21T03:47:46+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,215 difficulty=18,815,466 lastMineTime=1,740,109,416 proofsSubmitted=20
 t=2025-02-21T03:47:47+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.6s shard=0 block=7,752,215
@@ -3802,7 +3802,7 @@ t=2025-02-21T03:48:45+0000 lvl=info msg="Download range"                        
 t=2025-02-21T03:48:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T03:48:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=11 failed=1 dropped=1
 t=2025-02-21T03:48:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=20 failed=0 dropped=1
-t=2025-02-21T03:48:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T03:48:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T03:48:46+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,219 difficulty=14,263,938 lastMineTime=1,740,109,488 proofsSubmitted=11
 t=2025-02-21T03:48:46+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,219 difficulty=18,815,466 lastMineTime=1,740,109,416 proofsSubmitted=20
 t=2025-02-21T03:48:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.6s shard=0 block=7,752,219
@@ -3877,7 +3877,7 @@ t=2025-02-21T03:49:43+0000 lvl=info msg="Download range"                        
 t=2025-02-21T03:49:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T03:49:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=11 failed=1 dropped=1
 t=2025-02-21T03:49:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=21 failed=0 dropped=1
-t=2025-02-21T03:49:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T03:49:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T03:49:47+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,224 difficulty=14,263,938 lastMineTime=1,740,109,488 proofsSubmitted=11
 t=2025-02-21T03:49:47+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,224 difficulty=19,403,449 lastMineTime=1,740,109,632 proofsSubmitted=21
 t=2025-02-21T03:49:49+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=2.1s shard=0 block=7,752,224
@@ -3957,7 +3957,7 @@ t=2025-02-21T03:50:39+0000 lvl=info msg="Download range"                        
 t=2025-02-21T03:50:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T03:50:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=12 failed=1 dropped=1
 t=2025-02-21T03:50:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=21 failed=0 dropped=1
-t=2025-02-21T03:50:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T03:50:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T03:50:51+0000 lvl=info msg="Generate zk proof done"                sampleIdx="[2219 2049]" timeUsed(s)=60.851
 t=2025-02-21T03:50:51+0000 lvl=info msg="Got storage proof"                     shard=0 block=7,752,224 kvIdx="[1893 528]"    sampleIdxsInKv="[2219 2049]"
 t=2025-02-21T03:50:51+0000 lvl=info msg="Set mining result"                     shard=0 block=7,752,224 nonce=163,726
@@ -4043,7 +4043,7 @@ t=2025-02-21T03:51:46+0000 lvl=info msg="Mining info retrieved"                 
 t=2025-02-21T03:51:46+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,233 difficulty=20,009,806 lastMineTime=1,740,109,704 proofsSubmitted=22
 t=2025-02-21T03:51:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=13 failed=1 dropped=1
 t=2025-02-21T03:51:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=22 failed=0 dropped=1
-t=2025-02-21T03:51:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T03:51:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T03:51:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T03:51:47+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.2s shard=1 block=7,752,233
 t=2025-02-21T03:51:47+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.1s shard=0 block=7,752,233
@@ -4108,7 +4108,7 @@ t=2025-02-21T03:52:46+0000 lvl=info msg="Mining info retrieved"                 
 t=2025-02-21T03:52:46+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,238 difficulty=20,009,806 lastMineTime=1,740,109,704 proofsSubmitted=22
 t=2025-02-21T03:52:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=13 failed=1 dropped=1
 t=2025-02-21T03:52:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=22 failed=0 dropped=1
-t=2025-02-21T03:52:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T03:52:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T03:52:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T03:52:47+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.4s shard=0 block=7,752,238
 t=2025-02-21T03:52:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.7s shard=1 block=7,752,238
@@ -4179,7 +4179,7 @@ t=2025-02-21T03:53:36+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T03:53:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T03:53:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=14 failed=1 dropped=1
 t=2025-02-21T03:53:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=22 failed=0 dropped=1
-t=2025-02-21T03:53:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T03:53:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T03:53:46+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,243 difficulty=15,643,405 lastMineTime=1,740,109,848 proofsSubmitted=14
 t=2025-02-21T03:53:46+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,243 difficulty=20,009,806 lastMineTime=1,740,109,704 proofsSubmitted=22
 t=2025-02-21T03:53:47+0000 lvl=info msg="Calculated a valid hash"               shard=0 block=7,752,243 timestamp=1,740,109,944 randao=0x4b8821798c5b3ca0538f3646e08333080d95dac99c4f0beb3041272aa2ba26cd nonce=670,323   hash0=0xb6b5d1554d366d7934678e8779450ae27369e4042b407384086976a4b8881e42 hash1=0x000000b4f579c67fe1320ccd0b86c113206e3d892d4a8d5d4f82c463118cd852 sampleIdxs="[8920642 2244315]"
@@ -4249,7 +4249,7 @@ t=2025-02-21T03:54:46+0000 lvl=info msg="Download range"                        
 t=2025-02-21T03:54:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T03:54:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=14 failed=1 dropped=1
 t=2025-02-21T03:54:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=22 failed=0 dropped=1
-t=2025-02-21T03:54:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T03:54:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T03:54:47+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,248 difficulty=15,643,405 lastMineTime=1,740,109,848 proofsSubmitted=14
 t=2025-02-21T03:54:47+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,248 difficulty=20,009,806 lastMineTime=1,740,109,704 proofsSubmitted=22
 t=2025-02-21T03:54:49+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=2.2s shard=1 block=7,752,248
@@ -4338,7 +4338,7 @@ t=2025-02-21T03:55:41+0000 lvl=info msg="Download range"                        
 t=2025-02-21T03:55:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T03:55:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=14 failed=1 dropped=1
 t=2025-02-21T03:55:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=24 failed=0 dropped=1
-t=2025-02-21T03:55:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T03:55:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T03:55:47+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,253 difficulty=15,643,405 lastMineTime=1,740,109,848 proofsSubmitted=14
 t=2025-02-21T03:55:47+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,253 difficulty=21,279,959 lastMineTime=1,740,109,956 proofsSubmitted=24
 t=2025-02-21T03:55:49+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.8s shard=0 block=7,752,253
@@ -4398,7 +4398,7 @@ t=2025-02-21T03:56:45+0000 lvl=info msg="Download range"                        
 t=2025-02-21T03:56:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T03:56:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=14 failed=1 dropped=1
 t=2025-02-21T03:56:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=24 failed=0 dropped=1
-t=2025-02-21T03:56:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T03:56:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T03:56:47+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,258 difficulty=15,643,405 lastMineTime=1,740,109,848 proofsSubmitted=14
 t=2025-02-21T03:56:47+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,258 difficulty=21,279,959 lastMineTime=1,740,109,956 proofsSubmitted=24
 t=2025-02-21T03:56:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.2s shard=0 block=7,752,258
@@ -4454,7 +4454,7 @@ t=2025-02-21T03:57:37+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T03:57:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T03:57:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=14 failed=1 dropped=1
 t=2025-02-21T03:57:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=24 failed=0 dropped=1
-t=2025-02-21T03:57:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T03:57:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T03:57:47+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,263 difficulty=15,643,405 lastMineTime=1,740,109,848 proofsSubmitted=14
 t=2025-02-21T03:57:47+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,263 difficulty=21,279,959 lastMineTime=1,740,109,956 proofsSubmitted=24
 t=2025-02-21T03:57:49+0000 lvl=info msg="Don't find blob in the cache, will try to download directly" blockNumber=2,626,883 start=2,626,883 end=2,626,883 toCache=true
@@ -4535,7 +4535,7 @@ t=2025-02-21T03:58:46+0000 lvl=info msg="Mining info retrieved"                 
 t=2025-02-21T03:58:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T03:58:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=14 failed=1 dropped=1
 t=2025-02-21T03:58:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=25 failed=0 dropped=1
-t=2025-02-21T03:58:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T03:58:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T03:58:47+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.8s shard=0 block=7,752,268
 t=2025-02-21T03:58:47+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.0s shard=1 block=7,752,268
 t=2025-02-21T03:58:57+0000 lvl=info msg="Don't find blob in the cache, will try to download directly" blockNumber=2,626,918 start=2,626,917 end=2,626,918 toCache=true
@@ -4588,7 +4588,7 @@ t=2025-02-21T03:59:46+0000 lvl=info msg="Mining info retrieved"                 
 t=2025-02-21T03:59:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T03:59:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=14 failed=1 dropped=1
 t=2025-02-21T03:59:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=25 failed=0 dropped=1
-t=2025-02-21T03:59:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T03:59:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T03:59:47+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.5s shard=0 block=7,752,273
 t=2025-02-21T03:59:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.6s shard=1 block=7,752,273
 t=2025-02-21T03:59:48+0000 lvl=info msg="Don't find blob in the cache, will try to download directly" blockNumber=2,626,943 start=2,626,943 end=2,626,943 toCache=true
@@ -4647,7 +4647,7 @@ t=2025-02-21T04:00:46+0000 lvl=info msg="Mining info retrieved"                 
 t=2025-02-21T04:00:46+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,278 difficulty=21,944,957 lastMineTime=1,740,110,160 proofsSubmitted=25
 t=2025-02-21T04:00:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=14 failed=1 dropped=1
 t=2025-02-21T04:00:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=25 failed=0 dropped=1
-t=2025-02-21T04:00:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:00:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:00:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:00:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.6s shard=0 block=7,752,278
 t=2025-02-21T04:00:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.7s shard=1 block=7,752,278
@@ -4702,7 +4702,7 @@ t=2025-02-21T04:01:43+0000 lvl=info msg="Download range"                        
 t=2025-02-21T04:01:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:01:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=14 failed=1 dropped=1
 t=2025-02-21T04:01:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=25 failed=0 dropped=1
-t=2025-02-21T04:01:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:01:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:01:46+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,282 difficulty=15,643,405 lastMineTime=1,740,109,848 proofsSubmitted=14
 t=2025-02-21T04:01:46+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,282 difficulty=21,944,957 lastMineTime=1,740,110,160 proofsSubmitted=25
 t=2025-02-21T04:01:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.6s shard=1 block=7,752,282
@@ -4753,7 +4753,7 @@ t=2025-02-21T04:02:35+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T04:02:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:02:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=14 failed=1 dropped=1
 t=2025-02-21T04:02:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=25 failed=0 dropped=1
-t=2025-02-21T04:02:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:02:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:02:46+0000 lvl=info msg="Don't find blob in the cache, will try to download directly" blockNumber=2,627,032 start=2,627,032 end=2,627,032 toCache=true
 t=2025-02-21T04:02:46+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,287 difficulty=15,643,405 lastMineTime=1,740,109,848 proofsSubmitted=14
 t=2025-02-21T04:02:46+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,287 difficulty=21,944,957 lastMineTime=1,740,110,160 proofsSubmitted=25
@@ -4813,7 +4813,7 @@ t=2025-02-21T04:03:37+0000 lvl=info msg="Download range"                        
 t=2025-02-21T04:03:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:03:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=14 failed=1 dropped=1
 t=2025-02-21T04:03:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=25 failed=0 dropped=1
-t=2025-02-21T04:03:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:03:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:03:47+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,292 difficulty=21,944,957 lastMineTime=1,740,110,160 proofsSubmitted=25
 t=2025-02-21T04:03:47+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,292 difficulty=15,643,405 lastMineTime=1,740,109,848 proofsSubmitted=14
 t=2025-02-21T04:03:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.7s shard=0 block=7,752,292
@@ -4878,7 +4878,7 @@ t=2025-02-21T04:04:43+0000 lvl=info msg="Download range"                        
 t=2025-02-21T04:04:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:04:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=14 failed=1 dropped=1
 t=2025-02-21T04:04:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=25 failed=0 dropped=1
-t=2025-02-21T04:04:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:04:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:04:47+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,297 difficulty=15,643,405 lastMineTime=1,740,109,848 proofsSubmitted=14
 t=2025-02-21T04:04:47+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,297 difficulty=21,944,957 lastMineTime=1,740,110,160 proofsSubmitted=25
 t=2025-02-21T04:04:49+0000 lvl=info msg="Calculated a valid hash"               shard=1 block=7,752,297 timestamp=1,740,110,604 randao=0x577bfeac678774a8284b484941b876ed3d10c7f026f4b6c6d666513fae57d9bb nonce=322,334   hash0=0x4b4a08d815b9e444e0b289050dafbb53141ad355046a94e903f2eabbe668afea hash1=0x0000007f425bc76c7cd32c27bac69b7a902a2cbec686d9527b9d68bfd27f28a0 sampleIdxs="[40415210 42139050]"
@@ -4960,7 +4960,7 @@ t=2025-02-21T04:05:46+0000 lvl=info msg="Mining info retrieved"                 
 t=2025-02-21T04:05:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:05:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=15 failed=1 dropped=1
 t=2025-02-21T04:05:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=25 failed=0 dropped=1
-t=2025-02-21T04:05:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:05:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:05:47+0000 lvl=info msg="Cleanup done"                          blockFinalized=2,625,524 blocksCleaned=0  blobsCleaned=0
 t=2025-02-21T04:05:47+0000 lvl=info msg="BlobDiskCache cleanup done"            took="109.527µs"
 t=2025-02-21T04:05:47+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.2s shard=1 block=7,752,302
@@ -5050,7 +5050,7 @@ t=2025-02-21T04:06:46+0000 lvl=info msg="Mining info retrieved"                 
 t=2025-02-21T04:06:46+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,307 difficulty=22,630,736 lastMineTime=1,740,110,640 proofsSubmitted=26
 t=2025-02-21T04:06:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=26 failed=0 dropped=1
 t=2025-02-21T04:06:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=16 failed=1 dropped=1
-t=2025-02-21T04:06:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:06:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:06:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:06:47+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.7s shard=1 block=7,752,307
 t=2025-02-21T04:06:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.8s shard=0 block=7,752,307
@@ -5103,7 +5103,7 @@ t=2025-02-21T04:07:46+0000 lvl=info msg="Mining info retrieved"                 
 t=2025-02-21T04:07:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:07:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=16 failed=1 dropped=1
 t=2025-02-21T04:07:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=26 failed=0 dropped=1
-t=2025-02-21T04:07:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:07:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:07:47+0000 lvl=info msg="Downloaded and encoded"                blockNumber=2,627,182 kvIdx=12180
 t=2025-02-21T04:07:47+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.7s shard=0 block=7,752,312
 t=2025-02-21T04:07:47+0000 lvl=info msg="Downloaded and encoded"                blockNumber=2,627,182 kvIdx=12181
@@ -5161,7 +5161,7 @@ t=2025-02-21T04:08:46+0000 lvl=info msg="Mining info retrieved"                 
 t=2025-02-21T04:08:46+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,317 difficulty=22,630,736 lastMineTime=1,740,110,640 proofsSubmitted=26
 t=2025-02-21T04:08:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=26 failed=0 dropped=1
 t=2025-02-21T04:08:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=16 failed=1 dropped=1
-t=2025-02-21T04:08:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:08:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:08:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:08:47+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.2s shard=1 block=7,752,317
 t=2025-02-21T04:08:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.6s shard=0 block=7,752,317
@@ -5220,7 +5220,7 @@ t=2025-02-21T04:09:41+0000 lvl=info msg="Download range"                        
 t=2025-02-21T04:09:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:09:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=26 failed=0 dropped=1
 t=2025-02-21T04:09:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=16 failed=1 dropped=1
-t=2025-02-21T04:09:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:09:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:09:46+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,322 difficulty=16,636,394 lastMineTime=1,740,110,604 proofsSubmitted=16
 t=2025-02-21T04:09:46+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,322 difficulty=22,630,736 lastMineTime=1,740,110,640 proofsSubmitted=26
 t=2025-02-21T04:09:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.7s shard=1 block=7,752,322
@@ -5299,7 +5299,7 @@ t=2025-02-21T04:10:50+0000 lvl=info msg="Mining transaction details"            
 t=2025-02-21T04:10:50+0000 lvl=info msg="Mining transaction accounting (in ether)" reward=0.001984761             cost=0.000000482 profit=0.001984279
 t=2025-02-21T04:10:50+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=16 failed=1 dropped=1
 t=2025-02-21T04:10:50+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=27 failed=0 dropped=1
-t=2025-02-21T04:10:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:10:50+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:10:52+0000 lvl=info msg="Don't find blob in the cache, will try to download directly" blockNumber=2,627,275 start=2,627,275 end=2,627,275 toCache=true
 t=2025-02-21T04:10:53+0000 lvl=info msg="Downloaded and encoded"                blockNumber=2,627,275 kvIdx=12246
 t=2025-02-21T04:10:53+0000 lvl=info msg="Downloaded and encoded"                blockNumber=2,627,275 kvIdx=12247
@@ -5355,7 +5355,7 @@ t=2025-02-21T04:11:43+0000 lvl=info msg="Download range"                        
 t=2025-02-21T04:11:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:11:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=16 failed=1 dropped=1
 t=2025-02-21T04:11:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=27 failed=0 dropped=1
-t=2025-02-21T04:11:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:11:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:11:47+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,332 difficulty=16,636,394 lastMineTime=1,740,110,604 proofsSubmitted=16
 t=2025-02-21T04:11:47+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,332 difficulty=23,337,946 lastMineTime=1,740,110,904 proofsSubmitted=27
 t=2025-02-21T04:11:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.6s shard=0 block=7,752,332
@@ -5404,7 +5404,7 @@ t=2025-02-21T04:12:37+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T04:12:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:12:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=16 failed=1 dropped=1
 t=2025-02-21T04:12:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=27 failed=0 dropped=1
-t=2025-02-21T04:12:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:12:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:12:47+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,336 difficulty=16,636,394 lastMineTime=1,740,110,604 proofsSubmitted=16
 t=2025-02-21T04:12:47+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,336 difficulty=23,337,946 lastMineTime=1,740,110,904 proofsSubmitted=27
 t=2025-02-21T04:12:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.4s shard=1 block=7,752,336
@@ -5433,7 +5433,7 @@ t=2025-02-21T04:13:37+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T04:13:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:13:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=27 failed=0 dropped=1
 t=2025-02-21T04:13:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=16 failed=1 dropped=1
-t=2025-02-21T04:13:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:13:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:13:47+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,341 difficulty=16,636,394 lastMineTime=1,740,110,604 proofsSubmitted=16
 t=2025-02-21T04:13:47+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,341 difficulty=23,337,946 lastMineTime=1,740,110,904 proofsSubmitted=27
 t=2025-02-21T04:13:49+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.6s shard=1 block=7,752,341
@@ -5479,7 +5479,7 @@ t=2025-02-21T04:14:46+0000 lvl=info msg="Mining info retrieved"                 
 t=2025-02-21T04:14:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:14:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=17 failed=1 dropped=1
 t=2025-02-21T04:14:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=27 failed=0 dropped=1
-t=2025-02-21T04:14:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:14:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:14:47+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.0s shard=1 block=7,752,345
 t=2025-02-21T04:14:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=2.0s shard=0 block=7,752,345
 t=2025-02-21T04:14:58+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,346 difficulty=17,156,281 lastMineTime=1,740,111,120 proofsSubmitted=17
@@ -5527,7 +5527,7 @@ t=2025-02-21T04:15:46+0000 lvl=info msg="Mining info retrieved"                 
 t=2025-02-21T04:15:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:15:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=17 failed=1 dropped=1
 t=2025-02-21T04:15:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=28 failed=0 dropped=1
-t=2025-02-21T04:15:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:15:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:15:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.9s shard=1 block=7,752,350
 t=2025-02-21T04:15:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=2.2s shard=0 block=7,752,350
 t=2025-02-21T04:15:55+0000 lvl=info msg="Generate zk proof done"                sampleIdx="[1714 1804]" timeUsed(s)=54.906
@@ -5573,7 +5573,7 @@ t=2025-02-21T04:16:36+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T04:16:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:16:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=17 failed=1 dropped=1
 t=2025-02-21T04:16:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=29 failed=0 dropped=1
-t=2025-02-21T04:16:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:16:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:16:46+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,355 difficulty=17,156,281 lastMineTime=1,740,111,120 proofsSubmitted=17
 t=2025-02-21T04:16:46+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,355 difficulty=24,819,357 lastMineTime=1,740,111,216 proofsSubmitted=29
 t=2025-02-21T04:16:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.8s shard=1 block=7,752,355
@@ -5621,7 +5621,7 @@ t=2025-02-21T04:17:37+0000 lvl=info msg="Using snarkjs zk prover"
 t=2025-02-21T04:17:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:17:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=17 failed=1 dropped=1
 t=2025-02-21T04:17:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=30 failed=0 dropped=1
-t=2025-02-21T04:17:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:17:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:17:47+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,360 difficulty=17,156,281 lastMineTime=1,740,111,120 proofsSubmitted=17
 t=2025-02-21T04:17:47+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,360 difficulty=25,594,961 lastMineTime=1,740,111,288 proofsSubmitted=30
 t=2025-02-21T04:17:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.0s shard=1 block=7,752,360
@@ -5666,7 +5666,7 @@ t=2025-02-21T04:18:36+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T04:18:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:18:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=17 failed=1 dropped=1
 t=2025-02-21T04:18:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=31 failed=0 dropped=1
-t=2025-02-21T04:18:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:18:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:18:47+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,365 difficulty=17,156,281 lastMineTime=1,740,111,120 proofsSubmitted=17
 t=2025-02-21T04:18:47+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,365 difficulty=26,394,803 lastMineTime=1,740,111,372 proofsSubmitted=31
 t=2025-02-21T04:18:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.3s shard=1 block=7,752,365
@@ -5690,7 +5690,7 @@ t=2025-02-21T04:19:37+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T04:19:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:19:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=17 failed=1 dropped=1
 t=2025-02-21T04:19:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=31 failed=0 dropped=1
-t=2025-02-21T04:19:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:19:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:19:47+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,370 difficulty=17,156,281 lastMineTime=1,740,111,120 proofsSubmitted=17
 t=2025-02-21T04:19:47+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,370 difficulty=26,394,803 lastMineTime=1,740,111,372 proofsSubmitted=31
 t=2025-02-21T04:19:49+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.5s shard=1 block=7,752,370
@@ -5719,7 +5719,7 @@ t=2025-02-21T04:20:37+0000 lvl=info msg="Using snarkjs zk prover"
 t=2025-02-21T04:20:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:20:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=17 failed=1 dropped=1
 t=2025-02-21T04:20:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=31 failed=0 dropped=1
-t=2025-02-21T04:20:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:20:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:20:47+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,375 difficulty=17,156,281 lastMineTime=1,740,111,120 proofsSubmitted=17
 t=2025-02-21T04:20:47+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,375 difficulty=26,394,803 lastMineTime=1,740,111,372 proofsSubmitted=31
 t=2025-02-21T04:20:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.0s shard=1 block=7,752,375
@@ -5769,7 +5769,7 @@ t=2025-02-21T04:21:46+0000 lvl=info msg="Mining info retrieved"                 
 t=2025-02-21T04:21:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:21:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=18 failed=1 dropped=1
 t=2025-02-21T04:21:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=31 failed=0 dropped=1
-t=2025-02-21T04:21:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:21:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:21:47+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.1s shard=1 block=7,752,380
 t=2025-02-21T04:21:47+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.6s shard=0 block=7,752,380
 t=2025-02-21T04:21:58+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,381 difficulty=17,692,414 lastMineTime=1,740,111,552 proofsSubmitted=18
@@ -5812,7 +5812,7 @@ t=2025-02-21T04:22:46+0000 lvl=info msg="Mining info retrieved"                 
 t=2025-02-21T04:22:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:22:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=19 failed=1 dropped=1
 t=2025-02-21T04:22:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=31 failed=0 dropped=1
-t=2025-02-21T04:22:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:22:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:22:47+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.1s shard=1 block=7,752,385
 t=2025-02-21T04:22:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.6s shard=0 block=7,752,385
 t=2025-02-21T04:22:58+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,386 difficulty=18,245,301 lastMineTime=1,740,111,612 proofsSubmitted=19
@@ -5841,7 +5841,7 @@ t=2025-02-21T04:23:46+0000 lvl=info msg="Mining info retrieved"                 
 t=2025-02-21T04:23:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:23:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=19 failed=1 dropped=1
 t=2025-02-21T04:23:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=31 failed=0 dropped=1
-t=2025-02-21T04:23:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:23:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:23:47+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.0s shard=1 block=7,752,390
 t=2025-02-21T04:23:47+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.2s shard=0 block=7,752,390
 t=2025-02-21T04:23:58+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,391 difficulty=26,394,803 lastMineTime=1,740,111,372 proofsSubmitted=31
@@ -5882,7 +5882,7 @@ t=2025-02-21T04:24:36+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T04:24:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:24:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=19 failed=1 dropped=1
 t=2025-02-21T04:24:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=32 failed=0 dropped=1
-t=2025-02-21T04:24:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:24:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:24:46+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,395 difficulty=27,219,640 lastMineTime=1,740,111,720 proofsSubmitted=32
 t=2025-02-21T04:24:46+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,395 difficulty=18,245,301 lastMineTime=1,740,111,612 proofsSubmitted=19
 t=2025-02-21T04:24:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.7s shard=1 block=7,752,395
@@ -5908,7 +5908,7 @@ t=2025-02-21T04:25:37+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T04:25:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:25:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=19 failed=1 dropped=1
 t=2025-02-21T04:25:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=32 failed=0 dropped=1
-t=2025-02-21T04:25:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:25:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:25:47+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,400 difficulty=27,219,640 lastMineTime=1,740,111,720 proofsSubmitted=32
 t=2025-02-21T04:25:47+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,400 difficulty=18,245,301 lastMineTime=1,740,111,612 proofsSubmitted=19
 t=2025-02-21T04:25:47+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.8s shard=0 block=7,752,400
@@ -5937,7 +5937,7 @@ t=2025-02-21T04:26:37+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T04:26:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:26:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=19 failed=1 dropped=1
 t=2025-02-21T04:26:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=32 failed=0 dropped=1
-t=2025-02-21T04:26:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:26:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:26:47+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,405 difficulty=18,245,301 lastMineTime=1,740,111,612 proofsSubmitted=19
 t=2025-02-21T04:26:47+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,405 difficulty=27,219,640 lastMineTime=1,740,111,720 proofsSubmitted=32
 t=2025-02-21T04:26:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.0s shard=1 block=7,752,405
@@ -5980,7 +5980,7 @@ t=2025-02-21T04:27:37+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T04:27:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:27:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=20 failed=1 dropped=1
 t=2025-02-21T04:27:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=32 failed=0 dropped=1
-t=2025-02-21T04:27:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:27:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:27:47+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,410 difficulty=18,815,466 lastMineTime=1,740,111,876 proofsSubmitted=20
 t=2025-02-21T04:27:47+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,410 difficulty=27,219,640 lastMineTime=1,740,111,720 proofsSubmitted=32
 t=2025-02-21T04:27:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.9s shard=1 block=7,752,410
@@ -6000,7 +6000,7 @@ t=2025-02-21T04:28:37+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T04:28:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:28:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=20 failed=1 dropped=1
 t=2025-02-21T04:28:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=32 failed=0 dropped=1
-t=2025-02-21T04:28:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:28:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:28:47+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,414 difficulty=18,815,466 lastMineTime=1,740,111,876 proofsSubmitted=20
 t=2025-02-21T04:28:47+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,414 difficulty=27,219,640 lastMineTime=1,740,111,720 proofsSubmitted=32
 t=2025-02-21T04:28:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.2s shard=1 block=7,752,414
@@ -6031,7 +6031,7 @@ t=2025-02-21T04:29:46+0000 lvl=info msg="Mining info retrieved"                 
 t=2025-02-21T04:29:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:29:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=20 failed=1 dropped=1
 t=2025-02-21T04:29:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=32 failed=0 dropped=1
-t=2025-02-21T04:29:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:29:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:29:47+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.1s shard=1 block=7,752,419
 t=2025-02-21T04:29:47+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.4s shard=0 block=7,752,419
 t=2025-02-21T04:29:58+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,420 difficulty=18,815,466 lastMineTime=1,740,111,876 proofsSubmitted=20
@@ -6074,7 +6074,7 @@ t=2025-02-21T04:30:46+0000 lvl=info msg="Mining info retrieved"                 
 t=2025-02-21T04:30:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:30:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=21 failed=1 dropped=1
 t=2025-02-21T04:30:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=32 failed=0 dropped=1
-t=2025-02-21T04:30:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:30:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:30:47+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.3s shard=1 block=7,752,424
 t=2025-02-21T04:30:47+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.5s shard=0 block=7,752,424
 t=2025-02-21T04:30:58+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,425 difficulty=19,403,449 lastMineTime=1,740,112,080 proofsSubmitted=21
@@ -6100,7 +6100,7 @@ t=2025-02-21T04:31:46+0000 lvl=info msg="Mining info retrieved"                 
 t=2025-02-21T04:31:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:31:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=21 failed=1 dropped=1
 t=2025-02-21T04:31:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=32 failed=0 dropped=1
-t=2025-02-21T04:31:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:31:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:31:47+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.1s shard=1 block=7,752,429
 t=2025-02-21T04:31:47+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.5s shard=0 block=7,752,429
 t=2025-02-21T04:31:58+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,430 difficulty=19,403,449 lastMineTime=1,740,112,080 proofsSubmitted=21
@@ -6124,7 +6124,7 @@ t=2025-02-21T04:32:46+0000 lvl=info msg="Mining info retrieved"                 
 t=2025-02-21T04:32:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:32:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=21 failed=1 dropped=1
 t=2025-02-21T04:32:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=32 failed=0 dropped=1
-t=2025-02-21T04:32:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:32:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:32:47+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.1s shard=0 block=7,752,434
 t=2025-02-21T04:32:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.6s shard=1 block=7,752,434
 t=2025-02-21T04:32:58+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,435 difficulty=27,219,640 lastMineTime=1,740,111,720 proofsSubmitted=32
@@ -6151,7 +6151,7 @@ t=2025-02-21T04:33:36+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T04:33:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:33:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=21 failed=1 dropped=1
 t=2025-02-21T04:33:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=32 failed=0 dropped=1
-t=2025-02-21T04:33:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:33:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:33:46+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,439 difficulty=19,403,449 lastMineTime=1,740,112,080 proofsSubmitted=21
 t=2025-02-21T04:33:46+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,439 difficulty=27,219,640 lastMineTime=1,740,111,720 proofsSubmitted=32
 t=2025-02-21T04:33:47+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.9s shard=0 block=7,752,439
@@ -6199,7 +6199,7 @@ t=2025-02-21T04:34:36+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T04:34:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:34:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=21 failed=1 dropped=1
 t=2025-02-21T04:34:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=33 failed=0 dropped=1
-t=2025-02-21T04:34:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:34:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:34:47+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,444 difficulty=19,403,449 lastMineTime=1,740,112,080 proofsSubmitted=21
 t=2025-02-21T04:34:47+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,444 difficulty=28,070,253 lastMineTime=1,740,112,308 proofsSubmitted=33
 t=2025-02-21T04:34:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.2s shard=1 block=7,752,444
@@ -6252,7 +6252,7 @@ t=2025-02-21T04:35:37+0000 lvl=info msg="Using snarkjs zk prover"
 t=2025-02-21T04:35:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:35:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=21 failed=1 dropped=1
 t=2025-02-21T04:35:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=34 failed=0 dropped=1
-t=2025-02-21T04:35:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:35:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:35:47+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,449 difficulty=19,403,449 lastMineTime=1,740,112,080 proofsSubmitted=21
 t=2025-02-21T04:35:47+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,449 difficulty=28,947,448 lastMineTime=1,740,112,356 proofsSubmitted=34
 t=2025-02-21T04:35:49+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.6s shard=1 block=7,752,449
@@ -6314,7 +6314,7 @@ t=2025-02-21T04:36:44+0000 lvl=info msg="Mining transaction accounting (in ether
 t=2025-02-21T04:36:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:36:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=34 failed=0 dropped=1
 t=2025-02-21T04:36:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=23 failed=1 dropped=1
-t=2025-02-21T04:36:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:36:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:36:47+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,454 difficulty=28,947,448 lastMineTime=1,740,112,356 proofsSubmitted=34
 t=2025-02-21T04:36:47+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,454 difficulty=20,635,112 lastMineTime=1,740,112,452 proofsSubmitted=23
 t=2025-02-21T04:36:49+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.4s shard=0 block=7,752,454
@@ -6340,7 +6340,7 @@ t=2025-02-21T04:37:46+0000 lvl=info msg="Mining info retrieved"                 
 t=2025-02-21T04:37:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:37:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=34 failed=0 dropped=1
 t=2025-02-21T04:37:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=23 failed=1 dropped=1
-t=2025-02-21T04:37:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:37:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:37:46+0000 lvl=info msg="Cleanup done"                          blockFinalized=2,625,524 blocksCleaned=0  blobsCleaned=0
 t=2025-02-21T04:37:46+0000 lvl=info msg="BlobDiskCache cleanup done"            took="81.815µs"
 t=2025-02-21T04:37:46+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.0s shard=0 block=7,752,459
@@ -6366,7 +6366,7 @@ t=2025-02-21T04:38:46+0000 lvl=info msg="Mining info retrieved"                 
 t=2025-02-21T04:38:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:38:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=23 failed=1 dropped=1
 t=2025-02-21T04:38:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=34 failed=0 dropped=1
-t=2025-02-21T04:38:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:38:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:38:47+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.9s shard=1 block=7,752,464
 t=2025-02-21T04:38:47+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.4s shard=0 block=7,752,464
 t=2025-02-21T04:38:58+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,465 difficulty=20,635,112 lastMineTime=1,740,112,452 proofsSubmitted=23
@@ -6390,7 +6390,7 @@ t=2025-02-21T04:39:46+0000 lvl=info msg="Mining info retrieved"                 
 t=2025-02-21T04:39:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:39:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=23 failed=1 dropped=1
 t=2025-02-21T04:39:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=34 failed=0 dropped=1
-t=2025-02-21T04:39:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:39:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:39:47+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.4s shard=1 block=7,752,469
 t=2025-02-21T04:39:47+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.3s shard=0 block=7,752,469
 t=2025-02-21T04:39:58+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,470 difficulty=20,635,112 lastMineTime=1,740,112,452 proofsSubmitted=23
@@ -6419,7 +6419,7 @@ t=2025-02-21T04:40:46+0000 lvl=info msg="Mining info retrieved"                 
 t=2025-02-21T04:40:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:40:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=23 failed=1 dropped=1
 t=2025-02-21T04:40:47+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=34 failed=0 dropped=1
-t=2025-02-21T04:40:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:40:47+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:40:47+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.0s shard=1 block=7,752,474
 t=2025-02-21T04:40:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.5s shard=0 block=7,752,474
 t=2025-02-21T04:40:48+0000 lvl=info msg="Calculated a valid hash"               shard=1 block=7,752,474 timestamp=1,740,112,764 randao=0xb00a421d5a549df9c3738d92eb0e48f5c6587b22cf86c1ccb80c11acfdb1139a nonce=391,775   hash0=0xcf965b616c73ccc979699cb7337d0e7258884c6c5a08618fc082cb52efcc06c2 hash1=0x0000004d951889e7b4e548b2479c4eccfb600e5e35420641e2c1a47c3fa9627c sampleIdxs="[63702722 39495725]"
@@ -6465,7 +6465,7 @@ t=2025-02-21T04:41:44+0000 lvl=info msg="Mining transaction accounting (in ether
 t=2025-02-21T04:41:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:41:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=23 failed=1 dropped=1
 t=2025-02-21T04:41:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=35 failed=0 dropped=1
-t=2025-02-21T04:41:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:41:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:41:47+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,479 difficulty=20,635,112 lastMineTime=1,740,112,452 proofsSubmitted=23
 t=2025-02-21T04:41:47+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,479 difficulty=29,852,055 lastMineTime=1,740,112,752 proofsSubmitted=35
 t=2025-02-21T04:41:47+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.6s shard=1 block=7,752,479
@@ -6508,7 +6508,7 @@ t=2025-02-21T04:42:37+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T04:42:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:42:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=24 failed=1 dropped=1
 t=2025-02-21T04:42:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=35 failed=0 dropped=1
-t=2025-02-21T04:42:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:42:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:42:47+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,484 difficulty=21,279,959 lastMineTime=1,740,112,764 proofsSubmitted=24
 t=2025-02-21T04:42:47+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,484 difficulty=29,852,055 lastMineTime=1,740,112,752 proofsSubmitted=35
 t=2025-02-21T04:42:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.1s shard=1 block=7,752,484
@@ -6537,7 +6537,7 @@ t=2025-02-21T04:43:36+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T04:43:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:43:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=24 failed=1 dropped=1
 t=2025-02-21T04:43:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=35 failed=0 dropped=1
-t=2025-02-21T04:43:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:43:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:43:47+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,489 difficulty=21,279,959 lastMineTime=1,740,112,764 proofsSubmitted=24
 t=2025-02-21T04:43:47+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,489 difficulty=29,852,055 lastMineTime=1,740,112,752 proofsSubmitted=35
 t=2025-02-21T04:43:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.2s shard=1 block=7,752,489
@@ -6582,7 +6582,7 @@ t=2025-02-21T04:44:37+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T04:44:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:44:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=25 failed=1 dropped=1
 t=2025-02-21T04:44:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=35 failed=0 dropped=1
-t=2025-02-21T04:44:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:44:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:44:47+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,494 difficulty=21,944,957 lastMineTime=1,740,112,908 proofsSubmitted=25
 t=2025-02-21T04:44:47+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,494 difficulty=29,852,055 lastMineTime=1,740,112,752 proofsSubmitted=35
 t=2025-02-21T04:44:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.3s shard=1 block=7,752,494
@@ -6611,7 +6611,7 @@ t=2025-02-21T04:45:38+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T04:45:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:45:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=25 failed=1 dropped=1
 t=2025-02-21T04:45:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=35 failed=0 dropped=1
-t=2025-02-21T04:45:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:45:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:45:47+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,499 difficulty=21,944,957 lastMineTime=1,740,112,908 proofsSubmitted=25
 t=2025-02-21T04:45:47+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,499 difficulty=29,852,055 lastMineTime=1,740,112,752 proofsSubmitted=35
 t=2025-02-21T04:45:49+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.7s shard=1 block=7,752,499
@@ -6654,7 +6654,7 @@ t=2025-02-21T04:46:34+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T04:46:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:46:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=25 failed=1 dropped=1
 t=2025-02-21T04:46:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=36 failed=0 dropped=1
-t=2025-02-21T04:46:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:46:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:46:58+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,504 difficulty=21,944,957 lastMineTime=1,740,112,908 proofsSubmitted=25
 t=2025-02-21T04:46:58+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,504 difficulty=30,784,931 lastMineTime=1,740,113,028 proofsSubmitted=36
 t=2025-02-21T04:46:59+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.4s shard=1 block=7,752,504
@@ -6676,7 +6676,7 @@ t=2025-02-21T04:47:46+0000 lvl=info msg="Mining info retrieved"                 
 t=2025-02-21T04:47:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:47:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=25 failed=1 dropped=1
 t=2025-02-21T04:47:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=36 failed=0 dropped=1
-t=2025-02-21T04:47:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:47:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:47:47+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.2s shard=1 block=7,752,508
 t=2025-02-21T04:47:47+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.6s shard=0 block=7,752,508
 t=2025-02-21T04:47:58+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,509 difficulty=30,784,931 lastMineTime=1,740,113,028 proofsSubmitted=36
@@ -6710,7 +6710,7 @@ t=2025-02-21T04:48:46+0000 lvl=info msg="Mining info retrieved"                 
 t=2025-02-21T04:48:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:48:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=36 failed=0 dropped=1
 t=2025-02-21T04:48:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=25 failed=1 dropped=1
-t=2025-02-21T04:48:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:48:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:48:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=2.4s shard=0 block=7,752,513
 t=2025-02-21T04:48:49+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=2.5s shard=1 block=7,752,513
 t=2025-02-21T04:48:58+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,514 difficulty=21,944,957 lastMineTime=1,740,112,908 proofsSubmitted=25
@@ -6765,7 +6765,7 @@ t=2025-02-21T04:49:36+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T04:49:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:49:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=26 failed=1 dropped=2
 t=2025-02-21T04:49:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=36 failed=0 dropped=1
-t=2025-02-21T04:49:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:49:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:49:46+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,518 difficulty=30,784,931 lastMineTime=1,740,113,028 proofsSubmitted=36
 t=2025-02-21T04:49:46+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,518 difficulty=22,630,736 lastMineTime=1,740,113,196 proofsSubmitted=26
 t=2025-02-21T04:49:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.5s shard=0 block=7,752,518
@@ -6796,7 +6796,7 @@ t=2025-02-21T04:50:37+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T04:50:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:50:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=26 failed=1 dropped=2
 t=2025-02-21T04:50:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=36 failed=0 dropped=1
-t=2025-02-21T04:50:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:50:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:50:47+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,523 difficulty=22,630,736 lastMineTime=1,740,113,196 proofsSubmitted=26
 t=2025-02-21T04:50:47+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,523 difficulty=30,784,931 lastMineTime=1,740,113,028 proofsSubmitted=36
 t=2025-02-21T04:50:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.8s shard=1 block=7,752,523
@@ -6839,7 +6839,7 @@ t=2025-02-21T04:51:36+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T04:51:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:51:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=37 failed=0 dropped=1
 t=2025-02-21T04:51:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=26 failed=1 dropped=2
-t=2025-02-21T04:51:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:51:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:51:47+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,528 difficulty=22,630,736 lastMineTime=1,740,113,196 proofsSubmitted=26
 t=2025-02-21T04:51:47+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,528 difficulty=31,746,960 lastMineTime=1,740,113,316 proofsSubmitted=37
 t=2025-02-21T04:51:49+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.6s shard=1 block=7,752,528
@@ -6863,7 +6863,7 @@ t=2025-02-21T04:52:36+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T04:52:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:52:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=26 failed=1 dropped=2
 t=2025-02-21T04:52:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=37 failed=0 dropped=1
-t=2025-02-21T04:52:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:52:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:52:47+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,533 difficulty=22,630,736 lastMineTime=1,740,113,196 proofsSubmitted=26
 t=2025-02-21T04:52:47+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,533 difficulty=31,746,960 lastMineTime=1,740,113,316 proofsSubmitted=37
 t=2025-02-21T04:52:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.2s shard=0 block=7,752,533
@@ -6892,7 +6892,7 @@ t=2025-02-21T04:53:38+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T04:53:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:53:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=26 failed=1 dropped=2
 t=2025-02-21T04:53:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=37 failed=0 dropped=1
-t=2025-02-21T04:53:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:53:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:53:47+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,538 difficulty=22,630,736 lastMineTime=1,740,113,196 proofsSubmitted=26
 t=2025-02-21T04:53:47+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,538 difficulty=31,746,960 lastMineTime=1,740,113,316 proofsSubmitted=37
 t=2025-02-21T04:53:49+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.9s shard=1 block=7,752,538
@@ -6938,7 +6938,7 @@ t=2025-02-21T04:54:46+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T04:54:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:54:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=26 failed=1 dropped=2
 t=2025-02-21T04:54:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=38 failed=0 dropped=1
-t=2025-02-21T04:54:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:54:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:54:47+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.7s shard=1 block=7,752,543
 t=2025-02-21T04:54:58+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,544 difficulty=22,630,736 lastMineTime=1,740,113,196 proofsSubmitted=26
 t=2025-02-21T04:54:58+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,544 difficulty=32,739,052 lastMineTime=1,740,113,496 proofsSubmitted=38
@@ -6960,7 +6960,7 @@ t=2025-02-21T04:55:46+0000 lvl=info msg="Mining info retrieved"                 
 t=2025-02-21T04:55:46+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,548 difficulty=32,739,052 lastMineTime=1,740,113,496 proofsSubmitted=38
 t=2025-02-21T04:55:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=26 failed=1 dropped=2
 t=2025-02-21T04:55:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=38 failed=0 dropped=1
-t=2025-02-21T04:55:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:55:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:55:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:55:47+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.0s shard=0 block=7,752,548
 t=2025-02-21T04:55:47+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.4s shard=1 block=7,752,548
@@ -6985,7 +6985,7 @@ t=2025-02-21T04:56:46+0000 lvl=info msg="Mining info retrieved"                 
 t=2025-02-21T04:56:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:56:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=26 failed=1 dropped=2
 t=2025-02-21T04:56:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=38 failed=0 dropped=1
-t=2025-02-21T04:56:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:56:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:56:46+0000 lvl=info msg="Calculated a valid hash"               shard=1 block=7,752,553 timestamp=1,740,113,724 randao=0xecfc172b12fbc046eb2e7b7f44f8da4db4e1fd64ee0516b325ab9109be3ee3f8 nonce=217,381   hash0=0xce164691510e913615d86dd5fef36f804da201ce18c533f454b24cffc73a818d hash1=0x0000003a270a97233af3f871de2660d0b72be166507a8a4c82d4e70521135ba4 sampleIdxs="[54165901 53899640]"
 t=2025-02-21T04:56:46+0000 lvl=info msg="Get data hash"                         kvIndex=13224 hash=0x0000000000000000000000000000000000000000000000000000000000000000
 t=2025-02-21T04:56:46+0000 lvl=info msg="Get data hash"                         kvIndex=13159 hash=0x0000000000000000000000000000000000000000000000000000000000000000
@@ -7036,7 +7036,7 @@ t=2025-02-21T04:57:48+0000 lvl=info msg="Mining transaction details"            
 t=2025-02-21T04:57:48+0000 lvl=info msg="Mining transaction accounting (in ether)" reward=0.003969504             cost=0.000000385 profit=0.003969120
 t=2025-02-21T04:57:48+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=38 failed=0 dropped=1
 t=2025-02-21T04:57:48+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=27 failed=1 dropped=2
-t=2025-02-21T04:57:48+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:57:48+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:57:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=2.1s shard=0 block=7,752,558
 t=2025-02-21T04:57:58+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,559 difficulty=23,337,946 lastMineTime=1,740,113,724 proofsSubmitted=27
 t=2025-02-21T04:57:58+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,559 difficulty=32,739,052 lastMineTime=1,740,113,496 proofsSubmitted=38
@@ -7057,7 +7057,7 @@ t=2025-02-21T04:58:36+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T04:58:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:58:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=27 failed=1 dropped=2
 t=2025-02-21T04:58:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=38 failed=0 dropped=1
-t=2025-02-21T04:58:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:58:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:58:46+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,563 difficulty=23,337,946 lastMineTime=1,740,113,724 proofsSubmitted=27
 t=2025-02-21T04:58:46+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,563 difficulty=32,739,052 lastMineTime=1,740,113,496 proofsSubmitted=38
 t=2025-02-21T04:58:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.4s shard=0 block=7,752,563
@@ -7081,7 +7081,7 @@ t=2025-02-21T04:59:36+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T04:59:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T04:59:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=27 failed=1 dropped=2
 t=2025-02-21T04:59:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=38 failed=0 dropped=1
-t=2025-02-21T04:59:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T04:59:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T04:59:47+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,568 difficulty=23,337,946 lastMineTime=1,740,113,724 proofsSubmitted=27
 t=2025-02-21T04:59:47+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,568 difficulty=32,739,052 lastMineTime=1,740,113,496 proofsSubmitted=38
 t=2025-02-21T04:59:49+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=2.0s shard=0 block=7,752,568
@@ -7105,7 +7105,7 @@ t=2025-02-21T05:00:37+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T05:00:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T05:00:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=27 failed=1 dropped=2
 t=2025-02-21T05:00:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=38 failed=0 dropped=1
-t=2025-02-21T05:00:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T05:00:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T05:00:47+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,573 difficulty=23,337,946 lastMineTime=1,740,113,724 proofsSubmitted=27
 t=2025-02-21T05:00:47+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,573 difficulty=32,739,052 lastMineTime=1,740,113,496 proofsSubmitted=38
 t=2025-02-21T05:00:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.6s shard=1 block=7,752,573
@@ -7129,7 +7129,7 @@ t=2025-02-21T05:01:37+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T05:01:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T05:01:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=27 failed=1 dropped=2
 t=2025-02-21T05:01:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=38 failed=0 dropped=1
-t=2025-02-21T05:01:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T05:01:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T05:01:47+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,578 difficulty=32,739,052 lastMineTime=1,740,113,496 proofsSubmitted=38
 t=2025-02-21T05:01:47+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,578 difficulty=23,337,946 lastMineTime=1,740,113,724 proofsSubmitted=27
 t=2025-02-21T05:01:49+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.8s shard=0 block=7,752,578
@@ -7155,7 +7155,7 @@ t=2025-02-21T05:02:46+0000 lvl=info msg="Mining info retrieved"                 
 t=2025-02-21T05:02:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T05:02:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=27 failed=1 dropped=2
 t=2025-02-21T05:02:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=38 failed=0 dropped=1
-t=2025-02-21T05:02:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T05:02:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T05:02:47+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.6s shard=1 block=7,752,583
 t=2025-02-21T05:02:47+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.8s shard=0 block=7,752,583
 t=2025-02-21T05:02:58+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,584 difficulty=23,337,946 lastMineTime=1,740,113,724 proofsSubmitted=27
@@ -7181,7 +7181,7 @@ t=2025-02-21T05:03:46+0000 lvl=info msg="Mining info retrieved"                 
 t=2025-02-21T05:03:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T05:03:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=27 failed=1 dropped=2
 t=2025-02-21T05:03:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=38 failed=0 dropped=1
-t=2025-02-21T05:03:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T05:03:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T05:03:47+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.9s shard=1 block=7,752,588
 t=2025-02-21T05:03:47+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.6s shard=0 block=7,752,588
 t=2025-02-21T05:03:58+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,589 difficulty=23,337,946 lastMineTime=1,740,113,724 proofsSubmitted=27
@@ -7203,7 +7203,7 @@ t=2025-02-21T05:04:35+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T05:04:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T05:04:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=27 failed=1 dropped=2
 t=2025-02-21T05:04:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=38 failed=0 dropped=1
-t=2025-02-21T05:04:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T05:04:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T05:04:46+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,593 difficulty=32,739,052 lastMineTime=1,740,113,496 proofsSubmitted=38
 t=2025-02-21T05:04:46+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,593 difficulty=23,337,946 lastMineTime=1,740,113,724 proofsSubmitted=27
 t=2025-02-21T05:04:47+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.5s shard=1 block=7,752,593
@@ -7232,7 +7232,7 @@ t=2025-02-21T05:05:37+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T05:05:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T05:05:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=27 failed=1 dropped=2
 t=2025-02-21T05:05:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=38 failed=0 dropped=1
-t=2025-02-21T05:05:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T05:05:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T05:05:47+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,598 difficulty=23,337,946 lastMineTime=1,740,113,724 proofsSubmitted=27
 t=2025-02-21T05:05:47+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,598 difficulty=32,739,052 lastMineTime=1,740,113,496 proofsSubmitted=38
 t=2025-02-21T05:05:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.0s shard=1 block=7,752,598
@@ -7276,7 +7276,7 @@ t=2025-02-21T05:06:37+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T05:06:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T05:06:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=27 failed=1 dropped=2
 t=2025-02-21T05:06:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=39 failed=0 dropped=1
-t=2025-02-21T05:06:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T05:06:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T05:06:47+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,602 difficulty=23,337,946 lastMineTime=1,740,113,724 proofsSubmitted=27
 t=2025-02-21T05:06:47+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,602 difficulty=33,762,147 lastMineTime=1,740,114,228 proofsSubmitted=39
 t=2025-02-21T05:06:49+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=2.5s shard=1 block=7,752,602
@@ -7320,7 +7320,7 @@ t=2025-02-21T05:07:46+0000 lvl=info msg="Mining info retrieved"                 
 t=2025-02-21T05:07:46+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,607 difficulty=33,762,147 lastMineTime=1,740,114,228 proofsSubmitted=39
 t=2025-02-21T05:07:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=39 failed=0 dropped=1
 t=2025-02-21T05:07:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=28 failed=1 dropped=2
-t=2025-02-21T05:07:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T05:07:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T05:07:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T05:07:47+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.1s shard=1 block=7,752,607
 t=2025-02-21T05:07:47+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.4s shard=0 block=7,752,607
@@ -7344,7 +7344,7 @@ t=2025-02-21T05:08:46+0000 lvl=info msg="Mining info retrieved"                 
 t=2025-02-21T05:08:46+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,612 difficulty=33,762,147 lastMineTime=1,740,114,228 proofsSubmitted=39
 t=2025-02-21T05:08:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=28 failed=1 dropped=2
 t=2025-02-21T05:08:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=39 failed=0 dropped=1
-t=2025-02-21T05:08:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T05:08:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T05:08:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T05:08:47+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.4s shard=1 block=7,752,612
 t=2025-02-21T05:08:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.7s shard=0 block=7,752,612
@@ -7363,7 +7363,7 @@ t=2025-02-21T05:09:36+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T05:09:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T05:09:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=28 failed=1 dropped=2
 t=2025-02-21T05:09:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=39 failed=0 dropped=1
-t=2025-02-21T05:09:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T05:09:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T05:09:46+0000 lvl=info msg="Cleanup done"                          blockFinalized=2,625,524 blocksCleaned=0  blobsCleaned=0
 t=2025-02-21T05:09:46+0000 lvl=info msg="BlobDiskCache cleanup done"            took="22.824µs"
 t=2025-02-21T05:09:58+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,616 difficulty=24,067,256 lastMineTime=1,740,114,288 proofsSubmitted=28
@@ -7385,7 +7385,7 @@ t=2025-02-21T05:10:36+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T05:10:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T05:10:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=28 failed=1 dropped=2
 t=2025-02-21T05:10:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=39 failed=0 dropped=1
-t=2025-02-21T05:10:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T05:10:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T05:10:46+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,620 difficulty=24,067,256 lastMineTime=1,740,114,288 proofsSubmitted=28
 t=2025-02-21T05:10:46+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,620 difficulty=33,762,147 lastMineTime=1,740,114,228 proofsSubmitted=39
 t=2025-02-21T05:10:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.9s shard=0 block=7,752,620
@@ -7409,7 +7409,7 @@ t=2025-02-21T05:11:36+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T05:11:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T05:11:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=28 failed=1 dropped=2
 t=2025-02-21T05:11:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=39 failed=0 dropped=1
-t=2025-02-21T05:11:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T05:11:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T05:11:46+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,625 difficulty=33,762,147 lastMineTime=1,740,114,228 proofsSubmitted=39
 t=2025-02-21T05:11:46+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,625 difficulty=24,067,256 lastMineTime=1,740,114,288 proofsSubmitted=28
 t=2025-02-21T05:11:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.6s shard=1 block=7,752,625
@@ -7443,7 +7443,7 @@ t=2025-02-21T05:12:37+0000 lvl=info msg="Using snarkjs zk prover"
 t=2025-02-21T05:12:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T05:12:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=28 failed=1 dropped=2
 t=2025-02-21T05:12:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=39 failed=0 dropped=1
-t=2025-02-21T05:12:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T05:12:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T05:12:47+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,630 difficulty=24,067,256 lastMineTime=1,740,114,288 proofsSubmitted=28
 t=2025-02-21T05:12:47+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,630 difficulty=33,762,147 lastMineTime=1,740,114,228 proofsSubmitted=39
 t=2025-02-21T05:12:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.2s shard=1 block=7,752,630
@@ -7488,7 +7488,7 @@ t=2025-02-21T05:13:46+0000 lvl=info msg="Mining info retrieved"                 
 t=2025-02-21T05:13:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T05:13:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=28 failed=1 dropped=2
 t=2025-02-21T05:13:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=40 failed=0 dropped=1
-t=2025-02-21T05:13:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T05:13:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T05:13:47+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.6s shard=0 block=7,752,635
 t=2025-02-21T05:13:47+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.8s shard=1 block=7,752,635
 t=2025-02-21T05:13:51+0000 lvl=info msg="Generate zk proof done"                sampleIdx="[285 1635]"  timeUsed(s)=73.452
@@ -7531,7 +7531,7 @@ t=2025-02-21T05:14:46+0000 lvl=info msg="Mining info retrieved"                 
 t=2025-02-21T05:14:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T05:14:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=29 failed=1 dropped=2
 t=2025-02-21T05:14:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=40 failed=0 dropped=1
-t=2025-02-21T05:14:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T05:14:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T05:14:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.8s shard=0 block=7,752,640
 t=2025-02-21T05:14:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.9s shard=1 block=7,752,640
 t=2025-02-21T05:14:58+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,641 difficulty=24,819,357 lastMineTime=1,740,114,672 proofsSubmitted=29
@@ -7553,7 +7553,7 @@ t=2025-02-21T05:15:36+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T05:15:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T05:15:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=29 failed=1 dropped=2
 t=2025-02-21T05:15:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=40 failed=0 dropped=1
-t=2025-02-21T05:15:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T05:15:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T05:15:46+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,645 difficulty=24,819,357 lastMineTime=1,740,114,672 proofsSubmitted=29
 t=2025-02-21T05:15:46+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,645 difficulty=34,817,214 lastMineTime=1,740,114,648 proofsSubmitted=40
 t=2025-02-21T05:15:47+0000 lvl=info msg="Calculated a valid hash"               shard=1 block=7,752,645 timestamp=1,740,114,864 randao=0xe047f7f19e2b99ea19521c4c83d7dd9d1de6f66fbed6a210c33acfb9ee506d8a nonce=378,844   hash0=0x3e3273f8e1be54e10c3642183085ad933afd2a04c0e5791d6f8a8d4d1078c84a hash1=0x00000021d340ddbf46ac2ef0e68db8fe1d1bf986790cb57b907e9756a6d99b7b sampleIdxs="[41470026 52639316]"
@@ -7584,7 +7584,7 @@ t=2025-02-21T05:16:37+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T05:16:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T05:16:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=29 failed=1 dropped=2
 t=2025-02-21T05:16:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=40 failed=0 dropped=1
-t=2025-02-21T05:16:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T05:16:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T05:16:47+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,650 difficulty=24,819,357 lastMineTime=1,740,114,672 proofsSubmitted=29
 t=2025-02-21T05:16:47+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,650 difficulty=34,817,214 lastMineTime=1,740,114,648 proofsSubmitted=40
 t=2025-02-21T05:16:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.6s shard=1 block=7,752,650
@@ -7627,7 +7627,7 @@ t=2025-02-21T05:17:37+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T05:17:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T05:17:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=40 failed=0 dropped=1
 t=2025-02-21T05:17:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=30 failed=1 dropped=2
-t=2025-02-21T05:17:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T05:17:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T05:17:47+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,655 difficulty=25,594,961 lastMineTime=1,740,114,864 proofsSubmitted=30
 t=2025-02-21T05:17:47+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,655 difficulty=34,817,214 lastMineTime=1,740,114,648 proofsSubmitted=40
 t=2025-02-21T05:17:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.6s shard=1 block=7,752,655
@@ -7651,7 +7651,7 @@ t=2025-02-21T05:18:37+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T05:18:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T05:18:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=30 failed=1 dropped=2
 t=2025-02-21T05:18:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=40 failed=0 dropped=1
-t=2025-02-21T05:18:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T05:18:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T05:18:47+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,660 difficulty=25,594,961 lastMineTime=1,740,114,864 proofsSubmitted=30
 t=2025-02-21T05:18:47+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,660 difficulty=34,817,214 lastMineTime=1,740,114,648 proofsSubmitted=40
 t=2025-02-21T05:18:48+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.2s shard=0 block=7,752,660
@@ -7675,7 +7675,7 @@ t=2025-02-21T05:19:39+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T05:19:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T05:19:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=40 failed=0 dropped=1
 t=2025-02-21T05:19:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=30 failed=1 dropped=2
-t=2025-02-21T05:19:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T05:19:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T05:19:49+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,665 difficulty=25,594,961 lastMineTime=1,740,114,864 proofsSubmitted=30
 t=2025-02-21T05:19:49+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,665 difficulty=34,817,214 lastMineTime=1,740,114,648 proofsSubmitted=40
 t=2025-02-21T05:19:51+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.8s shard=1 block=7,752,665
@@ -7704,7 +7704,7 @@ t=2025-02-21T05:20:37+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T05:20:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T05:20:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=30 failed=1 dropped=2
 t=2025-02-21T05:20:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=40 failed=0 dropped=1
-t=2025-02-21T05:20:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T05:20:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T05:20:48+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,670 difficulty=25,594,961 lastMineTime=1,740,114,864 proofsSubmitted=30
 t=2025-02-21T05:20:48+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,670 difficulty=34,817,214 lastMineTime=1,740,114,648 proofsSubmitted=40
 t=2025-02-21T05:20:49+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.0s shard=1 block=7,752,670
@@ -7747,7 +7747,7 @@ t=2025-02-21T05:21:38+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T05:21:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T05:21:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=30 failed=1 dropped=2
 t=2025-02-21T05:21:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=41 failed=0 dropped=1
-t=2025-02-21T05:21:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T05:21:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T05:22:00+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,675 difficulty=25,594,961 lastMineTime=1,740,114,864 proofsSubmitted=30
 t=2025-02-21T05:22:00+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,675 difficulty=35,905,251 lastMineTime=1,740,115,128 proofsSubmitted=41
 t=2025-02-21T05:22:01+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.0s shard=1 block=7,752,675
@@ -7769,7 +7769,7 @@ t=2025-02-21T05:22:38+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T05:22:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T05:22:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=30 failed=1 dropped=2
 t=2025-02-21T05:22:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=41 failed=0 dropped=1
-t=2025-02-21T05:22:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T05:22:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T05:22:48+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,679 difficulty=25,594,961 lastMineTime=1,740,114,864 proofsSubmitted=30
 t=2025-02-21T05:22:48+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,679 difficulty=35,905,251 lastMineTime=1,740,115,128 proofsSubmitted=41
 t=2025-02-21T05:22:50+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.3s shard=1 block=7,752,679
@@ -7793,7 +7793,7 @@ t=2025-02-21T05:23:39+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T05:23:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T05:23:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=30 failed=1 dropped=2
 t=2025-02-21T05:23:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=41 failed=0 dropped=1
-t=2025-02-21T05:23:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T05:23:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T05:23:49+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,684 difficulty=25,594,961 lastMineTime=1,740,114,864 proofsSubmitted=30
 t=2025-02-21T05:23:49+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,684 difficulty=35,905,251 lastMineTime=1,740,115,128 proofsSubmitted=41
 t=2025-02-21T05:23:50+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.5s shard=1 block=7,752,684
@@ -7822,7 +7822,7 @@ t=2025-02-21T05:24:39+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T05:24:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T05:24:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=30 failed=1 dropped=2
 t=2025-02-21T05:24:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=41 failed=0 dropped=1
-t=2025-02-21T05:24:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T05:24:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T05:24:49+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,689 difficulty=25,594,961 lastMineTime=1,740,114,864 proofsSubmitted=30
 t=2025-02-21T05:24:49+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,689 difficulty=35,905,251 lastMineTime=1,740,115,128 proofsSubmitted=41
 t=2025-02-21T05:24:51+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.5s shard=0 block=7,752,689
@@ -7865,7 +7865,7 @@ t=2025-02-21T05:25:37+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T05:25:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T05:25:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=31 failed=1 dropped=2
 t=2025-02-21T05:25:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=41 failed=0 dropped=1
-t=2025-02-21T05:25:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T05:25:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T05:25:48+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,694 difficulty=26,394,803 lastMineTime=1,740,115,368 proofsSubmitted=31
 t=2025-02-21T05:25:48+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,694 difficulty=35,905,251 lastMineTime=1,740,115,128 proofsSubmitted=41
 t=2025-02-21T05:25:48+0000 lvl=info msg="Calculated a valid hash"               shard=1 block=7,752,694 timestamp=1,740,115,464 randao=0x7eda1694968bd1c6ee1a0acd86cc86beed7bedabb758a96086a8be60e3ebf73d nonce=934,270   hash0=0x9893a53cae737dcc9d3d2b93a7d432bfde292c9819ce5dd6129a9722eb4cc0ba hash1=0x00000062c87e7f691a85c74a24270acd5a804f61392a2027b6a1281077225106 sampleIdxs="[55361722 63003889]"
@@ -7904,7 +7904,7 @@ t=2025-02-21T05:26:39+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T05:26:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T05:26:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=41 failed=0 dropped=1
 t=2025-02-21T05:26:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=31 failed=1 dropped=2
-t=2025-02-21T05:26:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T05:26:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T05:26:48+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,699 difficulty=26,394,803 lastMineTime=1,740,115,368 proofsSubmitted=31
 t=2025-02-21T05:26:48+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,699 difficulty=35,905,251 lastMineTime=1,740,115,128 proofsSubmitted=41
 t=2025-02-21T05:26:50+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.6s shard=1 block=7,752,699
@@ -7990,7 +7990,7 @@ t=2025-02-21T05:27:46+0000 lvl=info msg="Mining transaction accounting (in ether
 t=2025-02-21T05:27:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T05:27:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=33 failed=1 dropped=2
 t=2025-02-21T05:27:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=42 failed=0 dropped=1
-t=2025-02-21T05:27:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T05:27:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T05:27:49+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,704 difficulty=28,070,253 lastMineTime=1,740,115,500 proofsSubmitted=33
 t=2025-02-21T05:27:49+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,704 difficulty=37,027,290 lastMineTime=1,740,115,464 proofsSubmitted=42
 t=2025-02-21T05:27:51+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.7s shard=1 block=7,752,704
@@ -8033,7 +8033,7 @@ t=2025-02-21T05:28:39+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T05:28:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T05:28:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=43 failed=0 dropped=1
 t=2025-02-21T05:28:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=33 failed=1 dropped=2
-t=2025-02-21T05:28:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T05:28:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T05:28:49+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,709 difficulty=28,070,253 lastMineTime=1,740,115,500 proofsSubmitted=33
 t=2025-02-21T05:28:49+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,709 difficulty=38,184,392 lastMineTime=1,740,115,548 proofsSubmitted=43
 t=2025-02-21T05:28:51+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.8s shard=1 block=7,752,709
@@ -8058,7 +8058,7 @@ t=2025-02-21T05:29:37+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T05:29:38+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.9s shard=1 block=7,752,713
 t=2025-02-21T05:29:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=33 failed=1 dropped=2
 t=2025-02-21T05:29:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=43 failed=0 dropped=1
-t=2025-02-21T05:29:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T05:29:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T05:29:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T05:29:48+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,714 difficulty=28,070,253 lastMineTime=1,740,115,500 proofsSubmitted=33
 t=2025-02-21T05:29:48+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,714 difficulty=38,184,392 lastMineTime=1,740,115,548 proofsSubmitted=43
@@ -8083,7 +8083,7 @@ t=2025-02-21T05:30:38+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T05:30:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T05:30:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=33 failed=1 dropped=2
 t=2025-02-21T05:30:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=43 failed=0 dropped=1
-t=2025-02-21T05:30:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T05:30:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T05:30:48+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,719 difficulty=28,070,253 lastMineTime=1,740,115,500 proofsSubmitted=33
 t=2025-02-21T05:30:48+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,719 difficulty=38,184,392 lastMineTime=1,740,115,548 proofsSubmitted=43
 t=2025-02-21T05:30:50+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=2.0s shard=1 block=7,752,719
@@ -8107,7 +8107,7 @@ t=2025-02-21T05:31:38+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T05:31:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T05:31:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=33 failed=1 dropped=2
 t=2025-02-21T05:31:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=43 failed=0 dropped=1
-t=2025-02-21T05:31:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T05:31:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T05:31:48+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,724 difficulty=28,070,253 lastMineTime=1,740,115,500 proofsSubmitted=33
 t=2025-02-21T05:31:48+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,724 difficulty=38,184,392 lastMineTime=1,740,115,548 proofsSubmitted=43
 t=2025-02-21T05:31:49+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.1s shard=1 block=7,752,724
@@ -8131,7 +8131,7 @@ t=2025-02-21T05:32:38+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T05:32:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T05:32:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=33 failed=1 dropped=2
 t=2025-02-21T05:32:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=43 failed=0 dropped=1
-t=2025-02-21T05:32:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T05:32:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T05:32:48+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,729 difficulty=28,070,253 lastMineTime=1,740,115,500 proofsSubmitted=33
 t=2025-02-21T05:32:48+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,729 difficulty=38,184,392 lastMineTime=1,740,115,548 proofsSubmitted=43
 t=2025-02-21T05:32:49+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.8s shard=0 block=7,752,729
@@ -8155,7 +8155,7 @@ t=2025-02-21T05:33:39+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T05:33:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T05:33:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=33 failed=1 dropped=2
 t=2025-02-21T05:33:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=43 failed=0 dropped=1
-t=2025-02-21T05:33:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T05:33:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T05:33:49+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,734 difficulty=28,070,253 lastMineTime=1,740,115,500 proofsSubmitted=33
 t=2025-02-21T05:33:49+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,734 difficulty=38,184,392 lastMineTime=1,740,115,548 proofsSubmitted=43
 t=2025-02-21T05:33:51+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.9s shard=0 block=7,752,734
@@ -8175,7 +8175,7 @@ t=2025-02-21T05:34:39+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T05:34:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T05:34:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=33 failed=1 dropped=2
 t=2025-02-21T05:34:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=43 failed=0 dropped=1
-t=2025-02-21T05:34:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T05:34:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T05:34:49+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,738 difficulty=28,070,253 lastMineTime=1,740,115,500 proofsSubmitted=33
 t=2025-02-21T05:34:49+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,738 difficulty=38,184,392 lastMineTime=1,740,115,548 proofsSubmitted=43
 t=2025-02-21T05:34:51+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=2.1s shard=1 block=7,752,738
@@ -8206,7 +8206,7 @@ t=2025-02-21T05:35:38+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T05:35:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T05:35:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=33 failed=1 dropped=2
 t=2025-02-21T05:35:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=43 failed=0 dropped=1
-t=2025-02-21T05:35:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T05:35:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T05:35:48+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,743 difficulty=28,070,253 lastMineTime=1,740,115,500 proofsSubmitted=33
 t=2025-02-21T05:35:48+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,743 difficulty=38,184,392 lastMineTime=1,740,115,548 proofsSubmitted=43
 t=2025-02-21T05:35:50+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=2.1s shard=0 block=7,752,743
@@ -8249,7 +8249,7 @@ t=2025-02-21T05:36:38+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T05:36:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T05:36:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=34 failed=1 dropped=2
 t=2025-02-21T05:36:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=43 failed=0 dropped=1
-t=2025-02-21T05:36:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T05:36:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T05:36:48+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,748 difficulty=28,947,448 lastMineTime=1,740,116,016 proofsSubmitted=34
 t=2025-02-21T05:36:48+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,748 difficulty=38,184,392 lastMineTime=1,740,115,548 proofsSubmitted=43
 t=2025-02-21T05:36:49+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=0.8s shard=0 block=7,752,748
@@ -8269,7 +8269,7 @@ t=2025-02-21T05:37:38+0000 lvl=info msg="Sampling done with all nonces"         
 t=2025-02-21T05:37:46+0000 lvl=info msg="P2P Summary"                           activePeers=1 inbound=1 outbound=0
 t=2025-02-21T05:37:46+0000 lvl=info msg="Mining stats"                          shard=1 succeeded=34 failed=1 dropped=2
 t=2025-02-21T05:37:46+0000 lvl=info msg="Mining stats"                          shard=0 succeeded=43 failed=0 dropped=1
-t=2025-02-21T05:37:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x7f2a3c87"
+t=2025-02-21T05:37:46+0000 lvl=eror msg="Mining stats"                          lastError="shard 1: block 7752130: failed to estimate gas: execution reverted: ErrorData: 0x3795c416: StorageContract_MinedTsTooSmall()"
 t=2025-02-21T05:37:48+0000 lvl=info msg="Mining info retrieved"                 shard=1 block=7,752,752 difficulty=28,947,448 lastMineTime=1,740,116,016 proofsSubmitted=34
 t=2025-02-21T05:37:48+0000 lvl=info msg="Mining info retrieved"                 shard=0 block=7,752,752 difficulty=38,184,392 lastMineTime=1,740,115,548 proofsSubmitted=43
 t=2025-02-21T05:37:49+0000 lvl=info msg="Sampling done with all nonces"         samplingTime=1.1s shard=1 block=7,752,752

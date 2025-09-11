@@ -18,7 +18,7 @@
 
 To config a bootnode, we need to find the ENR of the node via
 
-./es-node --network $network --p2p.listen.udp 30305 --p2p.advertise.ip 192.168.1.2
+./es-node --p2p.listen.udp 30305 --p2p.advertise.ip 192.168.1.2
 
 and es-node should output an ENR record like enr:-....
 
@@ -29,7 +29,7 @@ And then replace the ENR record in ethstorage/p2p/config.go
 To connect the node on the same machine, we need to make sure the TCP port is different
 --p2p.listen.tcp ...
 
-# Test Using Simple Sync (--network dev)
+# Test Using Simple Sync
 
 1. Prepare storage data for source and destination nodes
 
@@ -42,17 +42,17 @@ On destination node
 
 2. Prepare source node
 
-./es-node --network dev --p2p.listen.udp 30305 --p2p.advertise.ip 192.168.1.2 --storage.files storage.dat
+./es-node --p2p.listen.udp 30305 --p2p.advertise.ip 192.168.1.2 --storage.files storage.dat
 
 3. Prepare destination node
 
-../es-node --network dev --p2p.listen.tcp 9223 --p2p.advertise.ip 192.168.1.2 --p2p.test.simple-sync.end 16 --storage.files storage.dat
+../es-node --p2p.listen.tcp 9223 --p2p.advertise.ip 192.168.1.2 --p2p.test.simple-sync.end 16 --storage.files storage.dat
 
 where --p2p.test.simple-sync.end 16 will trigger a sync from index 0 to 16 (exclusive) when the node starts.
 
 # Test Downloader
 
-1. Start the downloader: `./es-node --network dev --l1.rpc http://65.108.236.27:8545 --l1.beacon http://65.108.236.27:5052 --storage.files storage.dat --storage.l1contract 0xA41e05C4a3Ed4E2c5971bB952d9753508d4dfFB4 --datadir ./database --download.start -2 --download.dump ../es-utils/compare`. We are using devnet6 for testing, and will update the RPC endpoint when the new version is ready.
+1. Start the downloader: `./es-node --l1.rpc http://65.108.236.27:8545 --l1.beacon http://65.108.236.27:5052 --storage.files storage.dat --storage.l1contract 0xA41e05C4a3Ed4E2c5971bB952d9753508d4dfFB4 --datadir ./database --download.start -2 --download.dump ../es-utils/compare`. We are using devnet6 for testing, and will update the RPC endpoint when the new version is ready.
 2. Upload those blob files: `/es-utils blob_upload --private_key xxx`
 3. es-node will download the uploaded blobs to ./es-utils/compare/ which is specified by --download.dump
 4. Compare the uploaded and downloaded files to check if they are the same: `./test_download.sh`.
