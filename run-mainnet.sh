@@ -27,6 +27,6 @@ fi
 
 ./run.sh \
   --chain_id 333 \
-  --storage.l1contract <> \
-  --p2p.bootnodes <> \
+  --storage.l1contract 0xf0193d6E8fc186e77b6E63af4151db07524f6a7A \
+  --p2p.bootnodes enr:-Lq4QLCzFy9BF47Y4OLjTvuG3r1moav7GWddahRASXja7WOCJlD0zo-I8mIzv1zfhW6toGmMvgPSMdwzO9VDaPZ18mSGAZky3V-fimV0aHN0b3JhZ2XdggFNgNjXlPAZPW6PwYbne25jr0FR2wdST2p6wYCCaWSCdjSCaXCEF1hGrolzZWNwMjU2azGhAuy54NtDdUk7YvhyNJMwCNNR_h1QaXcoB2ewiJ8DocwFg3RjcIIkCoN1ZHCCdmI \
   "$@"
