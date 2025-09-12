@@ -3,6 +3,16 @@
     "alert-type":"ESLastMinedBlockChecker",
     "email-to": "molaokp@gmail.com,lundeng@quarkchain.org,qzhu@quarkchain.org,pingke@quarkchain.org,limingpeng@quarkchain.org",
     "params":{
+      "name":"EthStorage Mainnet Last Mined Block Alert",
+      "contract":"0xf0193d6E8fc186e77b6E63af4151db07524f6a7A",
+      "rpc":"<ETH_RPC>",
+      "threshold-in-hours": "24"
+    }
+  },
+  {
+    "alert-type":"ESLastMinedBlockChecker",
+    "email-to": "molaokp@gmail.com,lundeng@quarkchain.org,qzhu@quarkchain.org,pingke@quarkchain.org,limingpeng@quarkchain.org",
+    "params":{
       "name":"EthStorage Testnet Last Mined Block Alert",
       "contract":"0xAb3d380A268d088BA21Eb313c1C23F3BEC5cfe93",
       "rpc":"http://65.108.230.142:8545",
