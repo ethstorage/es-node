@@ -147,7 +147,7 @@ func weiToEther(wei *big.Int) *big.Float {
 
 func fmtEth(wei *big.Int) string {
 	f := weiToEther(wei)
-	// drop the tailing zeros
+	// trim the tailing zeros
 	s := f.Text('f', 18)
 	s = strings.TrimRight(s, "0")
 	s = strings.TrimRight(s, ".")

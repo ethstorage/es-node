@@ -263,7 +263,7 @@ func (w *worker) newWorkLoop() {
 				msg += fmt.Sprintf("Contract: %s\r\n", w.storageMgr.ContractAddress().Hex())
 				msg += fmt.Sprintf("Miner: %s\r\n", miner.Hex())
 				msg += fmt.Sprintf("Threads per shard: %d\r\n", w.config.ThreadsPerShard)
-				msg += fmt.Sprintf("Minimum profit: %s\r\n", w.config.MinimumProfit)
+				msg += fmt.Sprintf("Minimum profit: %s wei\r\n", w.config.MinimumProfit)
 				msg += fmt.Sprintf("Maximum gas price: %s gwei\r\n", fmtGwei(w.config.MaxGasPrice))
 				go func() {
 					email.SendEmail(emailSubject, msg, w.config.EmailConfig, w.lg)
