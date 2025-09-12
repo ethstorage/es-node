@@ -42,6 +42,7 @@ type Config struct {
 	SignerFnFactory  signer.SignerFactory
 	SignerAddr       common.Address
 	MinimumProfit    *big.Int
+	MaxGasPrice      *big.Int
 
 	// for proof submission notifications
 	EmailEnabled bool
