@@ -29,8 +29,6 @@ Before proceeding, ensure your environment meets the following requirements:
 - A [deployed BatchInbox contract](https://sepolia.etherscan.io/address/0x3fe221a447f350551ff208951098517252018007) on Sepolia L1
 - An OP Stack L2 that utilizes EIP-4844 blobs to submit batches to the BatchInbox
 
-It is assumed that the above services and components are functioning properly.
-
 ## Running op-geth
 
 ### Building op-geth
@@ -45,10 +43,9 @@ curl -LO https://raw.githubusercontent.com/QuarkChain/pm/main/L2/assets/gamma_te
 ./build/bin/geth init --datadir=datadir --state.scheme hash gamma_testnet_genesis.json
 openssl rand -hex 32 > jwt.txt
 ```
-
 ### Starting op-geth
 
-Start the client with the following command:
+Start the op-geth with the following command:
 
 ```bash
 ./build/bin/geth \
@@ -63,15 +60,14 @@ Start the client with the following command:
   --ws.port=8546 \
   --ws.origins="*" \
   --ws.api=eth,txpool,net \
-  --syncmode=full \
-  --gcmode=archive \
-  --nodiscover \
-  --maxpeers=0 \
   --networkid=110011 \
   --authrpc.vhosts="*" \
   --authrpc.port=8551 \
   --authrpc.jwtsecret=./jwt.txt \
-  --rollup.disabletxpoolgossip=true
+  --rollup.disabletxpoolgossip \
+  --rollup.sequencerhttp=http://65.109.69.90:8545 \
+  --rollup.enabletxpooladmission \
+  --bootnodes enode://7c9422be3825257ac80f89968e7e6dd3f64608199640ae6cea07b59d2de57642568908974ed4327f092728a64c7bdc04130ebbeaa607b6a1b95d0d25e9c5330b@65.109.69.90:30303 2>&1 | tee -a geth.log -i
 ```
 
 ## Running op-node
@@ -93,11 +89,52 @@ mkdir safedb
 ### Starting the op-node
 
 To start the op-node, execute the following command:
-
 ```bash
 
 export L1_RPC_URL=http://65.108.230.142:8545
 export L1_BEACON_URL=http://65.108.230.142:3500
+
+./bin/op-node --l2=http://localhost:8551 \
+  --l2.jwt-secret=./jwt.txt \
+  --verifier.l1-confs=4 \
+  --rollup.config=./gamma_testnet_rollup.json \
+  --rpc.port=8547 \
+  --rpc.enable-admin \
+  --p2p.static=/ip4/65.109.69.90/tcp/9003/p2p/16Uiu2HAmLiwieHqxRjjvPJtn5hSowjnkwRPExZQyNJgUEn8ZjBDj \
+  --p2p.listen.ip=0.0.0.0 \
+  --p2p.listen.tcp=9003 \
+  --p2p.listen.udp=9003 \
+  --p2p.no-discovery \
+  --p2p.sync.onlyreqtostatic \
+  --l1=$L1_RPC_URL \
+  --l1.rpckind=basic \
+  --l1.beacon=$L1_BEACON_URL \
+  --l1.cache-size=0 \
+  --safedb.path=safedb \
+  --syncmode=execution-layer | tee -a node.log -i
+```
+
+## Start a proxy to Beacon API
+
+The following commands start a proxy to Beacon API with a shorter blob retention period:
+
+```
+export L1_BEACON_URL=http://65.108.230.142:3500
+
+git clone https://github.com/ethstorage/beacon-api-wrapper.git
+cd beacon-api-wrapper
+go run cmd/main.go -b $L1_BEACON_URL -p 3602 -r 3
+```
+If a blob request is within the latest 3 epochs (~20 minutes), the proxy will retrieve blobs from the Beacon URL. For requests older than that, it will return an empty list.
+
+## Test sync from archiver
+
+Stop op-node and restart it with the following commands:
+
+```bash
+export L1_RPC_URL=http://65.108.230.142:8545
+export L1_BEACON_MOCK=http://localhost:3602
+export L1_ARCHIVE_API=https://archive.testnet.ethstorage.io:9635
 
 ./bin/op-node \
   --l2=http://localhost:8551 \
@@ -108,9 +145,9 @@ export L1_BEACON_URL=http://65.108.230.142:3500
   --p2p.disable \
   --rpc.enable-admin \
   --l1=$L1_RPC_URL \
-  --l1.beacon=$L1_BEACON_URL \
   --l1.rpckind=basic \
-  --l1.beacon-archiver=http://65.109.50.145:9645 \
+  --l1.beacon=$L1_BEACON_MOCK \
+  --l1.beacon-archiver=$L1_ARCHIVE_API \
   --safedb.path=safedb | tee -a node.log -i
 ```
 
