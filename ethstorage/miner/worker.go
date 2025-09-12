@@ -34,12 +34,20 @@ const (
 	txStatusFailure = 0
 	txStatusSuccess = 1
 	txStatusTimeout = 2
+	txStatusDropped = 3
 )
+
+type errDropped struct {
+	reason string
+}
+
+func (e errDropped) Error() string {
+	return e.reason
+}
 
 var (
 	minedEventSig       = crypto.Keccak256Hash([]byte("MinedBlock(uint256,uint256,uint256,uint256,address,uint256)"))
 	errCh               = make(chan miningError, 10)
-	errDropped          = errors.New("dropped: not enough profit")
 	SubmissionStatusKey = []byte("SubmissionStatusKey")
 	MiningStatusKey     = []byte("MiningStatusKey")
 )
@@ -255,7 +263,8 @@ func (w *worker) newWorkLoop() {
 				msg += fmt.Sprintf("Contract: %s\r\n", w.storageMgr.ContractAddress().Hex())
 				msg += fmt.Sprintf("Miner: %s\r\n", miner.Hex())
 				msg += fmt.Sprintf("Threads per shard: %d\r\n", w.config.ThreadsPerShard)
-				msg += fmt.Sprintf("Minimum profit: %s\r\n", w.config.MinimumProfit)
+				msg += fmt.Sprintf("Minimum profit: %s wei\r\n", w.config.MinimumProfit)
+				msg += fmt.Sprintf("Maximum gas price: %s gwei\r\n", fmtGwei(w.config.MaxGasPrice))
 				go func() {
 					email.SendEmail(emailSubject, msg, w.config.EmailConfig, w.lg)
 				}()
@@ -427,8 +436,13 @@ func (w *worker) resultLoop() {
 			)
 			if s, ok := w.submissionStates[result.startShardId]; ok {
 				if err != nil {
-					if err == errDropped {
+					var dropErr errDropped
+					if errors.As(err, &dropErr) {
 						s.Dropped++
+						w.lg.Warn("Mining transaction dropped",
+							"shard", result.startShardId,
+							"block", result.blockNumber,
+							"reason", dropErr.reason)
 					} else {
 						s.Failed++
 						errorCache = append(errorCache, miningError{result.startShardId, result.blockNumber, err})
@@ -494,9 +508,11 @@ func (w *worker) reportMiningResult(rs *result, txHash common.Hash, err error) {
 	)
 
 	var status int
-	if err == errDropped {
-		msg += "However, it was dropped due to insufficient profit."
-		w.lg.Warn("Mining transaction dropped due to low profit.")
+	var dropErr errDropped
+	if errors.As(err, &dropErr) {
+		msg += fmt.Sprintf("However, it was dropped due to %s", dropErr.Error())
+		w.lg.Warn("Mining transaction dropped", "reason", dropErr.Error())
+		status = txStatusDropped
 	} else if err != nil {
 		msg += fmt.Sprintf("However, the mining transaction could not be submitted due to %s", err.Error())
 		w.lg.Error("Mining transaction failed", "error", err)
@@ -508,18 +524,21 @@ func (w *worker) reportMiningResult(rs *result, txHash common.Hash, err error) {
 		w.lg.Info("Mining transaction submitted", "txHash", txHash)
 		status = w.checkTxStatusRepeatedly(txHash, &msg)
 	}
-	msg += "\r\n"
+	msg += "\r\n\r\n"
 	msg += fmt.Sprintf("Chain: %d\r\n", w.config.ChainID)
 	msg += fmt.Sprintf("Contract: %s\r\n", w.storageMgr.ContractAddress().Hex())
 	msg += fmt.Sprintf("Miner: %s\r\n", rs.miner.Hex())
 
 	if w.config.EmailEnabled {
 		emailSubject := "EthStorage Proof Submission: "
-		if status == txStatusSuccess {
+		switch status {
+		case txStatusSuccess:
 			emailSubject += "✅ Success"
-		} else if status == txStatusFailure {
+		case txStatusFailure:
 			emailSubject += "❌ Failure"
-		} else {
+		case txStatusDropped:
+			emailSubject += "⚠️ Dropped"
+		default:
 			emailSubject += "⚠️ Timeout"
 		}
 		email.SendEmail(emailSubject, msg, w.config.EmailConfig, w.lg)

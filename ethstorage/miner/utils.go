@@ -147,5 +147,24 @@ func weiToEther(wei *big.Int) *big.Float {
 
 func fmtEth(wei *big.Int) string {
 	f := weiToEther(wei)
-	return fmt.Sprintf("%.9f", f)
+	// trim the tailing zeros
+	s := f.Text('f', 18)
+	s = strings.TrimRight(s, "0")
+	s = strings.TrimRight(s, ".")
+	if s == "" {
+		s = "0"
+	}
+	return s
+}
+
+func fmtGwei(gasPrice *big.Int) string {
+	// if gasPrice lower than 1 Gwei, show in decimal
+	if gasPrice.Cmp(big.NewInt(params.GWei)) < 0 {
+		f := new(big.Float).SetPrec(236)
+		f.SetMode(big.ToNearestEven)
+		f.Quo(f.SetInt(gasPrice), big.NewFloat(params.GWei))
+		return fmt.Sprintf("%.9f", f)
+	}
+	// otherwise show in integer
+	return fmt.Sprintf("%d", new(big.Int).Div(gasPrice, big.NewInt(params.GWei)))
 }

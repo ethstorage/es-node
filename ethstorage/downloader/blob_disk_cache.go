@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
-	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
@@ -155,10 +154,6 @@ func (c *BlobDiskCache) GetSampleData(idx, sampleIdx uint64) []byte {
 }
 
 func (c *BlobDiskCache) Cleanup(finalized uint64) {
-	start := time.Now()
-	defer func() {
-		c.lg.Info("BlobDiskCache cleanup done", "took", time.Since(start))
-	}()
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -178,7 +173,7 @@ func (c *BlobDiskCache) Cleanup(finalized uint64) {
 			blocksCleaned++
 		}
 	}
-	c.lg.Info("Cleanup done", "blockFinalized", finalized, "blocksCleaned", blocksCleaned, "blobsCleaned", blobsCleaned)
+	c.lg.Debug("Downloader cache cleaned up", "blockFinalized", finalized, "blocksCleaned", blocksCleaned, "blobsCleaned", blobsCleaned)
 }
 
 func (c *BlobDiskCache) Close() error {

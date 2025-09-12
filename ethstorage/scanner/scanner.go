@@ -111,13 +111,7 @@ func (s *Scanner) start() {
 			select {
 			case <-reportTicker.C:
 				if statsUpdated { // Wait for stats updated for the first time
-					s.lg.Info("Scanner stats",
-						"localKvs", sts.localKvs,
-						"localKvsCount", sts.total,
-						"mismatched", sts.mismatched.String(),
-						"fixed", sts.fixed.String(),
-						"failed", sts.failed.String(),
-					)
+					s.logStats(sts)
 					for _, e := range errCache {
 						s.lg.Error("Scanner error happened earlier", "kvIndex", e.kvIndex, "error", e.err)
 					}
@@ -159,6 +153,27 @@ func (s *Scanner) start() {
 	}()
 }
 
+func (s *Scanner) logStats(sts *statsSum) {
+
+	logFields := []any{
+		"localKvs", sts.localKvs,
+		"localKvsCount", sts.total,
+	}
+
+	if len(sts.mismatched) > 0 {
+		logFields = append(logFields, "mismatched", sts.mismatched.String())
+	}
+	if len(sts.fixed) > 0 {
+		logFields = append(logFields, "fixed", sts.fixed.String())
+	}
+	if len(sts.failed) > 0 {
+		logFields = append(logFields, "failed", sts.failed.String())
+	}
+
+	s.lg.Info("Scanner stats", logFields...)
+
+}
+
 func (s *Scanner) sendError(kvIndex uint64, err error) {
 	select {
 	case s.errorCh <- scanError{kvIndex, err}:
@@ -182,10 +197,10 @@ func (s *Scanner) Close() {
 }
 
 func (s *Scanner) doWork() {
-	s.lg.Info("Scan batch started")
+	s.lg.Debug("Scan batch started")
 	start := time.Now()
 	defer func(stt time.Time) {
-		s.lg.Info("Scan batch done", "duration", time.Since(stt).String())
+		s.lg.Debug("Scan batch done", "duration", time.Since(stt).String())
 	}(start)
 
 	sts, err := s.worker.ScanBatch(s.ctx, s.sendError)
