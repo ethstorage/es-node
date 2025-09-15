@@ -24,6 +24,7 @@ const (
 	ZKProverImplFlagName     = "miner.zk-prover-impl"
 	ThreadsPerShardFlagName  = "miner.threads-per-shard"
 	MinimumProfitFlagName    = "miner.min-profit"
+	MaxGasPriceFlagName      = "miner.max-gas-price"
 
 	// proof submission notify
 	EmailEnabledFlagName = "miner.email-enabled"
@@ -87,6 +88,12 @@ func CLIFlags() []cli.Flag {
 			Usage:  "Enable proof submission notifications via email",
 			EnvVar: minerEnv("EMAIL_ENABLED"),
 		},
+		&types.BigFlag{
+			Name:   MaxGasPriceFlagName,
+			Usage:  "Maximum gas price for mining transactions, set to 0 to disable the check",
+			Value:  DefaultConfig.MaxGasPrice,
+			EnvVar: minerEnv("MAX_GAS_PRICE"),
+		},
 	}
 	return flag
 }
@@ -96,6 +103,7 @@ type CLIConfig struct {
 	GasPrice         *big.Int
 	PriorityGasPrice *big.Int
 	MinimumProfit    *big.Int
+	MaxGasPrice      *big.Int
 	ZKeyFile         string
 	ZKWorkingDir     string
 	ZKProverMode     uint64
@@ -141,6 +149,7 @@ func (c CLIConfig) ToMinerConfig() (Config, error) {
 	cfg.MinimumProfit = c.MinimumProfit
 	cfg.ThreadsPerShard = c.ThreadsPerShard
 	cfg.EmailEnabled = c.EmailEnabled
+	cfg.MaxGasPrice = c.MaxGasPrice
 	return cfg, nil
 }
 
@@ -156,6 +165,7 @@ func ReadCLIConfig(ctx *cli.Context) CLIConfig {
 		ZKProverImpl:     ctx.GlobalUint64(ZKProverImplFlagName),
 		ThreadsPerShard:  ctx.GlobalUint64(ThreadsPerShardFlagName),
 		EmailEnabled:     ctx.GlobalBool(EmailEnabledFlagName),
+		MaxGasPrice:      types.GlobalBig(ctx, MaxGasPriceFlagName),
 	}
 	return cfg
 }

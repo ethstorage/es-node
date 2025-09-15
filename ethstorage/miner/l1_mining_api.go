@@ -139,6 +139,14 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 		m.lg.Error("Failed to suggest gas prices", "error", err)
 		return common.Hash{}, err
 	}
+
+	// if gasFeeCap is higher than the configured max, drop the mined result
+	if cfg.MaxGasPrice != nil && cfg.MaxGasPrice.Cmp(common.Big0) > 0 && gasFeeCap.Cmp(cfg.MaxGasPrice) == 1 {
+		errMessage := fmt.Sprintf("gas price %s Gwei exceeds the configured max %s Gwei", fmtGwei(gasFeeCap), fmtGwei(cfg.MaxGasPrice))
+		m.lg.Warn("Mining tx dropped", "error", errMessage)
+		return common.Hash{}, errDropped{reason: errMessage}
+	}
+
 	estimatedGas, err := m.EstimateGas(ctx, ethereum.CallMsg{
 		From:      cfg.SignerAddr,
 		To:        &contract,
@@ -354,8 +362,9 @@ func checkGasPrice(
 		if gasPrice.Cmp(profitableGasFeeCap) == 1 {
 			profit := new(big.Int).Sub(reward, new(big.Int).Mul(new(big.Int).SetUint64(estimatedGas), gasFeeCap))
 			profit = new(big.Int).Sub(profit, extraCost)
-			lg.Warn("Mining tx dropped: the profit will not meet expectation", "estimatedProfit", fmtEth(profit), "minimumProfit", fmtEth(minProfit))
-			return nil, errDropped
+			droppedMsg := fmt.Sprintf("not enough profit (in ether):\r\n reward %s - gas cost %s - extra cost %s = profit %s < min profit %s",
+				fmtEth(reward), fmtEth(new(big.Int).Mul(new(big.Int).SetUint64(estimatedGas), gasFeeCap)), fmtEth(extraCost), fmtEth(profit), fmtEth(minProfit))
+			return nil, errDropped{reason: droppedMsg}
 		}
 		// Cap the gas fee to be profitable
 		if gasFeeCap.Cmp(profitableGasFeeCap) == 1 && !useConfig {
