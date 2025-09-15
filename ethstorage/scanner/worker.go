@@ -173,7 +173,7 @@ func getKvsInBatch(shards []uint64, kvEntries, lastKvIdx, batchSize, batchStartI
 	startKvIndex := batchStartIndex
 	if startKvIndex >= totalEntries {
 		startKvIndex = 0
-		lg.Info("Scanner: restarting scan from beginning")
+		lg.Debug("Scanner: restarting scan from beginning")
 	}
 	endKvIndexExclusive := min(startKvIndex+batchSize, totalEntries)
 	// The actual batch would be [startKvIndex, endKvIndexExclusive) or [startKvIndex, endIndex]
@@ -204,6 +204,6 @@ func getKvsInBatch(shards []uint64, kvEntries, lastKvIdx, batchSize, batchStartI
 			kvsInBatch = append(kvsInBatch, shards[i]*kvEntries+k)
 		}
 	}
-	lg.Info("Scanner: batch index range", "batchStart", startKvIndex, "batchEnd(exclusive)", endKvIndexExclusive, "kvsInBatch", shortPrt(kvsInBatch))
+	lg.Debug("Scanner: batch index range", "batchStart", startKvIndex, "batchEnd(exclusive)", endKvIndexExclusive, "kvsInBatch", shortPrt(kvsInBatch))
 	return kvsInBatch, totalEntries, endKvIndexExclusive
 }

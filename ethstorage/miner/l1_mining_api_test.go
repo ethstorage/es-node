@@ -240,7 +240,8 @@ func Test_l1MiningAPI_checkGasPrice(t *testing.T) {
 				lg,
 			)
 			if tc.wantDropped {
-				assert.ErrorIs(t, gotErr, errDropped, "expected an dropped error, but got none")
+				var dropErr errDropped
+				assert.ErrorAs(t, gotErr, &dropErr, "expected a dropped error, but got none")
 			} else {
 				assert.NoError(t, gotErr, "unexpected error")
 			}
