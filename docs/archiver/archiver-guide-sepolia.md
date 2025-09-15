@@ -27,7 +27,7 @@ Before proceeding, ensure your environment meets the following requirements:
 - **Sepolia L1 RPC** provided by an execution client running in archive mode
 - **An es-node** running with the archive service enabled
 - A [deployed BatchInbox contract](https://sepolia.etherscan.io/address/0x3fe221a447f350551ff208951098517252018007) on Sepolia L1
-- An OP Stack L2 that utilizes EIP-4844 blobs to submit batches to the BatchInbox
+- An OP Stack L2 (QuarkChain L2 Gamma testnet in this tutorial) that utilizes EIP-4844 blobs to submit batches to the BatchInbox
 
 ## Running op-geth
 
@@ -142,6 +142,7 @@ export L1_ARCHIVE_API=https://archive.testnet.ethstorage.io:9635
   --verifier.l1-confs=4 \
   --rollup.config=./gamma_testnet_rollup.json \
   --rpc.port=8547 \
+  --sequencer.enabled=false \
   --p2p.disable \
   --rpc.enable-admin \
   --l1=$L1_RPC_URL \
