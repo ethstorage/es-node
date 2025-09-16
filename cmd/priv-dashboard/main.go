@@ -281,7 +281,6 @@ func (d *dashboard) outputSummaryHtml(contract string, nodes map[string]*record,
 		<h3>Network Statistic Report</h3>
 		<table border="1" cellspacing="0" cellpadding="5">
 			<tr>
-				<th>Contract</th>
 				<th>Address</th>
 				<th>Miner</th>
                 <th>SavedBlobs</th>
