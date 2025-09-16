@@ -35,6 +35,12 @@ func (s statsType) String() string {
 	return "[" + strings.Join(items, ",") + "]"
 }
 
+type ScanStats struct {
+	MismatchedCount int `json:"provided_blob"`
+	FixedCount      int `json:"fixed_blob"`
+	FailedCount     int `json:"failed_blob"`
+}
+
 type statsSum struct {
 	localKvs   string
 	total      int       // total number of kv entries stored in local

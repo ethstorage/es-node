@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/ethstorage/go-ethstorage/ethstorage/scanner"
 	"io"
 	"math/rand"
 	"net/http"
@@ -21,7 +22,7 @@ import (
 const (
 	TotalPeer = 70
 
-	L1Contract = "0x804C520d3c084C805E37A35E90057Ac32831F96f"
+	L1Contract = "0xf0193d6E8fc186e77b6E63af4151db07524f6a7A"
 	L2Contract = "0x64003adbdf3014f7E38FC6BE752EB047b95da89A"
 
 	L2Percent      = 3000
@@ -35,7 +36,7 @@ const (
 
 type IState interface {
 	ID() string
-	Mine()
+	Update()
 	Serialize() (string, error)
 }
 
@@ -83,7 +84,7 @@ func (s *LegacyNodeState) ID() string {
 	return s.Id
 }
 
-func (s *LegacyNodeState) Mine() {
+func (s *LegacyNodeState) Update() {
 	for _, s := range s.Shards {
 		if s.SyncState.SyncProgress != 10000 || s.SyncState.FillEmptyProgress != 10000 {
 			continue
@@ -108,8 +109,25 @@ func (s *LegacyNodeState) Serialize() (string, error) {
 }
 
 type NodeState struct {
-	Contract string `json:"contract"`
+	Contract        string             `json:"contract"`
+	SavedBlobs      uint64             `json:"saved_blobs"`
+	DownloadedBlobs uint64             `json:"downloaded_blobs"`
+	ScanStats       *scanner.ScanStats `json:"scan_stats"`
 	*LegacyNodeState
+}
+
+func (n *NodeState) Update() {
+	n.LegacyNodeState.Update()
+	n.SavedBlobs += 10
+	n.DownloadedBlobs += 10
+	r := rand.Intn(10000)
+	if r > 9080 {
+		n.ScanStats.MismatchedCount++
+		n.ScanStats.FixedCount++
+	} else if r > 9000 {
+		n.ScanStats.MismatchedCount++
+		n.ScanStats.FailedCount++
+	}
 }
 
 func (s *NodeState) Serialize() (string, error) {
@@ -137,7 +155,7 @@ func UploadNodeState(url string) {
 
 	sendStates := func() {
 		for _, s := range states {
-			s.Mine()
+			s.Update()
 			data, err := s.Serialize()
 			if err != nil {
 				log.Info("Fail to Marshal node state", "error", err.Error())
@@ -227,7 +245,10 @@ func generateState() IState {
 				Address: fmt.Sprintf("%d.%d.%d.%d:%d", rand.Intn(256), rand.Intn(256), rand.Intn(256), rand.Intn(256), rand.Intn(10000)),
 				Shards:  shards,
 			},
-			Contract: L1Contract,
+			Contract:        L1Contract,
+			SavedBlobs:      100,
+			DownloadedBlobs: 100,
+			ScanStats:       &scanner.ScanStats{0, 0, 0},
 		}
 	} else {
 		state = &NodeState{
@@ -237,7 +258,10 @@ func generateState() IState {
 				Address: fmt.Sprintf("%d.%d.%d.%d:%d", rand.Intn(256), rand.Intn(256), rand.Intn(256), rand.Intn(256), rand.Intn(10000)),
 				Shards:  shards,
 			},
-			Contract: L2Contract,
+			Contract:        L2Contract,
+			SavedBlobs:      100,
+			DownloadedBlobs: 100,
+			ScanStats:       &scanner.ScanStats{0, 0, 0},
 		}
 	}
 
@@ -262,5 +286,5 @@ func main() {
 	flag.Parse()
 	log.SetDefault(log.NewLogger(log.NewTerminalHandlerWithLevel(os.Stderr, log.LevelInfo, true)))
 
-	UploadNodeState("http://65.109.63.154:8888")
+	UploadNodeState("http://127.0.0.1:8080")
 }

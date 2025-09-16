@@ -112,7 +112,7 @@
   },
   {
     "alert-type":"WebsiteOnlineChecker",
-    "email-to": "molaokp@gmail.com,lundeng@quarkchain.org,qzhu@quarkchain.org,pingke@quarkchain.org,limingpeng@quarkchain.org",
+    "email-to": "molaokp@gmail.com,limingpeng@quarkchain.org",
     "params":{
       "name":"quarkchain.io online Alert",
       "url":"https://quarkchain.io/"
