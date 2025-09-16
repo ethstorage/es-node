@@ -354,11 +354,10 @@ func checkGasPrice(
 		txCostCap := new(big.Int).Sub(costCap, extraCost)
 		lg.Debug("Tx cost cap", "txCostCap", txCostCap)
 		profitableGasFeeCap := new(big.Int).Div(txCostCap, new(big.Int).SetUint64(estimatedGas))
-		lg.Info("Minimum profitable gas fee cap", "profitableGasFeeCap", profitableGasFeeCap)
 
-		// gasPrice = baseFee + tip would be the cheapest and most likely used for tx inclusion
+		// gasPrice = baseFee + tip would be the cheapest gas price and most likely used for tx inclusion
 		gasPrice := new(big.Int).Sub(gasFeeCap, baseFee)
-		lg.Info("Get baseFee and gasPrice", "baseFee", baseFee, "baseFee+tip", gasPrice)
+		lg.Info("Comparing gas price and profitable gas fee cap", "gasPrice(baseFee+tip)", gasPrice, "profitableGasFeeCap", profitableGasFeeCap)
 		// Drop the tx if baseFee + tip is already higher than the profitable gas fee cap
 		if gasPrice.Cmp(profitableGasFeeCap) == 1 {
 			profit := new(big.Int).Sub(reward, new(big.Int).Mul(new(big.Int).SetUint64(estimatedGas), gasPrice))
@@ -368,7 +367,7 @@ func checkGasPrice(
 			return nil, errDropped{reason: droppedMsg}
 		}
 		// Cap the gas fee to be profitable
-		if gasFeeCap.Cmp(profitableGasFeeCap) == 1 && !useConfig {
+		if !useConfig {
 			gasFeeCapChecked = profitableGasFeeCap
 			lg.Info("Using profitable gas fee cap", "gasFeeCap", gasFeeCapChecked)
 		}
