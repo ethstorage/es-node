@@ -216,6 +216,20 @@ func Test_l1MiningAPI_checkGasPrice(t *testing.T) {
 			wantDropped:   false,
 			wantGasFeeCap: new(big.Int).SetInt64(1666666666666),
 		},
+		{
+			name:          "L1: using gasFeeCap between (baseFee + tip) and (baseFee * 2 + tip)",
+			minProfit:     big.NewInt(0),
+			gasFeeCap:     big.NewInt(400000010),
+			baseFee:       big.NewInt(200000000), // 0.2 gwei
+			useL2:         false,
+			useConfig:     false,
+			l1Fee:         nil,
+			l1FeeErr:      nil,
+			reward:        new(big.Int).Mul(big.NewInt(150000), gwei),
+			rewardErr:     nil,
+			wantDropped:   false,
+			wantGasFeeCap: new(big.Int).SetInt64(300000000), // 0.3 gwei
+		},
 	}
 
 	for _, tc := range testCases {
