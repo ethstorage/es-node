@@ -126,7 +126,7 @@ func (n *NodeState) Update() {
 	n.SavedBlobs += 10
 	n.DownloadedBlobs += 10
 	r := rand.Intn(10000)
-	if r > 9080 {
+	if r > 9800 {
 		n.ScanStats.MismatchedCount++
 		n.ScanStats.FailedCount++
 	} else if r > 9000 {

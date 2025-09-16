@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"net/smtp"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -33,14 +34,14 @@ var (
 	portFlag        = flag.Int("port", 8080, "Listener port for the es-node to report node status")
 	grafanaPortFlag = flag.Int("grafana", 9500, "Listener port for the metrics report")
 
-	contractsToNotifyFlag = flag.String("contracts-to-notify", "0xf0193d6E8fc186e77b6E63af4151db07524f6a7A", "Contracts need to notify through email")
-	emailEnableFlag       = flag.Bool("email.enabled", false, "Email addresses to send notifications to")
-	emailUsernameFlag     = flag.String("email.username", "", "Email username for notifications")
-	emailPasswordFlag     = flag.String("email.password", "", "Email password for notifications")
-	emailHostFlag         = flag.String("email.host", "smtp.gmail.com", "Email host for notifications")
-	emailPortFlag         = flag.Int("email.port", 587, "Email port for notifications")
-	emailToFlag           = flag.String("email.to", "", "Email addresses to send notifications to")
-	emailFromFlag         = flag.String("email.from", "", "Email address that will appear as the sender of the notifications")
+	emailContractsFlag = flag.String("email.contracts", "0xf0193d6E8fc186e77b6E63af4151db07524f6a7A", "Contracts need to notify through email")
+	emailEnableFlag    = flag.Bool("email.enabled", false, "Email addresses to send notifications to")
+	emailUsernameFlag  = flag.String("email.username", "", "Email username for notifications")
+	emailPasswordFlag  = flag.String("email.password", "", "Email password for notifications")
+	emailHostFlag      = flag.String("email.host", "smtp.gmail.com", "Email host for notifications")
+	emailPortFlag      = flag.Int("email.port", 587, "Email port for notifications")
+	emailToFlag        = flag.String("email.to", "", "Email addresses to send notifications to")
+	emailFromFlag      = flag.String("email.from", "", "Email address that will appear as the sender of the notifications")
 )
 
 type record struct {
@@ -214,13 +215,23 @@ func (d *dashboard) Report() {
 	}
 	d.lock.Unlock()
 
-	if *emailEnableFlag && time.Now().After(d.lastNotification.Add(emailReportInterval)) {
+	if *emailEnableFlag && time.Now().After(d.lastNotification.Add(-emailReportInterval)) {
+		contracts := make(map[string]struct{})
+		cs := strings.Split(*emailContractsFlag, ",")
+		for _, c := range cs {
+			c = strings.TrimSpace(c)
+			if c == "" { // ignore empty records
+				continue
+			}
+			contracts[c] = struct{}{}
+		}
+
 		for contract, nodeStates := range nodesInNetwork {
 			cache, ok := nodesInNetwork[contract]
 			if !ok {
 				cache = make(map[string]*record)
 			}
-			if contract == *contractsToNotifyFlag { // TODO
+			if _, ok = contracts[contract]; ok {
 				d.outputSummaryHtml(contract, nodeStates, cache)
 			}
 		}
@@ -236,11 +247,11 @@ func (d *dashboard) Report() {
 
 func (d *dashboard) outputSummaryHtml(contract string, nodes map[string]*record, cache map[string]*record) {
 	dstr := time.Now().Format("2006-01-02")
-	subject := fmt.Sprintf("Subject: Network Statistic Report %s\r\n"+
+	subject := fmt.Sprintf("Subject: Daily Network Statistics Report | %s | %s\r\n"+
 		"MIME-Version: 1.0\r\n"+
-		"Content-Type: text/html; charset=\"UTF-8\"\r\n\r\n", dstr)
+		"Content-Type: text/html; charset=\"UTF-8\"\r\n\r\n", contract, dstr)
 
-	contentFormat := "<tr>\n\t<td>%s</td>\n\t<td>%s</td>\n\t<td>%s</td>\n\t<td>%d</td>\n\t<td>%d</td>\n\t<td>%d</td>\n\t" +
+	contentFormat := "<tr>\n\t<td>%s</td>\n\t<td>%s</td>\n\t<td>%d</td>\n\t<td>%d</td>\n\t<td>%d</td>\n\t" +
 		"<td>%d</td>\n\t<td>%d</td>\n\t<td>%s</td>\n\t<td>%d</td>\n\t<td>%d</td>\n\t</tr>\n"
 	content := ""
 	for _, n := range nodes {
@@ -252,9 +263,15 @@ func (d *dashboard) outputSummaryHtml(contract string, nodes map[string]*record,
 		}
 
 		for _, shard := range n.state.Shards {
-			content += fmt.Sprintf(contentFormat, contract, n.state.Address, shard.Miner, n.state.SavedBlobs,
-				downloadedBlobs, shard.ShardId, shard.SyncState.PeerCount, shard.SubmissionState.Submitted,
-				shard.SubmissionState.LastSubmittedTime, shard.SubmissionState.Dropped, shard.SubmissionState.Failed)
+			submitted, dropped, failed, submittedTime := 0, 0, 0, "N/A"
+			if shard.MiningState != nil {
+				submitted, dropped, failed = shard.SubmissionState.Submitted, shard.SubmissionState.Dropped, shard.SubmissionState.Failed
+				if shard.SubmissionState.LastSubmittedTime > 0 {
+					submittedTime = time.Unix(shard.SubmissionState.LastSubmittedTime, 0).Format("2006-01-02T15:04:05")
+				}
+			}
+			content += fmt.Sprintf(contentFormat, n.state.Address, shard.Miner, n.state.SavedBlobs, downloadedBlobs,
+				shard.ShardId, shard.SyncState.PeerCount, submitted, submittedTime, dropped, failed)
 		}
 	}
 
