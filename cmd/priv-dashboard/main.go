@@ -122,7 +122,7 @@ func (d *dashboard) ReportStateHandler(w http.ResponseWriter, r *http.Request) {
 		sync, mining, submission, scanStats := shard.SyncState, shard.MiningState, shard.SubmissionState, state.ScanStats
 		d.m.SetDownloadState(state.Id, state.Contract, state.Version, state.Address, shard.ShardId, shard.Miner, state.SavedBlobs, state.DownloadedBlobs)
 		if scanStats != nil {
-			d.m.SetScanState(state.Id, state.Contract, state.Version, state.Address, shard.ShardId, shard.Miner, scanStats.MismatchedCount, scanStats.FailedCount, scanStats.FailedCount)
+			d.m.SetScanState(state.Id, state.Contract, state.Version, state.Address, shard.ShardId, shard.Miner, scanStats.MismatchedCount, scanStats.FixedCount, scanStats.FailedCount)
 		}
 		d.m.SetSyncState(state.Id, state.Contract, state.Version, state.Address, shard.ShardId, shard.Miner, sync.PeerCount, sync.SyncProgress,
 			sync.SyncedSeconds, sync.FillEmptyProgress, sync.FillEmptySeconds, shard.ProvidedBlob)

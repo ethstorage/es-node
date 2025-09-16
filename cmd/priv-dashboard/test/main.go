@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/ethstorage/go-ethstorage/ethstorage/scanner"
 	"io"
 	"math/rand"
 	"net/http"
@@ -64,6 +63,12 @@ type SyncState struct {
 	FillEmptySeconds  uint64 `json:"fill_empty_seconds"`
 }
 
+type ScanStats struct {
+	MismatchedCount int `json:"provided_blob"`
+	FixedCount      int `json:"fixed_blob"`
+	FailedCount     int `json:"failed_blob"`
+}
+
 type ShardState struct {
 	ShardId         uint64           `json:"shard_id"`
 	Miner           common.Address   `json:"miner"`
@@ -109,10 +114,10 @@ func (s *LegacyNodeState) Serialize() (string, error) {
 }
 
 type NodeState struct {
-	Contract        string             `json:"contract"`
-	SavedBlobs      uint64             `json:"saved_blobs"`
-	DownloadedBlobs uint64             `json:"downloaded_blobs"`
-	ScanStats       *scanner.ScanStats `json:"scan_stats"`
+	Contract        string     `json:"contract"`
+	SavedBlobs      uint64     `json:"saved_blobs"`
+	DownloadedBlobs uint64     `json:"downloaded_blobs"`
+	ScanStats       *ScanStats `json:"scan_stats"`
 	*LegacyNodeState
 }
 
@@ -123,10 +128,10 @@ func (n *NodeState) Update() {
 	r := rand.Intn(10000)
 	if r > 9080 {
 		n.ScanStats.MismatchedCount++
-		n.ScanStats.FixedCount++
+		n.ScanStats.FailedCount++
 	} else if r > 9000 {
 		n.ScanStats.MismatchedCount++
-		n.ScanStats.FailedCount++
+		n.ScanStats.FixedCount++
 	}
 }
 
@@ -248,7 +253,7 @@ func generateState() IState {
 			Contract:        L1Contract,
 			SavedBlobs:      100,
 			DownloadedBlobs: 100,
-			ScanStats:       &scanner.ScanStats{0, 0, 0},
+			ScanStats:       &ScanStats{0, 0, 0},
 		}
 	} else {
 		state = &NodeState{
@@ -261,7 +266,7 @@ func generateState() IState {
 			Contract:        L2Contract,
 			SavedBlobs:      100,
 			DownloadedBlobs: 100,
-			ScanStats:       &scanner.ScanStats{0, 0, 0},
+			ScanStats:       &ScanStats{0, 0, 0},
 		}
 	}
 
@@ -286,5 +291,5 @@ func main() {
 	flag.Parse()
 	log.SetDefault(log.NewLogger(log.NewTerminalHandlerWithLevel(os.Stderr, log.LevelInfo, true)))
 
-	UploadNodeState("http://127.0.0.1:8080")
+	UploadNodeState("http://65.109.90.160:8080")
 }
