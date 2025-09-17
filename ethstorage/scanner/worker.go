@@ -31,6 +31,7 @@ type Worker struct {
 	l1               es.Il1Source
 	cfg              Config
 	nextIndexOfKvIdx uint64
+	mismatchedSet    map[uint64]struct{}
 	lg               log.Logger
 }
 
@@ -42,11 +43,12 @@ func NewWorker(
 	lg log.Logger,
 ) *Worker {
 	return &Worker{
-		sm:        sm,
-		fetchBlob: fetch,
-		l1:        l1,
-		cfg:       cfg,
-		lg:        lg,
+		sm:            sm,
+		fetchBlob:     fetch,
+		l1:            l1,
+		cfg:           cfg,
+		mismatchedSet: make(map[uint64]struct{}),
+		lg:            lg,
 	}
 }
 
@@ -122,14 +124,21 @@ func (s *Worker) ScanBatch(ctx context.Context, sendError func(kvIndex uint64, e
 			var commitErr *es.CommitMismatchError
 			if errors.As(err, &commitErr) {
 				s.lg.Warn("Scanner: commit mismatch found", "kvIndex", kvIndex, "error", err)
-				sts.mismatched = append(sts.mismatched, kvIndex)
-				if fixErr := s.fixKv(kvIndex, commit); fixErr != nil {
-					sts.failed = append(sts.failed, kvIndex)
-					s.lg.Error("Scanner: fix blob error", "kvIndex", kvIndex, "error", fixErr)
-					sendError(kvIndex, fmt.Errorf("failed to fix blob: %w", fixErr))
+				if _, ok := s.mismatchedSet[kvIndex]; !ok {
+					// Let go of the kvIndex for the first time mismatched found
+					s.mismatchedSet[kvIndex] = struct{}{}
 				} else {
-					sts.fixed = append(sts.fixed, kvIndex)
-					sendError(kvIndex, nil) // Clear the error
+					sts.mismatched = append(sts.mismatched, kvIndex)
+					if fixErr := s.fixKv(kvIndex, commit); fixErr != nil {
+						sts.failed = append(sts.failed, kvIndex)
+						s.lg.Error("Scanner: fix blob error", "kvIndex", kvIndex, "error", fixErr)
+						sendError(kvIndex, fmt.Errorf("failed to fix blob: %w", fixErr))
+					} else {
+						sts.fixed = append(sts.fixed, kvIndex)
+						// Clear the error
+						sendError(kvIndex, nil)
+						delete(s.mismatchedSet, kvIndex)
+					}
 				}
 			} else {
 				s.lg.Error("Scanner: unexpected error", "kvIndex", kvIndex, "error", err)

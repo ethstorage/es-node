@@ -22,6 +22,8 @@ const (
 	IntervalFlagName  = "scanner.interval"
 )
 
+const defaultInterval = 60 // in minutes
+
 func scannerEnv(name string) string {
 	return utils.PrefixEnvVar("SCANNER_" + name)
 }
@@ -48,9 +50,9 @@ func CLIFlags() []cli.Flag {
 		},
 		cli.IntFlag{
 			Name:   IntervalFlagName,
-			Usage:  "Data scan interval in minutes",
+			Usage:  fmt.Sprintf("Data scan interval in minutes, minimum %d (default)", defaultInterval),
 			EnvVar: scannerEnv("INTERVAL"),
-			Value:  3,
+			Value:  defaultInterval,
 		},
 	}
 	return flags
@@ -63,6 +65,9 @@ func NewConfig(ctx *cli.Context) *Config {
 	}
 	if mode != modeCheckMeta && mode != modeCheckBlob {
 		panic(fmt.Sprintf("invalid scanner mode: %d", mode))
+	}
+	if interval := ctx.GlobalInt(IntervalFlagName); interval < defaultInterval {
+		panic(fmt.Sprintf("scanner interval must be at least %d minutes", defaultInterval))
 	}
 	return &Config{
 		Mode:      mode,
