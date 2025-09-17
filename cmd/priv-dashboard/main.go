@@ -251,8 +251,8 @@ func (d *dashboard) outputSummaryHtml(contract string, nodes map[string]*record,
 		dstr          = time.Now().Format("2006-01-02")
 		dataRang      = "(24h)"
 		content       = ""
-		contentFormat = "<tr>\n\t<td>%s</td>\n\t<td>%s</td>\n\t<td>%d</td>\n\t<td>%d</td>\n\t<td>%d</td>\n\t" +
-			"<td>%d</td>\n\t<td>%d</td>\n\t<td>%s</td>\n\t<td>%d</td>\n\t<td>%d</td>\n\t</tr>\n"
+		contentFormat = "<tr>\n\t<td>%s</td>\n\t<td>%s</td>\n\t<td>%d</td>\n\t<td>%d</td>\n\t<td>%d</td>\n\t<td>%d</td>\n\t" +
+			"<td>%d</td>\n\t<td>%s</td>\n\t<td>%d</td>\n\t<td>%d</td>\n\t<td>%d</td>\n\t<td>%d</td>\n\t<td>%d</td>\n\t</tr>\n"
 		subject = fmt.Sprintf("Subject: Daily Network Statistics Report | %s | %s\r\n"+
 			"MIME-Version: 1.0\r\n"+
 			"Content-Type: text/html; charset=\"UTF-8\"\r\n\r\n", contract, dstr)
@@ -279,7 +279,8 @@ func (d *dashboard) outputSummaryHtml(contract string, nodes map[string]*record,
 				}
 			}
 			content += fmt.Sprintf(contentFormat, n.state.Address, shard.Miner, n.state.SavedBlobs, downloadedBlobs,
-				shard.ShardId, shard.SyncState.PeerCount, submitted, submittedTime, dropped, failed)
+				shard.ShardId, shard.SyncState.PeerCount, submitted, submittedTime, dropped, failed,
+				n.state.ScanStats.MismatchedCount, n.state.ScanStats.FixedCount, n.state.ScanStats.FailedCount)
 		}
 	}
 
@@ -299,6 +300,9 @@ func (d *dashboard) outputSummaryHtml(contract string, nodes map[string]*record,
                 <th>LastSubmittedTime</th>
                 <th>Dropped</th>
                 <th>Failed</th>
+                <th>MismatchedKVCount</th>
+                <th>FixedKVCount</th>
+                <th>FailedKVCount</th>
 			</tr>
 			%s
 		</table>
