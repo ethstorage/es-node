@@ -26,7 +26,7 @@ import (
 
 const (
 	timeoutTime         = time.Minute * 10
-	emailReportInterval = time.Minute * 10
+	emailReportInterval = time.Hour * 24
 )
 
 var (
