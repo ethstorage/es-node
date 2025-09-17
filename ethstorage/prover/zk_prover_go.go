@@ -1,3 +1,5 @@
+//go:build !windows
+
 // Copyright 2022-2023, EthStorage.
 // For license information, see https://github.com/ethstorage/es-node/blob/main/LICENSE
 
