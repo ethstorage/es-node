@@ -127,6 +127,7 @@ func (s *Worker) ScanBatch(ctx context.Context, sendError func(kvIndex uint64, e
 				if _, ok := s.mismatchedSet[kvIndex]; !ok {
 					// Let go of the kvIndex for the first time mismatched found
 					s.mismatchedSet[kvIndex] = struct{}{}
+					s.lg.Debug("Scanner: first time mismatch, let go", "kvIndex", kvIndex)
 				} else {
 					sts.mismatched = append(sts.mismatched, kvIndex)
 					if fixErr := s.fixKv(kvIndex, commit); fixErr != nil {
