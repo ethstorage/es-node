@@ -215,7 +215,7 @@ func (d *dashboard) Report() {
 	}
 	d.lock.Unlock()
 
-	if *emailEnableFlag && time.Now().After(d.lastNotification.Add(-emailReportInterval)) {
+	if *emailEnableFlag && time.Now().After(d.lastNotification.Add(emailReportInterval)) {
 		contracts := make(map[string]struct{})
 		cs := strings.Split(*emailContractsFlag, ",")
 		for _, c := range cs {
@@ -227,7 +227,7 @@ func (d *dashboard) Report() {
 		}
 
 		for contract, nodeStates := range nodesInNetwork {
-			cache, ok := nodesInNetwork[contract]
+			cache, ok := d.lastStateCache[contract]
 			if !ok {
 				cache = make(map[string]*record)
 			}
