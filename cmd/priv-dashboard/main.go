@@ -257,7 +257,7 @@ func (d *dashboard) outputSummaryHtml(contract string, nodes map[string]*record,
 	for _, n := range nodes {
 		downloadedBlobs := n.state.DownloadedBlobs
 		if r, ok := cache[n.state.Id]; ok {
-			if downloadedBlobs > r.state.DownloadedBlobs {
+			if downloadedBlobs >= r.state.DownloadedBlobs {
 				downloadedBlobs -= r.state.DownloadedBlobs
 			}
 		}
