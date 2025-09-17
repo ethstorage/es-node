@@ -80,6 +80,7 @@ func newDashboard(lg log.Logger, emailCfg *email.EmailConfig) (*dashboard, error
 		lg:               lg,
 		emailCfg:         emailCfg,
 		lastNotification: time.Now().Add(-emailReportInterval),
+		lastStateCache:   make(map[string]map[string]*record),
 	}, nil
 }
 
@@ -246,14 +247,21 @@ func (d *dashboard) Report() {
 }
 
 func (d *dashboard) outputSummaryHtml(contract string, nodes map[string]*record, cache map[string]*record) {
-	dstr := time.Now().Format("2006-01-02")
-	subject := fmt.Sprintf("Subject: Daily Network Statistics Report | %s | %s\r\n"+
-		"MIME-Version: 1.0\r\n"+
-		"Content-Type: text/html; charset=\"UTF-8\"\r\n\r\n", contract, dstr)
+	var (
+		dstr          = time.Now().Format("2006-01-02")
+		dataRang      = "(24h)"
+		content       = ""
+		contentFormat = "<tr>\n\t<td>%s</td>\n\t<td>%s</td>\n\t<td>%d</td>\n\t<td>%d</td>\n\t<td>%d</td>\n\t" +
+			"<td>%d</td>\n\t<td>%d</td>\n\t<td>%s</td>\n\t<td>%d</td>\n\t<td>%d</td>\n\t</tr>\n"
+		subject = fmt.Sprintf("Subject: Daily Network Statistics Report | %s | %s\r\n"+
+			"MIME-Version: 1.0\r\n"+
+			"Content-Type: text/html; charset=\"UTF-8\"\r\n\r\n", contract, dstr)
+	)
 
-	contentFormat := "<tr>\n\t<td>%s</td>\n\t<td>%s</td>\n\t<td>%d</td>\n\t<td>%d</td>\n\t<td>%d</td>\n\t" +
-		"<td>%d</td>\n\t<td>%d</td>\n\t<td>%s</td>\n\t<td>%d</td>\n\t<td>%d</td>\n\t</tr>\n"
-	content := ""
+	if len(cache) == 0 {
+		dataRang = "(total)"
+	}
+
 	for _, n := range nodes {
 		downloadedBlobs := n.state.DownloadedBlobs
 		if r, ok := cache[n.state.Id]; ok {
@@ -266,7 +274,7 @@ func (d *dashboard) outputSummaryHtml(contract string, nodes map[string]*record,
 			submitted, dropped, failed, submittedTime := 0, 0, 0, "N/A"
 			if shard.MiningState != nil {
 				submitted, dropped, failed = shard.SubmissionState.Submitted, shard.SubmissionState.Dropped, shard.SubmissionState.Failed
-				if shard.SubmissionState.LastSubmittedTime > 0 {
+				if shard.SubmissionState.LastSubmittedTime > 0 && shard.SubmissionState.Submitted > 0 {
 					submittedTime = time.Unix(shard.SubmissionState.LastSubmittedTime, 0).Format("2006-01-02T15:04:05")
 				}
 			}
@@ -284,7 +292,7 @@ func (d *dashboard) outputSummaryHtml(contract string, nodes map[string]*record,
 				<th>Address</th>
 				<th>Miner</th>
                 <th>SavedBlobs</th>
-                <th>DownloadedBlobs</th>
+                <th>DownloadedBlobs %s</th>
                 <th>Shard</th>
                 <th>PeerCount</th>
                 <th>Submitted</th>
@@ -295,7 +303,7 @@ func (d *dashboard) outputSummaryHtml(contract string, nodes map[string]*record,
 			%s
 		</table>
 	</body>
-	</html>`, content)
+	</html>`, dataRang, content)
 
 	msg := []byte(subject + body)
 	auth := smtp.PlainAuth("", d.emailCfg.Username, d.emailCfg.Password, d.emailCfg.Host)
