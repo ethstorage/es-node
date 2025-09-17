@@ -286,7 +286,7 @@ func (d *dashboard) outputSummaryHtml(contract string, nodes map[string]*record,
 	body := fmt.Sprintf(`
 	<html>
 	<body>
-		<h3>Network Statistic Report</h3>
+		<h3>Daily Network Statistics Report | %s | %s</h3>
 		<table border="1" cellspacing="0" cellpadding="5">
 			<tr>
 				<th>Address</th>
@@ -303,7 +303,7 @@ func (d *dashboard) outputSummaryHtml(contract string, nodes map[string]*record,
 			%s
 		</table>
 	</body>
-	</html>`, dataRang, content)
+	</html>`, contract, dstr, dataRang, content)
 
 	msg := []byte(subject + body)
 	auth := smtp.PlainAuth("", d.emailCfg.Username, d.emailCfg.Password, d.emailCfg.Host)
