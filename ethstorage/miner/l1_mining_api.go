@@ -184,7 +184,16 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 	if err != nil {
 		return common.Hash{}, err
 	}
-
+	unsignedTx = types.NewTx(&types.DynamicFeeTx{
+		ChainID:   m.NetworkID,
+		Nonce:     nonce,
+		GasTipCap: tip,
+		GasFeeCap: gasFeeCapChecked,
+		Gas:       safeGas,
+		To:        &contract,
+		Value:     common.Big0,
+		Data:      calldata,
+	})
 	sign := cfg.SignerFnFactory(m.NetworkID)
 	signedTx, err := sign(ctx, cfg.SignerAddr, unsignedTx)
 	if err != nil {
