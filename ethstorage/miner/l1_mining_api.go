@@ -134,7 +134,7 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 	}
 	m.lg.Info("Composed calldata", "calldata", hexutil.Encode(calldata))
 
-	tip, gasFeeCap, useConfig, err := m.suggestGasPrices(ctx, cfg)
+	tip, baseFee, gasFeeCap, useConfig, err := m.suggestGasPrices(ctx, cfg)
 	if err != nil {
 		m.lg.Error("Failed to suggest gas prices", "error", err)
 		return common.Hash{}, err
@@ -180,11 +180,20 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 		Value:     common.Big0,
 		Data:      calldata,
 	})
-	gasFeeCapChecked, err := checkGasPrice(ctx, m, unsignedTx, rst, cfg.MinimumProfit, gasFeeCap, tip, estimatedGas, safeGas, m.rc != nil, useConfig, m.lg)
+	gasFeeCapChecked, err := checkGasPrice(ctx, m, unsignedTx, rst, cfg.MinimumProfit, gasFeeCap, baseFee, estimatedGas, safeGas, m.rc != nil, useConfig, m.lg)
 	if err != nil {
 		return common.Hash{}, err
 	}
-
+	unsignedTx = types.NewTx(&types.DynamicFeeTx{
+		ChainID:   m.NetworkID,
+		Nonce:     nonce,
+		GasTipCap: tip,
+		GasFeeCap: gasFeeCapChecked,
+		Gas:       safeGas,
+		To:        &contract,
+		Value:     common.Big0,
+		Data:      calldata,
+	})
 	sign := cfg.SignerFnFactory(m.NetworkID)
 	signedTx, err := sign(ctx, cfg.SignerAddr, unsignedTx)
 	if err != nil {
@@ -283,18 +292,20 @@ func (m *l1MiningAPI) composeCalldata(ctx context.Context, rst result) ([]byte, 
 	return calldata, nil
 }
 
-func (m *l1MiningAPI) suggestGasPrices(ctx context.Context, cfg Config) (*big.Int, *big.Int, bool, error) {
+func (m *l1MiningAPI) suggestGasPrices(ctx context.Context, cfg Config) (*big.Int, *big.Int, *big.Int, bool, error) {
 	gasFeeCap := cfg.GasPrice
 	tip := cfg.PriorityGasPrice
+	var baseFee *big.Int
 	useConfig := true
 	if gasFeeCap == nil || gasFeeCap.Cmp(common.Big0) == 0 {
 		useConfig = false
 		blockHeader, err := m.HeaderByNumber(ctx, nil)
 		if err != nil {
 			m.lg.Error("Failed to get block header", "error", err)
-			return nil, nil, false, err
+			return nil, nil, nil, false, err
 		}
-		m.lg.Info("Query baseFee done", "baseFee", blockHeader.BaseFee)
+		baseFee = blockHeader.BaseFee
+		m.lg.Info("Query baseFee done", "baseFee", baseFee, "fromBlock", blockHeader.Number)
 		if tip == nil || tip.Cmp(common.Big0) == 0 {
 			suggested, err := m.SuggestGasTipCap(ctx)
 			if err != nil {
@@ -304,12 +315,14 @@ func (m *l1MiningAPI) suggestGasPrices(ctx context.Context, cfg Config) (*big.In
 			tip = suggested
 			m.lg.Info("Query gas tip cap done", "gasTipGap", tip)
 		}
-		gasFeeCap = new(big.Int).Add(blockHeader.BaseFee, tip)
-		m.lg.Info("Suggested gas fee cap", "gasFeeCap", gasFeeCap)
+		// Use (tip + 2*baseFee) to avoid `max fee per gas less than block base fee` when estimate gas
+		// It ensures the tx to be marketable for six consecutive 100% full blocks.
+		gasFeeCap = new(big.Int).Add(new(big.Int).Mul(baseFee, big.NewInt(2)), tip)
+		m.lg.Info("Suggested gas fee cap (tip + 2*baseFee)", "gasFeeCap", gasFeeCap)
 	} else {
 		m.lg.Info("Using configured gas price", "gasFeeCap", gasFeeCap, "tip", tip)
 	}
-	return tip, gasFeeCap, useConfig, nil
+	return tip, baseFee, gasFeeCap, useConfig, nil
 }
 
 type GasPriceChecker interface {
@@ -323,13 +336,13 @@ func checkGasPrice(
 	checker GasPriceChecker,
 	unsignedTx *types.Transaction,
 	rst result,
-	minProfit, gasFeeCap, tip *big.Int,
+	minProfit, gasFeeCap, baseFee *big.Int,
 	estimatedGas, safeGas uint64,
 	useL2, useConfig bool,
 	lg log.Logger,
 ) (*big.Int, error) {
 	extraCost := new(big.Int)
-	// Add L1 data fee as tx cost when es-node is deployed as an L3
+	// Add L1 data fee as tx cost when es-node is deployed on an L2
 	if useL2 {
 		l1fee, err := checker.GetL1Fee(ctx, unsignedTx)
 		if err != nil {
@@ -350,23 +363,22 @@ func checkGasPrice(
 		txCostCap := new(big.Int).Sub(costCap, extraCost)
 		lg.Debug("Tx cost cap", "txCostCap", txCostCap)
 		profitableGasFeeCap := new(big.Int).Div(txCostCap, new(big.Int).SetUint64(estimatedGas))
-		lg.Info("Minimum profitable gas fee cap", "gasFeeCap", profitableGasFeeCap)
-		if gasFeeCap.Cmp(profitableGasFeeCap) == 1 {
-			profit := new(big.Int).Sub(reward, new(big.Int).Mul(new(big.Int).SetUint64(estimatedGas), gasFeeCap))
+
+		// gasPrice = baseFee + tip would be the cheapest gas price and most likely used for tx inclusion
+		gasPrice := new(big.Int).Sub(gasFeeCap, baseFee)
+		lg.Info("Comparing gas price and profitable gas fee cap", "gasPrice(baseFee+tip)", gasPrice, "profitableGasFeeCap", profitableGasFeeCap)
+		// Drop the tx if baseFee + tip is already higher than the profitable gas fee cap
+		if gasPrice.Cmp(profitableGasFeeCap) == 1 {
+			profit := new(big.Int).Sub(reward, new(big.Int).Mul(new(big.Int).SetUint64(estimatedGas), gasPrice))
 			profit = new(big.Int).Sub(profit, extraCost)
 			droppedMsg := fmt.Sprintf("not enough profit (in ether):\r\n reward %s - gas cost %s - extra cost %s = profit %s < min profit %s",
-				fmtEth(reward), fmtEth(new(big.Int).Mul(new(big.Int).SetUint64(estimatedGas), gasFeeCap)), fmtEth(extraCost), fmtEth(profit), fmtEth(minProfit))
+				fmtEth(reward), fmtEth(new(big.Int).Mul(new(big.Int).SetUint64(estimatedGas), gasPrice)), fmtEth(extraCost), fmtEth(profit), fmtEth(minProfit))
 			return nil, errDropped{reason: droppedMsg}
 		}
+		// Cap the gas fee to be profitable
 		if !useConfig {
 			gasFeeCapChecked = profitableGasFeeCap
 			lg.Info("Using profitable gas fee cap", "gasFeeCap", gasFeeCapChecked)
-		}
-	} else {
-		if !useConfig {
-			// (tip + 2*baseFee) to ensure the tx to be marketable for six consecutive 100% full blocks.
-			gasFeeCapChecked = new(big.Int).Add(new(big.Int).Mul(new(big.Int).Sub(gasFeeCap, tip), big.NewInt(2)), tip)
-			lg.Info("Using marketable gas fee cap", "gasFeeCap", gasFeeCapChecked)
 		}
 	}
 
