@@ -113,7 +113,7 @@ func (s *Scanner) start() {
 				if statsUpdated { // Wait for stats updated for the first time
 					s.logStats(sts)
 					for _, e := range errCache {
-						s.lg.Error("Scanner error happened earlier", "kvIndex", e.kvIndex, "error", e.err)
+						s.lg.Info("Scanner error happened earlier", "kvIndex", e.kvIndex, "error", e.err)
 					}
 				}
 			case err := <-s.errorCh:
