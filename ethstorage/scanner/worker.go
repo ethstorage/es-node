@@ -177,11 +177,7 @@ func (s *Scanner) getMismatchingList() []uint64 {
 	s.worker.mu.RLock()
 	defer s.worker.mu.RUnlock()
 
-	if len(s.worker.mismatching) == 0 {
-		return nil
-	}
-
-	mismatchList := make([]uint64, 0, len(s.worker.mismatching))
+	var mismatchList []uint64
 	for kvIndex, count := range s.worker.mismatching {
 		if count > 1 {
 			mismatchList = append(mismatchList, kvIndex)
