@@ -5,6 +5,7 @@ package scanner
 
 import (
 	"context"
+	"slices"
 	"sync"
 	"time"
 
@@ -165,6 +166,7 @@ func (s *Scanner) logStats(sts *statsSum) {
 		for kvIndex := range s.worker.mismatching {
 			mismatching = append(mismatching, kvIndex)
 		}
+		slices.Sort(mismatching)
 		logFields = append(logFields, "mismatching", mismatching)
 	}
 

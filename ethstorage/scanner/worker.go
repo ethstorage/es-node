@@ -130,7 +130,7 @@ func (s *Worker) ScanBatch(ctx context.Context, sendError func(kvIndex uint64, e
 					s.lg.Debug("Scanner: first-time mismatch, skipping fix attempt", "kvIndex", kvIndex)
 				} else {
 					sts.mismatched = append(sts.mismatched, kvIndex)
-					s.lg.Info("Scanner: attempting to fix blob", "kvIndex", kvIndex, "commit", commit)
+					s.lg.Info("Scanner: second-time mismatch, attempting to fix blob", "kvIndex", kvIndex, "commit", commit)
 					if fixErr := s.fixKv(kvIndex, commit); fixErr != nil {
 						sts.failed = append(sts.failed, kvIndex)
 						s.lg.Error("Scanner: failed to fix blob", "kvIndex", kvIndex, "error", fixErr)
