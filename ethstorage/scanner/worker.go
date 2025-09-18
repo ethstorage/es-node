@@ -7,6 +7,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
+	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
@@ -31,7 +33,8 @@ type Worker struct {
 	l1               es.Il1Source
 	cfg              Config
 	nextIndexOfKvIdx uint64
-	mismatching      statsType // kv indices that are mismatching (not fixed yet)
+	mismatching      statsType    // kv indices that are mismatching (not fixed yet)
+	mu               sync.RWMutex // protects mismatching
 	lg               log.Logger
 }
 
@@ -110,8 +113,8 @@ func (s *Worker) ScanBatch(ctx context.Context, sendError func(kvIndex uint64, e
 
 		if found && err == nil {
 			// If a mismatching entry is fixed externally, clear its state
-			if _, ok := s.mismatching[kvIndex]; ok {
-				delete(s.mismatching, kvIndex)
+			if s.hasMismatch(kvIndex) {
+				s.removeMismatch(kvIndex)
 				s.lg.Info("Scanner: previously mismatching KV fixed externally", "kvIndex", kvIndex)
 			}
 			// Happy path
@@ -129,9 +132,8 @@ func (s *Worker) ScanBatch(ctx context.Context, sendError func(kvIndex uint64, e
 			var commitErr *es.CommitMismatchError
 			if errors.As(err, &commitErr) {
 				s.lg.Warn("Scanner: commit mismatch detected", "kvIndex", kvIndex, "error", err)
-				if _, ok := s.mismatching[kvIndex]; !ok {
+				if !s.checkAndMarkMismatch(kvIndex) {
 					// Mark but skip on the first occurrence as it may be caused by KV update and delayed download
-					s.mismatching[kvIndex] = 1
 					s.lg.Info("Scanner: first-time mismatch, skipping fix attempt", "kvIndex", kvIndex)
 				} else {
 					// Only count repeated mismatches
@@ -139,7 +141,7 @@ func (s *Worker) ScanBatch(ctx context.Context, sendError func(kvIndex uint64, e
 					s.lg.Info("Scanner: mismatch again, attempting to fix blob", "kvIndex", kvIndex, "commit", commit)
 					if fixErr := s.fixKv(kvIndex, commit); fixErr != nil {
 						sts.failed = append(sts.failed, kvIndex)
-						s.mismatching[kvIndex]++
+						s.incrementMismatch(kvIndex)
 						s.lg.Error("Scanner: failed to fix blob", "kvIndex", kvIndex, "error", fixErr)
 						sendError(kvIndex, fmt.Errorf("failed to fix blob: %w", fixErr))
 					} else {
@@ -147,7 +149,7 @@ func (s *Worker) ScanBatch(ctx context.Context, sendError func(kvIndex uint64, e
 						sts.fixed = append(sts.fixed, kvIndex)
 						// Clear the error state
 						sendError(kvIndex, nil)
-						delete(s.mismatching, kvIndex)
+						s.removeMismatch(kvIndex)
 					}
 				}
 			} else {
@@ -169,6 +171,58 @@ func (s *Worker) fixKv(kvIndex uint64, commit common.Hash) error {
 		return fmt.Errorf("failed to write KV: kvIndex=%d, commit=%x, %w", kvIndex, commit, err)
 	}
 	return nil
+}
+
+func (s *Scanner) getMismatchingList() []uint64 {
+	s.worker.mu.RLock()
+	defer s.worker.mu.RUnlock()
+
+	if len(s.worker.mismatching) == 0 {
+		return nil
+	}
+
+	mismatchList := make([]uint64, 0, len(s.worker.mismatching))
+	for kvIndex, count := range s.worker.mismatching {
+		if count > 1 {
+			mismatchList = append(mismatchList, kvIndex)
+		}
+	}
+
+	if len(mismatchList) > 0 {
+		slices.Sort(mismatchList)
+	}
+
+	return mismatchList
+}
+
+func (s *Worker) checkAndMarkMismatch(kvIndex uint64) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if _, exists := s.mismatching[kvIndex]; exists {
+		return true
+	}
+	s.mismatching[kvIndex] = 1
+	return false
+}
+
+func (s *Worker) incrementMismatch(kvIndex uint64) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.mismatching[kvIndex]++
+}
+
+func (s *Worker) removeMismatch(kvIndex uint64) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.mismatching, kvIndex)
+}
+
+func (s *Worker) hasMismatch(kvIndex uint64) bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	_, exists := s.mismatching[kvIndex]
+	return exists
 }
 
 func getKvsInBatch(shards []uint64, kvEntries, lastKvIdx, batchSize, batchStartIndex uint64, lg log.Logger) ([]uint64, uint64, uint64) {

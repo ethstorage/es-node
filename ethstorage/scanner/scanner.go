@@ -5,7 +5,6 @@ package scanner
 
 import (
 	"context"
-	"slices"
 	"sync"
 	"time"
 
@@ -155,20 +154,13 @@ func (s *Scanner) start() {
 }
 
 func (s *Scanner) logStats(sts *statsSum) {
-
 	logFields := []any{
 		"localKvs", sts.localKvs,
 		"localKvsCount", sts.total,
 	}
 
-	if len(s.worker.mismatching) > 0 {
-		mismatchList := make([]uint64, 0, len(s.worker.mismatching))
-		for kvIndex, count := range s.worker.mismatching {
-			if count > 1 {
-				mismatchList = append(mismatchList, kvIndex)
-			}
-		}
-		slices.Sort(mismatchList)
+	mismatchList := s.getMismatchingList()
+	if len(mismatchList) > 0 {
 		logFields = append(logFields, "mismatching", mismatchList)
 	}
 
@@ -183,7 +175,6 @@ func (s *Scanner) logStats(sts *statsSum) {
 	}
 
 	s.lg.Info("Scanner stats", logFields...)
-
 }
 
 func (s *Scanner) sendError(kvIndex uint64, err error) {
