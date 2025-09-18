@@ -31,7 +31,7 @@ type Worker struct {
 	l1               es.Il1Source
 	cfg              Config
 	nextIndexOfKvIdx uint64
-	mismatchedSet    map[uint64]struct{}
+	mismatching      map[uint64]struct{} // kv indices that are mismatching (not fixed yet)
 	lg               log.Logger
 }
 
@@ -43,12 +43,12 @@ func NewWorker(
 	lg log.Logger,
 ) *Worker {
 	return &Worker{
-		sm:            sm,
-		fetchBlob:     fetch,
-		l1:            l1,
-		cfg:           cfg,
-		mismatchedSet: make(map[uint64]struct{}),
-		lg:            lg,
+		sm:          sm,
+		fetchBlob:   fetch,
+		l1:          l1,
+		cfg:         cfg,
+		mismatching: make(map[uint64]struct{}),
+		lg:          lg,
 	}
 }
 
@@ -110,39 +110,41 @@ func (s *Worker) ScanBatch(ctx context.Context, sendError func(kvIndex uint64, e
 
 		if found && err == nil {
 			// Happy path
-			s.lg.Debug("Scanner: check KV done", "kvIndex", kvIndex, "commit", commit)
+			s.lg.Debug("Scanner: KV check completed successfully", "kvIndex", kvIndex, "commit", commit)
 			continue
 		}
 
 		if !found {
-			// The shard does not exist locally
-			s.lg.Error("Scanner: blob not found", "kvIndex", kvIndex, "commit", commit)
+			// The shard is not stored locally
+			s.lg.Error("Scanner: blob not found locally", "kvIndex", kvIndex, "commit", commit)
 			continue
 		}
 
 		if err != nil {
 			var commitErr *es.CommitMismatchError
 			if errors.As(err, &commitErr) {
-				s.lg.Warn("Scanner: commit mismatch found", "kvIndex", kvIndex, "error", err)
-				if _, ok := s.mismatchedSet[kvIndex]; !ok {
-					// Let go of the kvIndex for the first time mismatched found
-					s.mismatchedSet[kvIndex] = struct{}{}
-					s.lg.Debug("Scanner: first time mismatch, let go", "kvIndex", kvIndex)
+				s.lg.Warn("Scanner: commit mismatch detected", "kvIndex", kvIndex, "error", err)
+				if _, ok := s.mismatching[kvIndex]; !ok {
+					// Skip on first occurrence as it may be caused by KV update and delayed download
+					s.mismatching[kvIndex] = struct{}{}
+					s.lg.Debug("Scanner: first-time mismatch, skipping fix attempt", "kvIndex", kvIndex)
 				} else {
 					sts.mismatched = append(sts.mismatched, kvIndex)
+					s.lg.Info("Scanner: attempting to fix blob", "kvIndex", kvIndex, "commit", commit)
 					if fixErr := s.fixKv(kvIndex, commit); fixErr != nil {
 						sts.failed = append(sts.failed, kvIndex)
-						s.lg.Error("Scanner: fix blob error", "kvIndex", kvIndex, "error", fixErr)
+						s.lg.Error("Scanner: failed to fix blob", "kvIndex", kvIndex, "error", fixErr)
 						sendError(kvIndex, fmt.Errorf("failed to fix blob: %w", fixErr))
 					} else {
+						s.lg.Info("Scanner: blob fixed successfully", "kvIndex", kvIndex)
 						sts.fixed = append(sts.fixed, kvIndex)
-						// Clear the error
+						// Clear the error state
 						sendError(kvIndex, nil)
-						delete(s.mismatchedSet, kvIndex)
+						delete(s.mismatching, kvIndex)
 					}
 				}
 			} else {
-				s.lg.Error("Scanner: unexpected error", "kvIndex", kvIndex, "error", err)
+				s.lg.Error("Scanner: unexpected error occurred", "kvIndex", kvIndex, "error", err)
 				sendError(kvIndex, fmt.Errorf("unexpected error: %w", err))
 			}
 		}
@@ -156,25 +158,23 @@ func (s *Worker) ScanBatch(ctx context.Context, sendError func(kvIndex uint64, e
 }
 
 func (s *Worker) fixKv(kvIndex uint64, commit common.Hash) error {
-	s.lg.Info("Scanner: try to fix blob", "kvIndex", kvIndex, "commit", commit)
 	if err := s.sm.TryWriteWithMetaCheck(kvIndex, commit, s.fetchBlob); err != nil {
 		return fmt.Errorf("failed to write KV: kvIndex=%d, commit=%x, %w", kvIndex, commit, err)
 	}
-	s.lg.Info("Scanner: fixed blob successfully!", "kvIndex", kvIndex)
 	return nil
 }
 
 func getKvsInBatch(shards []uint64, kvEntries, lastKvIdx, batchSize, batchStartIndex uint64, lg log.Logger) ([]uint64, uint64, uint64) {
 	// Calculate the total number of KV entries stored locally
 	var totalEntries uint64
-	// The shard indices in shards are sorted but may not be continuous: e.g. [0, 1, 3, 4] means shard 2 is missing.
+	// Shard indices are sorted but may not be continuous: e.g. [0, 1, 3, 4] indicates shard 2 is missing
 	for _, shardIndex := range shards {
-		// the last shard may not have full kvEntries
+		// The last shard may contain fewer than the full kvEntries
 		if shardIndex == lastKvIdx/kvEntries {
 			totalEntries += lastKvIdx%kvEntries + 1
 			break
 		}
-		// full shards
+		// Complete shards
 		totalEntries += kvEntries
 	}
 	lg.Debug("Scanner: KV entries stored locally", "totalKvStored", totalEntries)
@@ -183,10 +183,10 @@ func getKvsInBatch(shards []uint64, kvEntries, lastKvIdx, batchSize, batchStartI
 	startKvIndex := batchStartIndex
 	if startKvIndex >= totalEntries {
 		startKvIndex = 0
-		lg.Debug("Scanner: restarting scan from beginning")
+		lg.Debug("Scanner: restarting scan from the beginning")
 	}
 	endKvIndexExclusive := min(startKvIndex+batchSize, totalEntries)
-	// The actual batch would be [startKvIndex, endKvIndexExclusive) or [startKvIndex, endIndex]
+	// The actual batch range is [startKvIndex, endKvIndexExclusive) or [startKvIndex, endIndex]
 	endIndex := endKvIndexExclusive - 1
 
 	// Calculate starting and ending shard indices and offsets where KV starts and ends on the current shard.
@@ -194,16 +194,16 @@ func getKvsInBatch(shards []uint64, kvEntries, lastKvIdx, batchSize, batchStartI
 	startKvOffset := startKvIndex % kvEntries
 
 	endShardPos := endIndex / kvEntries
-	endKvOffset := endIndex%kvEntries + 1 // +1 because the end KV is exclusive
+	endKvOffset := endIndex%kvEntries + 1 // +1 because the end KV index is exclusive
 
 	// Collect KV indices for the current batch
 	kvsInBatch := make([]uint64, 0, endKvIndexExclusive-startKvIndex)
-	// Loop through the shards from startShardPos to endShardPos(inclusive)
+	// Iterate through shards from startShardPos to endShardPos (inclusive)
 	for i := startShardPos; i <= endShardPos; i++ {
-		// Default range of the full shards
+		// Default range for complete shards
 		localStart := uint64(0)
 		localEnd := kvEntries
-		// If the shard is the first or last shard in the batch, adjust the start and end offsets
+		// Adjust start and end offsets for the first or last shard in the batch
 		if i == startShardPos {
 			localStart = startKvOffset
 		}
@@ -214,6 +214,6 @@ func getKvsInBatch(shards []uint64, kvEntries, lastKvIdx, batchSize, batchStartI
 			kvsInBatch = append(kvsInBatch, shards[i]*kvEntries+k)
 		}
 	}
-	lg.Debug("Scanner: batch index range", "batchStart", startKvIndex, "batchEnd(exclusive)", endKvIndexExclusive, "kvsInBatch", shortPrt(kvsInBatch))
+	lg.Debug("Scanner: batch index range determined", "batchStart", startKvIndex, "batchEnd(exclusive)", endKvIndexExclusive, "kvsInBatch", shortPrt(kvsInBatch))
 	return kvsInBatch, totalEntries, endKvIndexExclusive
 }

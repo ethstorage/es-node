@@ -160,6 +160,14 @@ func (s *Scanner) logStats(sts *statsSum) {
 		"localKvsCount", sts.total,
 	}
 
+	if len(s.worker.mismatching) > 0 {
+		mismatching := make([]uint64, 0, len(s.worker.mismatching))
+		for kvIndex := range s.worker.mismatching {
+			mismatching = append(mismatching, kvIndex)
+		}
+		logFields = append(logFields, "mismatching", mismatching)
+	}
+
 	if len(sts.mismatched) > 0 {
 		logFields = append(logFields, "mismatched", sts.mismatched.String())
 	}
