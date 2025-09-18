@@ -34,8 +34,9 @@ const (
 )
 
 var (
-	downloaderPrefix = []byte("dl-")
-	lastDownloadKey  = []byte("last-download-block")
+	downloaderPrefix   = []byte("dl-")
+	downloadedBlobsKey = []byte("downloaded-blobs")
+	lastDownloadKey    = []byte("last-download-block")
 )
 
 type BlobCache interface {
@@ -63,6 +64,7 @@ type Downloader struct {
 	latestHead                 int64
 	dumpDir                    string
 	minDurationForBlobsRequest uint64
+	downloadedBlobs            uint64
 
 	// Request to download new blobs
 	dlLatestReq    chan struct{}
@@ -124,6 +126,7 @@ func NewDownloader(
 		lg:                         lg,
 		done:                       make(chan struct{}),
 		lastDownloadBlock:          downloadStart,
+		downloadedBlobs:            0,
 	}
 }
 
@@ -158,7 +161,12 @@ func (s *Downloader) Start() error {
 		}
 	}
 
-	err := s.sm.Reset(s.lastDownloadBlock)
+	bs, err := s.db.Get(downloadedBlobsKey)
+	if err == nil && len(bs) == 8 {
+		s.downloadedBlobs = binary.LittleEndian.Uint64(bs)
+	}
+
+	err = s.sm.Reset(s.lastDownloadBlock)
 	if err != nil {
 		return err
 	}
@@ -206,6 +214,10 @@ func (s *Downloader) OnNewL1Head(head eth.L1BlockRef) {
 		// if there is already a download request in the channel, then do nothing
 		return
 	}
+}
+
+func (s *Downloader) GetState() uint64 {
+	return s.downloadedBlobs
 }
 
 func (s *Downloader) eventLoop() {
@@ -305,6 +317,7 @@ func (s *Downloader) download() {
 				return
 			}
 			if len(blobs) > 0 {
+				s.downloadedBlobs += uint64(len(blobs))
 				s.lg.Info("DownloadFinished", "duration(ms)", time.Since(ts).Milliseconds(), "blobs", len(blobs))
 			}
 
@@ -318,6 +331,13 @@ func (s *Downloader) download() {
 				return
 			}
 			s.lg.Debug("LastDownloadedBlock saved into db", "lastDownloadedBlock", end)
+
+			binary.LittleEndian.PutUint64(bs, s.downloadedBlobs)
+			err = s.db.Put(downloadedBlobsKey, bs)
+			if err != nil {
+				s.lg.Error("Save downloadedBlobs into db error", "err", err)
+				return
+			}
 
 			s.dumpBlobsIfNeeded(blobs)
 

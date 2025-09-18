@@ -27,6 +27,7 @@ type Scanner struct {
 	lg       log.Logger
 	errorCh  chan scanError
 	statsCh  chan stats
+	sts      *statsSum
 }
 
 type LoadKvFromCacheFunc func(uint64, common.Hash) []byte
@@ -50,6 +51,7 @@ func New(
 		lg:       lg,
 		errorCh:  make(chan scanError, 10),
 		statsCh:  make(chan stats, 10),
+		sts:      newStatsSum(),
 	}
 	scanner.wg.Add(1)
 	go scanner.update()
@@ -104,14 +106,13 @@ func (s *Scanner) start() {
 		defer reportTicker.Stop()
 
 		errCache := make(map[uint64]scanError)
-		sts := newStatsSum()
 		statsUpdated := false
 
 		for {
 			select {
 			case <-reportTicker.C:
 				if statsUpdated { // Wait for stats updated for the first time
-					s.logStats(sts)
+					s.logStats(s.sts)
 					for _, e := range errCache {
 						s.lg.Error("Scanner error happened earlier", "kvIndex", e.kvIndex, "error", e.err)
 					}
@@ -123,7 +124,7 @@ func (s *Scanner) start() {
 					delete(errCache, err.kvIndex)
 				}
 			case st := <-s.statsCh:
-				sts.update(st)
+				s.sts.update(st)
 				statsUpdated = true
 			case <-s.ctx.Done():
 				return
@@ -171,7 +172,6 @@ func (s *Scanner) logStats(sts *statsSum) {
 	}
 
 	s.lg.Info("Scanner stats", logFields...)
-
 }
 
 func (s *Scanner) sendError(kvIndex uint64, err error) {
@@ -179,6 +179,14 @@ func (s *Scanner) sendError(kvIndex uint64, err error) {
 	case s.errorCh <- scanError{kvIndex, err}:
 	default:
 		s.lg.Warn("Scanner: sent error to chan failed", "err", err, "lenOfCh", len(s.errorCh))
+	}
+}
+
+func (s *Scanner) GetScanState() *ScanStats {
+	return &ScanStats{
+		MismatchedCount: len(s.sts.mismatched),
+		FixedCount:      len(s.sts.fixed),
+		FailedCount:     len(s.sts.failed),
 	}
 }
 

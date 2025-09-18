@@ -4,6 +4,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethstorage/go-ethstorage/ethstorage/miner"
 	"github.com/ethstorage/go-ethstorage/ethstorage/p2p/protocol"
+	"github.com/ethstorage/go-ethstorage/ethstorage/scanner"
 )
 
 type ShardState struct {
@@ -16,9 +17,12 @@ type ShardState struct {
 }
 
 type NodeState struct {
-	Id       string        `json:"id"`
-	Contract string        `json:"contract"`
-	Version  string        `json:"version"`
-	Address  string        `json:"address"`
-	Shards   []*ShardState `json:"shards"`
+	Id              string             `json:"id"`
+	Contract        string             `json:"contract"`
+	Version         string             `json:"version"`
+	Address         string             `json:"address"`
+	SavedBlobs      uint64             `json:"saved_blobs"`
+	DownloadedBlobs uint64             `json:"downloaded_blobs"`
+	ScanStats       *scanner.ScanStats `json:"scan_stats"`
+	Shards          []*ShardState      `json:"shards"`
 }
