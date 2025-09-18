@@ -31,7 +31,7 @@ type Worker struct {
 	l1               es.Il1Source
 	cfg              Config
 	nextIndexOfKvIdx uint64
-	mismatching      map[uint64]struct{} // kv indices that are mismatching (not fixed yet)
+	mismatching      statsType // kv indices that are mismatching (not fixed yet)
 	lg               log.Logger
 }
 
@@ -47,7 +47,7 @@ func NewWorker(
 		fetchBlob:   fetch,
 		l1:          l1,
 		cfg:         cfg,
-		mismatching: make(map[uint64]struct{}),
+		mismatching: make(statsType),
 		lg:          lg,
 	}
 }
@@ -130,14 +130,16 @@ func (s *Worker) ScanBatch(ctx context.Context, sendError func(kvIndex uint64, e
 			if errors.As(err, &commitErr) {
 				s.lg.Warn("Scanner: commit mismatch detected", "kvIndex", kvIndex, "error", err)
 				if _, ok := s.mismatching[kvIndex]; !ok {
-					// Skip on first occurrence as it may be caused by KV update and delayed download
-					s.mismatching[kvIndex] = struct{}{}
-					s.lg.Debug("Scanner: first-time mismatch, skipping fix attempt", "kvIndex", kvIndex)
+					// Mark but skip on the first occurrence as it may be caused by KV update and delayed download
+					s.mismatching[kvIndex] = 1
+					s.lg.Info("Scanner: first-time mismatch, skipping fix attempt", "kvIndex", kvIndex)
 				} else {
+					// Only count repeated mismatches
 					sts.mismatched = append(sts.mismatched, kvIndex)
-					s.lg.Info("Scanner: second-time mismatch, attempting to fix blob", "kvIndex", kvIndex, "commit", commit)
+					s.lg.Info("Scanner: mismatch again, attempting to fix blob", "kvIndex", kvIndex, "commit", commit)
 					if fixErr := s.fixKv(kvIndex, commit); fixErr != nil {
 						sts.failed = append(sts.failed, kvIndex)
+						s.mismatching[kvIndex]++
 						s.lg.Error("Scanner: failed to fix blob", "kvIndex", kvIndex, "error", fixErr)
 						sendError(kvIndex, fmt.Errorf("failed to fix blob: %w", fixErr))
 					} else {

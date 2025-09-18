@@ -162,12 +162,14 @@ func (s *Scanner) logStats(sts *statsSum) {
 	}
 
 	if len(s.worker.mismatching) > 0 {
-		mismatching := make([]uint64, 0, len(s.worker.mismatching))
-		for kvIndex := range s.worker.mismatching {
-			mismatching = append(mismatching, kvIndex)
+		mismatchList := make([]uint64, 0, len(s.worker.mismatching))
+		for kvIndex, count := range s.worker.mismatching {
+			if count > 1 {
+				mismatchList = append(mismatchList, kvIndex)
+			}
 		}
-		slices.Sort(mismatching)
-		logFields = append(logFields, "mismatching", mismatching)
+		slices.Sort(mismatchList)
+		logFields = append(logFields, "mismatching", mismatchList)
 	}
 
 	if len(sts.mismatched) > 0 {
