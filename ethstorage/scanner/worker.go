@@ -109,6 +109,11 @@ func (s *Worker) ScanBatch(ctx context.Context, sendError func(kvIndex uint64, e
 		}
 
 		if found && err == nil {
+			// If a mismatching entry is fixed externally, clear its state
+			if _, ok := s.mismatching[kvIndex]; ok {
+				delete(s.mismatching, kvIndex)
+				s.lg.Info("Scanner: previously mismatching KV fixed externally", "kvIndex", kvIndex)
+			}
 			// Happy path
 			s.lg.Debug("Scanner: KV check completed successfully", "kvIndex", kvIndex, "commit", commit)
 			continue
