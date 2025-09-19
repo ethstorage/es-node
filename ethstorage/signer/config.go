@@ -3,7 +3,7 @@ package signer
 import (
 	"errors"
 
-	"github.com/ethstorage/go-ethstorage/ethstorage/rollup"
+	"github.com/ethstorage/go-ethstorage/ethstorage/flags/utils"
 	"github.com/urfave/cli"
 )
 
@@ -15,33 +15,36 @@ const (
 	PrivateKeyFlagName = "signer.private-key"
 )
 
-func CLIFlags(envPrefix string) []cli.Flag {
-	envPrefix += "_SIGNER"
+func signerEnv(name string) string {
+	return utils.PrefixEnvVar("SIGNER_" + name)
+}
+
+func CLIFlags() []cli.Flag {
 	flags := []cli.Flag{
 		cli.StringFlag{
 			Name:   EndpointFlagName,
 			Usage:  "Signer endpoint the client will connect to",
-			EnvVar: rollup.PrefixEnvVar(envPrefix, "ENDPOINT"),
+			EnvVar: signerEnv("ENDPOINT"),
 		},
 		cli.StringFlag{
 			Name:   AddressFlagName,
 			Usage:  "Address the signer is signing transactions for",
-			EnvVar: rollup.PrefixEnvVar(envPrefix, "ADDRESS"),
+			EnvVar: signerEnv("ADDRESS"),
 		},
 		cli.StringFlag{
 			Name:   MnemonicsFlagName,
 			Usage:  "The HD seed used to derive the wallet private keys for mining. Must be used in conjunction with HDPath.",
-			EnvVar: rollup.PrefixEnvVar(envPrefix, "MNEMONIC"),
+			EnvVar: signerEnv("MNEMONIC"),
 		},
 		cli.StringFlag{
 			Name:   HdpathFlagName,
 			Usage:  "HDPath is the derivation path used to obtain the private key for mining transactions",
-			EnvVar: rollup.PrefixEnvVar(envPrefix, "ADDRESS"),
+			EnvVar: signerEnv("ADDRESS"),
 		},
 		cli.StringFlag{
 			Name:   PrivateKeyFlagName,
 			Usage:  "The private key to sign a mining transaction",
-			EnvVar: rollup.PrefixEnvVar(envPrefix, "PRIVATE_KEY"),
+			EnvVar: signerEnv("PRIVATE_KEY"),
 		},
 	}
 	return flags

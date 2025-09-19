@@ -4,7 +4,7 @@
 package archiver
 
 import (
-	"github.com/ethstorage/go-ethstorage/ethstorage/rollup"
+	"github.com/ethstorage/go-ethstorage/ethstorage/flags/utils"
 	"github.com/urfave/cli"
 )
 
@@ -15,6 +15,10 @@ const (
 	MaxBlobsPerBlockName = "archiver.maxBlobsPerBlock"
 )
 
+func archiverEnv(name string) string {
+	return utils.PrefixEnvVar("ARCHIVER_" + name)
+}
+
 type Config struct {
 	Enabled          bool
 	ListenAddr       string
@@ -22,30 +26,29 @@ type Config struct {
 	MaxBlobsPerBlock int
 }
 
-func CLIFlags(envPrefix string) []cli.Flag {
-	envPrefix += "_ARCHIVER"
+func CLIFlags() []cli.Flag {
 	flags := []cli.Flag{
 		cli.BoolFlag{
 			Name:   EnabledFlagName,
 			Usage:  "Blob archiver enabled",
-			EnvVar: rollup.PrefixEnvVar(envPrefix, "ENABLED"),
+			EnvVar: archiverEnv("ENABLED"),
 		},
 		cli.StringFlag{
 			Name:   ListenAddrFlagName,
 			Usage:  "Blob archiver listening address",
-			EnvVar: rollup.PrefixEnvVar(envPrefix, "ADDRESS"),
+			EnvVar: archiverEnv("ADDRESS"),
 			Value:  "0.0.0.0",
 		},
 		cli.IntFlag{
 			Name:   ListenPortFlagName,
 			Usage:  "Blob archiver listening port",
-			EnvVar: rollup.PrefixEnvVar(envPrefix, "PORT"),
+			EnvVar: archiverEnv("PORT"),
 			Value:  9645,
 		},
 		cli.IntFlag{
 			Name:   MaxBlobsPerBlockName,
 			Usage:  "Max blobs per block",
-			EnvVar: rollup.PrefixEnvVar(envPrefix, "MAX_BLOBS_PER_BLOCK"),
+			EnvVar: archiverEnv("MAX_BLOBS_PER_BLOCK"),
 			Value:  0, // 0 means no limit
 		},
 	}

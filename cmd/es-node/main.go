@@ -32,7 +32,7 @@ import (
 var (
 	GitCommit     = ""
 	GitDate       = ""
-	Version       = "v0.2.3"
+	Version       = "v0.2.5"
 	Meta          = "dev"
 	BuildTime     = ""
 	systemVersion = fmt.Sprintf("%s/%s", runtime.GOARCH, runtime.GOOS)
@@ -123,7 +123,7 @@ func main() {
 			Name:    "email",
 			Aliases: []string{"mail"},
 			Usage:   "Send a test email using the configured SMTP settings",
-			Flags:   email.CLIFlags("ES_NODE"),
+			Flags:   email.CLIFlags(),
 			Action: func(ctx *cli.Context) error {
 				emailConfig, err := email.GetEmailConfig(ctx)
 				if err != nil {
@@ -151,7 +151,9 @@ func main() {
 
 func EsNodeMain(ctx *cli.Context) error {
 	lg.Info("Configuring EthStorage Node")
-	clog := log.NewLogger(log.ReadCLIConfig(ctx))
+	lgCfg := log.ReadCLIConfig(ctx)
+	lg.Info("Loading log config", "config", lgCfg)
+	clog := log.NewLogger(lgCfg)
 	cfg, err := NewConfig(ctx, clog)
 	if err != nil {
 		lg.Error("Unable to create the rollup node config", "error", err)

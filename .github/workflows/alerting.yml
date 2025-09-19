@@ -19,6 +19,8 @@ jobs:
       - name: check
         run: |
           cd ./cmd/alert
+          sed -i "s|<ETH_RPC>|${{ secrets.ETH_RPC }}|g" rules.json
+          
           go build
           ./alert --htmlbody ./body.html
 

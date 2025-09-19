@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"math/big"
 	"path/filepath"
 	"time"
 
@@ -17,7 +18,6 @@ import (
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
 	"github.com/ethstorage/go-ethstorage/ethstorage/miner"
 	"github.com/ethstorage/go-ethstorage/ethstorage/p2p"
-	"github.com/ethstorage/go-ethstorage/ethstorage/rollup"
 	"github.com/ethstorage/go-ethstorage/ethstorage/scanner"
 	"github.com/ethstorage/go-ethstorage/ethstorage/storage"
 )
@@ -33,10 +33,8 @@ type Config struct {
 	DataDir        string
 	StateUploadURL string
 	DBConfig       *db.Config
-
+	ChainID        *big.Int
 	// Driver driver.Config
-
-	Rollup rollup.EsConfig
 
 	// // P2PSigner will be used for signing off on published content
 	// // if the node is sequencing and if the p2p stack is enabled

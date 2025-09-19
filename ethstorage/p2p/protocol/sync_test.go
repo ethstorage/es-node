@@ -15,8 +15,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/detailyang/go-fallocate"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
@@ -27,11 +25,11 @@ import (
 	"github.com/ethstorage/go-ethstorage/ethstorage"
 	"github.com/ethstorage/go-ethstorage/ethstorage/metrics"
 	prv "github.com/ethstorage/go-ethstorage/ethstorage/prover"
-	"github.com/ethstorage/go-ethstorage/ethstorage/rollup"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/network"
 	bhost "github.com/libp2p/go-libp2p/p2p/host/blank"
 	swarmt "github.com/libp2p/go-libp2p/p2p/net/swarm/testing"
+	"github.com/stretchr/testify/assert"
 )
 
 const (
@@ -331,11 +329,11 @@ func connect(t *testing.T, a, b host.Host, as, bs map[common.Address][]uint64) {
 	}
 }
 
-func createLocalHostAndSyncClient(t *testing.T, rollupCfg *rollup.EsConfig, db ethdb.Database,
+func createLocalHostAndSyncClient(t *testing.T, chainID *big.Int, db ethdb.Database,
 	storageManager StorageManager, metrics SyncClientMetrics, mux *event.Feed) (host.Host, *SyncClient) {
 	localHost := getNetHost(t)
 
-	syncCl := NewSyncClient(lg, rollupCfg, localHost.NewStream, storageManager, &params, db, metrics, mux)
+	syncCl := NewSyncClient(lg, chainID, localHost.NewStream, storageManager, &params, db, metrics, mux)
 	localHost.Network().Notify(&network.NotifyBundle{
 		ConnectedF: func(nw network.Network, conn network.Conn) {
 			shards := make(map[common.Address][]uint64)
@@ -372,15 +370,15 @@ func createLocalHostAndSyncClient(t *testing.T, rollupCfg *rollup.EsConfig, db e
 	return localHost, syncCl
 }
 
-func createRemoteHost(t *testing.T, ctx context.Context, rollupCfg *rollup.EsConfig,
+func createRemoteHost(t *testing.T, ctx context.Context, chainID *big.Int,
 	storageManager *mockStorageManagerReader, db ethdb.Database, metrics SyncServerMetrics) host.Host {
 
 	remoteHost := getNetHost(t)
-	syncSrv := NewSyncServer(rollupCfg, storageManager, db, metrics, lg)
+	syncSrv := NewSyncServer(storageManager, db, metrics, lg)
 	blobByRangeHandler := MakeStreamHandler(ctx, lg, syncSrv.HandleGetBlobsByRangeRequest)
-	remoteHost.SetStreamHandler(GetProtocolID(RequestBlobsByRangeProtocolID, rollupCfg.L2ChainID), blobByRangeHandler)
+	remoteHost.SetStreamHandler(GetProtocolID(RequestBlobsByRangeProtocolID, chainID), blobByRangeHandler)
 	blobByListHandler := MakeStreamHandler(ctx, lg, syncSrv.HandleGetBlobsByListRequest)
-	remoteHost.SetStreamHandler(GetProtocolID(RequestBlobsByListProtocolID, rollupCfg.L2ChainID), blobByListHandler)
+	remoteHost.SetStreamHandler(GetProtocolID(RequestBlobsByListProtocolID, chainID), blobByListHandler)
 
 	return remoteHost
 }
@@ -517,9 +515,7 @@ func TestSync_RequestL2Range(t *testing.T) {
 		mux          = new(event.Feed)
 		shards       = make(map[common.Address][]uint64)
 		m            = metrics.NewMetrics("sync_test")
-		rollupCfg    = &rollup.EsConfig{
-			L2ChainID: new(big.Int).SetUint64(3333),
-		}
+		chainID      = new(big.Int).SetUint64(3333)
 	)
 	defer cancel()
 
@@ -557,7 +553,7 @@ func TestSync_RequestL2Range(t *testing.T) {
 	}
 
 	// create local and remote hosts, set up sync client and server
-	localHost, syncCl := createLocalHostAndSyncClient(t, rollupCfg, db, sm, m, mux)
+	localHost, syncCl := createLocalHostAndSyncClient(t, chainID, db, sm, m, mux)
 	syncCl.loadSyncStatus()
 	sm.Reset(0)
 	err = sm.DownloadAllMetas(context.Background(), 16)
@@ -565,7 +561,7 @@ func TestSync_RequestL2Range(t *testing.T) {
 		t.Fatal("Download blob metadata failed", "error", err)
 		return
 	}
-	remoteHost := createRemoteHost(t, ctx, rollupCfg, smr, db, m)
+	remoteHost := createRemoteHost(t, ctx, chainID, smr, db, m)
 	connect(t, localHost, remoteHost, shards, shards)
 
 	time.Sleep(2 * time.Second)
@@ -589,9 +585,7 @@ func TestSync_RequestL2List(t *testing.T) {
 		mux          = new(event.Feed)
 		shards       = make(map[common.Address][]uint64)
 		m            = metrics.NewMetrics("sync_test")
-		rollupCfg    = &rollup.EsConfig{
-			L2ChainID: new(big.Int).SetUint64(3333),
-		}
+		chainID      = new(big.Int).SetUint64(3333)
 	)
 	defer cancel()
 
@@ -629,7 +623,7 @@ func TestSync_RequestL2List(t *testing.T) {
 	}
 
 	// create local and remote hosts, set up sync client and server
-	localHost, syncCl := createLocalHostAndSyncClient(t, rollupCfg, db, sm, m, mux)
+	localHost, syncCl := createLocalHostAndSyncClient(t, chainID, db, sm, m, mux)
 	syncCl.loadSyncStatus()
 	sm.Reset(0)
 	err = sm.DownloadAllMetas(context.Background(), 16)
@@ -637,7 +631,7 @@ func TestSync_RequestL2List(t *testing.T) {
 		t.Fatal("Download blob metadata failed", "error", err)
 		return
 	}
-	remoteHost := createRemoteHost(t, ctx, rollupCfg, smr, db, m)
+	remoteHost := createRemoteHost(t, ctx, chainID, smr, db, m)
 	connect(t, localHost, remoteHost, shards, shards)
 
 	indexes := make([]uint64, 0)
@@ -672,9 +666,7 @@ func TestSaveAndLoadSyncStatus(t *testing.T) {
 		mux                 = new(event.Feed)
 		m                   = metrics.NewMetrics("sync_test")
 		expectedSecondsUsed = uint64(10)
-		rollupCfg           = &rollup.EsConfig{
-			L2ChainID: new(big.Int).SetUint64(3333),
-		}
+		chainID             = new(big.Int).SetUint64(3333)
 	)
 	// create ethstorage and generate data
 	shardManager, files := createEthStorage(contract, []uint64{0, 1, 2}, defaultChunkSize, kvSize, entries, common.Address{}, defaultEncodeType)
@@ -691,7 +683,7 @@ func TestSaveAndLoadSyncStatus(t *testing.T) {
 	l1 := NewMockL1Source(lastKvIndex, metafileName)
 	sm := ethstorage.NewStorageManager(shardManager, l1, lg)
 	sm.Reset(0)
-	_, syncCl := createLocalHostAndSyncClient(t, rollupCfg, db, sm, m, mux)
+	_, syncCl := createLocalHostAndSyncClient(t, chainID, db, sm, m, mux)
 	syncCl.loadSyncStatus()
 	indexes := []uint64{30, 5, 8}
 	syncCl.tasks[0].healTask.insert(indexes)
@@ -790,9 +782,7 @@ func testSync(t *testing.T, chunkSize, kvSize, kvEntries uint64, localShards []u
 		mux           = new(event.Feed)
 		localShardMap = make(map[common.Address][]uint64)
 		m             = metrics.NewMetrics("sync_test")
-		rollupCfg     = &rollup.EsConfig{
-			L2ChainID: new(big.Int).SetUint64(3333),
-		}
+		chainID       = new(big.Int).SetUint64(3333)
 	)
 
 	metafile, err := CreateMetaFile(metafileName, int64(kvEntries)*int64(len(localShards)))
@@ -820,7 +810,7 @@ func testSync(t *testing.T, chunkSize, kvSize, kvEntries uint64, localShards []u
 	sm := ethstorage.NewStorageManager(shardManager, l1, lg)
 	sm.Reset(0)
 	data := makeKVStorage(contract, localShards, chunkSize, kvSize, kvEntries, lastKvIndex, common.Address{}, encodeType, metafile)
-	localHost, syncCl := createLocalHostAndSyncClient(t, rollupCfg, db, sm, m, mux)
+	localHost, syncCl := createLocalHostAndSyncClient(t, chainID, db, sm, m, mux)
 	syncCl.Start()
 
 	finalExcludedList := remotePeers[0].excludedList
@@ -840,7 +830,7 @@ func testSync(t *testing.T, chunkSize, kvSize, kvEntries uint64, localShards []u
 		}
 		rShardMap := make(map[common.Address][]uint64)
 		rShardMap[contract] = rPeer.shards
-		remoteHost := createRemoteHost(t, ctx, rollupCfg, smr, db, m)
+		remoteHost := createRemoteHost(t, ctx, chainID, smr, db, m)
 		connect(t, localHost, remoteHost, localShardMap, rShardMap)
 	}
 
@@ -1018,9 +1008,7 @@ func TestAddPeerDuringSyncing(t *testing.T) {
 		shardMap     = make(map[common.Address][]uint64)
 		excludedList = getRandomU64InRange(make(map[uint64]struct{}), 0, 15, 3)
 		m            = metrics.NewMetrics("sync_test")
-		rollupCfg    = &rollup.EsConfig{
-			L2ChainID: new(big.Int).SetUint64(3333),
-		}
+		chainID      = new(big.Int).SetUint64(3333)
 	)
 
 	metafile, err := CreateMetaFile(metafileName, int64(kvEntries))
@@ -1048,7 +1036,7 @@ func TestAddPeerDuringSyncing(t *testing.T) {
 	// fill empty to excludedList for verify KVs
 	fillEmpty(shardManager, excludedList)
 
-	localHost, syncCl := createLocalHostAndSyncClient(t, rollupCfg, db, sm, m, mux)
+	localHost, syncCl := createLocalHostAndSyncClient(t, chainID, db, sm, m, mux)
 	syncCl.Start()
 
 	pData := copyShardData(data[contract], shards, kvEntries, excludedList)
@@ -1061,7 +1049,7 @@ func TestAddPeerDuringSyncing(t *testing.T) {
 		shardMiner:      common.Address{},
 		blobPayloads:    pData,
 	}
-	remoteHost0 := createRemoteHost(t, ctx, rollupCfg, smr0, db, m)
+	remoteHost0 := createRemoteHost(t, ctx, chainID, smr0, db, m)
 	connect(t, localHost, remoteHost0, shardMap, shardMap)
 	time.Sleep(3 * time.Second)
 
@@ -1079,7 +1067,7 @@ func TestAddPeerDuringSyncing(t *testing.T) {
 		shardMiner:      common.Address{},
 		blobPayloads:    data[contract],
 	}
-	remoteHost1 := createRemoteHost(t, ctx, rollupCfg, smr1, db, m)
+	remoteHost1 := createRemoteHost(t, ctx, chainID, smr1, db, m)
 	connect(t, localHost, remoteHost1, shardMap, shardMap)
 	checkStall(t, 4, mux, cancel)
 
@@ -1100,9 +1088,7 @@ func TestCloseSyncWhileFillEmpty(t *testing.T) {
 		shards      = []uint64{0}
 		shardMap    = make(map[common.Address][]uint64)
 		m           = metrics.NewMetrics("sync_test")
-		rollupCfg   = &rollup.EsConfig{
-			L2ChainID: new(big.Int).SetUint64(3333),
-		}
+		chainID     = new(big.Int).SetUint64(3333)
 	)
 
 	metafile, err := CreateMetaFile(metafileName, int64(kvEntries))
@@ -1127,7 +1113,7 @@ func TestCloseSyncWhileFillEmpty(t *testing.T) {
 	l1 := NewMockL1Source(lastKvIndex, metafileName)
 	sm := ethstorage.NewStorageManager(shardManager, l1, lg)
 	sm.Reset(0)
-	_, syncCl := createLocalHostAndSyncClient(t, rollupCfg, db, sm, m, mux)
+	_, syncCl := createLocalHostAndSyncClient(t, chainID, db, sm, m, mux)
 	syncCl.Start()
 	time.Sleep(10 * time.Millisecond)
 	syncCl.Close()
@@ -1154,9 +1140,7 @@ func TestAddPeerAfterSyncDone(t *testing.T) {
 		shardMap     = make(map[common.Address][]uint64)
 		excludedList = make(map[uint64]struct{})
 		m            = metrics.NewMetrics("sync_test")
-		rollupCfg    = &rollup.EsConfig{
-			L2ChainID: new(big.Int).SetUint64(3333),
-		}
+		chainID      = new(big.Int).SetUint64(3333)
 	)
 
 	metafile, err := CreateMetaFile(metafileName, int64(kvEntries))
@@ -1185,7 +1169,7 @@ func TestAddPeerAfterSyncDone(t *testing.T) {
 	// fill empty to excludedList for verify KVs
 	fillEmpty(shardManager, excludedList)
 
-	localHost, syncCl := createLocalHostAndSyncClient(t, rollupCfg, db, sm, m, mux)
+	localHost, syncCl := createLocalHostAndSyncClient(t, chainID, db, sm, m, mux)
 	syncCl.Start()
 
 	smr0 := &mockStorageManagerReader{
@@ -1197,7 +1181,7 @@ func TestAddPeerAfterSyncDone(t *testing.T) {
 		shardMiner:      common.Address{},
 		blobPayloads:    data[contract],
 	}
-	remoteHost0 := createRemoteHost(t, ctx, rollupCfg, smr0, db, m)
+	remoteHost0 := createRemoteHost(t, ctx, chainID, smr0, db, m)
 	connect(t, localHost, remoteHost0, shardMap, shardMap)
 	checkStall(t, 4, mux, cancel)
 
@@ -1215,7 +1199,7 @@ func TestAddPeerAfterSyncDone(t *testing.T) {
 		shardMiner:      common.Address{},
 		blobPayloads:    data[contract],
 	}
-	remoteHost1 := createRemoteHost(t, ctx, rollupCfg, smr1, db, m)
+	remoteHost1 := createRemoteHost(t, ctx, chainID, smr1, db, m)
 	connect(t, localHost, remoteHost1, shardMap, shardMap)
 
 	time.Sleep(10 * time.Millisecond)
@@ -1234,9 +1218,7 @@ func TestFillEmpty(t *testing.T) {
 		shards      = []uint64{0}
 		shardMap    = make(map[common.Address][]uint64)
 		m           = metrics.NewMetrics("sync_test")
-		rollupCfg   = &rollup.EsConfig{
-			L2ChainID: new(big.Int).SetUint64(3333),
-		}
+		chainID     = new(big.Int).SetUint64(3333)
 	)
 
 	metafile, err := CreateMetaFile(metafileName, int64(kvEntries))
@@ -1261,7 +1243,7 @@ func TestFillEmpty(t *testing.T) {
 	l1 := NewMockL1Source(lastKvIndex, metafileName)
 	sm := ethstorage.NewStorageManager(shardManager, l1, lg)
 	sm.Reset(0)
-	_, syncCl := createLocalHostAndSyncClient(t, rollupCfg, db, sm, m, mux)
+	_, syncCl := createLocalHostAndSyncClient(t, chainID, db, sm, m, mux)
 	syncCl.Start()
 	for i := 0; i < 4; i++ {
 		time.Sleep(500 * time.Millisecond)
