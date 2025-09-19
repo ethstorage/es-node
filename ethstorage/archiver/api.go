@@ -9,7 +9,6 @@ import (
 	"math/big"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto/kzg4844"
@@ -51,12 +50,10 @@ func (a *API) queryBlobSidecars(id string, indices []uint64) (*BlobSidecars, *ht
 	a.lg.Info("BeaconID to execution block number", "beaconID", id, "elBlock", elBlock)
 
 	blobsInBeacon := len(kzgCommitsAll)
-	if indices != nil {
-		for _, index := range indices {
-			if int(index) >= blobsInBeacon {
-				// beacon API will ignore invalid indices and return all blobs
-				indices = nil
-			}
+	for _, index := range indices {
+		if int(index) >= blobsInBeacon {
+			// beacon API will ignore invalid indices and return all blobs
+			indices = nil
 		}
 	}
 
@@ -99,12 +96,6 @@ func (a *API) queryBlobSidecars(id string, indices []uint64) (*BlobSidecars, *ht
 }
 
 func (a *API) queryElBlockNumberAndKzg(queryUrl string) (uint64, []string, *httpError) {
-	start := time.Now()
-	defer func(start time.Time) {
-		dur := time.Since(start)
-		a.lg.Info("Query el block number and kzg", "took(s)", dur.Seconds())
-	}(start)
-
 	resp, err := http.Get(queryUrl)
 	if err != nil {
 		return 0, nil, errServerError
@@ -136,12 +127,6 @@ func (a *API) queryElBlockNumberAndKzg(queryUrl string) (uint64, []string, *http
 }
 
 func (a *API) buildSidecar(kvIndex uint64, kzgCommitment []byte, blobHash common.Hash) (*BlobSidecar, *httpError) {
-	start := time.Now()
-	defer func(start time.Time) {
-		dur := time.Since(start)
-		a.lg.Info("Build sidecar", "took(s)", dur.Seconds())
-	}(start)
-
 	blobData, found, err := a.storageMgr.TryRead(kvIndex, int(a.storageMgr.MaxKvSize()), blobHash)
 	if err != nil {
 		a.lg.Error("Failed to read blob", "err", err)
