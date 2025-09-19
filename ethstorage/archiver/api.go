@@ -49,9 +49,9 @@ func (a *API) queryBlobSidecars(id string, indices []uint64) (*BlobSidecars, *ht
 	}
 	a.lg.Info("BeaconID to execution block number", "beaconID", id, "elBlock", elBlock)
 
-	blobsInBeacon := len(kzgCommitsAll)
+	blobsInBeacon := uint64(len(kzgCommitsAll))
 	for _, index := range indices {
-		if int(index) >= blobsInBeacon {
+		if index >= blobsInBeacon {
 			// beacon API will ignore invalid indices and return all blobs
 			indices = nil
 		}
