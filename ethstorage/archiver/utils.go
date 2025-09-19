@@ -92,7 +92,7 @@ loop:
 			invalidIndices = append(invalidIndices, raw)
 			continue
 		}
-		if ix >= uint64(max) {
+		if max > 0 && ix >= uint64(max) {
 			invalidIndices = append(invalidIndices, raw)
 			continue
 		}

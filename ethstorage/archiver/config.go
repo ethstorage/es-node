@@ -46,7 +46,7 @@ func CLIFlags(envPrefix string) []cli.Flag {
 			Name:   MaxBlobsPerBlockName,
 			Usage:  "Max blobs per block",
 			EnvVar: rollup.PrefixEnvVar(envPrefix, "MAX_BLOBS_PER_BLOCK"),
-			Value:  6,
+			Value:  0, // 0 means no limit
 		},
 	}
 	return flags
