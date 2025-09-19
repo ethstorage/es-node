@@ -10,7 +10,6 @@ import (
 	"net"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/ethereum-optimism/optimism/op-service/httputil"
 	"github.com/ethereum/go-ethereum/log"
@@ -38,11 +37,6 @@ type APIService struct {
 // blobSidecarHandler implements the /eth/v1/beacon/blob_sidecars/{id} endpoint,
 // but allows clients to fetch expired blobs.
 func (a *APIService) blobSidecarHandler(w http.ResponseWriter, r *http.Request) {
-	start := time.Now()
-	defer func(start time.Time) {
-		dur := time.Since(start)
-		a.lg.Info("Blob archiver API request handled", "took(s)", dur.Seconds())
-	}(start)
 
 	a.lg.Info("Blob archiver API request", "from", readUserIP(r), "url", r.RequestURI)
 
