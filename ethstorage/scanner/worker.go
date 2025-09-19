@@ -7,6 +7,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
+	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
@@ -31,6 +33,8 @@ type Worker struct {
 	l1               es.Il1Source
 	cfg              Config
 	nextIndexOfKvIdx uint64
+	mismatching      statsType    // kv indices that are mismatching (not fixed yet)
+	mu               sync.RWMutex // protects mismatching
 	lg               log.Logger
 }
 
@@ -42,11 +46,12 @@ func NewWorker(
 	lg log.Logger,
 ) *Worker {
 	return &Worker{
-		sm:        sm,
-		fetchBlob: fetch,
-		l1:        l1,
-		cfg:       cfg,
-		lg:        lg,
+		sm:          sm,
+		fetchBlob:   fetch,
+		l1:          l1,
+		cfg:         cfg,
+		mismatching: make(statsType),
+		lg:          lg,
 	}
 }
 
@@ -107,32 +112,49 @@ func (s *Worker) ScanBatch(ctx context.Context, sendError func(kvIndex uint64, e
 		}
 
 		if found && err == nil {
+			// If a mismatching entry is fixed externally, clear its state
+			if s.hasMismatch(kvIndex) {
+				s.removeMismatch(kvIndex)
+				sendError(kvIndex, nil)
+				s.lg.Info("Scanner: previously mismatching KV fixed externally", "kvIndex", kvIndex)
+			}
 			// Happy path
-			s.lg.Debug("Scanner: check KV done", "kvIndex", kvIndex, "commit", commit)
+			s.lg.Debug("Scanner: KV check completed successfully", "kvIndex", kvIndex, "commit", commit)
 			continue
 		}
 
 		if !found {
-			// The shard does not exist locally
-			s.lg.Error("Scanner: blob not found", "kvIndex", kvIndex, "commit", commit)
+			// The shard is not stored locally
+			s.lg.Error("Scanner: blob not found locally", "kvIndex", kvIndex, "commit", commit)
 			continue
 		}
 
 		if err != nil {
 			var commitErr *es.CommitMismatchError
 			if errors.As(err, &commitErr) {
-				s.lg.Warn("Scanner: commit mismatch found", "kvIndex", kvIndex, "error", err)
-				sts.mismatched = append(sts.mismatched, kvIndex)
-				if fixErr := s.fixKv(kvIndex, commit); fixErr != nil {
-					sts.failed = append(sts.failed, kvIndex)
-					s.lg.Error("Scanner: fix blob error", "kvIndex", kvIndex, "error", fixErr)
-					sendError(kvIndex, fmt.Errorf("failed to fix blob: %w", fixErr))
+				s.lg.Warn("Scanner: commit mismatch detected", "kvIndex", kvIndex, "error", err)
+				if !s.checkAndMarkMismatch(kvIndex) {
+					// Mark but skip on the first occurrence as it may be caused by KV update and delayed download
+					s.lg.Info("Scanner: first-time mismatch, skipping fix attempt", "kvIndex", kvIndex)
 				} else {
-					sts.fixed = append(sts.fixed, kvIndex)
-					sendError(kvIndex, nil) // Clear the error
+					// Only count repeated mismatches
+					sts.mismatched = append(sts.mismatched, kvIndex)
+					s.lg.Info("Scanner: mismatch again, attempting to fix blob", "kvIndex", kvIndex, "commit", commit)
+					if fixErr := s.fixKv(kvIndex, commit); fixErr != nil {
+						sts.failed = append(sts.failed, kvIndex)
+						s.incrementMismatch(kvIndex)
+						s.lg.Error("Scanner: failed to fix blob", "kvIndex", kvIndex, "error", fixErr)
+						sendError(kvIndex, fmt.Errorf("failed to fix blob: %w", fixErr))
+					} else {
+						s.lg.Info("Scanner: blob fixed successfully", "kvIndex", kvIndex)
+						sts.fixed = append(sts.fixed, kvIndex)
+						// Clear the error state
+						sendError(kvIndex, nil)
+						s.removeMismatch(kvIndex)
+					}
 				}
 			} else {
-				s.lg.Error("Scanner: unexpected error", "kvIndex", kvIndex, "error", err)
+				s.lg.Error("Scanner: unexpected error occurred", "kvIndex", kvIndex, "error", err)
 				sendError(kvIndex, fmt.Errorf("unexpected error: %w", err))
 			}
 		}
@@ -146,25 +168,71 @@ func (s *Worker) ScanBatch(ctx context.Context, sendError func(kvIndex uint64, e
 }
 
 func (s *Worker) fixKv(kvIndex uint64, commit common.Hash) error {
-	s.lg.Info("Scanner: try to fix blob", "kvIndex", kvIndex, "commit", commit)
 	if err := s.sm.TryWriteWithMetaCheck(kvIndex, commit, s.fetchBlob); err != nil {
 		return fmt.Errorf("failed to write KV: kvIndex=%d, commit=%x, %w", kvIndex, commit, err)
 	}
-	s.lg.Info("Scanner: fixed blob successfully!", "kvIndex", kvIndex)
 	return nil
+}
+
+func (s *Scanner) getMismatchingList() []uint64 {
+	s.worker.mu.RLock()
+	defer s.worker.mu.RUnlock()
+
+	var mismatchList []uint64
+	for kvIndex, count := range s.worker.mismatching {
+		if count > 1 {
+			mismatchList = append(mismatchList, kvIndex)
+		}
+	}
+
+	if len(mismatchList) > 0 {
+		slices.Sort(mismatchList)
+	}
+
+	return mismatchList
+}
+
+func (s *Worker) checkAndMarkMismatch(kvIndex uint64) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if _, exists := s.mismatching[kvIndex]; exists {
+		return true
+	}
+	s.mismatching[kvIndex] = 1
+	return false
+}
+
+func (s *Worker) incrementMismatch(kvIndex uint64) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.mismatching[kvIndex]++
+}
+
+func (s *Worker) removeMismatch(kvIndex uint64) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.mismatching, kvIndex)
+}
+
+func (s *Worker) hasMismatch(kvIndex uint64) bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	_, exists := s.mismatching[kvIndex]
+	return exists
 }
 
 func getKvsInBatch(shards []uint64, kvEntries, lastKvIdx, batchSize, batchStartIndex uint64, lg log.Logger) ([]uint64, uint64, uint64) {
 	// Calculate the total number of KV entries stored locally
 	var totalEntries uint64
-	// The shard indices in shards are sorted but may not be continuous: e.g. [0, 1, 3, 4] means shard 2 is missing.
+	// Shard indices are sorted but may not be continuous: e.g. [0, 1, 3, 4] indicates shard 2 is missing
 	for _, shardIndex := range shards {
-		// the last shard may not have full kvEntries
+		// The last shard may contain fewer than the full kvEntries
 		if shardIndex == lastKvIdx/kvEntries {
 			totalEntries += lastKvIdx%kvEntries + 1
 			break
 		}
-		// full shards
+		// Complete shards
 		totalEntries += kvEntries
 	}
 	lg.Debug("Scanner: KV entries stored locally", "totalKvStored", totalEntries)
@@ -173,10 +241,10 @@ func getKvsInBatch(shards []uint64, kvEntries, lastKvIdx, batchSize, batchStartI
 	startKvIndex := batchStartIndex
 	if startKvIndex >= totalEntries {
 		startKvIndex = 0
-		lg.Debug("Scanner: restarting scan from beginning")
+		lg.Debug("Scanner: restarting scan from the beginning")
 	}
 	endKvIndexExclusive := min(startKvIndex+batchSize, totalEntries)
-	// The actual batch would be [startKvIndex, endKvIndexExclusive) or [startKvIndex, endIndex]
+	// The actual batch range is [startKvIndex, endKvIndexExclusive) or [startKvIndex, endIndex]
 	endIndex := endKvIndexExclusive - 1
 
 	// Calculate starting and ending shard indices and offsets where KV starts and ends on the current shard.
@@ -184,16 +252,16 @@ func getKvsInBatch(shards []uint64, kvEntries, lastKvIdx, batchSize, batchStartI
 	startKvOffset := startKvIndex % kvEntries
 
 	endShardPos := endIndex / kvEntries
-	endKvOffset := endIndex%kvEntries + 1 // +1 because the end KV is exclusive
+	endKvOffset := endIndex%kvEntries + 1 // +1 because the end KV index is exclusive
 
 	// Collect KV indices for the current batch
 	kvsInBatch := make([]uint64, 0, endKvIndexExclusive-startKvIndex)
-	// Loop through the shards from startShardPos to endShardPos(inclusive)
+	// Iterate through shards from startShardPos to endShardPos (inclusive)
 	for i := startShardPos; i <= endShardPos; i++ {
-		// Default range of the full shards
+		// Default range for complete shards
 		localStart := uint64(0)
 		localEnd := kvEntries
-		// If the shard is the first or last shard in the batch, adjust the start and end offsets
+		// Adjust start and end offsets for the first or last shard in the batch
 		if i == startShardPos {
 			localStart = startKvOffset
 		}
@@ -204,6 +272,6 @@ func getKvsInBatch(shards []uint64, kvEntries, lastKvIdx, batchSize, batchStartI
 			kvsInBatch = append(kvsInBatch, shards[i]*kvEntries+k)
 		}
 	}
-	lg.Debug("Scanner: batch index range", "batchStart", startKvIndex, "batchEnd(exclusive)", endKvIndexExclusive, "kvsInBatch", shortPrt(kvsInBatch))
+	lg.Debug("Scanner: batch index range determined", "batchStart", startKvIndex, "batchEnd(exclusive)", endKvIndexExclusive, "kvsInBatch", shortPrt(kvsInBatch))
 	return kvsInBatch, totalEntries, endKvIndexExclusive
 }
