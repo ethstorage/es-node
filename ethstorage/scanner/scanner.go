@@ -8,7 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
 	es "github.com/ethstorage/go-ethstorage/ethstorage"
@@ -28,8 +27,6 @@ type Scanner struct {
 	errorCh  chan scanError
 	statsCh  chan stats
 }
-
-type LoadKvFromCacheFunc func(uint64, common.Hash) []byte
 
 func New(
 	ctx context.Context,
