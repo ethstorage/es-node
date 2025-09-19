@@ -36,8 +36,12 @@ func (s statsType) String() string {
 }
 
 type statsSum struct {
-	localKvs   string
-	total      int       // total number of kv entries stored in local
+
+	// localKvs and total are status at the time of the scan
+	localKvs string // kv entries stored in local
+	total    int    // total number of kv entries stored in local
+
+	// mismatched, fixed, and failed are stats accumulated over time since the node started
 	mismatched statsType // mismatched indices with times occurred for each
 	fixed      statsType // successfully fixed indices with times occurred for each
 	failed     statsType // failed fixed indices with times occurred for each
