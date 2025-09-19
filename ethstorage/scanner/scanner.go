@@ -94,21 +94,30 @@ func (s *Scanner) start() {
 	s.running = true
 	s.mu.Unlock()
 
-	s.wg.Add(2)
+	s.wg.Add(1)
 
-	// Reporting and error handling goroutine
 	go func() {
 		defer s.wg.Done()
 
+		s.lg.Info("Scanner started", "mode", s.worker.cfg.Mode, "interval", s.interval.String(), "batchSize", s.worker.cfg.BatchSize)
+
+		mainTicker := time.NewTicker(s.interval)
 		reportTicker := time.NewTicker(1 * time.Minute)
+		defer mainTicker.Stop()
 		defer reportTicker.Stop()
 
 		errCache := make(map[uint64]scanError)
 		sts := newStatsSum()
 		statsUpdated := false
 
+		s.doWork()
+
 		for {
 			select {
+			case <-mainTicker.C:
+				s.lg.Debug("Scanner: executing scheduled scan")
+				s.doWork()
+
 			case <-reportTicker.C:
 				if statsUpdated { // Wait for stats updated for the first time
 					s.logStats(sts)
@@ -116,36 +125,18 @@ func (s *Scanner) start() {
 						s.lg.Info("Scanner error happened earlier", "kvIndex", e.kvIndex, "error", e.err)
 					}
 				}
+
 			case err := <-s.errorCh:
 				if err.err != nil {
 					errCache[err.kvIndex] = err
 				} else {
 					delete(errCache, err.kvIndex)
 				}
+
 			case st := <-s.statsCh:
 				sts.update(st)
 				statsUpdated = true
-			case <-s.ctx.Done():
-				return
-			}
-		}
-	}()
 
-	// Main scanning loop
-	go func() {
-		defer s.wg.Done()
-
-		s.lg.Info("Scanner started", "mode", s.worker.cfg.Mode, "interval", s.interval.String(), "batchSize", s.worker.cfg.BatchSize)
-
-		mainTicker := time.NewTicker(s.interval)
-		defer mainTicker.Stop()
-
-		s.doWork()
-
-		for {
-			select {
-			case <-mainTicker.C:
-				s.doWork()
 			case <-s.ctx.Done():
 				return
 			}
