@@ -1,0 +1,105 @@
+name: Integration Test Debug
+
+on: [push]
+
+jobs:
+  integration-test:
+    runs-on: [self-hosted, ethstorage, l2]
+    outputs:
+      test_status: ${{ job.status }}
+    timeout-minutes: 2880
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.23'
+
+      - name: Use Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20.x'
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Deploy Contracts
+        run: |
+          cd ../storage-contracts-v1 
+          git pull
+          git checkout it-l1
+          npm install 
+          git submodule init && git submodule update
+          ./script/deploy.sh 22 >> deploy.log
+          source $(ls -t deployments/EthStorageContractM2L2*.txt | head -n 1)
+          echo ES_NODE_CONTRACT_ADDRESS=$PROXY >> "$GITHUB_ENV"
+          echo RPC_URL='http://5.9.87.214:8545' >> "$GITHUB_ENV"
+          ./script/wait_finalized.sh
+
+      - name: Build and Run Bootnode Node
+        run: |
+          cd ../es-node
+          git checkout main
+          git pull
+          make
+          ./run-l2-it-rpc.sh > es-node-it-bootnode.log&
+
+      - name: Set ENV Parameters
+        run: |
+          echo ES_NODE_UPLOADER_PRIVATE_KEY=`cat ../uploader.key` >> "$GITHUB_ENV"
+          echo ES_NODE_SIGNER_PRIVATE_KEY=`cat ../private.key` >> "$GITHUB_ENV"
+          echo ES_NODE_STORAGE_MINER=0x5C935469C5592Aeeac3372e922d9bCEabDF8830d >> "$GITHUB_ENV"
+
+      - name: Set Miner To Whitelist
+        run: |
+          cast send -r 'http://5.9.87.214:8545' --private-key $ES_NODE_SIGNER_PRIVATE_KEY $ES_NODE_CONTRACT_ADDRESS "grantMinerRole(address)" $ES_NODE_STORAGE_MINER
+
+      - name: Upload Blobs
+        run: |
+          cd ./integration_tests/scripts 
+          npm install --force
+          node ituploader.js 10800 true > upload.log
+          cp .data  ../../cmd/integration-test-server/.data
+
+      - name: Test
+        run: |
+          ./run-l2-it.sh > es-node-it.log&
+          cd ./integration_tests/scripts
+          node ituploader.js  12288 false > upload2.log&
+          cd ../../cmd/integration-test-server
+          go build
+          ./integration-test-server --contract_addr $ES_NODE_CONTRACT_ADDRESS > itserver.log 
+
+      - name: Upload Logs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: logs
+          path: |
+            ./cmd/integration-test-server/itserver.log
+            ./integration_tests/scripts/upload.log
+            ./integration_tests/scripts/upload2.log
+            es-node-it-bootnode.log
+            es-node-it.log
+
+  notification:
+    if: ${{ always() }}
+    needs: integration-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send notification email
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: ${{ github.repository }} GitHub Actions ${{ github.workflow }} Run ${{ needs.integration-test.outputs.test_status }} - ${{ github.sha }}
+          to: molaokp@gmail.com,lundeng@quarkchain.org,qzhu@quarkchain.org
+          from: ${{ secrets.SMTP_USERNAME }}
+          body: |
+            "GitHub Action job completed with status: ${{ needs.integration-test.outputs.test_status }}! Check the details at ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
