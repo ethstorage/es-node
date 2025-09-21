@@ -30,7 +30,7 @@ jobs:
         run: |
           cd ../ethereum-package 
           kurtosis run --enclave es-l1-it github.com/ethpandaops/ethereum-package --args-file local-geth-prysm.yaml
-          sleep 768
+          sleep 1536
 
       - name: Deploy Contracts
         run: |
