@@ -18,7 +18,9 @@
 
 ## Introduction
 
-This document outlines the process for running an op-node from source code, using Sepolia as Layer 1 (L1) and EthStorage as the blob archiver service. The goal is to verify that the op-node correctly derives Layer 2 (L2) blocks from Sepolia using expired blobs (pruned by the Sepolia Beacon Chain) retrieved from the EthStorage node (es-node).
+This document outlines the process for running an OP node from source code, using Sepolia as Layer 1 (L1) and EthStorage as the blob archiver service. 
+
+The goal is to verify that how an OP node that has been left behind correctly derives Layer 2 (L2) blocks from Sepolia using expired blobs (pruned by the Sepolia Beacon Chain) retrieved from the EthStorage node (es-node).
 
 ## Prerequisites
 
@@ -31,7 +33,15 @@ Before proceeding, ensure your environment meets the following requirements:
 
 ## Running an OP Node
 
-### Execution Client
+An OP node are composed of two core software services, the Rollup Node and the Execution Client. 
+
+The Execution Client is responsible for executing the block payloads it receives from the Rollup Node over JSON-RPC. 
+
+The Rollup Node is responsible for deriving L2 block payloads from L1 data and passing those payloads to the Execution Client. The Rollup Node can also optionally participate in a peer-to-peer network to receive blocks directly from the Sequencer before those blocks are submitted to L1. 
+
+In this section we will start both services to synchronize the OP node to the latest block of the network.
+
+### Start the Execution Client
 
 Clone the `op-geth` repository, build and initialize op-geth:
 
@@ -69,7 +79,7 @@ Start the op-geth with the following command:
   --bootnodes enode://7c9422be3825257ac80f89968e7e6dd3f64608199640ae6cea07b59d2de57642568908974ed4327f092728a64c7bdc04130ebbeaa607b6a1b95d0d25e9c5330b@65.109.69.90:30303 2>&1 | tee -a geth.log
 ```
 
-### Rollup Node
+### Start the Rollup Node
 
 Clone the Optimism monorepo and build, initialize op-node:
 
@@ -121,9 +131,9 @@ cast bn
 cast bn -r https://rpc.gamma.testnet.l2.quarkchain.io:8545
 ```
 
-If the node is fully synced, mark the current block number, and stop the op-node instance.
+If the node is completely synced, mark the current block number, and stop the op-node instance.
 
-## Test sync with the Archive API
+## Sync data from the Archive API
 
 ### Start a proxy to Beacon API
 
