@@ -48,7 +48,7 @@ jobs:
       - name: Build and Run Bootnode Node
         run: |
           cd ../es-node
-          git checkout main
+          git checkout debug
           git pull
           make
           ./run-it-rpc.sh > es-node-it-bootnode.log&
@@ -61,7 +61,7 @@ jobs:
 
       - name: Set Miner To Whitelist
         run: |
-          cast send -r 'http://127.0.0.1:32003' --private-key $ES_NODE_SIGNER_PRIVATE_KEY $ES_NODE_CONTRACT_ADDRESS "grantMinerRole(address)" $ES_NODE_STORAGE_MINER
+          cast send -r $RPC_URL --private-key $ES_NODE_SIGNER_PRIVATE_KEY $ES_NODE_CONTRACT_ADDRESS "grantMinerRole(address)" $ES_NODE_STORAGE_MINER
 
       - name: Upload Blobs
         run: |
