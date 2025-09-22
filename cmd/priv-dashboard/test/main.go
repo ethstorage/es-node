@@ -64,9 +64,8 @@ type SyncState struct {
 }
 
 type ScanStats struct {
-	MismatchedCount int `json:"provided_blob"`
-	FixedCount      int `json:"fixed_blob"`
-	FailedCount     int `json:"failed_blob"`
+	MismatchedCount int `json:"mismatched_blob"`
+	UnfixedCount    int `json:"unfixed_blob"`
 }
 
 type ShardState struct {
@@ -128,10 +127,9 @@ func (n *NodeState) Update() {
 	r := rand.Intn(10000)
 	if r > 9800 {
 		n.ScanStats.MismatchedCount++
-		n.ScanStats.FailedCount++
+		n.ScanStats.UnfixedCount++
 	} else if r > 9000 {
 		n.ScanStats.MismatchedCount++
-		n.ScanStats.FixedCount++
 	}
 }
 
@@ -253,7 +251,7 @@ func generateState() IState {
 			Contract:        L1Contract,
 			SavedBlobs:      100,
 			DownloadedBlobs: 100,
-			ScanStats:       &ScanStats{0, 0, 0},
+			ScanStats:       &ScanStats{0, 0},
 		}
 	} else {
 		state = &NodeState{
@@ -266,7 +264,7 @@ func generateState() IState {
 			Contract:        L2Contract,
 			SavedBlobs:      100,
 			DownloadedBlobs: 100,
-			ScanStats:       &ScanStats{0, 0, 0},
+			ScanStats:       &ScanStats{0, 0},
 		}
 	}
 

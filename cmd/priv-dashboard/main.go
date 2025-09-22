@@ -124,7 +124,7 @@ func (d *dashboard) ReportStateHandler(w http.ResponseWriter, r *http.Request) {
 		sync, mining, submission, scanStats := shard.SyncState, shard.MiningState, shard.SubmissionState, state.ScanStats
 		d.m.SetDownloadState(state.Id, state.Contract, state.Version, state.Address, shard.ShardId, shard.Miner, state.SavedBlobs, state.DownloadedBlobs)
 		if scanStats != nil {
-			d.m.SetScanState(state.Id, state.Contract, state.Version, state.Address, shard.ShardId, shard.Miner, scanStats.MismatchedCount, scanStats.FixedCount, scanStats.FailedCount)
+			d.m.SetScanState(state.Id, state.Contract, state.Version, state.Address, shard.ShardId, shard.Miner, scanStats.MismatchedCount, scanStats.UnfixedCount)
 		}
 		d.m.SetSyncState(state.Id, state.Contract, state.Version, state.Address, shard.ShardId, shard.Miner, sync.PeerCount, sync.SyncProgress,
 			sync.SyncedSeconds, sync.FillEmptyProgress, sync.FillEmptySeconds, shard.ProvidedBlob)
@@ -252,7 +252,7 @@ func (d *dashboard) outputSummaryHtml(contract string, nodes map[string]*record,
 		dataRang      = "(24h)"
 		content       = ""
 		contentFormat = "<tr>\n\t<td>%s</td>\n\t<td>%s</td>\n\t<td>%d</td>\n\t<td>%d</td>\n\t<td>%d</td>\n\t<td>%d</td>\n\t" +
-			"<td>%d</td>\n\t<td>%s</td>\n\t<td>%d</td>\n\t<td>%d</td>\n\t<td>%d</td>\n\t<td>%d</td>\n\t<td>%d</td>\n\t</tr>\n"
+			"<td>%d</td>\n\t<td>%s</td>\n\t<td>%d</td>\n\t<td>%d</td>\n\t<td>%d</td>\n\t<td>%d</td>\n\t</tr>\n"
 		subject = fmt.Sprintf("Subject: Daily Network Statistics Report | %s | %s\r\n"+
 			"MIME-Version: 1.0\r\n"+
 			"Content-Type: text/html; charset=\"UTF-8\"\r\n\r\n", contract, dstr)
@@ -280,7 +280,7 @@ func (d *dashboard) outputSummaryHtml(contract string, nodes map[string]*record,
 			}
 			content += fmt.Sprintf(contentFormat, n.state.Address, shard.Miner, n.state.SavedBlobs, downloadedBlobs,
 				shard.ShardId, shard.SyncState.PeerCount, submitted, submittedTime, dropped, failed,
-				n.state.ScanStats.MismatchedCount, n.state.ScanStats.FixedCount, n.state.ScanStats.FailedCount)
+				n.state.ScanStats.MismatchedCount, n.state.ScanStats.UnfixedCount)
 		}
 	}
 
@@ -301,8 +301,7 @@ func (d *dashboard) outputSummaryHtml(contract string, nodes map[string]*record,
                 <th>Dropped</th>
                 <th>Failed</th>
                 <th>MismatchedKVCount</th>
-                <th>FixedKVCount</th>
-                <th>FailedKVCount</th>
+                <th>UnfixedKVCount</th>
 			</tr>
 			%s
 		</table>

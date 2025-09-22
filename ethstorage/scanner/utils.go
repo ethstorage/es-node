@@ -36,9 +36,8 @@ func (s statsType) String() string {
 }
 
 type ScanStats struct {
-	MismatchedCount int `json:"provided_blob"`
-	FixedCount      int `json:"fixed_blob"`
-	FailedCount     int `json:"failed_blob"`
+	MismatchedCount int `json:"mismatched_blob"`
+	UnfixedCount    int `json:"unfixed_blob"`
 }
 
 type statsSum struct {

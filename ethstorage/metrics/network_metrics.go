@@ -105,10 +105,9 @@ func (m *NetworkMetrics) SetPeerInfo(id, contract, version, address string, shar
 	m.PeerState.WithLabelValues(contract, fmt.Sprintf(format, id, contract, version, address, shardId, miner.Hex()), "UpdateTime").Set(float64(time.Now().UnixMilli()))
 }
 
-func (m *NetworkMetrics) SetScanState(id, contract, version, address string, shardId uint64, miner common.Address, mismatchedCount, fixedCount, failedCount int) {
+func (m *NetworkMetrics) SetScanState(id, contract, version, address string, shardId uint64, miner common.Address, mismatchedCount, unfixedCount int) {
 	m.PeerState.WithLabelValues(contract, fmt.Sprintf(format, id, contract, version, address, shardId, miner.Hex()), "MismatchedKVCount").Set(float64(mismatchedCount))
-	m.PeerState.WithLabelValues(contract, fmt.Sprintf(format, id, contract, version, address, shardId, miner.Hex()), "FixedKVCount").Set(float64(fixedCount))
-	m.PeerState.WithLabelValues(contract, fmt.Sprintf(format, id, contract, version, address, shardId, miner.Hex()), "FailedKVCount").Set(float64(failedCount))
+	m.PeerState.WithLabelValues(contract, fmt.Sprintf(format, id, contract, version, address, shardId, miner.Hex()), "UnfixedKVCount").Set(float64(unfixedCount))
 }
 
 func (m *NetworkMetrics) SetDownloadState(id, contract, version, address string, shardId uint64, miner common.Address, savedBlobs, downloadedBlobs uint64) {

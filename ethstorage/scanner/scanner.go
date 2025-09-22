@@ -185,8 +185,7 @@ func (s *Scanner) sendError(kvIndex uint64, err error) {
 func (s *Scanner) GetScanState() *ScanStats {
 	return &ScanStats{
 		MismatchedCount: len(s.sts.mismatched),
-		FixedCount:      len(s.sts.fixed),
-		FailedCount:     len(s.sts.failed),
+		UnfixedCount:    0, // TODO
 	}
 }
 
