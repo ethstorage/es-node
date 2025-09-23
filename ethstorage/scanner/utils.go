@@ -81,23 +81,30 @@ func (m mismatchTracker) shouldFix(kvIndex uint64) bool {
 // since the first-time do not count as mismatched and the
 // second-time will be fixed immediately if possible
 func (m mismatchTracker) failed() []uint64 {
-	var fails []uint64
-	for kvIndex, status := range m {
-		if status == failed {
-			fails = append(fails, kvIndex)
-		}
-	}
-	return fails
+	return m.filterByStatus(failed)
 }
 
+// fixed() returns only indices that have been fixed by the scanner
+// add recovered() to get those fixed by downloader
 func (m mismatchTracker) fixed() []uint64 {
-	var fixes []uint64
+	return m.filterByStatus(fixed)
+}
+
+// recovered() returns indices fixed by downloader from failed status
+// those recovered from pending status are no longer tracked
+func (m mismatchTracker) recovered() []uint64 {
+	return m.filterByStatus(recovered)
+}
+
+func (m mismatchTracker) filterByStatus(s status) []uint64 {
+	var res []uint64
 	for kvIndex, status := range m {
-		if status == fixed {
-			fixes = append(fixes, kvIndex)
+		if status == s {
+			res = append(res, kvIndex)
 		}
 	}
-	return fixes
+	slices.Sort(res)
+	return res
 }
 
 func (m mismatchTracker) clone() mismatchTracker {
