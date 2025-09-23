@@ -11,6 +11,7 @@ fi
 mkdir ${data_dir}
 
 ./init.sh \
+  --l1.rpc http://127.0.0.1:32003 \
   --shard_index 0 \
   --shard_index 1 \
   --datadir $data_dir \

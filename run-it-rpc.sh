@@ -12,6 +12,7 @@ mkdir ${data_dir}
 echo "8714eb2672bb7ab01089a1060150b30bc374a3b00e18926460f169256d126339" > "${data_dir}/esnode_p2p_priv.txt"
 
 ./init.sh \
+  --l1.rpc http://127.0.0.1:32003 \
   --shard_index 0 \
   --shard_index 1 \
   --encoding_type=0 \

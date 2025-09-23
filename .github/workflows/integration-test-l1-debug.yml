@@ -35,11 +35,11 @@ jobs:
       - name: Deploy Contracts
         run: |
           cd ../storage-contracts-v1 
+          git checkout main
           git pull
-          git checkout it-l1
           npm install 
           git submodule init && git submodule update
-          ./script/deploy.sh 21 >> deploy.log
+          ./script/deploy.sh 21 > deploy.log
           source $(ls -t deployments/EthStorageContractM2*.txt | head -n 1)
           echo ES_NODE_CONTRACT_ADDRESS=$PROXY >> "$GITHUB_ENV"
           echo RPC_URL="http://127.0.0.1:32003" >> "$GITHUB_ENV" 
@@ -110,7 +110,7 @@ jobs:
           username: ${{ secrets.SMTP_USERNAME }}
           password: ${{ secrets.SMTP_PASSWORD }}
           subject: ${{ github.repository }} GitHub Actions ${{ github.workflow }} Run ${{ needs.integration-test.outputs.test_status }} - ${{ github.sha }}
-          to: molaokp@gmail.com,lundeng@quarkchain.org,qzhu@quarkchain.org
+          to: molaokp@gmail.com
           from: ${{ secrets.SMTP_USERNAME }}
           body: |
             "GitHub Action job completed with status: ${{ needs.integration-test.outputs.test_status }}! Check the details at ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
