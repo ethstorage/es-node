@@ -30,8 +30,8 @@ jobs:
       - name: Deploy Contracts
         run: |
           cd ../storage-contracts-v1 
+          git checkout main
           git pull
-          git checkout it-l1
           npm install 
           git submodule init && git submodule update
           ./script/deploy.sh 22 >> deploy.log
