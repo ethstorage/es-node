@@ -5,6 +5,7 @@ package scanner
 
 import (
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 )
@@ -13,67 +14,117 @@ type scanError struct {
 	kvIndex uint64
 	err     error
 }
-type statsType map[uint64]int // kvIndex -> times
 
-func (s statsType) String() string {
+type status int
+
+const (
+	pending   status = iota // first-time detected
+	fixed                   // by scanner
+	recovered               // by downloader
+	failed                  // failed to fix
+)
+
+func (s status) String() string {
+	switch s {
+	case pending:
+		return "pending"
+	case recovered:
+		return "recovered"
+	case fixed:
+		return "fixed"
+	case failed:
+		return "failed"
+	default:
+		return "unknown"
+	}
+}
+
+type mismatchTracker map[uint64]status
+
+func (m mismatchTracker) String() string {
 	var items []string
-	keys := make([]uint64, 0, len(s))
-	for k := range s {
+	keys := make([]uint64, 0, len(m))
+	for k := range m {
 		keys = append(keys, k)
 	}
 	slices.Sort(keys)
+
 	for _, kvIndex := range keys {
-		var str string
-		times := s[kvIndex]
-		if times == 1 {
-			str = fmt.Sprintf("%d", kvIndex)
-		} else {
-			str = fmt.Sprintf("%d(%d times)", kvIndex, times)
-		}
-		items = append(items, str)
+		status := m[kvIndex]
+		items = append(items, fmt.Sprintf("%d(%s)", kvIndex, status))
 	}
 	return "[" + strings.Join(items, ",") + "]"
 }
 
-type statsSum struct {
-	localKvs   string
-	total      int       // total number of kv entries stored in local
-	mismatched statsType // mismatched indices with times occurred for each
-	fixed      statsType // successfully fixed indices with times occurred for each
-	failed     statsType // failed fixed indices with times occurred for each
+func (m mismatchTracker) markPending(kvIndex uint64) {
+	m[kvIndex] = pending
 }
 
-func newStatsSum() *statsSum {
-	return &statsSum{
-		localKvs:   "",
-		total:      0,
-		mismatched: make(statsType),
-		fixed:      make(statsType),
-		failed:     make(statsType),
-	}
+func (m mismatchTracker) markRecovered(kvIndex uint64) {
+	m[kvIndex] = recovered
 }
 
-func (s *statsSum) update(st stats) {
-	s.localKvs = st.localKvs
-	s.total = st.total
+func (m mismatchTracker) markFixed(kvIndex uint64) {
+	m[kvIndex] = fixed
+}
 
-	for _, kvIndex := range st.mismatched {
-		s.mismatched[kvIndex]++
+func (m mismatchTracker) markFailed(kvIndex uint64) {
+	m[kvIndex] = failed
+}
+
+func (m mismatchTracker) shouldFix(kvIndex uint64) bool {
+	status, exists := m[kvIndex]
+	return exists && (status == pending || status == failed)
+}
+
+// failed() returns all indices that are still mismatched
+// since the first-time do not count as mismatched and the
+// second-time will be fixed immediately if possible
+func (m mismatchTracker) failed() []uint64 {
+	return m.filterByStatus(failed)
+}
+
+// fixed() returns only indices that have been fixed by the scanner
+// add recovered() to get those fixed by downloader
+func (m mismatchTracker) fixed() []uint64 {
+	return m.filterByStatus(fixed)
+}
+
+// recovered() returns indices fixed by downloader from failed status
+// those recovered from pending status are no longer tracked
+func (m mismatchTracker) recovered() []uint64 {
+	return m.filterByStatus(recovered)
+}
+
+func (m mismatchTracker) filterByStatus(s status) []uint64 {
+	var res []uint64
+	for kvIndex, status := range m {
+		if status == s {
+			res = append(res, kvIndex)
+		}
 	}
-	for _, kvIndex := range st.fixed {
-		s.fixed[kvIndex]++
-	}
-	for _, kvIndex := range st.failed {
-		s.failed[kvIndex]++
-	}
+	slices.Sort(res)
+	return res
+}
+
+func (m mismatchTracker) clone() mismatchTracker {
+	clone := make(mismatchTracker)
+	maps.Copy(clone, m)
+	return clone
 }
 
 type stats struct {
-	localKvs   string   // kv entries stored in local
-	total      int      // total number of kv entries stored in local
-	mismatched []uint64 // kv indices of mismatched
-	fixed      []uint64 // kv indices of successful fix
-	failed     []uint64 // kv indices of failed fix
+	localKvs   string          // kv entries stored in local
+	total      int             // total number of kv entries stored in local
+	mismatched mismatchTracker // tracks all mismatched indices and their status
+}
+
+func newStats() *stats {
+	return &stats{
+		localKvs:   "",
+		total:      0,
+		mismatched: mismatchTracker{},
+	}
 }
 
 func shortPrt(nums []uint64) string {
