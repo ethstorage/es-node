@@ -8,7 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
 	es "github.com/ethstorage/go-ethstorage/ethstorage"
@@ -27,10 +26,8 @@ type Scanner struct {
 	lg       log.Logger
 	errorCh  chan scanError
 	statsCh  chan stats
-	sts      *statsSum
+	tracker  mismatchTracker
 }
-
-type LoadKvFromCacheFunc func(uint64, common.Hash) []byte
 
 func New(
 	ctx context.Context,
@@ -51,7 +48,7 @@ func New(
 		lg:       lg,
 		errorCh:  make(chan scanError, 10),
 		statsCh:  make(chan stats, 10),
-		sts:      newStatsSum(),
+		tracker:  mismatchTracker{},
 	}
 	scanner.wg.Add(1)
 	go scanner.update()
@@ -96,57 +93,49 @@ func (s *Scanner) start() {
 	s.running = true
 	s.mu.Unlock()
 
-	s.wg.Add(2)
+	s.wg.Add(1)
 
-	// Reporting and error handling goroutine
-	go func() {
-		defer s.wg.Done()
-
-		reportTicker := time.NewTicker(1 * time.Minute)
-		defer reportTicker.Stop()
-
-		errCache := make(map[uint64]scanError)
-		statsUpdated := false
-
-		for {
-			select {
-			case <-reportTicker.C:
-				if statsUpdated { // Wait for stats updated for the first time
-					s.logStats(s.sts)
-					for _, e := range errCache {
-						s.lg.Error("Scanner error happened earlier", "kvIndex", e.kvIndex, "error", e.err)
-					}
-				}
-			case err := <-s.errorCh:
-				if err.err != nil {
-					errCache[err.kvIndex] = err
-				} else {
-					delete(errCache, err.kvIndex)
-				}
-			case st := <-s.statsCh:
-				s.sts.update(st)
-				statsUpdated = true
-			case <-s.ctx.Done():
-				return
-			}
-		}
-	}()
-
-	// Main scanning loop
 	go func() {
 		defer s.wg.Done()
 
 		s.lg.Info("Scanner started", "mode", s.worker.cfg.Mode, "interval", s.interval.String(), "batchSize", s.worker.cfg.BatchSize)
 
 		mainTicker := time.NewTicker(s.interval)
+		reportTicker := time.NewTicker(1 * time.Minute)
 		defer mainTicker.Stop()
+		defer reportTicker.Stop()
+
+		errCache := make(map[uint64]scanError)
+		sts := newStats()
+		statsUpdated := false
 
 		s.doWork()
 
 		for {
 			select {
 			case <-mainTicker.C:
+				s.lg.Debug("Scanner: executing scheduled scan")
 				s.doWork()
+
+			case <-reportTicker.C:
+				if statsUpdated { // Wait for stats updated for the first time
+					s.logStats(sts)
+					for _, e := range errCache {
+						s.lg.Info("Scanner error happened earlier", "kvIndex", e.kvIndex, "error", e.err)
+					}
+				}
+
+			case err := <-s.errorCh:
+				if err.err != nil {
+					errCache[err.kvIndex] = err
+				} else {
+					delete(errCache, err.kvIndex)
+				}
+
+			case st := <-s.statsCh:
+				s.tracker = st.mismatched
+				statsUpdated = true
+
 			case <-s.ctx.Done():
 				return
 			}
@@ -154,23 +143,14 @@ func (s *Scanner) start() {
 	}()
 }
 
-func (s *Scanner) logStats(sts *statsSum) {
-
+func (s *Scanner) logStats(sts *stats) {
 	logFields := []any{
 		"localKvs", sts.localKvs,
 		"localKvsCount", sts.total,
 	}
-
 	if len(sts.mismatched) > 0 {
 		logFields = append(logFields, "mismatched", sts.mismatched.String())
 	}
-	if len(sts.fixed) > 0 {
-		logFields = append(logFields, "fixed", sts.fixed.String())
-	}
-	if len(sts.failed) > 0 {
-		logFields = append(logFields, "failed", sts.failed.String())
-	}
-
 	s.lg.Info("Scanner stats", logFields...)
 }
 
@@ -183,9 +163,10 @@ func (s *Scanner) sendError(kvIndex uint64, err error) {
 }
 
 func (s *Scanner) GetScanState() *ScanStats {
+	tracker := s.tracker.clone()
 	return &ScanStats{
-		MismatchedCount: len(s.sts.mismatched),
-		UnfixedCount:    0, // TODO
+		MismatchedCount: len(tracker),
+		UnfixedCount:    len(tracker.failed()),
 	}
 }
 
@@ -207,10 +188,10 @@ func (s *Scanner) doWork() {
 	s.lg.Debug("Scan batch started")
 	start := time.Now()
 	defer func(stt time.Time) {
-		s.lg.Debug("Scan batch done", "duration", time.Since(stt).String())
+		s.lg.Info("Scan batch done", "duration", time.Since(stt).String())
 	}(start)
 
-	sts, err := s.worker.ScanBatch(s.ctx, s.sendError)
+	sts, err := s.worker.ScanBatch(s.ctx, s.sendError, s.tracker.clone())
 	if err != nil {
 		s.lg.Error("Scan batch failed", "err", err)
 	}
