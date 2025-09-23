@@ -5,10 +5,10 @@
 1. [Introduction](#introduction)
 2. [Prerequisites](#prerequisites)
 3. [Running an OP Node](#running-an-op-node)
-   - 3.1 [Execution Client](#execution-client)
-   - 3.2 [Rollup Node](#rollup-node)
+   - 3.1 [Start the Execution Client](#start-the-execution-client)
+   - 3.2 [Start the Rollup Node](#start-the-rollup-node)
    - 3.3 [Verify OP Node](#verify-op-node)
-4. [Test sync with the Archive API](#test-sync-with-the-archive-api)
+4. [Sync data from the Archive API](#sync-data-from-the-archive-api)
    - 4.1 [Start a proxy to Beacon API](#start-a-proxy-to-beacon-api)
    - 4.2 [Restart op-node with the Archive API](#restart-op-node-with-the-archive-api)
 5. [Verifying the Derivation Process](#verifying-the-derivation-process)
@@ -135,6 +135,8 @@ If the node is completely synced, mark the current block number, and stop the op
 
 ## Sync data from the Archive API
 
+In this section, we demonstrate how an OP Node derive L2 blocks using blobs from the EthStorage archive API.
+
 ### Start a proxy to Beacon API
 
 The following commands start a service to mock Beacon API with a shorter blob retention period:
@@ -151,7 +153,11 @@ If a blob older than 3 epochs (~20 minutes) is requested, the proxy will return 
 
 ### Restart op-node with the Archive API
 
-Restart the op-node with the following command:
+The timing of restarting the stopped op-node is crucial for this test. Ensure that:
+- At least one batch transaction has been submitted to L1 since the op-node stopped
+- The most recent batch has exceeded the mocked retention period
+
+Restart the op-node at the appropriate time with the following command:
 
 ```bash
 export L1_RPC_URL=http://65.108.230.142:8545
@@ -177,7 +183,7 @@ export L1_ARCHIVE_API=https://archive.testnet.ethstorage.io:9635
 **Note:**
 
 - P2P is disabled to ensure that it only syncs data from L1.
-- The beacon archiver is configured to point to the es-node archive service.
+- The beacon archiver is configured to use the es-node archive service.
 
 ## Verifying the Derivation Process
 
@@ -207,7 +213,7 @@ t=2025-09-16T13:15:32+0200 lvl=info msg="Inserted new L2 unsafe block" hash=0x61
 **op-geth logs:**
 ```log
 INFO [09-16|13:11:34.578] Imported new potential chain segment     number=2,275,756 hash=1900fd..127eea blocks=1 txs=1 mgas=0.049 elapsed="947.009µs" mgasps=51.359   age=10h11m26s snapdiffs=2.85MiB    triedirty=10.73MiB
-INFO [09-16|13:11:34.579] Chain head was updated                   number=2,275,756 hash=1900fd..127eea root=a9eb8c..feea18 elapsed="668.261µs" age=10h11m26s
+INFO [09-16|13:11:34.579] Chain head was updated                   number=2,275,756 hash=1900fd..127eea root=a9eb8c..feea18 elapsed="668.261µs"  age=10h11m26s
 INFO [09-16|13:11:34.583] Starting work on payload                 id=0x0301f10e4c14fc3c
 INFO [09-16|13:11:34.585] Imported new potential chain segment     number=2,275,757 hash=b63896..98e6c0 blocks=1 txs=1 mgas=0.049 elapsed=1.063ms     mgasps=45.734   age=10h11m24s snapdiffs=2.85MiB    triedirty=10.73MiB
 INFO [09-16|13:11:34.586] Chain head was updated                   number=2,275,757 hash=b63896..98e6c0 root=a94226..d705f7 elapsed="845.15µs"  age=10h11m24s
