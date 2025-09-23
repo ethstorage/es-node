@@ -37,7 +37,7 @@ jobs:
           ./script/deploy.sh 22 >> deploy.log
           source $(ls -t deployments/EthStorageContractM2L2*.txt | head -n 1)
           echo ES_NODE_CONTRACT_ADDRESS=$PROXY >> "$GITHUB_ENV"
-          echo RPC_URL='http://5.9.87.214:8545' >> "$GITHUB_ENV"
+          echo RPC_URL="http://5.9.87.214:8545" >> "$GITHUB_ENV"
           ./script/wait_finalized.sh
 
       - name: Build and Run Bootnode Node
