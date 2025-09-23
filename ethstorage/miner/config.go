@@ -42,6 +42,7 @@ type Config struct {
 	SignerFnFactory  signer.SignerFactory
 	SignerAddr       common.Address
 	MinimumProfit    *big.Int
+	MaxGasPrice      *big.Int
 
 	// for proof submission notifications
 	EmailEnabled bool
@@ -63,4 +64,5 @@ var DefaultConfig = Config{
 	ZKProverImpl:     1,
 	ThreadsPerShard:  uint64(2 * runtime.NumCPU()),
 	MinimumProfit:    common.Big0,
+	MaxGasPrice:      common.Big0,
 }
