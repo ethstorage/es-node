@@ -178,7 +178,7 @@ func (s *Scanner) doWork(tracker mismatchTracker) {
 	s.lg.Debug("Scan batch started")
 	start := time.Now()
 	defer func(stt time.Time) {
-		s.lg.Debug("Scan batch done", "duration", time.Since(stt).String())
+		s.lg.Info("Scan batch done", "duration", time.Since(stt).String())
 	}(start)
 
 	sts, err := s.worker.ScanBatch(s.ctx, s.sendError, tracker)

@@ -22,7 +22,7 @@ const (
 	IntervalFlagName  = "scanner.interval"
 )
 
-const defaultInterval = 60 // in minutes
+const defaultInterval = 3 // in minutes
 
 func scannerEnv(name string) string {
 	return utils.PrefixEnvVar("SCANNER_" + name)
