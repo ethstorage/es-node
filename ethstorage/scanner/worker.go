@@ -7,8 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"slices"
-	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
@@ -33,8 +31,6 @@ type Worker struct {
 	l1               es.Il1Source
 	cfg              Config
 	nextIndexOfKvIdx uint64
-	mismatching      statsType    // kv indices that are mismatching (not fixed yet)
-	mu               sync.RWMutex // protects mismatching
 	lg               log.Logger
 }
 
@@ -46,16 +42,15 @@ func NewWorker(
 	lg log.Logger,
 ) *Worker {
 	return &Worker{
-		sm:          sm,
-		fetchBlob:   fetch,
-		l1:          l1,
-		cfg:         cfg,
-		mismatching: make(statsType),
-		lg:          lg,
+		sm:        sm,
+		fetchBlob: fetch,
+		l1:        l1,
+		cfg:       cfg,
+		lg:        lg,
 	}
 }
 
-func (s *Worker) ScanBatch(ctx context.Context, sendError func(kvIndex uint64, err error)) (*stats, error) {
+func (s *Worker) ScanBatch(ctx context.Context, sendError func(kvIndex uint64, err error), mismatched mismatchTracker) (*stats, error) {
 	// Query local storage info
 	shards := s.sm.Shards()
 	kvEntries := s.sm.KvEntries()
@@ -69,9 +64,6 @@ func (s *Worker) ScanBatch(ctx context.Context, sendError func(kvIndex uint64, e
 
 	// Determine the batch of KV indices to scan
 	kvsInBatch, totalEntries, batchEndExclusive := getKvsInBatch(shards, kvEntries, lastKvIdx, uint64(s.cfg.BatchSize), s.nextIndexOfKvIdx, s.lg)
-	sts := stats{}
-	sts.localKvs = summaryLocalKvs(shards, kvEntries, lastKvIdx)
-	sts.total = int(totalEntries)
 
 	// Query the metas from the L1 contract
 	metas, err := s.l1.GetKvMetas(kvsInBatch, rpc.FinalizedBlockNumber.Int64())
@@ -112,12 +104,21 @@ func (s *Worker) ScanBatch(ctx context.Context, sendError func(kvIndex uint64, e
 		}
 
 		if found && err == nil {
-			// If a mismatching entry is fixed externally, clear its state
-			if s.hasMismatch(kvIndex) {
-				s.removeMismatch(kvIndex)
-				sendError(kvIndex, nil)
-				s.lg.Info("Scanner: previously mismatching KV fixed externally", "kvIndex", kvIndex)
+
+			// Update status for previously mismatched entries that are now valid
+			if status, exists := mismatched[kvIndex]; exists {
+				switch status {
+				case failed:
+					mismatched.markRecovered(kvIndex)
+					// Clear the error state
+					sendError(kvIndex, nil)
+					s.lg.Info("Scanner: previously failed KV recovered", "kvIndex", kvIndex)
+				case pending:
+					delete(mismatched, kvIndex)
+					s.lg.Info("Scanner: previously pending KV recovered", "kvIndex", kvIndex)
+				}
 			}
+
 			// Happy path
 			s.lg.Debug("Scanner: KV check completed successfully", "kvIndex", kvIndex, "commit", commit)
 			continue
@@ -133,25 +134,24 @@ func (s *Worker) ScanBatch(ctx context.Context, sendError func(kvIndex uint64, e
 			var commitErr *es.CommitMismatchError
 			if errors.As(err, &commitErr) {
 				s.lg.Warn("Scanner: commit mismatch detected", "kvIndex", kvIndex, "error", err)
-				if !s.checkAndMarkMismatch(kvIndex) {
-					// Mark but skip on the first occurrence as it may be caused by KV update and delayed download
-					s.lg.Info("Scanner: first-time mismatch, skipping fix attempt", "kvIndex", kvIndex)
-				} else {
-					// Only count repeated mismatches
-					sts.mismatched = append(sts.mismatched, kvIndex)
+
+				// Only fix repeated mismatches
+				if mismatched.shouldFix(kvIndex) {
 					s.lg.Info("Scanner: mismatch again, attempting to fix blob", "kvIndex", kvIndex, "commit", commit)
 					if fixErr := s.fixKv(kvIndex, commit); fixErr != nil {
-						sts.failed = append(sts.failed, kvIndex)
-						s.incrementMismatch(kvIndex)
+						mismatched.markFailed(kvIndex)
 						s.lg.Error("Scanner: failed to fix blob", "kvIndex", kvIndex, "error", fixErr)
 						sendError(kvIndex, fmt.Errorf("failed to fix blob: %w", fixErr))
 					} else {
 						s.lg.Info("Scanner: blob fixed successfully", "kvIndex", kvIndex)
-						sts.fixed = append(sts.fixed, kvIndex)
-						// Clear the error state
+						mismatched.markFixed(kvIndex)
 						sendError(kvIndex, nil)
-						s.removeMismatch(kvIndex)
 					}
+				} else {
+
+					// Mark but skip on the first occurrence as it may be caused by KV update and delayed download
+					mismatched.markPending(kvIndex)
+					s.lg.Info("Scanner: first-time mismatch, skipping fix attempt", "kvIndex", kvIndex)
 				}
 			} else {
 				s.lg.Error("Scanner: unexpected error occurred", "kvIndex", kvIndex, "error", err)
@@ -164,7 +164,13 @@ func (s *Worker) ScanBatch(ctx context.Context, sendError func(kvIndex uint64, e
 	if len(kvsInBatch) > 0 {
 		s.lg.Info("Scanner: scan batch done", "scanned", shortPrt(kvsInBatch), "count", len(kvsInBatch), "nextIndexOfKvIdx", s.nextIndexOfKvIdx)
 	}
-	return &sts, nil
+
+	sts := newStats()
+	sts.localKvs = summaryLocalKvs(shards, kvEntries, lastKvIdx)
+	sts.total = int(totalEntries)
+	sts.mismatched = mismatched
+
+	return sts, nil
 }
 
 func (s *Worker) fixKv(kvIndex uint64, commit common.Hash) error {
@@ -172,54 +178,6 @@ func (s *Worker) fixKv(kvIndex uint64, commit common.Hash) error {
 		return fmt.Errorf("failed to write KV: kvIndex=%d, commit=%x, %w", kvIndex, commit, err)
 	}
 	return nil
-}
-
-func (s *Scanner) getMismatchingList() []uint64 {
-	s.worker.mu.RLock()
-	defer s.worker.mu.RUnlock()
-
-	var mismatchList []uint64
-	for kvIndex, count := range s.worker.mismatching {
-		if count > 1 {
-			mismatchList = append(mismatchList, kvIndex)
-		}
-	}
-
-	if len(mismatchList) > 0 {
-		slices.Sort(mismatchList)
-	}
-
-	return mismatchList
-}
-
-func (s *Worker) checkAndMarkMismatch(kvIndex uint64) bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	if _, exists := s.mismatching[kvIndex]; exists {
-		return true
-	}
-	s.mismatching[kvIndex] = 1
-	return false
-}
-
-func (s *Worker) incrementMismatch(kvIndex uint64) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.mismatching[kvIndex]++
-}
-
-func (s *Worker) removeMismatch(kvIndex uint64) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	delete(s.mismatching, kvIndex)
-}
-
-func (s *Worker) hasMismatch(kvIndex uint64) bool {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	_, exists := s.mismatching[kvIndex]
-	return exists
 }
 
 func getKvsInBatch(shards []uint64, kvEntries, lastKvIdx, batchSize, batchStartIndex uint64, lg log.Logger) ([]uint64, uint64, uint64) {

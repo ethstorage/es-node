@@ -104,16 +104,16 @@ func (s *Scanner) start() {
 		defer reportTicker.Stop()
 
 		errCache := make(map[uint64]scanError)
-		sts := newStatsSum()
+		sts := newStats()
 		statsUpdated := false
 
-		s.doWork()
+		s.doWork(mismatchTracker{})
 
 		for {
 			select {
 			case <-mainTicker.C:
 				s.lg.Debug("Scanner: executing scheduled scan")
-				s.doWork()
+				s.doWork(sts.mismatched.clone())
 
 			case <-reportTicker.C:
 				if statsUpdated { // Wait for stats updated for the first time
@@ -131,7 +131,7 @@ func (s *Scanner) start() {
 				}
 
 			case st := <-s.statsCh:
-				sts.update(st)
+				sts = &st
 				statsUpdated = true
 
 			case <-s.ctx.Done():
@@ -141,27 +141,14 @@ func (s *Scanner) start() {
 	}()
 }
 
-func (s *Scanner) logStats(sts *statsSum) {
+func (s *Scanner) logStats(sts *stats) {
 	logFields := []any{
 		"localKvs", sts.localKvs,
 		"localKvsCount", sts.total,
 	}
-
-	mismatchList := s.getMismatchingList()
-	if len(mismatchList) > 0 {
-		logFields = append(logFields, "mismatching", mismatchList)
-	}
-
 	if len(sts.mismatched) > 0 {
 		logFields = append(logFields, "mismatched", sts.mismatched.String())
 	}
-	if len(sts.fixed) > 0 {
-		logFields = append(logFields, "fixed", sts.fixed.String())
-	}
-	if len(sts.failed) > 0 {
-		logFields = append(logFields, "failed", sts.failed.String())
-	}
-
 	s.lg.Info("Scanner stats", logFields...)
 }
 
@@ -187,14 +174,14 @@ func (s *Scanner) Close() {
 	s.wg.Wait()
 }
 
-func (s *Scanner) doWork() {
+func (s *Scanner) doWork(tracker mismatchTracker) {
 	s.lg.Debug("Scan batch started")
 	start := time.Now()
 	defer func(stt time.Time) {
 		s.lg.Debug("Scan batch done", "duration", time.Since(stt).String())
 	}(start)
 
-	sts, err := s.worker.ScanBatch(s.ctx, s.sendError)
+	sts, err := s.worker.ScanBatch(s.ctx, s.sendError, tracker)
 	if err != nil {
 		s.lg.Error("Scan batch failed", "err", err)
 	}
