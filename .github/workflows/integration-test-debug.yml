@@ -15,7 +15,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: '1.22'
+          go-version: '1.21'
 
       - name: Use Node.js
         uses: actions/setup-node@v3
@@ -56,7 +56,7 @@ jobs:
 
       - name: Set Miner To Whitelist
         run: |
-          cast send -r 'http://5.9.87.214:8545' --private-key $ES_NODE_SIGNER_PRIVATE_KEY $ES_NODE_CONTRACT_ADDRESS "grantMinerRole(address)" $ES_NODE_STORAGE_MINER
+          cast send -r $RPC_URL --private-key $ES_NODE_SIGNER_PRIVATE_KEY $ES_NODE_CONTRACT_ADDRESS "grantMinerRole(address)" $ES_NODE_STORAGE_MINER
 
       - name: Upload Blobs
         run: |
@@ -99,7 +99,7 @@ jobs:
           username: ${{ secrets.SMTP_USERNAME }}
           password: ${{ secrets.SMTP_PASSWORD }}
           subject: ${{ github.repository }} GitHub Actions ${{ github.workflow }} Run ${{ needs.integration-test.outputs.test_status }} - ${{ github.sha }}
-          to: molaokp@gmail.com,lundeng@quarkchain.org,qzhu@quarkchain.org
+          to: molaokp@gmail.com
           from: ${{ secrets.SMTP_USERNAME }}
           body: |
             "GitHub Action job completed with status: ${{ needs.integration-test.outputs.test_status }}! Check the details at ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
