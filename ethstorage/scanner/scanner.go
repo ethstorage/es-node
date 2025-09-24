@@ -46,7 +46,7 @@ func New(
 		cancel:   cancel,
 		lg:       lg,
 		errorCh:  make(chan scanError, 10),
-		statsCh:  make(chan stats, 10),
+		statsCh:  make(chan stats, 1), // only need the latest stats
 	}
 	scanner.wg.Add(1)
 	go scanner.update()
@@ -187,10 +187,11 @@ func (s *Scanner) doWork(tracker mismatchTracker) {
 	}
 
 	if sts != nil {
+		// drain the channel to keep only the latest stats
 		select {
-		case s.statsCh <- *sts:
+		case <-s.statsCh:
 		default:
-			s.lg.Warn("Scanner: stats channel is full, dropping stats")
 		}
+		s.statsCh <- *sts
 	}
 }
