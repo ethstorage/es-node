@@ -26,7 +26,7 @@ type Scanner struct {
 	lg       log.Logger
 	errorCh  chan scanError
 	statsCh  chan stats
-	tracker  mismatchTracker
+	stats    *stats
 }
 
 func New(
@@ -48,7 +48,7 @@ func New(
 		lg:       lg,
 		errorCh:  make(chan scanError, 10),
 		statsCh:  make(chan stats, 10),
-		tracker:  mismatchTracker{},
+		stats:    newStats(),
 	}
 	scanner.wg.Add(1)
 	go scanner.update()
@@ -106,7 +106,6 @@ func (s *Scanner) start() {
 		defer reportTicker.Stop()
 
 		errCache := make(map[uint64]scanError)
-		sts := newStats()
 		statsUpdated := false
 
 		s.doWork()
@@ -119,7 +118,7 @@ func (s *Scanner) start() {
 
 			case <-reportTicker.C:
 				if statsUpdated { // Wait for stats updated for the first time
-					s.logStats(sts)
+					s.logStats(s.stats)
 					for _, e := range errCache {
 						s.lg.Info("Scanner error happened earlier", "kvIndex", e.kvIndex, "error", e.err)
 					}
@@ -133,7 +132,7 @@ func (s *Scanner) start() {
 				}
 
 			case st := <-s.statsCh:
-				s.tracker = st.mismatched
+				s.stats = &st
 				statsUpdated = true
 
 			case <-s.ctx.Done():
@@ -163,7 +162,7 @@ func (s *Scanner) sendError(kvIndex uint64, err error) {
 }
 
 func (s *Scanner) GetScanState() *ScanStats {
-	tracker := s.tracker.clone()
+	tracker := s.stats.mismatched.clone()
 	return &ScanStats{
 		MismatchedCount: len(tracker),
 		UnfixedCount:    len(tracker.failed()),
@@ -191,7 +190,7 @@ func (s *Scanner) doWork() {
 		s.lg.Info("Scan batch done", "duration", time.Since(stt).String())
 	}(start)
 
-	sts, err := s.worker.ScanBatch(s.ctx, s.sendError, s.tracker.clone())
+	sts, err := s.worker.ScanBatch(s.ctx, s.sendError, s.stats.mismatched.clone())
 	if err != nil {
 		s.lg.Error("Scan batch failed", "err", err)
 	}

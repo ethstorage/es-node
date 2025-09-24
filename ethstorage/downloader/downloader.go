@@ -161,7 +161,7 @@ func (s *Downloader) Start() error {
 		}
 	}
 
-	bs, err := s.db.Get(downloadedBlobsKey)
+	bs, err := s.db.Get(append(downloaderPrefix, downloadedBlobsKey...))
 	if err == nil && len(bs) == 8 {
 		s.downloadedBlobs = binary.LittleEndian.Uint64(bs)
 	}
@@ -333,7 +333,7 @@ func (s *Downloader) download() {
 			s.lg.Debug("LastDownloadedBlock saved into db", "lastDownloadedBlock", end)
 
 			binary.LittleEndian.PutUint64(bs, s.downloadedBlobs)
-			err = s.db.Put(downloadedBlobsKey, bs)
+			err = s.db.Put(append(downloaderPrefix, downloadedBlobsKey...), bs)
 			if err != nil {
 				s.lg.Error("Save downloadedBlobs into db error", "err", err)
 				return
