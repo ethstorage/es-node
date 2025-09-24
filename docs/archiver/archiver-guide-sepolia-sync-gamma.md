@@ -127,7 +127,7 @@ After stated, the op node will finish sync with other node via p2p very quickly.
 You can check if the node is correctly synced by comparing the latest block numbers:
 
 ```bash
-cast bn
+cast bn -r http://127.0.0.1:8545
 cast bn -r https://rpc.gamma.testnet.l2.quarkchain.io:8545
 ```
 
@@ -196,42 +196,37 @@ After starting the op-node, you can observe the logs from the consoles:
 **op-node logs:**
 
 ```log
-t=2025-09-16T09:44:42+0200 lvl=info msg="Advancing bq origin" origin=0xa5db0f9f188b6a51e1e0c01518cc85c54fb1b08fe2e4a09e4769f406906a738a:9207275 originBehind=false
-t=2025-09-16T09:44:42+0200 lvl=info msg="Advancing bq origin" origin=0x7d55c34ce8fe2e94edab97f7a79d99716e0c86baf0821d7621dfc9faa0e22d11:9207276 originBehind=false
-t=2025-09-16T09:44:42+0200 lvl=info msg="Advancing bq origin" origin=0xd0f4a32d8b4613801f0270d82b06ded009b11a3189cf16d7e89c3f06c76bae16:9207277 originBehind=false
-t=2025-09-16T09:44:43+0200 lvl=info msg="Advancing bq origin" origin=0x550d319dd811c72ebd44d88b55c712c59f00c2a4d9efe7acb0c77331baae10e0:9207278 originBehind=false
-...
-t=2025-09-16T13:15:32+0200 lvl=info msg="generated attributes in payload queue" txs=1 timestamp=1757986822
-t=2025-09-16T13:15:32+0200 lvl=info msg="Record safe head" l2=0xdc6e4609ae5fb6528ab8fc5aa7312eb8b89576a9ce276c9fdbb64387e1b57b40:2276962 l1=0x7752fcf783c6bc3d6c55ff676ba3c579ca99f0f0dc84d185f900c36f7e535a32:9213344
-t=2025-09-16T13:15:32+0200 lvl=info msg="Inserted new L2 unsafe block" hash=0xfb52e94b7baf680999c7dcd260604596dbb5863d8aa4c599c12cc489c72459e8 number=2276963 state_root=0x6f8d6451bc7c6ac60d7b4c272ea344072fcfa6a0b847f6d50c5bf1dd35ca1294 timestamp=1757986822 parent=0xdc6e4609ae5fb6528ab8fc5aa7312eb8b89576a9ce276c9fdbb64387e1b57b40 prev_randao=0x48fd16fb17500bcbe13146690acd6eaa3e638329521a1d58bfec51192f9deba0 fee_recipient=0x4200000000000000000000000000000000000011 txs=1 build_time=1.336ms insert_time=2.249ms total_time=3.586ms mgas=0.048637 mgasps=13.561241677403777
-t=2025-09-16T13:15:32+0200 lvl=info msg="generated attributes in payload queue" txs=1 timestamp=1757986824
-t=2025-09-16T13:15:32+0200 lvl=info msg="Record safe head" l2=0xfb52e94b7baf680999c7dcd260604596dbb5863d8aa4c599c12cc489c72459e8:2276963 l1=0x7752fcf783c6bc3d6c55ff676ba3c579ca99f0f0dc84d185f900c36f7e535a32:9213344
-t=2025-09-16T13:15:32+0200 lvl=info msg="Inserted new L2 unsafe block" hash=0x4f03259baa62710548cc25aaddc477a93bf081627df5d705a0fd232529c5530e number=2276964 state_root=0xdf6107b1555c08b479e114be32784295919307fc4a706f353467375fdc23ee56 timestamp=1757986824 parent=0xfb52e94b7baf680999c7dcd260604596dbb5863d8aa4c599c12cc489c72459e8 prev_randao=0x48fd16fb17500bcbe13146690acd6eaa3e638329521a1d58bfec51192f9deba0 fee_recipient=0x4200000000000000000000000000000000000011 txs=1 build_time=1.216ms insert_time=1.915ms total_time=3.132ms mgas=0.048637 mgasps=15.526784397428473
-t=2025-09-16T13:15:32+0200 lvl=info msg="generated attributes in payload queue" txs=1 timestamp=1757986826
-t=2025-09-16T13:15:32+0200 lvl=info msg="Record safe head" l2=0x4f03259baa62710548cc25aaddc477a93bf081627df5d705a0fd232529c5530e:2276964 l1=0x7752fcf783c6bc3d6c55ff676ba3c579ca99f0f0dc84d185f900c36f7e535a32:9213344
-t=2025-09-16T13:15:32+0200 lvl=info msg="Inserted new L2 unsafe block" hash=0x61c9fc0463ffde42a3f2919d1a2cbde63e139014bddb88a2a2d33e20f5f45c8e number=2276965 state_root=0xc1f3e6231766bbd63733729eb5ea5d436825c87c06e27486c68f5ca14e35ed08 timestamp=1757986826 parent=0x4f03259baa62710548cc25aaddc477a93bf081627df5d705a0fd232529c5530e prev_randao=0x48fd16fb17500bcbe13146690acd6eaa3e638329521a1d58bfec51192f9deba0 fee_recipient=0x4200000000000000000000000000000000000011 txs=1 build_time=1.657ms insert_time=2.112ms total_time=3.769ms mgas=0.048637 mgasps=12.90153668795746
+t=2025-09-24T10:22:27+0200 lvl=info msg="Advancing bq origin" origin=0x844a9429a59c53c954ee4cbed4fe045bb0d58e53726ee2a7064bed250cfca95d:9263658 originBehind=false
+t=2025-09-24T10:22:27+0200 lvl=info msg="Advancing bq origin" origin=0x6de121f2d0d020a7ac9bfd31e0e3ec8057080a40b925abcf89abeda1d976e0e7:9263659 originBehind=false
+t=2025-09-24T10:22:31+0200 lvl=info msg="created new channel" stage=channel origin=0x6de121f2d0d020a7ac9bfd31e0e3ec8057080a40b925abcf89abeda1d976e0e7:9263659
+t=2025-09-24T10:22:31+0200 lvl=info msg="decoded span batch from channel" batch_type=SpanBatch batch_timestamp=1758597326 parent_check=0x7b5b06d6fdc439f9604dff8f7dd96fc0bdc3b320 origin_check=0x5ee498aebee9a36b39fde8638af8fa4b94991bd0 start_epoch_number=9260058 end_epoch_number=9263652 block_count=23011 txs=0 compression_algo=zlib stage_origin=0x6de121f2d0d020a7ac9bfd31e0e3ec8057080a40b925abcf89abeda1d976e0e7:9263659
+t=2025-09-24T10:22:31+0200 lvl=info msg="Found next valid span batch" origin=0x6de121f2d0d020a7ac9bfd31e0e3ec8057080a40b925abcf89abeda1d976e0e7:9263659 epoch=0x6c8662d4b263ca7ff59eef072e4de677d2576b9e6e52eeafca2a586e2efe72ae:9262264 batch_type=SpanBatch batch_timestamp=1758597326 parent_check=0x7b5b06d6fdc439f9604dff8f7dd96fc0bdc3b320 origin_check=0x5ee498aebee9a36b39fde8638af8fa4b94991bd0 start_epoch_number=9260058 end_epoch_number=9263652 block_count=23011 txs=0
+t=2025-09-24T10:22:32+0200 lvl=info msg="generated attributes in payload queue" txs=1 timestamp=1758625538
+t=2025-09-24T10:22:32+0200 lvl=info msg="generated attributes in payload queue" txs=1 timestamp=1758625540
+t=2025-09-24T10:22:32+0200 lvl=info msg="Record safe head" l2=0xf991363ca31f1b1754ea85542ac75d9a19349cdcae5971d6cf8064faaf67a98f:2596321 l1=0x6de121f2d0d020a7ac9bfd31e0e3ec8057080a40b925abcf89abeda1d976e0e7:9263659
+t=2025-09-24T10:22:32+0200 lvl=info msg="generated attributes in payload queue" txs=1 timestamp=1758625542
+t=2025-09-24T10:22:32+0200 lvl=info msg="Record safe head" l2=0xe1e7269b0f67a15739a1b613cf7a4b0391746ff70271848cfb0c67abd064b028:2596322 l1=0x6de121f2d0d020a7ac9bfd31e0e3ec8057080a40b925abcf89abeda1d976e0e7:9263659
+t=2025-09-24T10:22:32+0200 lvl=info msg="generated attributes in payload queue" txs=1 timestamp=1758625544
+t=2025-09-24T10:22:32+0200 lvl=info msg="Record safe head" l2=0x51bd98649d29d7e4c09a74955a648f4bd99e118c5d0bf15edf1f3d65d1a6bb7f:2596323 l1=0x6de121f2d0d020a7ac9bfd31e0e3ec8057080a40b925abcf89abeda1d976e0e7:9263659
+t=2025-09-24T10:22:32+0200 lvl=info msg="generated attributes in payload queue" txs=1 timestamp=1758625546
+t=2025-09-24T10:22:32+0200 lvl=info msg="Record safe head" l2=0x71811da4a764a5bef91e52d8cd9237d1927bb76aceb100d5a495e900142ea39d:2596324 l1=0x6de121f2d0d020a7ac9bfd31e0e3ec8057080a40b925abcf89abeda1d976e0e7:9263659
+t=2025-09-24T10:22:32+0200 lvl=info msg="generated attributes in payload queue" txs=1 timestamp=1758625548
 ```
 
-**op-geth logs:**
+**beacon logs:**
 ```log
-INFO [09-16|13:11:34.578] Imported new potential chain segment     number=2,275,756 hash=1900fd..127eea blocks=1 txs=1 mgas=0.049 elapsed="947.009µs" mgasps=51.359   age=10h11m26s snapdiffs=2.85MiB    triedirty=10.73MiB
-INFO [09-16|13:11:34.579] Chain head was updated                   number=2,275,756 hash=1900fd..127eea root=a9eb8c..feea18 elapsed="668.261µs"  age=10h11m26s
-INFO [09-16|13:11:34.583] Starting work on payload                 id=0x0301f10e4c14fc3c
-INFO [09-16|13:11:34.585] Imported new potential chain segment     number=2,275,757 hash=b63896..98e6c0 blocks=1 txs=1 mgas=0.049 elapsed=1.063ms     mgasps=45.734   age=10h11m24s snapdiffs=2.85MiB    triedirty=10.73MiB
-INFO [09-16|13:11:34.586] Chain head was updated                   number=2,275,757 hash=b63896..98e6c0 root=a94226..d705f7 elapsed="845.15µs"  age=10h11m24s
+2025/09/24 10:22:27 Received request for /eth/v1/beacon/blob_sidecars/8575813
+2025/09/24 10:22:27 Block 8575813 is not in the retention window
 ```
 
 **es-node logs:**
 ```log
-INFO [09-16|09:26:23.911] Blob archiver API request                url="/eth/v1/beacon/blob_sidecars/8514581?indices=3"
-INFO [09-16|09:26:24.367] Blob archiver API request handled        took(s)=0.456
-INFO [09-16|10:27:09.649] Blob archiver API request                url="/eth/v1/beacon/blob_sidecars/8518431?indices=1"
-INFO [09-16|10:27:10.063] Blob archiver API request handled        took(s)=0.414
-INFO [09-16|12:31:19.786] Blob archiver API request                url="/eth/v1/beacon/blob_sidecars/8522289?indices=5"
-INFO [09-16|12:31:20.362] Blob archiver API request handled        took(s)=0.576
+INFO [09-24|10:22:28.787] Blob archiver API request                url="/eth/v1/beacon/blob_sidecars/8575813?indices=2"
 ```
 
-From the logs, we can see that the op-node keeps converting batches into payload attributes, calling the op-geth to work on the payload to convert it into blocks, and inserting the blocks as the chain head.
+From the logs, we can see that the op-node advancing batch queue until the batch was found at L1 block 9263659. 
+
+It then converts the batch into payload attributes, calling the op-geth to convert it into blocks, and inserting the blocks as the chain head.
 
 Additionally, you may notice the age of derived blocks is over 12 hours, and blob archiver API requests were handled by the es-node, meaning the blobs were retrieved from EthStorage since they were pruned by the L1 Beacon client (mocked).
 
@@ -242,8 +237,8 @@ You can also verify the correctness of the derived rollup blocks by comparing th
 Make sure that the number you pick is greater than the one before the op-node is restarted and lower than the latest.
 
 ```bash
-cast block 2276963 -f hash -r http://127.0.0.1:8545
-cast block 2276963 -f hash -r https://rpc.gamma.testnet.l2.quarkchain.io:8545
+cast block 2611953 -f hash -r http://127.0.0.1:8545
+cast block 2611953 -f hash -r https://rpc.gamma.testnet.l2.quarkchain.io:8545
 ```
 
 ## Conclusion
