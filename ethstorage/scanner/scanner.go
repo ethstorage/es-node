@@ -115,6 +115,10 @@ func (s *Scanner) start() {
 				s.lg.Debug("Scanner: executing scheduled scan")
 				s.doWork(sts.mismatched.clone())
 
+				// Update the latest stats after each scan immediately
+				st := <-s.statsCh
+				sts = &st
+
 			case <-reportTicker.C:
 				if statsUpdated { // Wait for stats updated for the first time
 					s.logStats(sts)
