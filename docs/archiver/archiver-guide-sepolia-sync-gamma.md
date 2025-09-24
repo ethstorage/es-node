@@ -1,4 +1,4 @@
-# Running an op-node to Derive Blocks from Sepolia through EthStorage
+# Sync a Node of QuarkChain L2 Gamma Testnet from Sepolia through EthStorage
 
 ## Table of Contents
 
@@ -20,7 +20,7 @@
 
 This document outlines the process for running an OP node from source code, using Sepolia as Layer 1 (L1) and EthStorage as the blob archiver service.
 
-The goal is to verify how an OP node that has fallen behind correctly derives Layer 2 (L2) blocks from Sepolia using expired blobs (pruned by the Sepolia Beacon Chain) retrieved from the EthStorage node (es-node).
+The goal is to verify how an OP node that has fallen behind correctly derives Layer 2 (L2) blocks from Sepolia. It does this using expired blobs (pruned by the Sepolia Beacon Chain) retrieved from the EthStorage node (es-node).
 
 ## Prerequisites
 
@@ -35,9 +35,7 @@ Before proceeding, ensure your environment meets the following requirements:
 
 An OP node are composed of two core software services, the Rollup Node and the Execution Client. 
 
-The Execution Client is responsible for executing the block payloads it receives from the Rollup Node over JSON-RPC. 
-
-The Rollup Node is responsible for deriving L2 block payloads from L1 data and passing those payloads to the Execution Client. The Rollup Node can also optionally participate in a peer-to-peer network to receive blocks directly from the Sequencer before those blocks are submitted to L1. 
+The Execution Client is responsible for executing the block payloads it receives from the Rollup Node over JSON-RPC. The Rollup Node is responsible for deriving L2 block payloads from L1 data and passing those payloads to the Execution Client.
 
 In this section we will start both services to synchronize the OP node to the latest block of the network.
 
@@ -123,8 +121,7 @@ export L1_BEACON_URL=http://65.108.230.142:3500
 
 ### Verify OP Node
 
-After stated, the op node will finish sync with other node via p2p very quickly.
-You can check if the node is correctly synced by comparing the latest block numbers:
+After starting, the op node will finish syncing with other node via p2p very quickly. You can check if the node is correctly synced by comparing the latest block numbers:
 
 ```bash
 cast bn -r http://127.0.0.1:8545
@@ -135,7 +132,7 @@ If the node is completely synced, mark the current block number, and stop the op
 
 ## Sync data from the Archive API
 
-In this section, we demonstrate how an OP Node derive L2 blocks using blobs from the EthStorage archive API.
+In this section, we demonstrate how an OP Node derives L2 blocks using blobs from the EthStorage archive API.
 
 ### Start a proxy to Beacon API
 
@@ -185,7 +182,7 @@ export L1_ARCHIVE_API=https://archive.testnet.ethstorage.io:9635
 **Note:**
 
 - P2P is disabled to ensure that it only syncs data from L1.
-- The beacon archiver is configured to use the es-node archive service.
+- The beacon archiver is configured to use the es-node archive service as the fallback source of blobs.
 
 ## Verifying the Derivation Process
 
@@ -213,26 +210,24 @@ t=2025-09-24T10:22:32+0200 lvl=info msg="Record safe head" l2=0x71811da4a764a5be
 t=2025-09-24T10:22:32+0200 lvl=info msg="generated attributes in payload queue" txs=1 timestamp=1758625548
 ```
 
+From the op-node logs, we can see that the op-node advances batch queue until the batch is found at L1 block 9263659. It then converts the batch into payload attributes, calls the op-geth to generate L2 blocks, and inserts the blocks as the chain head.
+
 **beacon logs:**
 ```log
 2025/09/24 10:22:27 Received request for /eth/v1/beacon/blob_sidecars/8575813
 2025/09/24 10:22:27 Block 8575813 is not in the retention window
 ```
+The blob request was unfulfilled by the L1 Beacon client (mocked) since the blob was expired.
 
 **es-node logs:**
 ```log
 INFO [09-24|10:22:28.787] Blob archiver API request                url="/eth/v1/beacon/blob_sidecars/8575813?indices=2"
 ```
-
-From the logs, we can see that the op-node advancing batch queue until the batch was found at L1 block 9263659. 
-
-It then converts the batch into payload attributes, calling the op-geth to convert it into blocks, and inserting the blocks as the chain head.
-
-Additionally, you may notice the age of derived blocks is over 12 hours, and blob archiver API requests were handled by the es-node, meaning the blobs were retrieved from EthStorage since they were pruned by the L1 Beacon client (mocked).
+Later the blob request was handled by es-node and the blob was retrieved from EthStorage.
 
 ### Comparing Blocks
 
-You can also verify the correctness of the derived rollup blocks by comparing the results of the following commands:
+You can also verify the correctness of the derived blocks by comparing the results of the following commands:
 
 Make sure that the number you pick is greater than the one before the op-node is restarted and lower than the latest.
 
