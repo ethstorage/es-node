@@ -1,5 +1,8 @@
-name: Integration Test With L1
-on: [push]
+name: Integration Test
+on:
+  schedule:
+    - cron: '0 8 * * 0'
+  workflow_dispatch:
 
 jobs:
   integration-test:
@@ -48,8 +51,8 @@ jobs:
       - name: Build and Run Bootnode Node
         run: |
           cd ../es-node
-          git checkout debug
           git pull
+          git checkout main
           make
           ./run-it-rpc.sh > es-node-it-bootnode.log&
 
@@ -57,7 +60,7 @@ jobs:
         run: |
           echo ES_NODE_UPLOADER_PRIVATE_KEY=`cat ../uploader.key` >> "$GITHUB_ENV"
           echo ES_NODE_SIGNER_PRIVATE_KEY=`cat ../private.key` >> "$GITHUB_ENV"
-          echo ES_NODE_STORAGE_MINER=0x5C935469C5592Aeeac3372e922d9bCEabDF8830d >> "$GITHUB_ENV"
+            echo ES_NODE_STORAGE_MINER=0x5C935469C5592Aeeac3372e922d9bCEabDF8830d >> "$GITHUB_ENV"
 
       - name: Set Miner To Whitelist
         run: |
@@ -110,7 +113,7 @@ jobs:
           username: ${{ secrets.SMTP_USERNAME }}
           password: ${{ secrets.SMTP_PASSWORD }}
           subject: ${{ github.repository }} GitHub Actions ${{ github.workflow }} Run ${{ needs.integration-test.outputs.test_status }} - ${{ github.sha }}
-          to: molaokp@gmail.com
+          to: molaokp@gmail.com,lundeng@quarkchain.org,qzhu@quarkchain.org
           from: ${{ secrets.SMTP_USERNAME }}
           body: |
             "GitHub Action job completed with status: ${{ needs.integration-test.outputs.test_status }}! Check the details at ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
