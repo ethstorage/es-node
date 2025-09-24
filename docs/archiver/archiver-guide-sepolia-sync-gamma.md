@@ -153,9 +153,11 @@ If a blob older than 3 epochs (~20 minutes) is requested, the proxy will return 
 
 ### Restart op-node with the Archive API
 
-The timing of restarting the stopped op-node is crucial for this test. Ensure that:
+The timing of restarting the stopped op-node is crucial for this test. Generally speaking, waiting 13 hours should be sufficient. If you prefer not to wait that long, simply ensure that:
 - At least one batch transaction has been submitted to L1 since the op-node stopped
 - The most recent batch has exceeded the mocked retention period
+
+Check the submissions of the batch transactions [here](https://sepolia.etherscan.io/address/0x3fe221A447f350551ff208951098517252018007).
 
 Restart the op-node at the appropriate time with the following command:
 
