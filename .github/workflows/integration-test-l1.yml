@@ -1,4 +1,6 @@
 name: Integration Test
+permissions:
+  contents: read
 on:
   schedule:
     - cron: '0 8 * * 0'
