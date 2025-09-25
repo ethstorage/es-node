@@ -175,3 +175,8 @@ func formatRange(start, end uint64) string {
 		return fmt.Sprintf("[%d-%d]", start, end)
 	}
 }
+
+type ScanStats struct {
+	MismatchedCount int `json:"mismatched_blob"`
+	UnfixedCount    int `json:"unfixed_blob"`
+}
