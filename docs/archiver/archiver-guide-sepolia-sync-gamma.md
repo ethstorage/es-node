@@ -151,7 +151,7 @@ If a blob older than 3 epochs (~20 minutes) is requested, the proxy will return 
 ### Restart op-node with the Archive API
 
 The timing of restarting the stopped op-node is crucial for this test. Generally speaking, waiting 13 hours should be sufficient. If you prefer not to wait that long, simply ensure that:
-- At least one batch transaction has been submitted to L1 since the op-node stopped
+- At least one batch transaction has been submitted to L1 since the op-node stopped, and
 - The most recent batch has exceeded the mocked retention period
 
 Check the submissions of the batch transactions [here](https://sepolia.etherscan.io/address/0x3fe221A447f350551ff208951098517252018007).
@@ -181,7 +181,7 @@ export L1_ARCHIVE_API=https://archive.testnet.ethstorage.io:9635
 
 **Note:**
 
-- P2P is disabled to ensure that it only syncs data from L1.
+- Even if P2P is not disabled, L2 blocks can only be derived from L1 blobs. Disabling P2P helps eliminate interference from unsafe blocks.
 - The beacon archiver is configured to use the es-node archive service as the fallback source of blobs.
 
 ## Verifying the Derivation Process
