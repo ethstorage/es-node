@@ -35,4 +35,4 @@ exec ./build/bin/es-node \
   --p2p.priv.path $data_dir/esnode_p2p_priv.txt \
   --p2p.peerstore.path $data_dir/esnode_peerstore_db \
   --p2p.discovery.path $data_dir/esnode_discovery_db \
-  --p2p.bootnodes enr:-Lu4QFjZbYGUJSvXn56eQELUYd2lY0gRKIG8FGWzV4wKVhf7StMTvlTLiMwkbsagg09s1AAeonpYN_h8AvZWl7pCOP6GAZcrhU4FimV0aHN0b3JhZ2Xegg0FgNnYlEl6Yz1E_cSmjk3_UdPb2jmfC1qAwoABgmlkgnY0gmlwhEFtP5qJc2VjcDI1NmsxoQJ8KIsZjyfFPHZOR66JORtqr5ax0QU6QmvT6QE0QllVZIN0Y3CCJE-DdWRwgna7
+  --p2p.bootnodes enr:-Lu4QGrri5Jy5gVEw_wpZn6TbIk8SjJgDrj-E4_RE4JISe2PYYjRjkJPtDHdrLZTuMOK-bC_b2ek08FHfzue_5J9A4WGAZl5vlySimV0aHN0b3JhZ2Xegg0LgNnYlMyj-ancoZauPJjmScNd2U-WEO0rwgGAgmlkgnY0gmlwhEFtWqCJc2VjcDI1NmsxoQJ8KIsZjyfFPHZOR66JORtqr5ax0QU6QmvT6QE0QllVZIN0Y3CCJE-DdWRwgna7
