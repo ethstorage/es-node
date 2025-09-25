@@ -109,12 +109,13 @@ func (s *Scanner) start() {
 		for {
 			select {
 			case <-mainTicker.C:
-				sts, scanErrs, err := s.doWork(sts.mismatched.clone())
+				newSts, scanErrs, err := s.doWork(sts.mismatched.clone())
 				if err != nil {
 					s.lg.Error("Scanner: scan batch failed", "error", err)
 					continue
 				}
-				s.setScanState(sts)
+				sts = newSts
+				s.setScanState(newSts)
 				errCache.merge(scanErrs)
 
 			case <-reportTicker.C:
