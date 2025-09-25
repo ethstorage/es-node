@@ -315,7 +315,7 @@ func (d *dashboard) outputSummaryHtml(contract string, nodes map[string]*record,
 
 	msg := []byte(subject + body)
 	auth := smtp.PlainAuth("", d.emailCfg.Username, d.emailCfg.Password, d.emailCfg.Host)
-	err := smtp.SendMail(fmt.Sprintf("%s:%d", d.emailCfg.Host, d.emailCfg.Port), auth, d.emailCfg.Username, []string{d.emailCfg.To}, msg)
+	err := smtp.SendMail(fmt.Sprintf("%s:%d", d.emailCfg.Host, d.emailCfg.Port), auth, d.emailCfg.Username, strings.Split(d.emailCfg.To, ","), msg)
 	if err != nil {
 		d.lg.Warn("Send email fail ❌:", err)
 		return
