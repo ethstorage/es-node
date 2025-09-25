@@ -51,13 +51,17 @@ func NewWorker(
 }
 
 func (s *Worker) ScanBatch(ctx context.Context, mismatched mismatchTracker) (*stats, scanErrors, error) {
+	// Never return nil stats and nil scanErrors
+	sts := newStats()
+	scanErrors := make(scanErrors)
+
 	// Query local storage info
 	shards := s.sm.Shards()
 	kvEntries := s.sm.KvEntries()
 	entryCount := s.sm.KvEntryCount()
 	if entryCount == 0 {
 		s.lg.Info("Scanner: no KV entries found in local storage")
-		return newStats(), nil, nil
+		return sts, scanErrors, nil
 	}
 	lastKvIdx := entryCount - 1
 	s.lg.Info("Scanner: local storage info", "lastKvIdx", lastKvIdx, "shards", shards, "kvEntriesPerShard", kvEntries)
@@ -65,20 +69,22 @@ func (s *Worker) ScanBatch(ctx context.Context, mismatched mismatchTracker) (*st
 	// Determine the batch of KV indices to scan
 	kvsInBatch, totalEntries, batchEndExclusive := getKvsInBatch(shards, kvEntries, lastKvIdx, uint64(s.cfg.BatchSize), s.nextIndexOfKvIdx, s.lg)
 
+	sts.localKvs = summaryLocalKvs(shards, kvEntries, lastKvIdx)
+	sts.total = int(totalEntries)
+
 	// Query the metas from the L1 contract
 	metas, err := s.l1.GetKvMetas(kvsInBatch, rpc.FinalizedBlockNumber.Int64())
 	if err != nil {
 		s.lg.Error("Scanner: failed to query KV metas", "error", err)
-		return nil, nil, fmt.Errorf("failed to query KV metas: %w", err)
+		return sts, scanErrors, fmt.Errorf("failed to query KV metas: %w", err)
 	}
 	s.lg.Debug("Scanner: query KV meta done", "kvsInBatch", shortPrt(kvsInBatch))
 
-	scanErrors := make(scanErrors)
 	for i, meta := range metas {
 		select {
 		case <-ctx.Done():
 			s.lg.Warn("Scanner canceled, stopping scan", "ctx.Err", ctx.Err())
-			return nil, scanErrors, ctx.Err()
+			return sts, scanErrors, ctx.Err()
 		default:
 		}
 
@@ -101,7 +107,7 @@ func (s *Worker) ScanBatch(ctx context.Context, mismatched mismatchTracker) (*st
 			_, found, err = s.sm.TryRead(kvIndex, int(s.sm.MaxKvSize()), commit)
 		} else {
 			s.lg.Error("Scanner: invalid scanner mode", "mode", s.cfg.Mode)
-			return nil, scanErrors, fmt.Errorf("invalid scanner mode: %d", s.cfg.Mode)
+			return sts, scanErrors, fmt.Errorf("invalid scanner mode: %d", s.cfg.Mode)
 		}
 
 		if found && err == nil {
@@ -167,9 +173,6 @@ func (s *Worker) ScanBatch(ctx context.Context, mismatched mismatchTracker) (*st
 		s.lg.Info("Scanner: scan batch done", "scanned", shortPrt(kvsInBatch), "count", len(kvsInBatch), "nextIndexOfKvIdx", s.nextIndexOfKvIdx)
 	}
 
-	sts := newStats()
-	sts.localKvs = summaryLocalKvs(shards, kvEntries, lastKvIdx)
-	sts.total = int(totalEntries)
 	sts.mismatched = mismatched
 
 	return sts, scanErrors, nil

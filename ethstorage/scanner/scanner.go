@@ -100,31 +100,25 @@ func (s *Scanner) start() {
 		reportTicker := time.NewTicker(1 * time.Minute)
 		defer mainTicker.Stop()
 		defer reportTicker.Stop()
-		stats := newStats()
 		sts, errCache, err := s.doWork(mismatchTracker{})
 		if err != nil {
 			s.lg.Error("Initial scan failed", "error", err)
 		}
-		if sts != nil {
-			stats = sts
-			s.setScanState(sts)
-		}
+		s.setScanState(sts)
+
 		for {
 			select {
 			case <-mainTicker.C:
-				sts, scanErrs, err := s.doWork(stats.mismatched.clone())
+				sts, scanErrs, err := s.doWork(sts.mismatched.clone())
 				if err != nil {
 					s.lg.Error("Scanner: scan batch failed", "error", err)
 					continue
 				}
-				if sts != nil {
-					stats = sts
-					s.setScanState(sts)
-				}
+				s.setScanState(sts)
 				errCache.merge(scanErrs)
 
 			case <-reportTicker.C:
-				s.logStats(stats)
+				s.logStats(sts)
 				for i, e := range errCache {
 					s.lg.Info("Scanner error happened earlier", "kvIndex", i, "error", e)
 				}
