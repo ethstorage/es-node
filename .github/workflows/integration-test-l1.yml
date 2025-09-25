@@ -1,10 +1,7 @@
 name: Integration Test With L1
 permissions:
   contents: read
-on:
-  schedule:
-    - cron: '0 8 * * 0'
-  workflow_dispatch:
+on: [push]
 
 jobs:
   integration-test:
