@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"net/smtp"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -252,7 +253,7 @@ func (d *dashboard) outputSummaryHtml(contract string, nodes map[string]*record,
 		dataRang      = "(24h)"
 		content       = ""
 		contentFormat = "<tr>\n\t<td>%s</td>\n\t<td>%s</td>\n\t<td>%d</td>\n\t<td>%d</td>\n\t<td>%d</td>\n\t<td>%d</td>\n\t" +
-			"<td>%d</td>\n\t<td>%s</td>\n\t<td>%d</td>\n\t<td>%d</td>\n\t<td>%d</td>\n\t<td>%d</td>\n\t</tr>\n"
+			"<td>%d</td>\n\t<td>%s</td>\n\t<td>%d</td>\n\t<td>%d</td>\n\t<td>%s</td>\n\t<td>%s</td>\n\t</tr>\n"
 		subject = fmt.Sprintf("Subject: Daily Network Statistics Report | %s | %s\r\n"+
 			"MIME-Version: 1.0\r\n"+
 			"Content-Type: text/html; charset=\"UTF-8\"\r\n\r\n", contract, dstr)
@@ -278,9 +279,13 @@ func (d *dashboard) outputSummaryHtml(contract string, nodes map[string]*record,
 					submittedTime = time.Unix(shard.SubmissionState.LastSubmittedTime, 0).Format("2006-01-02T15:04:05")
 				}
 			}
+			mismatchedCount, unfixedCount := "N/A", "N/A"
+			if n.state.ScanStats != nil {
+				mismatchedCount = strconv.Itoa(n.state.ScanStats.MismatchedCount)
+				unfixedCount = strconv.Itoa(n.state.ScanStats.UnfixedCount)
+			}
 			content += fmt.Sprintf(contentFormat, n.state.Address, shard.Miner, n.state.SavedBlobs, downloadedBlobs,
-				shard.ShardId, shard.SyncState.PeerCount, submitted, submittedTime, dropped, failed,
-				n.state.ScanStats.MismatchedCount, n.state.ScanStats.UnfixedCount)
+				shard.ShardId, shard.SyncState.PeerCount, submitted, submittedTime, dropped, failed, mismatchedCount, unfixedCount)
 		}
 	}
 
