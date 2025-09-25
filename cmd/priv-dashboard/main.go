@@ -80,7 +80,7 @@ func newDashboard(lg log.Logger, emailCfg *email.EmailConfig) (*dashboard, error
 		m:                m,
 		lg:               lg,
 		emailCfg:         emailCfg,
-		lastNotification: time.Now().Add(-emailReportInterval),
+		lastNotification: time.Now().Add(-emailReportInterval + 20*time.Minute), // First email sent 20 minutes after service startup
 		lastStateCache:   make(map[string]map[string]*record),
 	}, nil
 }
