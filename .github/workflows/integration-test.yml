@@ -1,4 +1,4 @@
-name: Integration Test
+name: Integration Test With L2
 on:
   schedule:
     - cron: '0 8 * * 0,2,4'

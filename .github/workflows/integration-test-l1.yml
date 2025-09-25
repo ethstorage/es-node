@@ -1,4 +1,4 @@
-name: Integration Test
+name: Integration Test With L1
 permissions:
   contents: read
 on:
