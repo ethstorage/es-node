@@ -104,7 +104,6 @@ func (s *Scanner) start() {
 		if err != nil {
 			s.lg.Error("Initial scan failed", "error", err)
 		}
-		s.setScanState(sts)
 
 		for {
 			select {
@@ -115,7 +114,6 @@ func (s *Scanner) start() {
 					continue
 				}
 				sts = newSts
-				s.setScanState(newSts)
 				errCache.merge(scanErrs)
 
 			case <-reportTicker.C:
@@ -177,5 +175,9 @@ func (s *Scanner) doWork(tracker mismatchTracker) (*stats, scanErrors, error) {
 		s.lg.Info("Scan batch done", "duration", time.Since(stt).String())
 	}(start)
 
-	return s.worker.ScanBatch(s.ctx, tracker)
+	sts, scanErrs, err := s.worker.ScanBatch(s.ctx, tracker)
+	if err == nil {
+		s.setScanState(sts)
+	}
+	return sts, scanErrs, err
 }
