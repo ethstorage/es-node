@@ -15,17 +15,18 @@ import (
 )
 
 type Scanner struct {
-	worker   *Worker
-	feed     *event.Feed
-	interval time.Duration
-	ctx      context.Context
-	cancel   context.CancelFunc
-	wg       sync.WaitGroup
-	running  bool
-	mu       sync.Mutex
-	lg       log.Logger
-	errorCh  chan scanError
-	statsCh  chan stats
+	worker    *Worker
+	feed      *event.Feed
+	interval  time.Duration
+	ctx       context.Context
+	cancel    context.CancelFunc
+	wg        sync.WaitGroup
+	running   bool
+	mu        sync.Mutex
+	lg        log.Logger
+	errorCh   chan scanError
+	statsCh   chan stats
+	scanStats ScanStats
 }
 
 func New(
@@ -39,14 +40,15 @@ func New(
 ) *Scanner {
 	cctx, cancel := context.WithCancel(ctx)
 	scanner := &Scanner{
-		worker:   NewWorker(sm, fetchBlob, l1, cfg, lg),
-		feed:     feed,
-		interval: time.Minute * time.Duration(cfg.Interval),
-		ctx:      cctx,
-		cancel:   cancel,
-		lg:       lg,
-		errorCh:  make(chan scanError, 10),
-		statsCh:  make(chan stats, 1), // only need the latest stats
+		worker:    NewWorker(sm, fetchBlob, l1, cfg, lg),
+		feed:      feed,
+		interval:  time.Minute * time.Duration(cfg.Interval),
+		ctx:       cctx,
+		cancel:    cancel,
+		lg:        lg,
+		errorCh:   make(chan scanError, 10),
+		statsCh:   make(chan stats, 1), // only need the latest stats
+		scanStats: ScanStats{0, 0},
 	}
 	scanner.wg.Add(1)
 	go scanner.update()
@@ -136,6 +138,10 @@ func (s *Scanner) start() {
 
 			case st := <-s.statsCh:
 				sts = &st
+				s.mu.Lock()
+				s.scanStats.MismatchedCount = len(sts.mismatched)
+				s.scanStats.UnfixedCount = len(sts.mismatched.failed())
+				s.mu.Unlock()
 				statsUpdated = true
 
 			case <-s.ctx.Done():
@@ -162,6 +168,13 @@ func (s *Scanner) sendError(kvIndex uint64, err error) {
 	default:
 		s.lg.Warn("Scanner: sent error to chan failed", "err", err, "lenOfCh", len(s.errorCh))
 	}
+}
+
+func (s *Scanner) GetScanState() *ScanStats {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	snapshot := s.scanStats // Make a copy
+	return &snapshot        // Return a pointer to the copy
 }
 
 func (s *Scanner) Close() {

@@ -124,7 +124,7 @@ func addToEmailList(emailList map[string]struct{}, emailToString string) {
 
 func writeToGitHubEnv(emailList map[string]struct{}, lg log.Logger) {
 	if len(emailList) == 0 {
-		lg.Error("The email list shoud not be empty")
+		lg.Error("The email list should not be empty")
 		return
 	}
 
