@@ -256,7 +256,7 @@ func (d *dashboard) outputSummaryHtml(contract string, nodes map[string]*record,
 			"<td>%d</td>\n\t<td>%s</td>\n\t<td>%d</td>\n\t<td>%d</td>\n\t<td>%s</td>\n\t<td>%s</td>\n\t</tr>\n"
 		subject = fmt.Sprintf("Subject: Daily Network Statistics Report | %s | %s\r\n"+
 			"MIME-Version: 1.0\r\n"+
-			"Content-Type: text/html; charset=\"UTF-8\"\r\n\r\n", contract, dstr)
+			"Content-Type: text/html; charset=\"UTF-8\"\r\nTo: %s\r\n", contract, dstr, d.emailCfg.To)
 	)
 
 	if len(cache) == 0 {
