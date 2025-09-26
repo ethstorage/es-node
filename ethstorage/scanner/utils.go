@@ -10,9 +10,24 @@ import (
 	"strings"
 )
 
-type scanError struct {
-	kvIndex uint64
-	err     error
+type scanErrors map[uint64]error
+
+func (s scanErrors) add(kvIndex uint64, err error) {
+	s[kvIndex] = err
+}
+
+func (s scanErrors) nil(kvIndex uint64) {
+	s[kvIndex] = nil
+}
+
+func (s scanErrors) merge(errs scanErrors) {
+	for k, v := range errs {
+		if v != nil {
+			s[k] = v
+		} else {
+			delete(s, k)
+		}
+	}
 }
 
 type status int

@@ -24,8 +24,6 @@ type Scanner struct {
 	running   bool
 	mu        sync.Mutex
 	lg        log.Logger
-	errorCh   chan scanError
-	statsCh   chan stats
 	scanStats ScanStats
 }
 
@@ -46,8 +44,6 @@ func New(
 		ctx:       cctx,
 		cancel:    cancel,
 		lg:        lg,
-		errorCh:   make(chan scanError, 10),
-		statsCh:   make(chan stats, 10),
 		scanStats: ScanStats{0, 0},
 	}
 	scanner.wg.Add(1)
@@ -104,41 +100,27 @@ func (s *Scanner) start() {
 		reportTicker := time.NewTicker(1 * time.Minute)
 		defer mainTicker.Stop()
 		defer reportTicker.Stop()
-
-		errCache := make(map[uint64]scanError)
-		sts := newStats()
-		statsUpdated := false
-
-		s.doWork(mismatchTracker{})
+		sts, errCache, err := s.doWork(mismatchTracker{})
+		if err != nil {
+			s.lg.Error("Initial scan failed", "error", err)
+		}
 
 		for {
 			select {
 			case <-mainTicker.C:
-				s.lg.Debug("Scanner: executing scheduled scan")
-				s.doWork(sts.mismatched.clone())
+				newSts, scanErrs, err := s.doWork(sts.mismatched.clone())
+				if err != nil {
+					s.lg.Error("Scanner: scan batch failed", "error", err)
+					continue
+				}
+				sts = newSts
+				errCache.merge(scanErrs)
 
 			case <-reportTicker.C:
-				if statsUpdated { // Wait for stats updated for the first time
-					s.logStats(sts)
-					for _, e := range errCache {
-						s.lg.Info("Scanner error happened earlier", "kvIndex", e.kvIndex, "error", e.err)
-					}
+				s.logStats(sts)
+				for i, e := range errCache {
+					s.lg.Info("Scanner error happened earlier", "kvIndex", i, "error", e)
 				}
-
-			case err := <-s.errorCh:
-				if err.err != nil {
-					errCache[err.kvIndex] = err
-				} else {
-					delete(errCache, err.kvIndex)
-				}
-
-			case st := <-s.statsCh:
-				sts = &st
-				s.mu.Lock()
-				s.scanStats.MismatchedCount = len(sts.mismatched)
-				s.scanStats.UnfixedCount = len(sts.mismatched.failed())
-				s.mu.Unlock()
-				statsUpdated = true
 
 			case <-s.ctx.Done():
 				return
@@ -158,19 +140,18 @@ func (s *Scanner) logStats(sts *stats) {
 	s.lg.Info("Scanner stats", logFields...)
 }
 
-func (s *Scanner) sendError(kvIndex uint64, err error) {
-	select {
-	case s.errorCh <- scanError{kvIndex, err}:
-	default:
-		s.lg.Warn("Scanner: sent error to chan failed", "err", err, "lenOfCh", len(s.errorCh))
-	}
-}
-
 func (s *Scanner) GetScanState() *ScanStats {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	snapshot := s.scanStats // Make a copy
 	return &snapshot        // Return a pointer to the copy
+}
+
+func (s *Scanner) setScanState(sts *stats) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.scanStats.MismatchedCount = len(sts.mismatched)
+	s.scanStats.UnfixedCount = len(sts.mismatched.failed())
 }
 
 func (s *Scanner) Close() {
@@ -187,23 +168,16 @@ func (s *Scanner) Close() {
 	s.wg.Wait()
 }
 
-func (s *Scanner) doWork(tracker mismatchTracker) {
+func (s *Scanner) doWork(tracker mismatchTracker) (*stats, scanErrors, error) {
 	s.lg.Debug("Scan batch started")
 	start := time.Now()
 	defer func(stt time.Time) {
 		s.lg.Info("Scan batch done", "duration", time.Since(stt).String())
 	}(start)
 
-	sts, err := s.worker.ScanBatch(s.ctx, s.sendError, tracker)
-	if err != nil {
-		s.lg.Error("Scan batch failed", "err", err)
+	sts, scanErrs, err := s.worker.ScanBatch(s.ctx, tracker)
+	if err == nil {
+		s.setScanState(sts)
 	}
-
-	if sts != nil {
-		select {
-		case s.statsCh <- *sts:
-		default:
-			s.lg.Warn("Scanner: stats channel is full, dropping stats")
-		}
-	}
+	return sts, scanErrs, err
 }
