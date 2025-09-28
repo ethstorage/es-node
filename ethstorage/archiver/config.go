@@ -49,7 +49,7 @@ func CLIFlags() []cli.Flag {
 			Name:   MaxBlobsPerBlockName,
 			Usage:  "Max blobs per block",
 			EnvVar: archiverEnv("MAX_BLOBS_PER_BLOCK"),
-			Value:  6,
+			Value:  0, // 0 means no limit
 		},
 	}
 	return flags
