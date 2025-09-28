@@ -276,7 +276,7 @@ func (d *dashboard) outputSummaryHtml(contract string, nodes map[string]*record,
 			if shard.MiningState != nil {
 				submitted, dropped, failed = shard.SubmissionState.Submitted, shard.SubmissionState.Dropped, shard.SubmissionState.Failed
 				if shard.SubmissionState.LastSubmittedTime > 0 && shard.SubmissionState.Submitted > 0 {
-					submittedTime = time.Unix(shard.SubmissionState.LastSubmittedTime, 0).Format("2006-01-02T15:04:05")
+					submittedTime = time.UnixMilli(shard.SubmissionState.LastSubmittedTime).Format("2006-01-02T15:04:05")
 				}
 			}
 			mismatchedCount, unfixedCount := "N/A", "N/A"
