@@ -203,7 +203,7 @@ func generateState() IState {
 		Succeeded:         0,
 		Failed:            0,
 		Dropped:           0,
-		LastSucceededTime: time.Now().Add(-1 * time.Minute).Unix(),
+		LastSucceededTime: time.Now().Add(-1 * time.Minute).UnixMilli(),
 	}
 	miningState := &MiningState{
 		MiningPower:  10000,
