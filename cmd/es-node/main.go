@@ -74,8 +74,8 @@ func main() {
 		{
 			Name:      "init",
 			Aliases:   []string{"i"},
-			Usage:     `Initialize shard data files (one per shard).`,
-			UsageText: `Use --shard_len to create N sequential shards starting at 0, or --shard_index to list one or more explicit shard indices (repeatable). If both are supplied, --shard_index wins. Type 'es-node init --help' for more information.`,
+			Usage:     `Initialize shard data files (one per shard). Type 'es-node init --help' for more information.`,
+			UsageText: `Use --shard_len to create N sequential shards starting at 0, or --shard_index to list one or more explicit shard indices (repeatable). If both are supplied, --shard_index wins.`,
 			Flags: []cli.Flag{
 				cli.Uint64Flag{
 					Name:  shardLenFlagName,
