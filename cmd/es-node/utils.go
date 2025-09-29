@@ -23,7 +23,6 @@ import (
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
 	"github.com/ethstorage/go-ethstorage/ethstorage/flags"
 	"github.com/ethstorage/go-ethstorage/ethstorage/miner"
-	"github.com/ethstorage/go-ethstorage/ethstorage/node"
 	"github.com/ethstorage/go-ethstorage/ethstorage/storage"
 	"github.com/urfave/cli"
 )
@@ -169,7 +168,7 @@ func initShardManager(ctx *cli.Context, l1Rpc string, l1contract common.Address,
 	}
 	defer client.Close()
 
-	storageCfg, err := node.InitStorageConfig(client, common.HexToAddress(miner), lg)
+	storageCfg, err := client.LoadStorageConfigFromContract(common.HexToAddress(miner))
 	if err != nil {
 		return nil, fmt.Errorf("failed to load storage config: %w", err)
 	}

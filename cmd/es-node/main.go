@@ -153,7 +153,7 @@ func EsNodeMain(ctx *cli.Context) error {
 	lgCfg := log.ReadCLIConfig(ctx)
 	lg.Info("Loading log config", "config", lgCfg)
 	clog := log.NewLogger(lgCfg)
-	cfg, err := node.NewConfig(ctx, clog)
+	cfg, err := NewConfig(ctx, clog)
 	if err != nil {
 		lg.Error("Unable to create the rollup node config", "error", err)
 		return err
@@ -258,7 +258,7 @@ func EsNodeInit(ctx *cli.Context) error {
 	}
 	defer client.Close()
 
-	storageCfg, err := node.InitStorageConfig(client, common.HexToAddress(miner), lg)
+	storageCfg, err := client.LoadStorageConfigFromContract(common.HexToAddress(miner))
 	if err != nil {
 		lg.Error("Failed to load storage config", "error", err)
 		return err

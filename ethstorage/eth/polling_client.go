@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/ethstorage/go-ethstorage/ethstorage/storage"
 	"math/big"
 	"regexp"
 	"sync"
@@ -376,6 +377,35 @@ func (w *PollingClient) IsContractExist() (bool, error) {
 
 func (w *PollingClient) ContractAddress() common.Address {
 	return w.esContract
+}
+
+func (w *PollingClient) LoadStorageConfigFromContract(miner common.Address) (*storage.StorageConfig, error) {
+	exist, err := w.IsContractExist()
+	if err != nil {
+		return nil, fmt.Errorf("check contract exist fail: %s", err.Error())
+	}
+	if !exist {
+		return nil, fmt.Errorf("contract does not exist")
+	}
+	result, err := w.ReadContractField("maxKvSizeBits", nil)
+	if err != nil {
+		return nil, fmt.Errorf("get maxKvSizeBits: %s", err.Error())
+	}
+	maxKvSizeBits := new(big.Int).SetBytes(result).Uint64()
+	chunkSizeBits := maxKvSizeBits
+	result, err = w.ReadContractField("shardEntryBits", nil)
+	if err != nil {
+		return nil, fmt.Errorf("get shardEntryBits: %s", err.Error())
+	}
+	shardEntryBits := new(big.Int).SetBytes(result).Uint64()
+
+	return &storage.StorageConfig{
+		L1Contract:        w.esContract,
+		Miner:             miner,
+		KvSize:            1 << maxKvSizeBits,
+		ChunkSize:         1 << chunkSizeBits,
+		KvEntriesPerShard: 1 << shardEntryBits,
+	}, nil
 }
 
 func decodeString(data []byte) (string, error) {
