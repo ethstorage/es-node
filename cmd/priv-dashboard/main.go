@@ -251,7 +251,7 @@ func (d *dashboard) outputSummaryHtml(contract string, nodes map[string]*record,
 	var (
 		dstr          = time.Now().Format("2006-01-02")
 		dataRang      = "(24h)"
-		content       = ""
+		content       strings.Builder
 		contentFormat = "<tr>\n\t<td>%s</td>\n\t<td>%s</td>\n\t<td>%d</td>\n\t<td>%d</td>\n\t<td>%d</td>\n\t<td>%d</td>\n\t" +
 			"<td>%d</td>\n\t<td>%s</td>\n\t<td>%d</td>\n\t<td>%d</td>\n\t<td>%s</td>\n\t<td>%s</td>\n\t</tr>\n"
 		subject = fmt.Sprintf("Subject: Daily Network Statistics Report | %s | %s\r\n"+
@@ -284,8 +284,8 @@ func (d *dashboard) outputSummaryHtml(contract string, nodes map[string]*record,
 				mismatchedCount = strconv.Itoa(n.state.ScanStats.MismatchedCount)
 				unfixedCount = strconv.Itoa(n.state.ScanStats.UnfixedCount)
 			}
-			content += fmt.Sprintf(contentFormat, n.state.Address, shard.Miner, n.state.SavedBlobs, downloadedBlobs,
-				shard.ShardId, shard.SyncState.PeerCount, submitted, submittedTime, dropped, failed, mismatchedCount, unfixedCount)
+			content.WriteString(fmt.Sprintf(contentFormat, n.state.Address, shard.Miner, n.state.SavedBlobs, downloadedBlobs,
+				shard.ShardId, shard.SyncState.PeerCount, submitted, submittedTime, dropped, failed, mismatchedCount, unfixedCount))
 		}
 	}
 
@@ -311,7 +311,7 @@ func (d *dashboard) outputSummaryHtml(contract string, nodes map[string]*record,
 			%s
 		</table>
 	</body>
-	</html>`, contract, dstr, dataRang, content)
+	</html>`, contract, dstr, dataRang, content.String())
 
 	msg := []byte(subject + body)
 	auth := smtp.PlainAuth("", d.emailCfg.Username, d.emailCfg.Password, d.emailCfg.Host)
