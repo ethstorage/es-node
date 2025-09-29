@@ -16,7 +16,6 @@ import (
 
 	oppprof "github.com/ethereum-optimism/optimism/op-service/pprof"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethstorage/go-ethstorage/ethstorage"
 	"github.com/ethstorage/go-ethstorage/ethstorage/email"
@@ -154,7 +153,7 @@ func EsNodeMain(ctx *cli.Context) error {
 	lgCfg := log.ReadCLIConfig(ctx)
 	lg.Info("Loading log config", "config", lgCfg)
 	clog := log.NewLogger(lgCfg)
-	cfg, err := NewConfig(ctx, clog)
+	cfg, err := node.NewConfig(ctx, clog)
 	if err != nil {
 		lg.Error("Unable to create the rollup node config", "error", err)
 		return err
@@ -249,16 +248,17 @@ func EsNodeInit(ctx *cli.Context) error {
 		}
 		shardLen = shards
 	}
+
 	cctx := context.Background()
-	client, err := ethclient.DialContext(cctx, l1Rpc)
+	l1Contract := common.HexToAddress(contract)
+	client, err := eth.DialContext(cctx, l1Rpc, l1Contract, 12, lg)
 	if err != nil {
 		lg.Error("Failed to connect to the Ethereum client", "error", err, "l1Rpc", l1Rpc)
 		return err
 	}
 	defer client.Close()
 
-	l1Contract := common.HexToAddress(contract)
-	storageCfg, err := initStorageConfig(cctx, client, l1Contract, common.HexToAddress(miner), lg)
+	storageCfg, err := node.InitStorageConfig(client, common.HexToAddress(miner), lg)
 	if err != nil {
 		lg.Error("Failed to load storage config", "error", err)
 		return err
@@ -268,18 +268,18 @@ func EsNodeInit(ctx *cli.Context) error {
 	if len(shardIndexes) > 0 {
 	out:
 		for i := 0; i < len(shardIndexes); i++ {
-			new := uint64(shardIndexes[i])
+			n := uint64(shardIndexes[i])
 			// prevent duplicated
 			for _, s := range shardIdxList {
-				if s == new {
+				if s == n {
 					continue out
 				}
 			}
-			shardIdxList = append(shardIdxList, new)
+			shardIdxList = append(shardIdxList, n)
 		}
 	} else {
 		// get shard indexes of length shardLen from contract
-		shardList, err := getShardList(cctx, client, l1Contract, shardLen)
+		shardList, err := getTopNShardListSortByDiff(cctx, client, shardLen)
 		if err != nil {
 			lg.Error("Failed to get shard indexes from contract", "error", err)
 			return err
@@ -339,7 +339,7 @@ func EsNodeSync(ctx *cli.Context) error {
 	}
 	lg.Info("Download blob from RPC done", "kvIndex", kvIndex, "commit", commit.Hex())
 	// write blob and meta
-	shardManager, err := initShardManager(ctx, l1Rpc, l1contract)
+	shardManager, err := initShardManager(ctx, l1Rpc, l1contract, lg)
 	if err != nil {
 		return fmt.Errorf("failed to init shard manager: %w", err)
 	}

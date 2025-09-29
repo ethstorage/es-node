@@ -334,6 +334,22 @@ func (w *PollingClient) ReadContractField(fieldName string, blockNumber *big.Int
 	return bs, nil
 }
 
+func (w *PollingClient) ReadContractBigIntField(fieldName string, blockNumber *big.Int) (*big.Int, error) {
+	bs, err := w.ReadContractField(fieldName, blockNumber)
+	if err != nil {
+		return nil, err
+	}
+	return new(big.Int).SetBytes(bs), nil
+}
+
+func (w *PollingClient) ReadContractUint64Field(fieldName string, blockNumber *big.Int) (uint64, error) {
+	bs, err := w.ReadContractField(fieldName, blockNumber)
+	if err != nil {
+		return 0, err
+	}
+	return new(big.Int).SetBytes(bs).Uint64(), nil
+}
+
 func (w *PollingClient) GetContractVersion() (string, error) {
 	bs, err := w.ReadContractField("version", nil)
 	if err != nil {
@@ -348,6 +364,18 @@ func (w *PollingClient) GetContractVersion() (string, error) {
 		return "", fmt.Errorf("invalid version string: %s", versionStr)
 	}
 	return version, nil
+}
+
+func (w *PollingClient) IsContractExist() (bool, error) {
+	code, err := w.CodeAt(w.ctx, w.esContract, nil)
+	if err != nil {
+		return false, fmt.Errorf("failed to get code at %s: %v", w.esContract.Hex(), err)
+	}
+	return len(code) > 0, nil
+}
+
+func (w *PollingClient) ContractAddress() common.Address {
+	return w.esContract
 }
 
 func decodeString(data []byte) (string, error) {
