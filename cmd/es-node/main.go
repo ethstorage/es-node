@@ -74,8 +74,8 @@ func main() {
 		{
 			Name:      "init",
 			Aliases:   []string{"i"},
-			Usage:     `Init storage node by creating a data file for each shard. Type 'es-node init --help' for more information.`,
-			UsageText: `You can specify shard_len (the number of shards) or shard_index (the index of specified shard, and you can specify more than one) to mine. If both appears, shard_index takes precedence. `,
+			Usage:     `Initialize shard data files (one per shard). Type 'es-node init --help' for more information.`,
+			UsageText: `Use --shard_len to create N sequential shards starting at 0, or --shard_index to list one or more explicit shard indices (repeatable). If both are supplied, --shard_index wins.`,
 			Flags: []cli.Flag{
 				cli.Uint64Flag{
 					Name:  shardLenFlagName,
@@ -100,8 +100,8 @@ func main() {
 		{
 			Name:      "sync",
 			Aliases:   []string{"s"},
-			Usage:     fmt.Sprintf("Download a blob from an RPC node and update it in local storage. Type 'es-node sync --help' for more information."),
-			UsageText: fmt.Sprintf("Sync local data specified by `%s` from RPC specified by `%s`", kvIndexFlagName, esRpcFlagName),
+			Usage:     "Fetch a single blob (by KV index) from a remote EthStorage RPC and write it into local storage. Type 'es-node sync --help' for more information.",
+			UsageText: fmt.Sprintf("Requires --%s (KV index) and --%s (RPC endpoint).", kvIndexFlagName, esRpcFlagName),
 			Flags: []cli.Flag{
 				cli.Uint64Flag{
 					Name:  kvIndexFlagName,
@@ -121,8 +121,8 @@ func main() {
 		},
 		{
 			Name:    "email",
-			Aliases: []string{"mail"},
-			Usage:   "Send a test email using the configured SMTP settings",
+			Aliases: []string{"m"},
+			Usage:   "Send a test email using the configured SMTP settings.",
 			Flags:   email.CLIFlags(),
 			Action: func(ctx *cli.Context) error {
 				emailConfig, err := email.GetEmailConfig(ctx)
