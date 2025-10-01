@@ -427,7 +427,7 @@ func (w *worker) resultLoop() {
 			if r == nil {
 				continue
 			}
-			w.lg.Info("Mining result loop get r", "shard", r.startShardId, "block", r.blockNumber, "nonce", r.nonce)
+			w.lg.Info("Mining result loop get result", "shard", r.startShardId, "block", r.blockNumber, "nonce", r.nonce)
 			txHash, err := w.l1API.SubmitMinedResult(
 				context.Background(),
 				w.storageMgr.ContractAddress(),
