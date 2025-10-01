@@ -9,9 +9,14 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethstorage/go-ethstorage/ethstorage/email"
+	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
 	"github.com/ethstorage/go-ethstorage/ethstorage/flags/types"
 	"github.com/ethstorage/go-ethstorage/ethstorage/flags/utils"
 	"github.com/ethstorage/go-ethstorage/ethstorage/prover"
+	"github.com/ethstorage/go-ethstorage/ethstorage/signer"
 	"github.com/urfave/cli"
 )
 
@@ -168,4 +173,103 @@ func ReadCLIConfig(ctx *cli.Context) CLIConfig {
 		MaxGasPrice:      types.GlobalBig(ctx, MaxGasPriceFlagName),
 	}
 	return cfg
+}
+
+func NewMinerConfig(ctx *cli.Context, pClient *eth.PollingClient, minerAddr common.Address, lg log.Logger) (*Config, error) {
+	cliConfig := ReadCLIConfig(ctx)
+	if !cliConfig.Enabled {
+		lg.Info("Miner is not enabled.")
+		return nil, nil
+	}
+	if minerAddr == (common.Address{}) {
+		return nil, fmt.Errorf("miner address cannot be empty")
+	}
+	lg.Debug("Read mining config from cli", "config", fmt.Sprintf("%+v", cliConfig))
+	err := cliConfig.Check()
+	if err != nil {
+		return nil, fmt.Errorf("invalid miner flags: %w", err)
+	}
+	minerConfig, err := cliConfig.ToMinerConfig()
+	if err != nil {
+		return nil, err
+	}
+	if minerConfig.EmailEnabled {
+		emailConfig, err := email.GetEmailConfig(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get email config: %w", err)
+		}
+		minerConfig.EmailConfig = *emailConfig
+	}
+
+	randomChecks, err := pClient.ReadContractUint64Field("randomChecks", nil)
+	if err != nil {
+		return nil, err
+	}
+	minerConfig.RandomChecks = randomChecks
+	nonceLimit, err := pClient.ReadContractUint64Field("nonceLimit", nil)
+	if err != nil {
+		return nil, err
+	}
+	minerConfig.NonceLimit = nonceLimit
+	minimumDiff, err := pClient.ReadContractBigIntField("minimumDiff", nil)
+	if err != nil {
+		return nil, err
+	}
+	minerConfig.MinimumDiff = minimumDiff
+	cutoff, err := pClient.ReadContractBigIntField("cutoff", nil)
+	if err != nil {
+		return nil, err
+	}
+	minerConfig.Cutoff = cutoff
+	diffAdjDivisor, err := pClient.ReadContractBigIntField("diffAdjDivisor", nil)
+	if err != nil {
+		return nil, err
+	}
+	minerConfig.DiffAdjDivisor = diffAdjDivisor
+	dcf, err := pClient.ReadContractBigIntField("dcfFactor", nil)
+	if err != nil {
+		return nil, err
+	}
+	minerConfig.DcfFactor = dcf
+
+	startTime, err := pClient.ReadContractUint64Field("startTime", nil)
+	if err != nil {
+		return nil, err
+	}
+	minerConfig.StartTime = startTime
+	shardEntryBits, err := pClient.ReadContractUint64Field("shardEntryBits", nil)
+	if err != nil {
+		return nil, err
+	}
+	minerConfig.ShardEntry = 1 << shardEntryBits
+	treasuryShare, err := pClient.ReadContractUint64Field("treasuryShare", nil)
+	if err != nil {
+		return nil, err
+	}
+	minerConfig.TreasuryShare = treasuryShare
+	storageCost, err := pClient.ReadContractBigIntField("storageCost", nil)
+	if err != nil {
+		return nil, err
+	}
+	minerConfig.StorageCost = storageCost
+	prepaidAmount, err := pClient.ReadContractBigIntField("prepaidAmount", nil)
+	if err != nil {
+		return nil, err
+	}
+	minerConfig.PrepaidAmount = prepaidAmount
+	signerFnFactory, signerAddr, err := NewSignerConfig(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get signer: %w", err)
+	}
+	minerConfig.SignerFnFactory = signerFnFactory
+	minerConfig.SignerAddr = signerAddr
+	return &minerConfig, nil
+}
+
+func NewSignerConfig(ctx *cli.Context) (signer.SignerFactory, common.Address, error) {
+	signerConfig := signer.ReadCLIConfig(ctx)
+	if err := signerConfig.Check(); err != nil {
+		return nil, common.Address{}, fmt.Errorf("invalid siger flags: %w", err)
+	}
+	return signer.SignerFactoryFromConfig(signerConfig)
 }
