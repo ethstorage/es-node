@@ -157,7 +157,7 @@ npx hardhat run scripts/deploy.js --network op_devnet
 ```
 Make sure to save the **storage contract address** for future use. For example:
 
-```hash
+```bash
 export ES_CONTRACT=0x9B75f686F348d18AF9A4b98e0290D24350d742c4  # replace with the actual address
 ```
 Now, navigate to the parent directory in preparation for the next steps.
@@ -210,6 +210,8 @@ Finally, run the es-node:
 --archiver.port 6678 \
 --archiver.enabled 
 ```
+
+Note: The default port for the archive service is 9645 (see `ethstorage/archiver/config.go`); the example above explicitly overrides it to 6678.
 
 Shortly after the es-node starts, it will listen for the storage contract, download all blobs managed by the contract, and store them locally. In this instance, it collects all the blobs received by the BatchInbox contract. The es-node also serves blob queries in the format `/eth/v1/beacon/blob_sidecars/{slot}` on port 6678, similar to the Beacon API.
 
