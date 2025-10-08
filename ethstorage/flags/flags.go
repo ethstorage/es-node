@@ -25,17 +25,17 @@ var (
 	//}
 	DataDir = cli.StringFlag{
 		Name:   "datadir",
-		Usage:  "Data directory for the storage files, databases and keystore",
+		Usage:  "(Required) Data directory for the storage files, databases and keystore",
 		EnvVar: utils.PrefixEnvVar("DATADIR"),
 	}
 	L1NodeAddr = cli.StringFlag{
 		Name:   "l1.rpc",
-		Usage:  "Address of L1 User JSON-RPC endpoint to use (eth namespace required)",
+		Usage:  "(Required) Address of L1 User JSON-RPC endpoint to use (eth namespace required)",
 		EnvVar: utils.PrefixEnvVar("L1_ETH_RPC"),
 	}
 	L1BeaconAddr = cli.StringFlag{
 		Name:   "l1.beacon",
-		Usage:  "Address of L1 beacon chain endpoint to use",
+		Usage:  "(Required) Address of L1 beacon chain endpoint to use",
 		EnvVar: utils.PrefixEnvVar("L1_BEACON_URL"),
 	}
 	L1BlockTime = cli.Uint64Flag{
@@ -128,7 +128,7 @@ var (
 	// TODO: move storage flag to storage folder
 	StorageFiles = cli.StringSliceFlag{
 		Name:   "storage.files",
-		Usage:  "File paths where the data are stored",
+		Usage:  "(Required) File paths where the data are stored",
 		EnvVar: utils.PrefixEnvVar("STORAGE_FILES"),
 	}
 	StorageMiner = cli.StringFlag{
@@ -138,7 +138,7 @@ var (
 	}
 	StorageL1Contract = cli.StringFlag{
 		Name:   "storage.l1contract",
-		Usage:  "Storage contract address on l1",
+		Usage:  "(Required) Storage contract address on l1",
 		EnvVar: utils.PrefixEnvVar("STORAGE_L1CONTRACT"),
 	}
 	StorageKvSize = cli.Uint64Flag{
