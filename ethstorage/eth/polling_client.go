@@ -387,17 +387,15 @@ func (w *PollingClient) LoadStorageConfigFromContract(miner common.Address) (*st
 	if !exist {
 		return nil, fmt.Errorf("contract does not exist")
 	}
-	result, err := w.ReadContractField("maxKvSizeBits", nil)
+	maxKvSizeBits, err := w.ReadContractUint64Field("maxKvSizeBits", nil)
 	if err != nil {
 		return nil, fmt.Errorf("get maxKvSizeBits: %s", err.Error())
 	}
-	maxKvSizeBits := new(big.Int).SetBytes(result).Uint64()
 	chunkSizeBits := maxKvSizeBits
-	result, err = w.ReadContractField("shardEntryBits", nil)
+	shardEntryBits, err := w.ReadContractUint64Field("shardEntryBits", nil)
 	if err != nil {
 		return nil, fmt.Errorf("get shardEntryBits: %s", err.Error())
 	}
-	shardEntryBits := new(big.Int).SetBytes(result).Uint64()
 
 	return &storage.StorageConfig{
 		L1Contract:        w.esContract,
