@@ -13,8 +13,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
 	es "github.com/ethstorage/go-ethstorage/ethstorage"
-	"github.com/ethstorage/go-ethstorage/ethstorage/blobs"
-	"github.com/ethstorage/go-ethstorage/ethstorage/downloader"
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
 	"github.com/ethstorage/go-ethstorage/ethstorage/miner"
 	"github.com/ethstorage/go-ethstorage/ethstorage/storage"
@@ -183,9 +181,9 @@ func main() {
 	}
 	config.Filenames = []string{*filenameFlag}
 
-	runner, err := initRunner(client, config, lg)
+	runner, err := initMinerPerfRunner(config, lg)
 	if err != nil {
-		lg.Error("❌ initRunner perf error", "err", err)
+		lg.Error("❌ initMinerPerfRunner perf error", "err", err)
 		os.Exit(1)
 	}
 
@@ -210,30 +208,13 @@ func main() {
 	lg.Info("Stop miner perf", key, ps, "final state", ss.String(), "time", time.Now())
 }
 
-func initRunner(client *eth.PollingClient, config *storage.StorageConfig, lg log.Logger) (IRunner, error) {
-	minerConfig := miner.DefaultConfig
-	minerConfig.ThreadsPerShard = uint64(*miningTreadsFlag)
+func initMinerPerfRunner(config *storage.StorageConfig, lg log.Logger) (IRunner, error) {
+	threads := uint64(*miningTreadsFlag)
+	multiple := (threads + 3) / 4
+	nonceLimit := miner.DefaultConfig.NonceLimit * multiple
 
 	shardManager := es.NewShardManager(config.L1Contract, config.KvSize, config.KvEntriesPerShard, config.ChunkSize)
-	for _, filename := range config.Filenames {
-		fmt.Printf("Adding data file %s\n", filename)
-		df, err := es.OpenDataFile(filename)
-		if err != nil {
-			return nil, fmt.Errorf("open data file failed: %w", err)
-		}
-		if df.Miner() != config.Miner {
-			return nil, fmt.Errorf("miner mismatches data file")
-		}
-		shardManager.AddDataFileAndShard(df)
-	}
-	if shardManager.IsComplete() != nil {
-		return nil, fmt.Errorf("data files are not completed")
-	}
-
-	storageManager := es.NewStorageManager(shardManager, client, lg)
-	br := blobs.NewBlobReader(downloader.NewBlobMemCache(), storageManager, lg)
-
-	runner := miner.NewMinerPerfRunner(minerConfig, br, storageManager, config.Miner, lg)
+	runner := miner.NewMinerPerfRunner(shardManager.KvEntriesBits(), shardManager.MaxKvSizeBits(), nonceLimit, threads, *filenameFlag, config.Miner, lg)
 	return runner, nil
 }
 

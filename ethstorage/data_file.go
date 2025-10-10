@@ -7,10 +7,9 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"os"
-
 	"github.com/detailyang/go-fallocate"
 	"github.com/ethereum/go-ethereum/common"
+	"os"
 )
 
 const (
@@ -26,7 +25,8 @@ const (
 
 	HEADER_SIZE = 4096
 
-	SampleSizeBits = 5 // 32 bytes
+	SampleSizeBits = 5  // 32 bytes
+	SampleSize     = 32 // 32 byte
 )
 
 // A DataFile represents a local file for a consecutive chunks
@@ -171,18 +171,22 @@ func (df *DataFile) Read(chunkIdx uint64, len int) ([]byte, error) {
 	return md, nil
 }
 
-// Read raw chunk data from the storage file.
-func (df *DataFile) ReadSample(sampleIdx uint64) (common.Hash, error) {
+// ReadSample read raw chunk data from the storage file.
+func (df *DataFile) ReadSample(shardIdx, sampleIdx uint64) (common.Hash, error) {
 	if !df.ContainsSample(sampleIdx) {
 		return common.Hash{}, fmt.Errorf("sample not found")
 	}
-	sampleSize := 1 << SampleSizeBits
-	md := make([]byte, sampleSize)
+	return df.readSample(sampleIdx)
+}
+
+// ReadSample read raw chunk data from the storage file.
+func (df *DataFile) readSample(sampleIdx uint64) (common.Hash, error) {
+	md := make([]byte, SampleSize)
 	n, err := df.file.ReadAt(md, HEADER_SIZE+int64(sampleIdx<<SampleSizeBits)-int64(df.chunkIdxStart*df.chunkSize))
 	if err != nil {
 		return common.Hash{}, err
 	}
-	if n != sampleSize {
+	if n != SampleSize {
 		return common.Hash{}, fmt.Errorf("not full read")
 	}
 	return common.BytesToHash(md), nil

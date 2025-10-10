@@ -11,25 +11,34 @@ import (
 	es "github.com/ethstorage/go-ethstorage/ethstorage"
 )
 
+const (
+	RandomChecks   = 2
+	SampleSizeBits = 5
+)
+
 type MinerPerfRunner struct {
-	config     Config
-	dataReader DataReader
-	storageMgr *es.StorageManager
-	miner      common.Address
-	wg         sync.WaitGroup
-	lg         log.Logger
-	processed  []uint64
-	startTime  time.Time
+	nonceLimit    uint64
+	threads       uint64
+	kvEntriesBits uint64
+	maxKvSizeBits uint64
+	dataFileName  string
+	miner         common.Address
+	wg            sync.WaitGroup
+	lg            log.Logger
+	processed     []uint64
+	startTime     time.Time
 }
 
-func NewMinerPerfRunner(config Config, dataReader DataReader, storageMgr *es.StorageManager, miner common.Address, lg log.Logger) *MinerPerfRunner {
+func NewMinerPerfRunner(kvEntriesBits, maxKvSizeBits, nonceLimit, threadsCount uint64, filename string, miner common.Address, lg log.Logger) *MinerPerfRunner {
 	return &MinerPerfRunner{
-		config:     config,
-		dataReader: dataReader,
-		storageMgr: storageMgr,
-		miner:      miner,
-		lg:         lg,
-		processed:  make([]uint64, config.ThreadsPerShard),
+		kvEntriesBits: kvEntriesBits,
+		maxKvSizeBits: maxKvSizeBits,
+		nonceLimit:    nonceLimit,
+		threads:       threadsCount,
+		dataFileName:  filename,
+		miner:         miner,
+		lg:            lg,
+		processed:     make([]uint64, threadsCount),
 	}
 }
 
@@ -39,24 +48,32 @@ func (r *MinerPerfRunner) Start() {
 		r.lg.Crit("failed to init random hash: %v", err)
 	}
 	r.startTime = time.Now()
-	for i := uint64(0); i < r.config.ThreadsPerShard; i++ {
+	for i := uint64(0); i < r.threads; i++ {
 		r.wg.Add(1)
 		go func(threadID uint64, rh common.Hash) {
 			defer r.wg.Done()
-			seg := r.config.NonceLimit / r.config.ThreadsPerShard
+			seg := r.nonceLimit / r.threads
 			end := seg * (threadID + 1)
-			if threadID == r.config.ThreadsPerShard-1 {
-				end = r.config.NonceLimit
+			if threadID == r.threads-1 {
+				end = r.nonceLimit
 			}
+			df, err := es.OpenDataFile(r.dataFileName)
+			if err != nil {
+				r.lg.Crit("failed to open data file fail for thread %d: %v", threadID, err)
+			}
+			if df.Miner() != r.miner {
+				r.lg.Crit("miner mismatches data file")
+			}
+
 			for j := seg * threadID; j < end; j++ {
 				hash0 := initHash(r.miner, rh, j)
 				var err error
-				_, _, err = hashimoto(r.storageMgr.KvEntriesBits(),
-					r.storageMgr.MaxKvSizeBits(),
-					es.SampleSizeBits,
+				_, _, err = hashimoto(r.kvEntriesBits,
+					r.maxKvSizeBits,
+					SampleSizeBits,
 					0,
-					r.config.RandomChecks,
-					r.storageMgr.ReadSampleUnlocked, hash0)
+					RandomChecks,
+					df.ReadSample, hash0)
 				r.processed[threadID]++
 				if err != nil {
 					r.lg.Warn("hashimoto error", "threadID", threadID, "err", err)

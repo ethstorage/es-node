@@ -216,10 +216,9 @@ func (ds *DataShard) readWith(kvIdx uint64, readLen int, decoder func([]byte, ui
 }
 
 func (ds *DataShard) ReadSample(sampleIdx uint64) (common.Hash, error) {
-
 	for _, df := range ds.dataFiles {
 		if df.ContainsSample(sampleIdx) {
-			return df.ReadSample(sampleIdx)
+			return df.readSample(sampleIdx)
 		}
 	}
 	return common.Hash{}, fmt.Errorf("chunk not found: the shard is not completed?")
