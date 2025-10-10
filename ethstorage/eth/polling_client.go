@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/ethstorage/go-ethstorage/ethstorage/storage"
 	"math/big"
 	"regexp"
 	"sync"
@@ -334,6 +335,22 @@ func (w *PollingClient) ReadContractField(fieldName string, blockNumber *big.Int
 	return bs, nil
 }
 
+func (w *PollingClient) ReadContractBigIntField(fieldName string, blockNumber *big.Int) (*big.Int, error) {
+	bs, err := w.ReadContractField(fieldName, blockNumber)
+	if err != nil {
+		return nil, err
+	}
+	return new(big.Int).SetBytes(bs), nil
+}
+
+func (w *PollingClient) ReadContractUint64Field(fieldName string, blockNumber *big.Int) (uint64, error) {
+	bs, err := w.ReadContractField(fieldName, blockNumber)
+	if err != nil {
+		return 0, err
+	}
+	return new(big.Int).SetBytes(bs).Uint64(), nil
+}
+
 func (w *PollingClient) GetContractVersion() (string, error) {
 	bs, err := w.ReadContractField("version", nil)
 	if err != nil {
@@ -348,6 +365,45 @@ func (w *PollingClient) GetContractVersion() (string, error) {
 		return "", fmt.Errorf("invalid version string: %s", versionStr)
 	}
 	return version, nil
+}
+
+func (w *PollingClient) IsContractExist() (bool, error) {
+	code, err := w.CodeAt(w.ctx, w.esContract, nil)
+	if err != nil {
+		return false, fmt.Errorf("failed to get code at %s: %v", w.esContract.Hex(), err)
+	}
+	return len(code) > 0, nil
+}
+
+func (w *PollingClient) ContractAddress() common.Address {
+	return w.esContract
+}
+
+func (w *PollingClient) LoadStorageConfigFromContract(miner common.Address) (*storage.StorageConfig, error) {
+	exist, err := w.IsContractExist()
+	if err != nil {
+		return nil, fmt.Errorf("check contract exist fail: %s", err.Error())
+	}
+	if !exist {
+		return nil, fmt.Errorf("contract does not exist")
+	}
+	maxKvSizeBits, err := w.ReadContractUint64Field("maxKvSizeBits", nil)
+	if err != nil {
+		return nil, fmt.Errorf("get maxKvSizeBits: %s", err.Error())
+	}
+	chunkSizeBits := maxKvSizeBits
+	shardEntryBits, err := w.ReadContractUint64Field("shardEntryBits", nil)
+	if err != nil {
+		return nil, fmt.Errorf("get shardEntryBits: %s", err.Error())
+	}
+
+	return &storage.StorageConfig{
+		L1Contract:        w.esContract,
+		Miner:             miner,
+		KvSize:            1 << maxKvSizeBits,
+		ChunkSize:         1 << chunkSizeBits,
+		KvEntriesPerShard: 1 << shardEntryBits,
+	}, nil
 }
 
 func decodeString(data []byte) (string, error) {

@@ -14,17 +14,15 @@ import (
 	"path/filepath"
 	"sort"
 
-	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/crypto/kzg4844"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rpc"
 	es "github.com/ethstorage/go-ethstorage/ethstorage"
+	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
 	"github.com/ethstorage/go-ethstorage/ethstorage/flags"
+	"github.com/ethstorage/go-ethstorage/ethstorage/miner"
 	"github.com/ethstorage/go-ethstorage/ethstorage/storage"
 	"github.com/urfave/cli"
 )
@@ -38,105 +36,22 @@ const (
 	esRpcFlagName        = "es_rpc"
 )
 
-type ContractReader struct {
-	ctx      context.Context
-	client   *ethclient.Client
-	contract common.Address
-	lg       log.Logger
-}
-
-func newContractReader(ctx context.Context, client *ethclient.Client, contract common.Address, logger log.Logger) *ContractReader {
-	return &ContractReader{
-		ctx:      ctx,
-		client:   client,
-		contract: contract,
-		lg:       logger,
-	}
-}
-
-func (c *ContractReader) readSlot(fieldName string) ([]byte, error) {
-	h := crypto.Keccak256Hash([]byte(fieldName + "()"))
-	msg := ethereum.CallMsg{
-		To:   &c.contract,
-		Data: h[0:4],
-	}
-	bs, err := c.client.CallContract(c.ctx, msg, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get %s from contract: %v", fieldName, err)
-	}
-	return bs, nil
-}
-
-func (c *ContractReader) readUint(fieldName string) (uint64, error) {
-	bs, err := c.readSlot(fieldName)
-	if err != nil {
-		return 0, err
-	}
-	value := new(big.Int).SetBytes(bs).Uint64()
-	c.lg.Info("Read uint from contract", "field", fieldName, "value", value)
-	return value, nil
-}
-
-func (c *ContractReader) readBig(fieldName string) (*big.Int, error) {
-	bs, err := c.readSlot(fieldName)
-	if err != nil {
-		return nil, err
-	}
-	value := new(big.Int).SetBytes(bs)
-	c.lg.Info("Read big int from contract", "field", fieldName, "value", value)
-	return new(big.Int).SetBytes(bs), nil
-}
-
-func (c *ContractReader) contractExists() (bool, error) {
-	code, err := c.client.CodeAt(c.ctx, c.contract, nil)
-	if err != nil {
-		return false, fmt.Errorf("failed to get code at %s: %v", c.contract.Hex(), err)
-	}
-	return len(code) > 0, nil
-}
-
-func initStorageConfig(ctx context.Context, client *ethclient.Client, l1Contract, miner common.Address, lg log.Logger) (*storage.StorageConfig, error) {
-	cr := newContractReader(ctx, client, l1Contract, lg)
-	exist, err := cr.contractExists()
-	if err != nil {
-		return nil, err
-	}
-	if !exist {
-		return nil, fmt.Errorf("contract does not exist")
-	}
-	maxKvSizeBits, err := cr.readUint("maxKvSizeBits")
-	if err != nil {
-		return nil, err
-	}
-	chunkSizeBits := maxKvSizeBits
-	shardEntryBits, err := cr.readUint("shardEntryBits")
-	if err != nil {
-		return nil, err
-	}
-	return &storage.StorageConfig{
-		L1Contract:        l1Contract,
-		Miner:             miner,
-		KvSize:            1 << maxKvSizeBits,
-		ChunkSize:         1 << chunkSizeBits,
-		KvEntriesPerShard: 1 << shardEntryBits,
-	}, nil
-}
-
-func getShardList(ctx context.Context, client *ethclient.Client, contract common.Address, shardLen int) ([]uint64, error) {
+func getTopNShardListSortByDiff(ctx context.Context, pClient *eth.PollingClient, n int) ([]uint64, error) {
 	var shardId uint64 = 0
 	var diffs []*big.Int
+	api := miner.NewL1MiningAPI(pClient, nil, nil)
 	for {
-		diff, err := getDifficulty(ctx, client, contract, shardId)
+		info, err := api.GetMiningInfo(ctx, pClient.ContractAddress(), shardId)
 		if err != nil {
 			lg.Error("Query difficulty by shard", "error", err)
 			break
 		}
-		if diff != nil && diff.Cmp(big.NewInt(0)) == 0 {
+		if info.Difficulty != nil && info.Difficulty.Cmp(big.NewInt(0)) == 0 {
 			// shardId not exist yet
 			break
 		}
-		lg.Info("Query difficulty by shard", "shard", shardId, "difficulty", diff)
-		diffs = append(diffs, diff)
+		lg.Info("Query difficulty by shard", "shard", shardId, "difficulty", info.Difficulty)
+		diffs = append(diffs, info.Difficulty)
 		shardId++
 	}
 	// get the shards with lowest difficulty
@@ -146,49 +61,15 @@ func getShardList(ctx context.Context, client *ethclient.Client, contract common
 		// Will create at least one data file
 		result = []uint64{0}
 	} else {
-		if len(sortedShardIds) < shardLen {
-			shardLen = len(sortedShardIds)
+		if len(sortedShardIds) < n {
+			n = len(sortedShardIds)
 		}
-		for i := 0; i < shardLen; i++ {
+		for i := 0; i < n; i++ {
 			result = append(result, uint64(sortedShardIds[i]))
 		}
 	}
 	lg.Info("Get shard list", "shards", result)
 	return result, nil
-}
-
-func getDifficulty(ctx context.Context, client *ethclient.Client, contract common.Address, shardIdx uint64) (*big.Int, error) {
-	res, err := getMiningInfo(ctx, client, contract, shardIdx)
-	if err != nil {
-		return nil, err
-	}
-	return res[1].(*big.Int), nil
-}
-
-func getMiningInfo(ctx context.Context, client *ethclient.Client, contract common.Address, shardIdx uint64) ([]interface{}, error) {
-	uint256Type, _ := abi.NewType("uint256", "", nil)
-	dataField, _ := abi.Arguments{{Type: uint256Type}}.Pack(new(big.Int).SetUint64(shardIdx))
-	h := crypto.Keccak256Hash([]byte(`infos(uint256)`))
-	calldata := append(h[0:4], dataField...)
-	msg := ethereum.CallMsg{
-		To:   &contract,
-		Data: calldata,
-	}
-	bs, err := client.CallContract(ctx, msg, nil)
-	if err != nil {
-		lg.Error("Failed to call contract", "error", err.Error())
-		return nil, err
-	}
-	res, _ := abi.Arguments{
-		{Type: uint256Type},
-		{Type: uint256Type},
-		{Type: uint256Type},
-	}.UnpackValues(bs)
-	if res == nil || len(res) < 3 {
-		lg.Error("Query mining info by shard", "error", "invalid result", "result", res)
-		return nil, fmt.Errorf("invalid result: %v", res)
-	}
-	return res, nil
 }
 
 func createDataFile(cfg *storage.StorageConfig, shardIdxList []uint64, datadir string, encodingType int) ([]string, error) {
@@ -276,19 +157,18 @@ func downloadBlobFromRPC(endpoint string, kvIndex uint64, hash common.Hash) ([]b
 	return result, nil
 }
 
-func initShardManager(ctx *cli.Context, l1Rpc string, l1contract common.Address) (*es.ShardManager, error) {
+func initShardManager(ctx *cli.Context, l1Rpc string, l1contract common.Address, lg log.Logger) (*es.ShardManager, error) {
 	miner := readRequiredFlag(ctx, flags.StorageMiner)
 	if !common.IsHexAddress(miner) {
 		return nil, fmt.Errorf("invalid miner address %s", miner)
 	}
-	cctx := context.Background()
-	client, err := ethclient.DialContext(cctx, l1Rpc)
+	client, err := eth.Dial(l1Rpc, l1contract, 0, lg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to the Ethereum client: %w", err)
 	}
 	defer client.Close()
 
-	storageCfg, err := initStorageConfig(cctx, client, l1contract, common.HexToAddress(miner), lg)
+	storageCfg, err := client.LoadStorageConfigFromContract(common.HexToAddress(miner))
 	if err != nil {
 		return nil, fmt.Errorf("failed to load storage config: %w", err)
 	}
