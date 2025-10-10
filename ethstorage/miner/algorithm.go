@@ -4,6 +4,7 @@
 package miner
 
 import (
+	"encoding/binary"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -16,12 +17,12 @@ var maxUint256 = new(big.Int).Sub(new(big.Int).Exp(new(big.Int).SetUint64(2),
 type SampleReader func(uint64, uint64) (common.Hash, error)
 
 func hashimoto(kvEntriesBits, kvSizeBits, sampleSizeBits, shardIdx, randomChecks uint64, sampleReader SampleReader, hash0 common.Hash) (common.Hash, []uint64, error) {
-	var sampleIdxs []uint64
+	sampleIdxs := make([]uint64, 0, randomChecks)
 	rowBits := kvEntriesBits + kvSizeBits - sampleSizeBits
+	rowMask := uint64((1 << rowBits) - 1) // faster & safer
 	for i := uint64(0); i < randomChecks; i++ {
-		parent := big.NewInt(0)
-		parent.Mod(new(big.Int).SetBytes(hash0.Bytes()), big.NewInt(1<<rowBits))
-		sampleIdx := parent.Uint64() + shardIdx<<rowBits
+		parent := binary.BigEndian.Uint64(hash0[:8]) & rowMask
+		sampleIdx := parent + shardIdx<<rowBits
 		encodedSample, err := sampleReader(shardIdx, sampleIdx)
 		if err != nil {
 			return common.Hash{}, nil, err
