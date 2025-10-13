@@ -13,8 +13,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
 	es "github.com/ethstorage/go-ethstorage/ethstorage"
-	"github.com/ethstorage/go-ethstorage/ethstorage/blobs"
-	"github.com/ethstorage/go-ethstorage/ethstorage/downloader"
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
 	"github.com/ethstorage/go-ethstorage/ethstorage/miner"
 	"github.com/ethstorage/go-ethstorage/ethstorage/storage"
@@ -232,7 +230,6 @@ func initRunner(client *eth.PollingClient, config *storage.StorageConfig, lg log
 	}
 
 	storageManager := es.NewStorageManager(shardManager, client, lg)
-	br := blobs.NewBlobReader(downloader.NewBlobMemCache(), storageManager, lg)
 
 	runner := miner.NewMinerPerfRunner(storageManager, nonceLimit, threads, config.Miner, lg)
 	return runner, nil
