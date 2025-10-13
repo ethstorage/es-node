@@ -13,8 +13,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
 	es "github.com/ethstorage/go-ethstorage/ethstorage"
-	"github.com/ethstorage/go-ethstorage/ethstorage/blobs"
-	"github.com/ethstorage/go-ethstorage/ethstorage/downloader"
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
 	"github.com/ethstorage/go-ethstorage/ethstorage/miner"
 	"github.com/ethstorage/go-ethstorage/ethstorage/storage"
@@ -84,11 +82,11 @@ func (ss *stateSum) AddState(newState *state) {
 }
 
 func (ss *stateSum) String() string {
-	if ss.Count == 1 {
+	sec := uint64(ss.LastTime.Sub(ss.InitTime).Seconds())
+	if sec == 0 {
 		return fmt.Sprintf("StartTime: %s, CPUPercent: %.2f%%, MemPercent: %.2f%%",
 			ss.InitTime.Format("2006-01-02 15:04:05"), ss.CPUPercent, ss.MemPercent)
 	} else {
-		sec := uint64(ss.LastTime.Sub(ss.InitTime).Seconds())
 		return fmt.Sprintf("TimeUsed: %d, CPUPercent: %.2f%%, MemPercent: %.2f%%, "+
 			"ReadBytesPerSec: %dMB, TotalReadBytes: %dMB, WriteBytesPerSec: %dMB, TotalWriteBytes: %dMB, "+
 			"BytesSentPerSec: %dMB, BytesRecvPerSec: %dMB", sec, ss.CPUPercent, ss.MemPercent,
@@ -211,8 +209,9 @@ func main() {
 }
 
 func initRunner(client *eth.PollingClient, config *storage.StorageConfig, lg log.Logger) (IRunner, error) {
-	minerConfig := miner.DefaultConfig
-	minerConfig.ThreadsPerShard = uint64(*miningTreadsFlag)
+	threads := uint64(*miningTreadsFlag)
+	multiple := (threads + 3) / 4
+	nonceLimit := miner.DefaultConfig.NonceLimit * multiple
 
 	shardManager := es.NewShardManager(config.L1Contract, config.KvSize, config.KvEntriesPerShard, config.ChunkSize)
 	for _, filename := range config.Filenames {
@@ -231,9 +230,8 @@ func initRunner(client *eth.PollingClient, config *storage.StorageConfig, lg log
 	}
 
 	storageManager := es.NewStorageManager(shardManager, client, lg)
-	br := blobs.NewBlobReader(downloader.NewBlobMemCache(), storageManager, lg)
 
-	runner := miner.NewMinerPerfRunner(minerConfig, br, storageManager, config.Miner, lg)
+	runner := miner.NewMinerPerfRunner(storageManager, nonceLimit, threads, config.Miner, lg)
 	return runner, nil
 }
 

@@ -1,6 +1,6 @@
-//go:build !windows
+//go:build windows
 
-// Copyright 2022-2023, EthStorage.
+//Copyright 2022-2023, EthStorage.
 // For license information, see https://github.com/ethstorage/es-node/blob/main/LICENSE
 
 package ethstorage
@@ -8,11 +8,15 @@ package ethstorage
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
+	"io"
 	"os"
+	"syscall"
+	"unsafe"
 
-	"github.com/detailyang/go-fallocate"
 	"github.com/ethereum/go-ethereum/common"
+	"golang.org/x/sys/windows"
 )
 
 const (
@@ -29,11 +33,159 @@ const (
 	HEADER_SIZE = 4096
 
 	SampleSizeBits = 5 // 32 bytes
+
+	InvalidHandle = ^windows.Handle(0)
+	// DefaultTimeout allows changing the default timeout used for Write() and Read() functions. Defaults to -1 (blocking)
+	DefaultTimeout int = -1
 )
 
-// A DataFile represents a local file for a consecutive chunks
+var (
+	kernel32             = syscall.NewLazyDLL("kernel32.dll")
+	procSetFilePointerEx = kernel32.NewProc("SetFilePointerEx")
+	procSetEndOfFile     = kernel32.NewProc("SetEndOfFile")
+)
+
+// preallocateFile expand file size to targetSize bytes
+func preallocateFile(h windows.Handle, targetSize int64) error {
+	// Move the file pointer to the target location
+	var newPos int64
+	r1, _, e1 := procSetFilePointerEx.Call(
+		uintptr(h),
+		uintptr(targetSize),
+		uintptr(unsafe.Pointer(&newPos)),
+		uintptr(windows.FILE_BEGIN),
+	)
+	if r1 == 0 {
+		return fmt.Errorf("SetFilePointerEx failed: %v", e1)
+	}
+
+	// Set the current position to the end of the file
+	r1, _, e1 = procSetEndOfFile.Call(uintptr(h))
+	if r1 == 0 {
+		return fmt.Errorf("SetEndOfFile failed: %v", e1)
+	}
+
+	return nil
+}
+
+func asyncIo(fn func(windows.Handle, []byte, *uint32, *windows.Overlapped) error, h windows.Handle, buf []byte, milliseconds int, o *windows.Overlapped) (uint32, error) {
+	var n uint32
+	err := fn(h, buf, &n, o)
+
+	if err == windows.ERROR_IO_PENDING {
+		if milliseconds >= 0 {
+			// Honor the time limit if one is set
+			if n, _ = windows.WaitForSingleObject(o.HEvent, uint32(milliseconds)); n != windows.WAIT_OBJECT_0 {
+				switch n {
+				case syscall.WAIT_ABANDONED:
+					err = os.NewSyscallError("WaitForSingleObject", fmt.Errorf("WAIT_ABANDONED"))
+				case syscall.WAIT_TIMEOUT:
+					err = os.NewSyscallError("WaitForSingleObject", windows.WAIT_TIMEOUT)
+				case syscall.WAIT_FAILED:
+					err = os.NewSyscallError("WaitForSingleObject", fmt.Errorf("WAIT_FAILED"))
+				default:
+					err = os.NewSyscallError("WaitForSingleObject", fmt.Errorf("UNKNOWN ERROR"))
+				}
+				return 0, err
+			}
+		}
+		if err = windows.GetOverlappedResult(h, o, &n, true); err != nil {
+			if err == windows.ERROR_HANDLE_EOF {
+				err = io.EOF
+				return n, err
+			}
+			err = os.NewSyscallError("GetOverlappedResult", err)
+			return 0, err
+		}
+	} else if err != nil {
+		return 0, err
+	}
+	return n, nil
+}
+
+func asyncReadAt(h windows.Handle, buf []byte, offset int64) (int, error) {
+	var overlapped windows.Overlapped
+	overlapped.Offset = uint32(offset)
+	overlapped.OffsetHigh = uint32(offset >> 32)
+	event, err := windows.CreateEvent(nil, 1, 0, nil)
+	if err != nil {
+		return 0, err
+	}
+	defer windows.CloseHandle(event)
+	overlapped.HEvent = event
+
+	n, err := asyncIo(windows.ReadFile, h, buf, DefaultTimeout, &overlapped)
+	err = os.NewSyscallError("asyncReadAt", err)
+	if errors.Is(err, io.EOF) || (err == nil && n == 0 && len(buf) > 0) || (err == nil && len(buf) > int(n)) {
+		err = io.EOF
+	}
+	return int(n), err
+}
+
+func asyncWriteAt(h windows.Handle, buf []byte, offset int64) (int, error) {
+
+	var overlapped windows.Overlapped
+	overlapped.Offset = uint32(offset)
+	overlapped.OffsetHigh = uint32(offset >> 32)
+	event, err := windows.CreateEvent(nil, 1, 0, nil)
+	if err != nil {
+		return 0, err
+	}
+	defer windows.CloseHandle(event)
+	overlapped.HEvent = event
+
+	n, err := asyncIo(windows.WriteFile, h, buf, DefaultTimeout, &overlapped)
+	return int(n), os.NewSyscallError("asyncWriteAt", err)
+}
+
+// createFile opens or creates a file on Windows with high-performance I/O flags.
+func createFile(filename string, mode int) (windows.Handle, error) {
+	// createmode logic is same as syscall.Open used by os.Create and os.OpenFile
+	var createmode uint32
+	switch {
+	case mode&(syscall.O_CREAT|syscall.O_EXCL) == (syscall.O_CREAT | syscall.O_EXCL):
+		createmode = syscall.CREATE_NEW
+	case mode&(syscall.O_CREAT|syscall.O_TRUNC) == (syscall.O_CREAT | syscall.O_TRUNC):
+		createmode = syscall.CREATE_ALWAYS
+	case mode&syscall.O_CREAT == syscall.O_CREAT:
+		createmode = syscall.OPEN_ALWAYS
+	case mode&syscall.O_TRUNC == syscall.O_TRUNC:
+		createmode = syscall.TRUNCATE_EXISTING
+	default:
+		createmode = syscall.OPEN_EXISTING
+	}
+
+	path, err := windows.UTF16PtrFromString(filename)
+	if err != nil {
+		return InvalidHandle, fmt.Errorf("invalid filename: %w", err)
+	}
+
+	h, err := windows.CreateFile(
+		path,
+		windows.GENERIC_READ|windows.GENERIC_WRITE,       // Allow read/write access
+		windows.FILE_SHARE_READ|windows.FILE_SHARE_WRITE, // Allow concurrent read/write access
+		nil,        // Default security attributes
+		createmode, // Open/create behavior
+		windows.FILE_FLAG_OVERLAPPED|windows.FILE_FLAG_RANDOM_ACCESS, // High-performance async I/O
+		0,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("CreateFile failed: %w", err)
+	}
+
+	return h, nil
+}
+
+func CreateFile(filename string) (windows.Handle, error) {
+	return createFile(filename, syscall.O_RDWR|syscall.O_CREAT|syscall.O_TRUNC)
+}
+func OpenFile(filename string, mode int) (windows.Handle, error) {
+	return createFile(filename, mode)
+}
+
+// A DataFile represents a local fileHandle for a consecutive chunks
 type DataFile struct {
-	file          *os.File
+	fileHandle    windows.Handle
 	chunkIdxStart uint64
 	chunkIdxLen   uint64
 	encodeType    uint64
@@ -92,17 +244,17 @@ func Create(filename string, chunkIdxStart, chunkIdxLen, epoch, maxKvSize, encod
 		return nil, fmt.Errorf("chunkSize and maxKvSize must be 2^n")
 	}
 
-	file, err := os.Create(filename)
+	h, err := CreateFile(filename)
 	if err != nil {
 		return nil, err
 	}
 	// actual initialization is done when synchronize
-	err = fallocate.Fallocate(file, int64((chunkSize+32)*chunkIdxLen), int64(HEADER_SIZE))
+	err = preallocateFile(h, int64((chunkSize+32)*chunkIdxLen+HEADER_SIZE))
 	if err != nil {
 		return nil, err
 	}
 	dataFile := &DataFile{
-		file:          file,
+		fileHandle:    h,
 		chunkIdxStart: chunkIdxStart,
 		chunkIdxLen:   chunkIdxLen,
 		encodeType:    encodeType,
@@ -116,12 +268,12 @@ func Create(filename string, chunkIdxStart, chunkIdxLen, epoch, maxKvSize, encod
 }
 
 func OpenDataFile(filename string) (*DataFile, error) {
-	file, err := os.OpenFile(filename, os.O_RDWR, 0755)
+	h, err := OpenFile(filename, syscall.O_RDWR)
 	if err != nil {
 		return nil, err
 	}
 	dataFile := &DataFile{
-		file: file,
+		fileHandle: h,
 	}
 	return dataFile, dataFile.readHeader()
 }
@@ -154,7 +306,17 @@ func (df *DataFile) Miner() common.Address {
 	return df.miner
 }
 
-// Read raw chunk data from the storage file.
+// Read raw chunk data from the storage fileHandle.
+func (df *DataFile) ReadAt(b []byte, off int64) (int, error) {
+	return asyncReadAt(df.fileHandle, b, off)
+}
+
+// WriteAt writes data to a file handle at the specified offset.
+func (df *DataFile) WriteAt(b []byte, off int64) (n int, err error) {
+	return asyncWriteAt(df.fileHandle, b, off)
+}
+
+// Read raw chunk data from the storage fileHandle.
 func (df *DataFile) Read(chunkIdx uint64, len int) ([]byte, error) {
 	if !df.Contains(chunkIdx) {
 		return nil, fmt.Errorf("chunk not found")
@@ -163,7 +325,7 @@ func (df *DataFile) Read(chunkIdx uint64, len int) ([]byte, error) {
 		return nil, fmt.Errorf("read too large")
 	}
 	md := make([]byte, len)
-	n, err := df.file.ReadAt(md, HEADER_SIZE+int64(chunkIdx-df.chunkIdxStart)*int64(df.chunkSize))
+	n, err := df.ReadAt(md, HEADER_SIZE+int64(chunkIdx-df.chunkIdxStart)*int64(df.chunkSize))
 	if err != nil {
 		return nil, err
 	}
@@ -173,14 +335,14 @@ func (df *DataFile) Read(chunkIdx uint64, len int) ([]byte, error) {
 	return md, nil
 }
 
-// Read raw chunk data from the storage file.
+// Read raw chunk data from the storage fileHandle.
 func (df *DataFile) ReadSample(sampleIdx uint64) (common.Hash, error) {
 	if !df.ContainsSample(sampleIdx) {
 		return common.Hash{}, fmt.Errorf("sample not found")
 	}
 	sampleSize := 1 << SampleSizeBits
 	md := make([]byte, sampleSize)
-	n, err := df.file.ReadAt(md, HEADER_SIZE+int64(sampleIdx<<SampleSizeBits)-int64(df.chunkIdxStart*df.chunkSize))
+	n, err := df.ReadAt(md, HEADER_SIZE+int64(sampleIdx<<SampleSizeBits)-int64(df.chunkIdxStart*df.chunkSize))
 	if err != nil {
 		return common.Hash{}, err
 	}
@@ -190,7 +352,7 @@ func (df *DataFile) ReadSample(sampleIdx uint64) (common.Hash, error) {
 	return common.BytesToHash(md), nil
 }
 
-// Write the chunk bytes to the file.
+// Write the chunk bytes to the fileHandle.
 func (df *DataFile) Write(chunkIdx uint64, b []byte) error {
 	if !df.Contains(chunkIdx) {
 		return fmt.Errorf("chunk not found")
@@ -200,7 +362,7 @@ func (df *DataFile) Write(chunkIdx uint64, b []byte) error {
 		return fmt.Errorf("write data too large")
 	}
 
-	_, err := df.file.WriteAt(b, HEADER_SIZE+int64(chunkIdx-df.chunkIdxStart)*int64(df.chunkSize))
+	_, err := df.WriteAt(b, HEADER_SIZE+int64(chunkIdx-df.chunkIdxStart)*int64(df.chunkSize))
 	return err
 }
 
@@ -211,7 +373,7 @@ func (df *DataFile) ReadMeta(kvIdx uint64) ([]byte, error) {
 	}
 
 	b := make([]byte, df.metaSize)
-	_, err := df.file.ReadAt(b, int64(HEADER_SIZE+df.chunkIdxLen*df.chunkSize+(kvIdx-df.KvIdxStart())*df.metaSize))
+	_, err := df.ReadAt(b, int64(HEADER_SIZE+df.chunkIdxLen*df.chunkSize+(kvIdx-df.KvIdxStart())*df.metaSize))
 	return b, err
 }
 
@@ -225,7 +387,7 @@ func (df *DataFile) WriteMeta(kvIdx uint64, b []byte) error {
 		return fmt.Errorf("write meta too large")
 	}
 
-	_, err := df.file.WriteAt(b, int64(HEADER_SIZE+df.chunkIdxLen*df.chunkSize+(kvIdx-df.KvIdxStart())*df.metaSize))
+	_, err := df.WriteAt(b, int64(HEADER_SIZE+df.chunkIdxLen*df.chunkSize+(kvIdx-df.KvIdxStart())*df.metaSize))
 	return err
 }
 
@@ -278,7 +440,7 @@ func (df *DataFile) writeHeader() error {
 	if err := binary.Write(buf, binary.BigEndian, header.status); err != nil {
 		return err
 	}
-	if _, err := df.file.WriteAt(buf.Bytes(), 0); err != nil {
+	if _, err := df.WriteAt(buf.Bytes(), 0); err != nil {
 		return err
 	}
 	return nil
@@ -288,7 +450,7 @@ func (df *DataFile) readHeader() error {
 	header := DataFileHeader{}
 
 	b := make([]byte, HEADER_SIZE)
-	n, err := df.file.ReadAt(b, 0)
+	n, err := df.ReadAt(b, 0)
 	if err != nil {
 		return err
 	}
@@ -355,9 +517,9 @@ func (df *DataFile) readHeader() error {
 }
 
 func (df *DataFile) Close() error {
-	if df.file != nil {
-		if err := df.file.Close(); err != nil {
-			return fmt.Errorf("close data file %s error: %w", df.file.Name(), err)
+	if df.fileHandle != InvalidHandle {
+		if err := windows.CloseHandle(df.fileHandle); err != nil {
+			return fmt.Errorf("close data fileHandle error: %w", err)
 		}
 	}
 	return nil
