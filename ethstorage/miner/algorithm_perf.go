@@ -11,10 +11,14 @@ import (
 	es "github.com/ethstorage/go-ethstorage/ethstorage"
 )
 
+const (
+	RandomChecks = 2
+)
+
 type MinerPerfRunner struct {
-	config     Config
-	dataReader DataReader
 	storageMgr *es.StorageManager
+	nonceLimit uint64
+	threads    uint64
 	miner      common.Address
 	wg         sync.WaitGroup
 	lg         log.Logger
@@ -22,14 +26,14 @@ type MinerPerfRunner struct {
 	startTime  time.Time
 }
 
-func NewMinerPerfRunner(config Config, dataReader DataReader, storageMgr *es.StorageManager, miner common.Address, lg log.Logger) *MinerPerfRunner {
+func NewMinerPerfRunner(storageMgr *es.StorageManager, nonceLimit, threadsCount uint64, miner common.Address, lg log.Logger) *MinerPerfRunner {
 	return &MinerPerfRunner{
-		config:     config,
-		dataReader: dataReader,
 		storageMgr: storageMgr,
+		nonceLimit: nonceLimit,
+		threads:    threadsCount,
 		miner:      miner,
 		lg:         lg,
-		processed:  make([]uint64, config.ThreadsPerShard),
+		processed:  make([]uint64, threadsCount),
 	}
 }
 
@@ -39,14 +43,14 @@ func (r *MinerPerfRunner) Start() {
 		r.lg.Crit("failed to init random hash: %v", err)
 	}
 	r.startTime = time.Now()
-	for i := uint64(0); i < r.config.ThreadsPerShard; i++ {
+	for i := uint64(0); i < r.threads; i++ {
 		r.wg.Add(1)
 		go func(threadID uint64, rh common.Hash) {
 			defer r.wg.Done()
-			seg := r.config.NonceLimit / r.config.ThreadsPerShard
+			seg := r.nonceLimit / r.threads
 			end := seg * (threadID + 1)
-			if threadID == r.config.ThreadsPerShard-1 {
-				end = r.config.NonceLimit
+			if threadID == r.threads-1 {
+				end = r.nonceLimit
 			}
 			for j := seg * threadID; j < end; j++ {
 				hash0 := initHash(r.miner, rh, j)
@@ -55,7 +59,7 @@ func (r *MinerPerfRunner) Start() {
 					r.storageMgr.MaxKvSizeBits(),
 					es.SampleSizeBits,
 					0,
-					r.config.RandomChecks,
+					RandomChecks,
 					r.storageMgr.ReadSampleUnlocked, hash0)
 				r.processed[threadID]++
 				if err != nil {
