@@ -101,10 +101,3 @@ func (r *MinerPerfRunner) ProcessState() (string, string) {
 func (r *MinerPerfRunner) Stop() {
 
 }
-
-func FactRead(shardIdx, sampleIdx uint64) (common.Hash, error) {
-	randomHash := make([]byte, 32)
-	rand.Read(randomHash)
-	time.Sleep(time.Millisecond)
-	return common.BytesToHash(randomHash), nil
-}

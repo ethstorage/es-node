@@ -82,11 +82,11 @@ func (ss *stateSum) AddState(newState *state) {
 }
 
 func (ss *stateSum) String() string {
-	if ss.Count == 1 {
+	sec := uint64(ss.LastTime.Sub(ss.InitTime).Seconds())
+	if sec == 0 {
 		return fmt.Sprintf("StartTime: %s, CPUPercent: %.2f%%, MemPercent: %.2f%%",
 			ss.InitTime.Format("2006-01-02 15:04:05"), ss.CPUPercent, ss.MemPercent)
 	} else {
-		sec := uint64(ss.LastTime.Sub(ss.InitTime).Seconds())
 		return fmt.Sprintf("TimeUsed: %d, CPUPercent: %.2f%%, MemPercent: %.2f%%, "+
 			"ReadBytesPerSec: %dMB, TotalReadBytes: %dMB, WriteBytesPerSec: %dMB, TotalWriteBytes: %dMB, "+
 			"BytesSentPerSec: %dMB, BytesRecvPerSec: %dMB", sec, ss.CPUPercent, ss.MemPercent,
@@ -215,6 +215,7 @@ func initMinerPerfRunner(config *storage.StorageConfig, lg log.Logger) (IRunner,
 
 	shardManager := es.NewShardManager(config.L1Contract, config.KvSize, config.KvEntriesPerShard, config.ChunkSize)
 	runner := miner.NewMinerPerfRunner(shardManager.KvEntriesBits(), shardManager.MaxKvSizeBits(), nonceLimit, threads, *filenameFlag, config.Miner, lg)
+
 	return runner, nil
 }
 
