@@ -460,9 +460,9 @@ func (w *worker) resultLoop() {
 							}
 						}
 						if diff != nil {
-							w.lg.Error("Failed to submit mined r", "shard", r.startShardId, "block", r.blockNumber, "difficulty", diff, "error", err.Error())
+							w.lg.Error("Failed to submit mined result", "shard", r.startShardId, "block", r.blockNumber, "difficulty", diff, "error", err.Error())
 						} else {
-							w.lg.Error("Failed to submit mined r", "shard", r.startShardId, "block", r.blockNumber, "error", err.Error())
+							w.lg.Error("Failed to submit mined result", "shard", r.startShardId, "block", r.blockNumber, "error", err.Error())
 						}
 					}
 				} else {
