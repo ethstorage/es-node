@@ -1,8 +1,8 @@
 module github.com/ethstorage/go-ethstorage
 
-go 1.23.0
+go 1.24.0
 
-toolchain go1.23.7
+toolchain go1.24.9
 
 require (
 	github.com/consensys/gnark-crypto v0.18.0
@@ -11,9 +11,9 @@ require (
 	github.com/edsrzf/mmap-go v1.1.0
 	github.com/ethereum-optimism/go-ethereum-hdwallet v0.1.3
 	github.com/ethereum-optimism/optimism v1.2.0
-	github.com/ethereum/go-ethereum v1.16.3
+	github.com/ethereum/go-ethereum v1.16.5
 	github.com/ethstorage/billy v0.0.0-20240730021803-ca24378685e7
-	github.com/golang/snappy v0.0.5-0.20220116011046-fa5810519dcb
+	github.com/golang/snappy v1.0.0
 	github.com/gorilla/mux v1.8.1
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d
 	github.com/holiman/uint256 v1.3.2
@@ -31,7 +31,7 @@ require (
 	github.com/stretchr/testify v1.10.0
 	github.com/urfave/cli v1.22.9
 	golang.org/x/crypto v0.36.0
-	golang.org/x/sys v0.31.0
+	golang.org/x/sys v0.36.0
 	golang.org/x/time v0.9.0
 )
 
@@ -45,12 +45,12 @@ require (
 	github.com/cockroachdb/fifo v0.0.0-20240606204812-0bbfbd93a7ce // indirect
 	github.com/cockroachdb/pebble v1.1.5 // indirect
 	github.com/cockroachdb/tokenbucket v0.0.0-20230807174530-cc333fc44b06 // indirect
-	github.com/crate-crypto/go-eth-kzg v1.3.0 // indirect
+	github.com/crate-crypto/go-eth-kzg v1.4.0 // indirect
 	github.com/crate-crypto/go-ipa v0.0.0-20240724233137-53bbb0ceb27a // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/deckarep/golang-set/v2 v2.6.0 // indirect
 	github.com/emicklei/dot v1.6.2 // indirect
-	github.com/ethereum/c-kzg-4844/v2 v2.1.0 // indirect
+	github.com/ethereum/c-kzg-4844/v2 v2.1.3 // indirect
 	github.com/ethereum/go-verkle v0.2.2 // indirect
 	github.com/ferranbt/fastssz v0.1.4 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
@@ -76,7 +76,7 @@ require (
 	github.com/rs/cors v1.9.0 // indirect
 	github.com/shirou/gopsutil v3.21.11+incompatible // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
-	github.com/supranational/blst v0.3.14 // indirect
+	github.com/supranational/blst v0.3.16-0.20250831170142-f48500c1fdbe // indirect
 	github.com/syndtr/goleveldb v1.0.1-0.20220614013038-64ee5596c38a // indirect
 	github.com/tetratelabs/wazero v1.8.0 // indirect
 	github.com/tyler-smith/go-bip39 v1.1.0 // indirect
