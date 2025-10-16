@@ -379,8 +379,8 @@ func (n *EsNode) UploadNodeState(url string) {
 	<-time.After(2 * time.Minute)
 	localNode := n.p2pNode.Dv5Local().Node()
 	id := localNode.ID().String()
-	helloUrl := fmt.Sprintf(url + "/hello")
-	stateUrl := fmt.Sprintf(url + "/reportstate")
+	helloUrl := fmt.Sprintf("%s/hello", url)
+	stateUrl := fmt.Sprintf("%s/reportstate", url)
 	_, err := sendMessage(helloUrl, id)
 	if err != nil {
 		n.lg.Warn("Send message to resp", "err", err.Error())
