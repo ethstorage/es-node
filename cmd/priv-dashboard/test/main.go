@@ -142,8 +142,8 @@ func (s *NodeState) Serialize() (string, error) {
 }
 
 func UploadNodeState(url string) {
-	helloUrl := fmt.Sprintf(url + "/hello")
-	stateUrl := fmt.Sprintf(url + "/reportstate")
+	helloUrl := fmt.Sprintf("%s/hello", url)
+	stateUrl := fmt.Sprintf("%s/reportstate", url)
 	states := make([]IState, 0)
 
 	for i := 0; i < TotalPeer; i++ {
