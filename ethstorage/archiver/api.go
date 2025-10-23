@@ -44,7 +44,7 @@ func (a *API) queryBlobSidecars(id string, indices []uint64) (*BlobSidecars, *ht
 	}
 	elBlock, kzgCommitsAll, hErr := a.queryElBlockNumberAndKzg(queryUrl)
 	if hErr != nil {
-		a.lg.Error("Failed to get execution block number", "beaconID", id, "err", err)
+		a.lg.Error("Failed to get execution block number", "beaconID", id, "err", hErr)
 		return nil, hErr
 	}
 	a.lg.Info("BeaconID to execution block number", "beaconID", id, "elBlock", elBlock)
@@ -98,6 +98,7 @@ func (a *API) queryBlobSidecars(id string, indices []uint64) (*BlobSidecars, *ht
 func (a *API) queryElBlockNumberAndKzg(queryUrl string) (uint64, []string, *httpError) {
 	resp, err := http.Get(queryUrl)
 	if err != nil {
+		a.lg.Error("Failed to query execution block", "url", queryUrl, "err", err)
 		return 0, nil, errServerError
 	}
 	defer resp.Body.Close()
@@ -116,11 +117,13 @@ func (a *API) queryElBlockNumberAndKzg(queryUrl string) (uint64, []string, *http
 	}{}
 	err = json.NewDecoder(resp.Body).Decode(&respObj)
 	if err != nil {
+		a.lg.Error("Failed to decode execution block response", "url", queryUrl, "err", err)
 		return 0, nil, errUnknownBlock
 	}
 	body := respObj.Data.Message.Body
 	elBlock, err := strconv.ParseUint(body.ExecutionPayload.BlockNumber, 10, 64)
 	if err != nil {
+		a.lg.Error("Failed to parse execution block number", "blockNumber", body.ExecutionPayload.BlockNumber, "err", err)
 		return 0, nil, errUnknownBlock
 	}
 	return elBlock, body.BlobKzgCommitments, nil

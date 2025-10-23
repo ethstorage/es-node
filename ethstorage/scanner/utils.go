@@ -136,7 +136,7 @@ type stats struct {
 
 func newStats() *stats {
 	return &stats{
-		localKvs:   "",
+		localKvs:   "(none)",
 		total:      0,
 		mismatched: mismatchTracker{},
 	}

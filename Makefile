@@ -14,10 +14,10 @@ es-node: build
 	mkdir -p build/bin/snarkbuild
 
 build:
-	env GO111MODULE=on CGO_ENABLED=1 GOOS=$(TARGETOS) GOARCH=$(TARGETARCH) go build -v $(LDFLAGS) -o build/bin/es-node -tags rapidsnark_asm ./cmd/es-node/
+	env GO111MODULE=on CGO_ENABLED=1 CGO_LDFLAGS="-w" GOOS=$(TARGETOS) GOARCH=$(TARGETARCH) go build -v $(LDFLAGS) -o build/bin/es-node -tags rapidsnark_asm ./cmd/es-node/
 
 clean:
-	rm -r build
+	rm -r build/bin/es-node
 
 test:
 	go test -v ./...
