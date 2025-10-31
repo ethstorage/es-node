@@ -20,16 +20,6 @@
     }
   },
   {
-    "alert-type":"ESLastMinedBlockChecker",
-    "email-to": "molaokp@gmail.com,lundeng@quarkchain.org,qzhu@quarkchain.org,pingke@quarkchain.org,limingpeng@quarkchain.org",
-    "params":{
-      "name":"EthStorage L2 Testnet Last Mined Block Alert",
-      "contract":"0x64003adbdf3014f7E38FC6BE752EB047b95da89A",
-      "rpc":"http://5.9.87.214:8545",
-      "threshold-in-hours": "24"
-    }
-  },
-  {
     "alert-type":"WebsiteOnlineChecker",
     "email-to": "molaokp@gmail.com,pingke@quarkchain.org",
     "params":{
