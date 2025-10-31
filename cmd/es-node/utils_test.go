@@ -15,6 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethstorage/go-ethstorage/ethstorage"
+	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
 	"github.com/ethstorage/go-ethstorage/ethstorage/storage"
 )
 
@@ -53,16 +54,18 @@ func TestCreateDataFile(t *testing.T) {
 			false,
 		},
 	}
-	client, err := ethclient.DialContext(context.Background(), "http://65.108.236.27:8545")
+	ctx := context.Background()
+	client, err := ethclient.DialContext(ctx, "http://65.108.236.27:8545")
 	if err != nil {
 		t.Fatalf("connect to L1 error: %v ", err)
 	}
 	defer client.Close()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			shardList, err := getShardList(context.Background(), client, tt.args.cfg.L1Contract, tt.args.sLen)
+			pClient := eth.NewClient(ctx, client, true, tt.args.cfg.L1Contract, 0, nil, lg)
+			shardList, err := getTopNShardListSortByDiff(ctx, pClient, tt.args.sLen)
 			if err != nil {
-				t.Fatalf("getShardList() error: %v ", err)
+				t.Fatalf("getTopNShardListSortByDiff() error: %v ", err)
 			}
 			files, err := createDataFile(tt.args.cfg, shardList, ".", ethstorage.ENCODE_BLOB_POSEIDON)
 			if err != nil {

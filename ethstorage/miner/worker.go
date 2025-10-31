@@ -423,35 +423,35 @@ func (w *worker) resultLoop() {
 	for {
 		select {
 		case <-w.resultCh:
-			result := w.getResult()
-			if result == nil {
+			r := w.getResult()
+			if r == nil {
 				continue
 			}
-			w.lg.Info("Mining result loop get result", "shard", result.startShardId, "block", result.blockNumber, "nonce", result.nonce)
+			w.lg.Info("Mining result loop get result", "shard", r.startShardId, "block", r.blockNumber, "nonce", r.nonce)
 			txHash, err := w.l1API.SubmitMinedResult(
 				context.Background(),
 				w.storageMgr.ContractAddress(),
-				*result,
+				*r,
 				w.config,
 			)
-			if s, ok := w.submissionStates[result.startShardId]; ok {
+			if s, ok := w.submissionStates[r.startShardId]; ok {
 				if err != nil {
 					var dropErr errDropped
 					if errors.As(err, &dropErr) {
 						s.Dropped++
 						w.lg.Warn("Mining transaction dropped",
-							"shard", result.startShardId,
-							"block", result.blockNumber,
+							"shard", r.startShardId,
+							"block", r.blockNumber,
 							"reason", dropErr.reason)
 					} else {
 						s.Failed++
-						errorCache = append(errorCache, miningError{result.startShardId, result.blockNumber, err})
+						errorCache = append(errorCache, miningError{r.startShardId, r.blockNumber, err})
 						var diff *big.Int
 						if strings.Contains(err.Error(), "StorageContract_DifficultyNotMet") {
 							info, err := w.l1API.GetMiningInfo(
 								context.Background(),
 								w.storageMgr.ContractAddress(),
-								result.startShardId,
+								r.startShardId,
 							)
 							if err != nil {
 								w.lg.Warn("Failed to get es mining info", "error", err.Error())
@@ -460,9 +460,9 @@ func (w *worker) resultLoop() {
 							}
 						}
 						if diff != nil {
-							w.lg.Error("Failed to submit mined result", "shard", result.startShardId, "block", result.blockNumber, "difficulty", diff, "error", err.Error())
+							w.lg.Error("Failed to submit mined result", "shard", r.startShardId, "block", r.blockNumber, "difficulty", diff, "error", err.Error())
 						} else {
-							w.lg.Error("Failed to submit mined result", "shard", result.startShardId, "block", result.blockNumber, "error", err.Error())
+							w.lg.Error("Failed to submit mined result", "shard", r.startShardId, "block", r.blockNumber, "error", err.Error())
 						}
 					}
 				} else {
@@ -470,7 +470,7 @@ func (w *worker) resultLoop() {
 					s.LastSubmittedTime = time.Now().UnixMilli()
 				}
 			}
-			w.reportMiningResult(result, txHash, err)
+			w.reportMiningResult(r, txHash, err)
 			// optimistically check next result if exists
 			w.notifyResultLoop()
 		case <-ticker.C:
