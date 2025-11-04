@@ -240,7 +240,7 @@ func loadLibp2pOpts(conf *p2p.Config, ctx *cli.Context) error {
 		conf.StaticPeers = append(conf.StaticPeers, a)
 	}
 
-	for _, v := range strings.Split(ctx.GlobalString(flags.HostMux.Name), ",") {
+	for v := range strings.SplitSeq(ctx.GlobalString(flags.HostMux.Name), ",") {
 		v = strings.ToLower(strings.TrimSpace(v))
 		switch v {
 		case "yamux":
