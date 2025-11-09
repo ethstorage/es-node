@@ -54,7 +54,7 @@ type DataFileHeader struct {
 	status        uint64
 }
 
-// Mask the data in place.  Padding zeros to userData if the len of userData is smaller than that of maskData,
+// Mask the data in place. Padding zeros to userData if the len of userData is smaller than that of maskData.
 func MaskDataInPlace(maskData []byte, userData []byte) []byte {
 	if len(userData) > len(maskData) {
 		panic("user data can not be larger than mask data")

@@ -100,8 +100,8 @@ func (n *NodeP2P) init(resourcesCtx context.Context, chainID *big.Int, lg log.Lo
 				)
 				css, err := n.Host().Peerstore().Get(remotePeerId, protocol.EthStorageENRKey)
 				if err != nil {
-					// for node which is new to the ethstorage network, and it dial the nodes which do not contain
-					// the new node's enr, so the nodes do not know its shard list from enr, so it needs to call
+					// For nodes new to the ethstorage network that dial nodes which do not contain
+					// the new node's enr, the nodes do not know its shard list from enr, so it needs to call
 					// n.RequestShardList to fetch the shard list of the new node.
 					remoteShardList, e := n.RequestShardList(remotePeerId)
 					if e != nil && len(n.host.Peerstore().Addrs(remotePeerId)) == 0 {
