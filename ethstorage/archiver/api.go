@@ -65,7 +65,7 @@ func (a *API) queryBlobs(id string, hashes []common.Hash) (*blobs.BeaconBlobs, *
 	}
 
 	// get event logs on the block
-	blockBN := big.NewInt(int64(elBlock))
+	blockBN := new(big.Int).SetUint64(elBlock)
 	events, err := a.l1Source.FilterLogsByBlockRange(blockBN, blockBN, eth.PutBlobEvent)
 	if err != nil {
 		a.lg.Error("Failed to get events", "err", err)
@@ -136,7 +136,7 @@ func (a *API) queryBlobSidecars(id string, indices []uint64) (*BlobSidecars, *ht
 	}
 
 	// get event logs on the block
-	blockBN := big.NewInt(int64(elBlock))
+	blockBN := new(big.Int).SetUint64(elBlock)
 	events, err := a.l1Source.FilterLogsByBlockRange(blockBN, blockBN, eth.PutBlobEvent)
 	if err != nil {
 		a.lg.Error("Failed to get events", "err", err)
