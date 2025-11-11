@@ -4,6 +4,7 @@
 package archiver
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -35,6 +36,74 @@ func NewAPI(storageMgr *ethstorage.StorageManager, beaconClient *eth.BeaconClien
 	}
 }
 
+// From the getBlobs spec: https://ethereum.github.io/beacon-APIs/beacon-node-oapi.yaml
+// The returned blobs are ordered based on their kzg commitments in the block.
+// So EthStorage needs to follow the order of kzg commitments in the block as well.
+func (a *API) queryBlobs(id string, hashes []common.Hash) (*blobs.BeaconBlobs, *httpError) {
+	// /eth/v2/beacon/blocks
+	queryUrl, err := a.beaconClient.QueryUrlForV2BeaconBlock(id)
+	if err != nil {
+		a.lg.Error("Invalid beaconID", "beaconID", id, "err", err)
+		return nil, errUnknownBlock
+	}
+	elBlock, kzgCommitsAll, hErr := a.queryElBlockNumberAndKzg(queryUrl)
+	if hErr != nil {
+		a.lg.Error("Failed to get execution block number", "beaconID", id, "err", err)
+		return nil, hErr
+	}
+	a.lg.Info("BeaconID to execution block number", "beaconID", id, "elBlock", elBlock)
+
+	// hashToIndex is used to determine correct blob index
+	hashToIndex := make(map[common.Hash]int)
+	for _, c := range kzgCommitsAll {
+		var commit kzg4844.Commitment
+		copy(commit[:], common.FromHex(c))
+		vh := common.Hash(kzg4844.CalcBlobHashV1(sha256.New(), &commit))
+		if hashIncluded(vh, hashes) {
+			hashToIndex[vh] = len(hashToIndex)
+		}
+	}
+
+	// get event logs on the block
+	blockBN := new(big.Int).SetUint64(elBlock)
+	events, err := a.l1Source.FilterLogsByBlockRange(blockBN, blockBN, eth.PutBlobEvent)
+	if err != nil {
+		a.lg.Error("Failed to get events", "err", err)
+		return nil, errServerError
+	}
+
+	blobsData := make([]string, len(hashToIndex))
+	for i, event := range events {
+		blobHash := event.Topics[3]
+		a.lg.Info("Parsing event", "blobHash", blobHash, "event", fmt.Sprintf("%d of %d", i, len(events)))
+		// parse event to get kv_index with queried index
+		if index, ok := hashToIndex[blobHash]; ok {
+			kvIndex := big.NewInt(0).SetBytes(event.Topics[1][:]).Uint64()
+			a.lg.Info("Blobhash matched", "blobhash", blobHash, "index", index, "kvIndex", kvIndex)
+			blobData, found, err := a.storageMgr.TryRead(kvIndex, int(a.storageMgr.MaxKvSize()), blobHash)
+			if err != nil {
+				a.lg.Error("Failed to read blob", "err", err)
+				return nil, errServerError
+			}
+			if !found {
+				a.lg.Info("Blob not found by storage manager", "kvIndex", kvIndex, "blobHash", blobHash)
+				return nil, errBlobNotInES
+			}
+			blobsData[index] = "0x" + common.Bytes2Hex(blobData)
+		}
+	}
+	// remove empty entries (not found)
+	filteredBlobs := make([]string, 0, len(blobsData))
+	for _, data := range blobsData {
+		if data != "" {
+			filteredBlobs = append(filteredBlobs, data)
+		}
+	}
+	a.lg.Info("Query blobs done", "blobs", len(filteredBlobs))
+	return &blobs.BeaconBlobs{Data: filteredBlobs}, nil
+}
+
+// Deprecated since Fusaka
 func (a *API) queryBlobSidecars(id string, indices []uint64) (*BlobSidecars, *httpError) {
 	// query EL block
 	queryUrl, err := a.beaconClient.QueryUrlForV2BeaconBlock(id)
@@ -67,7 +136,7 @@ func (a *API) queryBlobSidecars(id string, indices []uint64) (*BlobSidecars, *ht
 	}
 
 	// get event logs on the block
-	blockBN := big.NewInt(int64(elBlock))
+	blockBN := new(big.Int).SetUint64(elBlock)
 	events, err := a.l1Source.FilterLogsByBlockRange(blockBN, blockBN, eth.PutBlobEvent)
 	if err != nil {
 		a.lg.Error("Failed to get events", "err", err)
@@ -126,6 +195,7 @@ func (a *API) queryElBlockNumberAndKzg(queryUrl string) (uint64, []string, *http
 	return elBlock, body.BlobKzgCommitments, nil
 }
 
+// Deprecated since Fusaka
 func (a *API) buildSidecar(kvIndex uint64, kzgCommitment []byte, blobHash common.Hash) (*BlobSidecar, *httpError) {
 	blobData, found, err := a.storageMgr.TryRead(kvIndex, int(a.storageMgr.MaxKvSize()), blobHash)
 	if err != nil {

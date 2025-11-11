@@ -145,10 +145,13 @@ func (s *StorageManager) DownloadFinished(newL1 int64, kvIndices []uint64, blobs
 			var err error = nil
 			for _, idx := range insertIdx {
 				c := PrepareCommit(commits[idx])
-				// if return false, just ignore because we are not interested in it
-				_, err = s.shardManager.TryWriteEncoded(kvIndices[idx], blobs[idx], c)
+				done, err := s.shardManager.TryWriteEncoded(kvIndices[idx], blobs[idx], c)
 				if err != nil {
 					break
+				}
+				if !done {
+					shardIdx := kvIndices[idx] / s.KvEntries()
+					s.lg.Warn("Shard not managed locally to store the blob", "kvIndex", kvIndices[idx], "shardIdx", shardIdx)
 				}
 			}
 
