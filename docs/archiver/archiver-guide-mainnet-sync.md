@@ -117,7 +117,7 @@ To start the op-node, execute the following commands in `optimism/op-node` direc
 # Ethereum Mainnet L1 RPC provided by an execution client running in archive mode
 export L1_RPC_URL=<your_rpc_url>
 
-# Ethereum Mainnet L1 Beacon URL provided by a Beacon node
+# The mocked Ethereum Mainnet L1 Beacon URL with short blob retention period
 export L1_BEACON_URL_MOCKED=http://localhost:3600
 
 # EthStorage API provided by an es-node with the archive service enabled
