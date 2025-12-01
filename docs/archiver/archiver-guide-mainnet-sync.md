@@ -2,30 +2,18 @@
 
 ## Table of Contents
 1. **[Introduction](#introduction)**
-
-2. **[Running L2 Node](#running-l2-node)**
-   - 2.1 [Initializing op-geth](#preparing-op-geth)
-   - 2.2 [Starting op-geth](#starting-op-geth)
-   - 2.3 [Initializing op-node](#preparing-op-node)
-   - 2.4 [Starting op-node](#starting-op-node)
-
-3. **[Verifying the Derivation Process](#verifying-the-derivation-process)**
-   - 3.1 [Observing the Logs](#observing-the-logs)
-     - 3.1.1 [op-geth logs](#op-geth-logs)
-     - 3.1.2 [op-node logs](#op-node-logs)
-     - 3.1.3 [es-node logs](#es-node-logs)
-   - 3.2 [Comparing Blocks](#comparing-blocks)
-
-4. **[Conclusion](#conclusion)**
-
+2. **[Running a Mocked Beacon API](#running-a-mocked-beacon-api)**
+3. **[Running L2 Node](#running-l2-node)**
+4. **[Verifying the Derivation Process](#verifying-the-derivation-process)**
+   - 4.1 [Observing the Logs](#observing-the-logs)
+   - 4.2 [Comparing Blocks](#comparing-blocks)
+5. **[Conclusion](#conclusion)**
 
 ## Introduction
 
-This guide walks you through spinning up a QuarkChain L2 node on mainnet using the EthStorage archive service.
-
 QuarkChain L2, built on OP Stack, publishes batches as blobs to its [BatchInbox contract](https://etherscan.io/address/0xf62e8574B92dc8764c5Ad957b5B0311595f5A3f9) on Ethereum mainnet. EthStorage stores those blobs as a long-term data-availability layer.
 
-The objective is to verify that the L2 node can derive blocks correctly from blobs fetched via EthStorage.
+This guide shows you how to configure a QuarkChain L2 Mainnet node with a mocked Beacon API to verify that the new node can derive blocks from blobs fetched via EthStorage.
 
 ## Running a Mocked Beacon API
 
@@ -44,112 +32,30 @@ If a blob older than 3 epochs (~20 minutes) is requested through `http://localho
 
 ## Running L2 Node
 
-The following steps will guide you through setting up a QuarkChain L2 node. Refer to [this tutorial](https://github.com/QuarkChain/pm/blob/main/L2/mainnet_new_node.md) for more details. 
+Refer to [this tutorial](https://github.com/QuarkChain/pm/blob/main/L2/mainnet_new_node.md) to initialize and start op-geth (full sync, archive) and op-node. 
 
-### Initializing op-geth
-
-Prepare op-geth in one bash:
+The differences to launch the op-node are highlighted below.
 
 ```bash
-# Clone the `op-geth` repository and build the execution client:
-git clone -b qkc_mainnet_v1 https://github.com/QuarkChain/op-geth.git
-cd op-geth && make geth
-
-# Generate a JWT secret to secure communications between the op-geth and the op-node:
-openssl rand -hex 32 > jwt.txt
-
-# Download the genesis file and initialize the client:
-curl -LO https://raw.githubusercontent.com/QuarkChain/pm/refs/heads/main/L2/assets/mainnet_genesis.json
-./build/bin/geth init --datadir=datadir --state.scheme hash mainnet_genesis.json
-```
-
-### Starting op-geth
-
-Start the client with the following command:
-
-```bash
-./build/bin/geth \
-  --datadir ./datadir \
-  --port=30303 \
-  --http \
-  --http.corsdomain="*" \
-  --http.vhosts="*" \
-  --http.addr=0.0.0.0 \
-  --http.port=8545 \
-  --http.api=web3,debug,eth,txpool,net,engine \
-  --ws \
-  --ws.addr=0.0.0.0 \
-  --ws.port=8546 \
-  --ws.origins="*" \
-  --ws.api=eth,txpool,net \
-  --syncmode=full \
-  --gcmode=archive \
-  --networkid=100011 \
-  --authrpc.vhosts="*" \
-  --authrpc.port=8551 \
-  --authrpc.jwtsecret=./jwt.txt \
-  --rollup.disabletxpoolgossip \
-  --rollup.sequencerhttp=http://65.109.115.36:8545 \
-  --rollup.enabletxpooladmission \
-  --bootnodes enode://d50aa6776bef2345b3492332595956771a19bbf35803bc64574aa130b8d4e779b64782b42abc9194ae47ae05c0850372501cc563f3e61dd188ec868446a216d6@65.109.115.36:30303 2>&1 | tee -a geth.log -i
-```
-
-### Initializing op-node
-
-Prepare op-node in one bash:
-
-```bash
-git clone -b qkc_mainnet_v1 https://github.com/QuarkChain/optimism.git
-pushd optimism && make op-node && popd
-
-cp op-geth/jwt.txt optimism/op-node 
-cd optimism/op-node
-
-curl -LO https://raw.githubusercontent.com/QuarkChain/pm/refs/heads/main/L2/assets/mainnet_rollup.json
-mkdir safedb
-```
-
-### Starting op-node
-
-To start the op-node, execute the following commands in `optimism/op-node` directory:
-
-```bash
-# Ethereum Mainnet L1 RPC provided by an execution client running in archive mode
-export L1_RPC_URL=<your_rpc_url>
-
 # The mocked Ethereum Mainnet L1 Beacon URL with short blob retention period
 export L1_BEACON_URL_MOCKED=http://localhost:3600
 
 # EthStorage API provided by an es-node with the archive service enabled
 export ES_ARCHIVE_API=https://archive.mainnet.ethstorage.io:9645
 
-./bin/op-node \
-  --l2=http://localhost:8551 \
-  --l2.jwt-secret=./jwt.txt \
-  --verifier.l1-confs=4 \
-  --rollup.config=./mainnet_rollup.json \
-  --rpc.addr=0.0.0.0 \
-  --rpc.port=8547 \
-  --rpc.enable-admin \
-  --p2p.listen.ip=0.0.0.0 \
-  --p2p.listen.tcp=9222 \
-  --p2p.listen.udp=9222 \
-  --p2p.no-discovery \
-  --p2p.sync.onlyreqtostatic \
+  ...
   --syncmode=consensus-layer \
-  --l1.rpckind=basic \
   --l1=$L1_RPC_URL \
   --l1.beacon=$L1_BEACON_URL_MOCKED \
   --l1.beacon-archiver=$ES_ARCHIVE_API \
-  --l1.cache-size=0 \
-  --safedb.path=safedb | tee -a node.log -i
+  ...
 ```
 
 **Note:**
 - Consensus-layer sync is used so that op-node reads transaction data from L1 and derives blocks, then inserts them into the execution client. 
 - Although P2P is enabled, consensus-layer sync does not rely on P2P networking to download state or block data from other L2 nodes.
 - The L1 Beacon client is set to the mocked one started earlier, which has a shorter blob retention period.
-- The beacon archiver is configured to point to the es-node Mainnet archive service as a fallback endpoints used when the requested blob is expired.
+- The beacon archiver is configured to point to the es-node Mainnet archive service as a fallback endpoint used when the requested blob is expired.
 
 ## Verifying the Derivation Process
 
@@ -165,7 +71,7 @@ The snippet below specifically shows a blob from slot 13076142 (L1 block 238
 ```
 A request for a blob older than 3 epochs is made by the op-node, and the proxy returns 404 as expected. Note that the new blobs Beacon API (`/eth/v1/beacon/blobs/...`) is used here.
 
-**es-node logs(if available):**
+**es-node logs (if available):**
 ```log
 INFO [11-26|04:05:58.924] Blob archiver API request                from=65.108.236.27   url="/eth/v1/beacon/blob_sidecars/13076142?indices=8"
 INFO [11-26|04:05:59.615] BeaconID to execution block number       beaconID=13076142 elBlock=23,848,173
@@ -202,4 +108,4 @@ cast block 7931 -f hash -r https://rpc.mainnet.l2.quarkchain.io:8545
 
 ## Conclusion
 
-By following these instructions, you'll permissionlessly launch an QuarkChain L2 rollup node that retrieves blobs from EthStorage, which have been pruned by the Ethereum Mainnet Beacon Chain. Additionally, you can verify that the op-node derives L2 blocks correctly from these blobs, demonstrating that EthStorage effectively serves as a decentralized long-term data availability solution.
+By following these instructions, you'll permissionlessly launch a QuarkChain L2 rollup node that retrieves blobs from EthStorage, which have been pruned by the Ethereum Mainnet Beacon Chain. Additionally, you can verify that the op-node derives L2 blocks correctly from these blobs, demonstrating that EthStorage effectively serves as a decentralized long-term data availability solution.
