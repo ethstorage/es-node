@@ -131,7 +131,11 @@ export ES_ARCHIVE_API=https://archive.mainnet.ethstorage.io:9645
   --rpc.addr=0.0.0.0 \
   --rpc.port=8547 \
   --rpc.enable-admin \
-  --p2p.disable \
+  --p2p.listen.ip=0.0.0.0 \
+  --p2p.listen.tcp=9222 \
+  --p2p.listen.udp=9222 \
+  --p2p.no-discovery \
+  --p2p.sync.onlyreqtostatic \
   --syncmode=consensus-layer \
   --l1.rpckind=basic \
   --l1=$L1_RPC_URL \
@@ -143,7 +147,7 @@ export ES_ARCHIVE_API=https://archive.mainnet.ethstorage.io:9645
 
 **Note:**
 - Consensus-layer sync is used so that op-node reads transaction data from L1 and derives blocks, then inserts them into the execution client. 
-- P2P is disabled since consensus-layer sync does not rely on P2P networking to download state or block data from other L2 nodes.
+- Although P2P is enabled, consensus-layer sync does not rely on P2P networking to download state or block data from other L2 nodes.
 - The L1 Beacon client is set to the mocked one started earlier, which has a shorter blob retention period.
 - The beacon archiver is configured to point to the es-node Mainnet archive service as a fallback endpoints used when the requested blob is expired.
 
