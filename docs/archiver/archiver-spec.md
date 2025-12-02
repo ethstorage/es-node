@@ -20,7 +20,7 @@ And Beacon API response:
     "data":["0x31000001610086d08e089e8c9644182c1ab1db2d061e00000000014978daec90264afc..."]
 }
 ```
-Although the blob payloads match, es-node still relies on the `/eth/v2/beacon/blocks/{block_id}` endpoint to preserve the exact ordering: blobs must be returned in the same sequence as their KZG commitments appear in the block (per the Beacon API spec), not the order in which `versioned_hash` values were requested.
+In the case of multiple blobs response, es-node still relies on the `/eth/v2/beacon/blocks/{block_id}` endpoint to preserve the exact ordering: blobs must be returned in the same sequence as their KZG commitments appear in the block (per the Beacon API spec), not the order in which `versioned_hash` values were requested.
 
 > [!NOTE]
 > The 'blob_sidecars' API in the following old specification is deprecated.
