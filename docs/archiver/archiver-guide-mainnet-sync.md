@@ -13,7 +13,7 @@
 
 QuarkChain L2, built on OP Stack, publishes batches as blobs to its [BatchInbox contract](https://etherscan.io/address/0xf62e8574B92dc8764c5Ad957b5B0311595f5A3f9) on Ethereum mainnet. EthStorage stores those blobs as a long-term data-availability layer.
 
-This guide shows you how to configure a QuarkChain L2 Mainnet node with a mocked Beacon API to verify that the new node can derive blocks from blobs fetched via EthStorage.
+This guide shows you how to configure a QuarkChain L2 Mainnet node with a mocked [Beacon API](https://ethereum.github.io/beacon-APIs/#/Beacon/getBlobs) to verify that the new node can derive blocks from blobs fetched via EthStorage.
 
 ## Running a Mocked Beacon API
 
@@ -53,7 +53,7 @@ export ES_ARCHIVE_API=https://archive.mainnet.ethstorage.io:9645
 
 **Note:**
 - Consensus-layer sync is used so that op-node reads transaction data from L1 and derives blocks, then inserts them into the execution client. 
-- Although P2P is enabled, consensus-layer sync does not rely on P2P networking to download state or block data from other L2 nodes.
+- Although P2P is enabled (in the omitted flags), consensus-layer sync does not rely on P2P networking to download state or block data from other L2 nodes.
 - The L1 Beacon client is set to the mocked one started earlier, which has a shorter blob retention period.
 - The beacon archiver is configured to point to the es-node Mainnet archive service as a fallback endpoint used when the requested blob is expired.
 
@@ -80,7 +80,7 @@ INFO [11-26|04:05:59.788] Blobhash matched                         blobhash=01af
 INFO [11-26|04:05:59.877] Sidecar built                            index=8 sidecar="{\n  \"index\": \"8\",\n  \"kzg_commitment\": \"0x861422d6f73dd7d5d4f9689a70e7619fdcb066b921fd25156c16d80af5d6f955a588076caf3b542fb651a43bc673e578\",\n  \"kzg_proof\": \"0x8c8593f07bde81031d48771f525ba18c84b63b8aaad3557e3d389887dd44b0b68cbf08804e2bed9de250afe0acbc033c\",\n  \"blob\": \"0x21000000b6005d7c347dd9872d68fb1e16b963f512af00000000009e78dada2927c97821f4c9c9f5dc51bf77f1dd78fce9faa72f1be7ea2be97a3c58f0b5e524173d2ba7a58bf8e6aaecce5f7159ef43cab5d233e7b4041c59a8861ca00c06082f118b1a062a5a87cd6aaa20066a1b28e0c8c4a1d044083510..."
 INFO [11-26|04:05:59.884] Query blob sidecars done                 blobs=1
 ```
-The op-node falls back to EthStorage’s archive endpoint for the same blob in slot 13076142. The old blob sidecar route (`/eth/v1/beacon/blob_sidecars/...`) is still used in this case, and the EthStorage archive service supports both the legacy and the new blob APIs, so the blob fetch succeeds.
+The op-node falls back to EthStorage’s archive endpoint for the same blob in slot 13076142. The old blob sidecar route (`/eth/v1/beacon/blob_sidecars/...`) is still used in this case, and the EthStorage archive service supports both the legacy and the new blob APIs, so the blob fetching succeeds.
 
 **op-node logs:**
 ```log
