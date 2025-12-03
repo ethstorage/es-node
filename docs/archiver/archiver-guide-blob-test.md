@@ -121,13 +121,10 @@ With block explorer, you can find the versioned hash of the blob you just upload
 ```
 "https://sepolia.etherscan.io/tx/$TX_HASH#blobs"
 ```
-Export value for later use:
-```
+Export the value for later use:
+```bash
 export VERSIONED_HASH=0x0158420bd7b1f3c04a097694235c52659f31b479018ac56b2545727fab33712d
 ```
-
-
-This will return the `expired` blob data.
 
 ### Load and Verify the Blob
 
