@@ -416,14 +416,14 @@ func (s *Downloader) downloadRange(start int64, end int64, toCache bool) ([]blob
 			clBlob, exists := clBlobs[elBlob.hash]
 			if !exists {
 				if s.emailConfig != nil {
-					msg := "Downloader did not find the specified blob in CL: \n"
-					msg += "From the EL event: \n"
-					msg += fmt.Sprintf("	blockNumber=%d\n", elBlock.number)
-					msg += fmt.Sprintf("	kvIndex=%d\n", elBlob.kvIndex)
-					msg += fmt.Sprintf("	hash=%s\n", elBlob.hash.Hex())
-					msg += "This may indicate that there is an issue with the consensus layer blob availability.\n"
+					msg := "The downloader couldn't locate the specified blob in the consensus layer. The node is stopped pending resolution. \n"
+					msg += "Details from the EL event: \n"
+					msg += fmt.Sprintf(" - blockNumber: %d\n", elBlock.number)
+					msg += fmt.Sprintf(" - kvIndex: %d\n", elBlob.kvIndex)
+					msg += fmt.Sprintf(" - hash: %s\n", elBlob.hash.Hex())
+					msg += "This may indicate a potential issue with blob availability on the consensus layer. \n"
 					email.SendEmail(
-						"🛑 Fatal error from es-node: blob missing in CL for downloader",
+						"🛑 Fatal Error from es-node: Downloader Failed to Locate Blob in CL",
 						msg,
 						*s.emailConfig,
 						s.lg,
