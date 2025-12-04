@@ -416,7 +416,7 @@ func (s *Downloader) downloadRange(start int64, end int64, toCache bool) ([]blob
 			clBlob, exists := clBlobs[elBlob.hash]
 			if !exists {
 				if s.emailConfig != nil {
-					msg := "The downloader couldn't locate the specified blob in the consensus layer. The node is stopped pending resolution. \n"
+					msg := "The downloader couldn't locate the specified blob in the consensus layer. The node is stopped pending resolution. "
 					msg += "Details from the EL event: \n"
 					msg += fmt.Sprintf(" - blockNumber: %d\n", elBlock.number)
 					msg += fmt.Sprintf(" - kvIndex: %d\n", elBlob.kvIndex)
