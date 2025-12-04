@@ -55,7 +55,6 @@ func NewConfig(ctx *cli.Context, lg log.Logger) (*node.Config, error) {
 	}
 
 	dlConfig := NewDownloaderConfig(ctx)
-	fmt.Println("Downloader config. EmailConfig:", dlConfig.EmailConfig)
 	minerConfig, err := NewMinerConfig(ctx, client, storageConfig.L1Contract, storageConfig.Miner, lg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load miner config: %w", err)
@@ -267,6 +266,6 @@ func NewDownloaderConfig(ctx *cli.Context) *downloader.Config {
 		// email is nice to have but not required by downloader
 		return dlCfg
 	}
-	dlCfg.EmailConfig = *emailConfig
+	dlCfg.EmailConfig = emailConfig
 	return dlCfg
 }

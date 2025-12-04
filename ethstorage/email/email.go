@@ -22,7 +22,6 @@ type EmailConfig struct {
 }
 
 func (c EmailConfig) Check() error {
-	fmt.Println("Checking email config:", c.String())
 	if c.Username == "" {
 		return fmt.Errorf("email username is empty")
 	}
