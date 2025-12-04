@@ -22,6 +22,7 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 
 	"github.com/ethstorage/go-ethstorage/ethstorage"
+	"github.com/ethstorage/go-ethstorage/ethstorage/email"
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
 )
 
@@ -70,10 +71,11 @@ type Downloader struct {
 	dlLatestReq    chan struct{}
 	dlFinalizedReq chan struct{}
 
-	lg   log.Logger
-	done chan struct{}
-	wg   sync.WaitGroup
-	mu   sync.Mutex
+	emailConfig *email.EmailConfig
+	lg          log.Logger
+	done        chan struct{}
+	wg          sync.WaitGroup
+	mu          sync.Mutex
 }
 
 type blob struct {
@@ -109,6 +111,7 @@ func NewDownloader(
 	downloadDump string,
 	minDurationForBlobsRequest uint64,
 	downloadThreadNum int,
+	emailConfig email.EmailConfig,
 	lg log.Logger,
 ) *Downloader {
 	sm.DownloadThreadNum = downloadThreadNum
@@ -127,6 +130,7 @@ func NewDownloader(
 		done:                       make(chan struct{}),
 		lastDownloadBlock:          downloadStart,
 		downloadedBlobs:            0,
+		emailConfig:                &emailConfig,
 	}
 }
 
@@ -411,8 +415,17 @@ func (s *Downloader) downloadRange(start int64, end int64, toCache bool) ([]blob
 		for _, elBlob := range elBlock.blobs {
 			clBlob, exists := clBlobs[elBlob.hash]
 			if !exists {
-				s.lg.Error("Did not find the event specified blob in the CL")
-
+				if s.emailConfig != nil {
+					msg := fmt.Sprintf("Did not find the event specified blob in the CL, blockNumber: %d, kvIndex: %d\n", elBlock.number, elBlob.kvIndex)
+					msg += "This may indicate that the blob has not been published to the consensus layer yet, or there is an issue with the consensus layer blob availability.\n"
+					email.SendEmail(
+						"Blob missing in CL for downloader",
+						msg,
+						*s.emailConfig,
+						s.lg,
+					)
+				}
+				s.lg.Crit("Did not find the event specified blob in the CL", "blockNumber", elBlock.number, "kvIndex", elBlob.kvIndex)
 			}
 			// encode blobs so that miner can do sampling directly from cache
 			elBlob.data = s.sm.EncodeBlob(clBlob.Data, elBlob.hash, elBlob.kvIndex.Uint64(), s.sm.MaxKvSize())

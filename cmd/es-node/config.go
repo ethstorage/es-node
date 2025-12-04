@@ -255,9 +255,17 @@ func NewL1EndpointConfig(ctx *cli.Context, lg log.Logger) (*eth.L1EndpointConfig
 }
 
 func NewDownloaderConfig(ctx *cli.Context) *downloader.Config {
-	return &downloader.Config{
+	dlCfg := &downloader.Config{
 		DownloadStart:     ctx.GlobalInt64(flags.DownloadStart.Name),
 		DownloadDump:      ctx.GlobalString(flags.DownloadDump.Name),
 		DownloadThreadNum: ctx.GlobalInt(flags.DownloadThreadNum.Name),
 	}
+
+	emailConfig, err := email.GetEmailConfig(ctx)
+	if err != nil {
+		// email is nice to have but not required by downloader
+		return dlCfg
+	}
+	dlCfg.EmailConfig = *emailConfig
+	return dlCfg
 }
