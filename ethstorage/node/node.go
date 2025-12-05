@@ -139,11 +139,8 @@ func (n *EsNode) initL2(ctx context.Context, cfg *Config) error {
 		n.db,
 		n.storageManager,
 		n.blobCache,
-		cfg.Downloader.DownloadStart,
-		cfg.Downloader.DownloadDump,
 		cfg.L1.L1MinDurationForBlobsRequest,
-		cfg.Downloader.DownloadThreadNum,
-		*cfg.Downloader.EmailConfig,
+		cfg.Downloader,
 		n.lg,
 	)
 	return nil

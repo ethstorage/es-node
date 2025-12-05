@@ -107,14 +107,11 @@ func NewDownloader(
 	db ethdb.Database,
 	sm *ethstorage.StorageManager,
 	cache BlobCache,
-	downloadStart int64,
-	downloadDump string,
 	minDurationForBlobsRequest uint64,
-	downloadThreadNum int,
-	emailConfig email.EmailConfig,
+	downloadConfig Config,
 	lg log.Logger,
 ) *Downloader {
-	sm.DownloadThreadNum = downloadThreadNum
+	sm.DownloadThreadNum = downloadConfig.DownloadThreadNum
 	return &Downloader{
 		Cache:                      cache,
 		l1Source:                   l1Source,
@@ -122,15 +119,15 @@ func NewDownloader(
 		daClient:                   daClient,
 		db:                         db,
 		sm:                         sm,
-		dumpDir:                    downloadDump,
+		dumpDir:                    downloadConfig.DownloadDump,
 		minDurationForBlobsRequest: minDurationForBlobsRequest,
 		dlLatestReq:                make(chan struct{}, 1),
 		dlFinalizedReq:             make(chan struct{}, 1),
 		lg:                         lg,
 		done:                       make(chan struct{}),
-		lastDownloadBlock:          downloadStart,
+		lastDownloadBlock:          downloadConfig.DownloadStart,
 		downloadedBlobs:            0,
-		emailConfig:                &emailConfig,
+		emailConfig:                downloadConfig.EmailConfig,
 	}
 }
 
