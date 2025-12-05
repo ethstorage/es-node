@@ -412,20 +412,7 @@ func (s *Downloader) downloadRange(start int64, end int64, toCache bool) ([]blob
 		for _, elBlob := range elBlock.blobs {
 			clBlob, exists := clBlobs[elBlob.hash]
 			if !exists {
-				if s.emailConfig != nil {
-					msg := "The downloader couldn't locate the specified blob in the consensus layer. The node is stopped pending resolution. "
-					msg += "Details from the EL event: \n"
-					msg += fmt.Sprintf(" - blockNumber: %d\n", elBlock.number)
-					msg += fmt.Sprintf(" - kvIndex: %d\n", elBlob.kvIndex)
-					msg += fmt.Sprintf(" - hash: %s\n", elBlob.hash.Hex())
-					msg += "This may indicate a potential issue with blob availability on the consensus layer. \n"
-					email.SendEmail(
-						"🛑 Fatal Error from es-node: Downloader Failed to Locate Blob in CL",
-						msg,
-						*s.emailConfig,
-						s.lg,
-					)
-				}
+				s.notifyBlobMissing(elBlock.number, elBlob.kvIndex.Uint64(), elBlob.hash)
 				s.lg.Crit("Did not find the event specified blob in the CL", "blockNumber", elBlock.number, "kvIndex", elBlob.kvIndex)
 			}
 			// encode blobs so that miner can do sampling directly from cache
@@ -497,4 +484,23 @@ func (s *Downloader) eventsToBlocks(events []types.Log) ([]*blockBlobs, error) {
 	}
 
 	return blocks, nil
+}
+
+func (s *Downloader) notifyBlobMissing(blockNumber uint64, kvIndex uint64, hash common.Hash) {
+	if s.emailConfig == nil {
+		return
+	}
+
+	msg := "The downloader couldn't locate the specified blob in the consensus layer. The node is stopped pending resolution. "
+	msg += "Details from the EL event: \n"
+	msg += fmt.Sprintf(" - blockNumber: %d\n", blockNumber)
+	msg += fmt.Sprintf(" - kvIndex: %d\n", kvIndex)
+	msg += fmt.Sprintf(" - hash: %s\n", hash.Hex())
+	msg += "This may indicate a potential issue with blob availability on the consensus layer. \n"
+	email.SendEmail(
+		"🛑 Fatal Error from es-node: Downloader Failed to Locate Blob in CL",
+		msg,
+		*s.emailConfig,
+		s.lg,
+	)
 }
