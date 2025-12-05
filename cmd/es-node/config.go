@@ -56,7 +56,7 @@ func NewConfig(ctx *cli.Context, lg log.Logger) (*node.Config, error) {
 
 	emailConfig, err := email.GetEmailConfig(ctx)
 	if err != nil {
-		lg.Warn("Failed to load email config, email notifications will be disabled", "error", err)
+		lg.Warn("Failed to load email config, email notifications will be disabled.", "error", err)
 	}
 	dlConfig := NewDownloaderConfig(ctx)
 	if emailConfig != nil {
@@ -66,7 +66,7 @@ func NewConfig(ctx *cli.Context, lg log.Logger) (*node.Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to load miner config: %w", err)
 	}
-	if minerConfig.EmailEnabled {
+	if minerConfig != nil && minerConfig.EmailEnabled {
 		if emailConfig == nil {
 			return nil, fmt.Errorf("email config is required by miner but not loaded")
 		}
