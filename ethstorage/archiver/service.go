@@ -73,7 +73,7 @@ func (a *APIService) blobSidecarHandler(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
-// blobSidecarHandler implements the /eth/v1/beacon/blobs/{id} endpoint
+// blobsHandler implements the /eth/v1/beacon/blobs/{id} endpoint
 func (a *APIService) blobsHandler(w http.ResponseWriter, r *http.Request) {
 
 	a.lg.Info("Blob archiver API request", "from", readUserIP(r), "url", r.RequestURI)
