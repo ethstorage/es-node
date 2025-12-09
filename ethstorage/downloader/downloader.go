@@ -12,6 +12,7 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
+	"slices"
 	"sync"
 	"time"
 
@@ -410,6 +411,11 @@ func (s *Downloader) downloadRange(start int64, end int64, toCache bool) ([]blob
 		}
 
 		for _, elBlob := range elBlock.blobs {
+			shard := elBlob.kvIndex.Uint64() >> s.sm.KvEntriesBits()
+			if !slices.Contains(s.sm.Shards(), shard) {
+				s.lg.Warn("Shard not initialized locally for the kvIndex, skip this blob", "kvIndex", elBlob.kvIndex.Uint64(), "shard", shard)
+				continue
+			}
 			clBlob, exists := clBlobs[elBlob.hash]
 			if !exists {
 				s.notifyBlobMissing(elBlock.number, elBlob.kvIndex.Uint64(), elBlob.hash)
