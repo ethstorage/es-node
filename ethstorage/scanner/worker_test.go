@@ -20,6 +20,17 @@ func TestGetKvsInBatch(t *testing.T) {
 		expectedBatchEnd uint64
 	}{
 		{
+			name:             "skip empty shards",
+			shards:           []uint64{0, 2},
+			kvEntries:        8,
+			lastKvIdx:        12,
+			batchSize:        100,
+			batchStartIndex:  0,
+			expectedKvs:      []uint64{0, 1, 2, 3, 4, 5, 6, 7},
+			expectedTotal:    8,
+			expectedBatchEnd: 8,
+		},
+		{
 			name:             "1 shard batch 1",
 			shards:           []uint64{0},
 			kvEntries:        8,
