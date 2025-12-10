@@ -38,7 +38,7 @@ func CLIFlags() []cli.Flag {
 	flags := []cli.Flag{
 		cli.IntFlag{
 			Name:   ModeFlagName,
-			Usage:  "Data scan mode, 0: disabled, 1: check meta, 2: check blob",
+			Usage:  "Data scan mode, 0: disabled, 1: check meta, 2: check blob, 3: hybrid",
 			EnvVar: scannerEnv("MODE"),
 			Value:  1,
 		},
@@ -50,7 +50,7 @@ func CLIFlags() []cli.Flag {
 		},
 		cli.IntFlag{
 			Name:   IntervalFlagName,
-			Usage:  fmt.Sprintf("Data scan interval in minutes, minimum %d (default)", defaultInterval),
+			Usage:  fmt.Sprintf("Data scan interval in minutes, minimum %d (default). In hybrid mode, the interval applies to meta mode in minutes, blob mode in days", defaultInterval),
 			EnvVar: scannerEnv("INTERVAL"),
 			Value:  defaultInterval,
 		},
@@ -63,7 +63,7 @@ func NewConfig(ctx *cli.Context) *Config {
 	if mode == modeDisabled {
 		return nil
 	}
-	if mode != modeCheckMeta && mode != modeCheckBlob {
+	if mode != modeCheckMeta && mode != modeCheckBlob && mode != modeCheckBlob+modeCheckMeta {
 		panic(fmt.Sprintf("invalid scanner mode: %d", mode))
 	}
 	if interval := ctx.GlobalInt(IntervalFlagName); interval < defaultInterval {

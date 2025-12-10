@@ -26,31 +26,34 @@ type IStorageManager interface {
 }
 
 type Worker struct {
-	sm               IStorageManager
-	fetchBlob        es.FetchBlobFunc
-	l1               es.Il1Source
-	cfg              Config
-	nextIndexOfKvIdx uint64
-	lg               log.Logger
+	sm        IStorageManager
+	fetchBlob es.FetchBlobFunc
+	l1        es.Il1Source
+	lg        log.Logger
 }
 
 func NewWorker(
 	sm IStorageManager,
 	fetch es.FetchBlobFunc,
 	l1 es.Il1Source,
-	cfg Config,
 	lg log.Logger,
 ) *Worker {
 	return &Worker{
 		sm:        sm,
 		fetchBlob: fetch,
 		l1:        l1,
-		cfg:       cfg,
 		lg:        lg,
 	}
 }
 
-func (s *Worker) ScanBatch(ctx context.Context, mismatched mismatchTracker) (*stats, scanErrors, error) {
+func (s *Worker) ScanBatch(
+	ctx context.Context,
+	mode int,
+	batchSize int,
+	startIndex uint64,
+	mismatched mismatchTracker,
+) (*stats, scanErrors, uint64, error) {
+	s.lg.Info("Scanner: scan batch started", "mode", mode)
 	// Never return nil stats and nil scanErrors
 	sts := newStats()
 	scanErrors := make(scanErrors)
@@ -61,13 +64,13 @@ func (s *Worker) ScanBatch(ctx context.Context, mismatched mismatchTracker) (*st
 	entryCount := s.sm.KvEntryCount()
 	if entryCount == 0 {
 		s.lg.Info("Scanner: no KV entries found in local storage")
-		return sts, scanErrors, nil
+		return sts, scanErrors, startIndex, nil
 	}
 	lastKvIdx := entryCount - 1
 	s.lg.Info("Scanner: local storage info", "lastKvIdx", lastKvIdx, "shards", shards, "kvEntriesPerShard", kvEntries)
 
 	// Determine the batch of KV indices to scan
-	kvsInBatch, totalEntries, batchEndExclusive := getKvsInBatch(shards, kvEntries, lastKvIdx, uint64(s.cfg.BatchSize), s.nextIndexOfKvIdx, s.lg)
+	kvsInBatch, totalEntries, batchEndExclusive := getKvsInBatch(shards, kvEntries, lastKvIdx, uint64(batchSize), startIndex, s.lg)
 
 	sts.localKvs = summaryLocalKvs(shards, kvEntries, lastKvIdx)
 	sts.total = int(totalEntries)
@@ -76,7 +79,7 @@ func (s *Worker) ScanBatch(ctx context.Context, mismatched mismatchTracker) (*st
 	metas, err := s.l1.GetKvMetas(kvsInBatch, rpc.FinalizedBlockNumber.Int64())
 	if err != nil {
 		s.lg.Error("Scanner: failed to query KV metas", "error", err)
-		return sts, scanErrors, fmt.Errorf("failed to query KV metas: %w", err)
+		return sts, scanErrors, startIndex, fmt.Errorf("failed to query KV metas: %w", err)
 	}
 	s.lg.Debug("Scanner: query KV meta done", "kvsInBatch", shortPrt(kvsInBatch))
 
@@ -84,27 +87,27 @@ func (s *Worker) ScanBatch(ctx context.Context, mismatched mismatchTracker) (*st
 		select {
 		case <-ctx.Done():
 			s.lg.Warn("Scanner canceled, stopping scan", "ctx.Err", ctx.Err())
-			return sts, scanErrors, ctx.Err()
+			return sts, scanErrors, startIndex, ctx.Err()
 		default:
 		}
 
 		var commit common.Hash
 		copy(commit[:], meta[32-es.HashSizeInContract:32])
 		kvIndex := kvsInBatch[i]
-		s.processScanKv(kvIndex, commit, &mismatched, scanErrors)
+		s.processScanKv(mode, kvIndex, commit, &mismatched, scanErrors)
 	}
 
-	s.nextIndexOfKvIdx = batchEndExclusive
 	if len(kvsInBatch) > 0 {
-		s.lg.Info("Scanner: scan batch done", "scanned", shortPrt(kvsInBatch), "count", len(kvsInBatch), "nextIndexOfKvIdx", s.nextIndexOfKvIdx)
+		s.lg.Info("Scanner: scan batch done", "mode", mode, "scanned", shortPrt(kvsInBatch), "count", len(kvsInBatch), "nextIndexOfKvIdx", batchEndExclusive)
 	}
 
 	sts.mismatched = mismatched
 
-	return sts, scanErrors, nil
+	return sts, scanErrors, batchEndExclusive, nil
 }
 
 func (s *Worker) processScanKv(
+	mode int,
 	kvIndex uint64,
 	commit common.Hash,
 	mismatched *mismatchTracker,
@@ -112,7 +115,8 @@ func (s *Worker) processScanKv(
 ) {
 	var err error
 	var found bool
-	if s.cfg.Mode == modeCheckMeta {
+	switch mode {
+	case modeCheckMeta:
 		// Check meta only
 		var metaLocal []byte
 		metaLocal, found, err = s.sm.TryReadMeta(kvIndex)
@@ -122,11 +126,12 @@ func (s *Worker) processScanKv(
 			return
 		}
 		err = es.CompareCommits(commit.Bytes(), metaLocal)
-	} else if s.cfg.Mode == modeCheckBlob {
+	case modeCheckBlob:
 		// Query blob and check meta from storage
 		_, found, err = s.sm.TryRead(kvIndex, int(s.sm.MaxKvSize()), commit)
-	} else {
-		s.lg.Crit("Scanner: invalid scanner mode", "mode", s.cfg.Mode)
+	default:
+		// Other modes are handled outside
+		s.lg.Crit("Scanner: invalid scanner mode", "mode", mode)
 	}
 
 	if found && err == nil {
