@@ -100,7 +100,7 @@ func (s *Worker) ScanBatch(ctx context.Context, state *scanLoopState, mismatched
 		var commit common.Hash
 		copy(commit[:], meta[32-es.HashSizeInContract:32])
 		kvIndex := kvsInBatch[i]
-		s.processScannedKv(state.mode, kvIndex, commit, &mismatched, errs)
+		s.scanKv(state.mode, kvIndex, commit, &mismatched, errs)
 	}
 
 	sts.mismatched = mismatched
@@ -109,13 +109,7 @@ func (s *Worker) ScanBatch(ctx context.Context, state *scanLoopState, mismatched
 	return sts, nil
 }
 
-func (s *Worker) processScannedKv(
-	mode scanMode,
-	kvIndex uint64,
-	commit common.Hash,
-	mismatched *mismatchTracker,
-	scanErrors scanErrors,
-) {
+func (s *Worker) scanKv(mode scanMode, kvIndex uint64, commit common.Hash, mismatched *mismatchTracker, errs scanErrors) {
 	var err error
 	var found bool
 	switch mode {
@@ -125,7 +119,7 @@ func (s *Worker) processScannedKv(
 		metaLocal, found, err = s.sm.TryReadMeta(kvIndex)
 		if err != nil {
 			s.lg.Error("Scanner: failed to read meta", "kvIndex", kvIndex, "error", err)
-			scanErrors.add(kvIndex, fmt.Errorf("failed to read meta: %w", err))
+			errs.add(kvIndex, fmt.Errorf("failed to read meta: %w", err))
 			return
 		}
 		err = es.CompareCommits(commit.Bytes(), metaLocal)
@@ -145,7 +139,7 @@ func (s *Worker) processScannedKv(
 			case failed:
 				mismatched.markRecovered(kvIndex)
 				// Clear the error state
-				scanErrors.nil(kvIndex)
+				errs.nil(kvIndex)
 				s.lg.Info("Scanner: previously failed KV recovered", "kvIndex", kvIndex)
 			case pending:
 				delete(*mismatched, kvIndex)
@@ -160,7 +154,7 @@ func (s *Worker) processScannedKv(
 
 	if !found {
 		// The shard is not stored locally
-		scanErrors.add(kvIndex, fmt.Errorf("shard not found locally: commit=%x", commit))
+		errs.add(kvIndex, fmt.Errorf("shard not found locally: commit=%x", commit))
 		s.lg.Error("Scanner: blob not found locally", "kvIndex", kvIndex, "commit", commit)
 		return
 	}
@@ -176,11 +170,11 @@ func (s *Worker) processScannedKv(
 				if fixErr := s.fixKv(kvIndex, commit); fixErr != nil {
 					mismatched.markFailed(kvIndex)
 					s.lg.Error("Scanner: failed to fix blob", "kvIndex", kvIndex, "error", fixErr)
-					scanErrors.add(kvIndex, fmt.Errorf("failed to fix blob: %w", fixErr))
+					errs.add(kvIndex, fmt.Errorf("failed to fix blob: %w", fixErr))
 				} else {
 					s.lg.Info("Scanner: blob fixed successfully", "kvIndex", kvIndex)
 					mismatched.markFixed(kvIndex)
-					scanErrors.nil(kvIndex)
+					errs.nil(kvIndex)
 				}
 			} else {
 
@@ -190,7 +184,7 @@ func (s *Worker) processScannedKv(
 			}
 		} else {
 			s.lg.Error("Scanner: unexpected error occurred", "kvIndex", kvIndex, "error", err)
-			scanErrors.add(kvIndex, fmt.Errorf("unexpected error: %w", err))
+			errs.add(kvIndex, fmt.Errorf("unexpected error: %w", err))
 		}
 	}
 }

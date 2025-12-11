@@ -98,8 +98,8 @@ func (s *Scanner) start() {
 	s.startReporter()
 
 	if s.cfg.Mode == modeCheckBlob+modeCheckMeta {
-		// TODO: blobInterval := time.Hour * 24 * time.Duration(s.cfg.Interval)
-		blobInterval := time.Minute * 9 * time.Duration(s.cfg.Interval) //  test only
+		// Always keep blob interval 24 * 60 times of meta interval for hybrid mode
+		blobInterval := time.Hour * 24 * time.Duration(s.cfg.Interval)
 		s.lg.Info("Scanner running in hybrid mode", "mode", s.cfg.Mode, "metaInterval", s.interval, "blobInterval", blobInterval)
 		s.launchScanLoop(&scanLoopState{mode: modeCheckBlob}, blobInterval)
 		s.launchScanLoop(&scanLoopState{mode: modeCheckMeta}, s.interval)
