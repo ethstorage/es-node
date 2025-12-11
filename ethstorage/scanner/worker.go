@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
@@ -49,11 +50,18 @@ func NewWorker(
 	}
 }
 
-func (s *Worker) ScanBatch(ctx context.Context, state *scanLoopState, mismatched mismatchTracker) (*stats, scanErrors, error) {
-	s.lg.Info("Scanner: scan batch started", "mode", state.mode)
+func (s *Worker) ScanBatch(ctx context.Context, state *scanLoopState, mismatched mismatchTracker) (*stats, error) {
+	start := time.Now()
+	var kvsInBatch []uint64
+	defer func(stt time.Time) {
+		if len(kvsInBatch) > 0 {
+			s.lg.Info("Scanner: scan batch done", "mode", state.mode, "scanned", shortPrt(kvsInBatch), "count", len(kvsInBatch), "nextIndexOfKvIdx", state.nextIndex, "duration", time.Since(stt).String())
+		}
+	}(start)
+
 	// Never return nil stats and nil scanErrors
 	sts := newStats()
-	scanErrors := make(scanErrors)
+	errs := sts.errs
 
 	// Query local storage info
 	shards := s.sm.Shards()
@@ -61,13 +69,14 @@ func (s *Worker) ScanBatch(ctx context.Context, state *scanLoopState, mismatched
 	entryCount := s.sm.KvEntryCount()
 	if entryCount == 0 {
 		s.lg.Info("Scanner: no KV entries found in local storage")
-		return sts, scanErrors, nil
+		return sts, nil
 	}
 	lastKvIdx := entryCount - 1
-	s.lg.Info("Scanner: local storage info", "lastKvIdx", lastKvIdx, "shards", shards, "kvEntriesPerShard", kvEntries)
+	startIndexOfKvIdx := state.nextIndex
+	s.lg.Info("Scanner: scan batch started", "mode", state.mode, "startIndexOfKvIdx", startIndexOfKvIdx, "lastKvIdxOnChain", lastKvIdx, "shardsInLocal", shards)
 
 	// Determine the batch of KV indices to scan
-	kvsInBatch, totalEntries, batchEndExclusive := getKvsInBatch(shards, kvEntries, lastKvIdx, s.batchSize, state.nextIndex, s.lg)
+	kvsInBatch, totalEntries, batchEndExclusive := getKvsInBatch(shards, kvEntries, lastKvIdx, s.batchSize, startIndexOfKvIdx, s.lg)
 
 	sts.localKvs = summaryLocalKvs(shards, kvEntries, lastKvIdx)
 	sts.total = int(totalEntries)
@@ -76,7 +85,7 @@ func (s *Worker) ScanBatch(ctx context.Context, state *scanLoopState, mismatched
 	metas, err := s.l1.GetKvMetas(kvsInBatch, rpc.FinalizedBlockNumber.Int64())
 	if err != nil {
 		s.lg.Error("Scanner: failed to query KV metas", "error", err)
-		return sts, scanErrors, fmt.Errorf("failed to query KV metas: %w", err)
+		return sts, fmt.Errorf("failed to query KV metas: %w", err)
 	}
 	s.lg.Debug("Scanner: query KV meta done", "kvsInBatch", shortPrt(kvsInBatch))
 
@@ -84,28 +93,24 @@ func (s *Worker) ScanBatch(ctx context.Context, state *scanLoopState, mismatched
 		select {
 		case <-ctx.Done():
 			s.lg.Warn("Scanner canceled, stopping scan", "ctx.Err", ctx.Err())
-			return sts, scanErrors, ctx.Err()
+			return sts, ctx.Err()
 		default:
 		}
 
 		var commit common.Hash
 		copy(commit[:], meta[32-es.HashSizeInContract:32])
 		kvIndex := kvsInBatch[i]
-		s.processScanKv(state.mode, kvIndex, commit, &mismatched, scanErrors)
-	}
-
-	if len(kvsInBatch) > 0 {
-		s.lg.Info("Scanner: scan batch done", "mode", state.mode, "scanned", shortPrt(kvsInBatch), "count", len(kvsInBatch), "nextIndexOfKvIdx", batchEndExclusive)
+		s.processScannedKv(state.mode, kvIndex, commit, &mismatched, errs)
 	}
 
 	sts.mismatched = mismatched
 	state.nextIndex = batchEndExclusive
 
-	return sts, scanErrors, nil
+	return sts, nil
 }
 
-func (s *Worker) processScanKv(
-	mode int,
+func (s *Worker) processScannedKv(
+	mode scanMode,
 	kvIndex uint64,
 	commit common.Hash,
 	mismatched *mismatchTracker,

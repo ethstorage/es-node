@@ -28,8 +28,25 @@ func scannerEnv(name string) string {
 	return utils.PrefixEnvVar("SCANNER_" + name)
 }
 
+type scanMode int
+
+func (m scanMode) String() string {
+	switch m {
+	case modeDisabled:
+		return "disabled"
+	case modeCheckMeta:
+		return "check-meta"
+	case modeCheckBlob:
+		return "check-blob"
+	case modeCheckBlob + modeCheckMeta:
+		return "hybrid"
+	default:
+		panic(fmt.Sprintf("invalid scanner mode: %d", m))
+	}
+}
+
 type Config struct {
-	Mode      int
+	Mode      scanMode
 	BatchSize int
 	Interval  int
 }
@@ -70,7 +87,7 @@ func NewConfig(ctx *cli.Context) *Config {
 		panic(fmt.Sprintf("scanner interval must be at least %d minutes", defaultInterval))
 	}
 	return &Config{
-		Mode:      mode,
+		Mode:      scanMode(mode),
 		BatchSize: ctx.GlobalInt(BatchSizeFlagName),
 		Interval:  ctx.GlobalInt(IntervalFlagName),
 	}

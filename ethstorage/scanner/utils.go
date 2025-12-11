@@ -128,10 +128,16 @@ func (m mismatchTracker) clone() mismatchTracker {
 	return clone
 }
 
+type scanLoopState struct {
+	mode      scanMode
+	nextIndex uint64
+}
+
 type stats struct {
 	localKvs   string          // kv entries stored in local
 	total      int             // total number of kv entries stored in local
 	mismatched mismatchTracker // tracks all mismatched indices and their status
+	errs       scanErrors      // latest scan errors keyed by kv index
 }
 
 func newStats() *stats {
@@ -139,6 +145,7 @@ func newStats() *stats {
 		localKvs:   "",
 		total:      0,
 		mismatched: mismatchTracker{},
+		errs:       scanErrors{},
 	}
 }
 
