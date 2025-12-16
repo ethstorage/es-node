@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -50,7 +51,7 @@ func NewWorker(
 	}
 }
 
-func (s *Worker) ScanBatch(ctx context.Context, state *scanLoopState, mismatched mismatchTracker) (*stats, error) {
+func (s *Worker) ScanBatch(ctx context.Context, state *scanLoopState, localKvCount uint64, mismatched mismatchTracker) (*stats, error) {
 	start := time.Now()
 	var kvsInBatch []uint64
 	defer func(stt time.Time) {
@@ -63,23 +64,18 @@ func (s *Worker) ScanBatch(ctx context.Context, state *scanLoopState, mismatched
 	sts := newStats()
 	errs := sts.errs
 
-	// Query local storage info
-	shards := s.sm.Shards()
-	kvEntries := s.sm.KvEntries()
-	entryCount := s.sm.KvEntryCount()
-	if entryCount == 0 {
+	if localKvCount == 0 {
 		s.lg.Info("Scanner: no KV entries found in local storage")
 		return sts, nil
 	}
-	lastKvIdx := entryCount - 1
+	// Query local storage info
+	shards := s.sm.Shards()
+	kvEntries := s.sm.KvEntries()
+	lastKvIdx := s.sm.KvEntryCount() - 1
 	startIndexOfKvIdx := state.nextIndex
 	s.lg.Info("Scanner: scan batch started", "mode", state.mode, "startIndexOfKvIdx", startIndexOfKvIdx, "lastKvIdxOnChain", lastKvIdx, "shardsInLocal", shards)
-
 	// Determine the batch of KV indices to scan
-	kvsInBatch, totalEntries, batchEndExclusive := getKvsInBatch(shards, kvEntries, lastKvIdx, s.batchSize, startIndexOfKvIdx, s.lg)
-
-	sts.localKvs = summaryLocalKvs(shards, kvEntries, lastKvIdx)
-	sts.total = int(totalEntries)
+	kvsInBatch, batchEndExclusive := getKvsInBatch(shards, kvEntries, localKvCount, s.batchSize, startIndexOfKvIdx, s.lg)
 
 	// Query the metas from the L1 contract
 	metas, err := s.l1.GetKvMetas(kvsInBatch, rpc.FinalizedBlockNumber.Int64())
@@ -196,16 +192,22 @@ func (s *Worker) fixKv(kvIndex uint64, commit common.Hash) error {
 	return nil
 }
 
-func getKvsInBatch(shards []uint64, kvEntries, lastKvIdx, batchSize, startKvIndex uint64, lg log.Logger) ([]uint64, uint64, uint64) {
-	totalEntries := getTotalEntries(shards, kvEntries, lastKvIdx)
-	lg.Debug("Scanner: KV entries stored locally", "totalKvStored", totalEntries)
+func (s *Worker) summaryLocalKvs() (uint64, string) {
+	kvEntryCountOnChain := s.sm.KvEntryCount()
+	if kvEntryCountOnChain == 0 {
+		s.lg.Info("Scanner: no KV entries found in local storage")
+		return 0, "(none)"
+	}
+	return summaryLocalKvs(s.sm.Shards(), s.sm.KvEntries(), kvEntryCountOnChain-1)
+}
 
+func getKvsInBatch(shards []uint64, kvEntries, localKvCount, batchSize, startKvIndex uint64, lg log.Logger) ([]uint64, uint64) {
 	// Determine batch start and end KV indices
-	if startKvIndex >= totalEntries {
+	if startKvIndex >= localKvCount {
 		startKvIndex = 0
 		lg.Debug("Scanner: restarting scan from the beginning")
 	}
-	endKvIndexExclusive := min(startKvIndex+batchSize, totalEntries)
+	endKvIndexExclusive := min(startKvIndex+batchSize, localKvCount)
 	// The actual batch range is [startKvIndex, endKvIndexExclusive) or [startKvIndex, endIndex]
 	endIndex := endKvIndexExclusive - 1
 
@@ -235,26 +237,32 @@ func getKvsInBatch(shards []uint64, kvEntries, lastKvIdx, batchSize, startKvInde
 		}
 	}
 	lg.Debug("Scanner: batch index range determined", "batchStart", startKvIndex, "batchEnd(exclusive)", endKvIndexExclusive, "kvsInBatch", shortPrt(kvsInBatch))
-	return kvsInBatch, totalEntries, endKvIndexExclusive
+	return kvsInBatch, endKvIndexExclusive
 }
 
 // Calculate the total number of KV entries stored locally
-func getTotalEntries(shards []uint64, kvEntries, lastKvIdx uint64) uint64 {
+func summaryLocalKvs(shards []uint64, kvEntries, lastKvIdx uint64) (uint64, string) {
 	var totalEntries uint64
+	var res []string
 	// Shard indices are sorted but may not be continuous: e.g. [0, 1, 3, 4] indicates shard 2 is missing
-	for _, shardIndex := range shards {
-		shardOfLastFinalizedKv := lastKvIdx / kvEntries
-		if shardIndex > shardOfLastFinalizedKv {
+	for _, shard := range shards {
+		shardOfLastKv := lastKvIdx / kvEntries
+		if shard > shardOfLastKv {
 			// Skip empty shards
 			break
 		}
+		var lastEntry uint64
 		// The last shard may contain fewer than the full kvEntries
-		if shardIndex == lastKvIdx/kvEntries {
+		if shard == shardOfLastKv {
 			totalEntries += lastKvIdx%kvEntries + 1
-			break
+			lastEntry = lastKvIdx
+		} else {
+			// Complete shards
+			totalEntries += kvEntries
+			lastEntry = (shard+1)*kvEntries - 1
 		}
-		// Complete shards
-		totalEntries += kvEntries
+		shardView := fmt.Sprintf("shard%d%s", shard, formatRange(shard*kvEntries, lastEntry))
+		res = append(res, shardView)
 	}
-	return totalEntries
+	return totalEntries, strings.Join(res, ",")
 }

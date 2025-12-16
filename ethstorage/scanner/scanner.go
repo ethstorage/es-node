@@ -5,6 +5,7 @@ package scanner
 
 import (
 	"context"
+	"maps"
 	"sync"
 	"time"
 
@@ -15,19 +16,20 @@ import (
 )
 
 type Scanner struct {
-	worker      *Worker
-	feed        *event.Feed
-	interval    time.Duration
-	cfg         Config
-	ctx         context.Context
-	cancel      context.CancelFunc
-	wg          sync.WaitGroup
-	running     bool
-	mu          sync.Mutex // protects running
-	lg          log.Logger
-	scanPermit  chan struct{} // to ensure only one scan at a time
-	statsMu     sync.Mutex    // protects sharedStats
-	sharedStats stats
+	worker       *Worker
+	feed         *event.Feed
+	interval     time.Duration
+	cfg          Config
+	ctx          context.Context
+	cancel       context.CancelFunc
+	wg           sync.WaitGroup
+	running      bool
+	mu           sync.Mutex // protects running
+	lg           log.Logger
+	scanPermit   chan struct{} // to ensure only one scan at a time
+	statsMu      sync.Mutex    // protects sharedStats
+	sharedStats  stats
+	localKvCount uint64 // total number of kv entries stored in local
 }
 
 func New(
@@ -136,7 +138,11 @@ func (s *Scanner) doWork(state *scanLoopState) {
 	if !s.acquireScanPermit() {
 		return
 	}
-	stats, err := s.worker.ScanBatch(s.ctx, state, s.cloneSharedMismatches())
+	s.statsMu.Lock()
+	localKvCount := s.localKvCount
+	tracker := s.sharedStats.mismatched.clone()
+	s.statsMu.Unlock()
+	stats, err := s.worker.ScanBatch(s.ctx, state, localKvCount, tracker)
 	s.releaseScanPermit()
 	if err != nil {
 		s.lg.Error("Scanner: initial scan failed", "mode", state.mode, "error", err)
@@ -170,7 +176,13 @@ func (s *Scanner) startReporter() {
 		for {
 			select {
 			case <-ticker.C:
-				s.logStats()
+				// update local entries info
+				localKvs, sum := s.worker.summaryLocalKvs()
+				s.statsMu.Lock()
+				s.localKvCount = localKvs
+				s.statsMu.Unlock()
+
+				s.logStats(sum)
 			case <-s.ctx.Done():
 				return
 			}
@@ -178,29 +190,32 @@ func (s *Scanner) startReporter() {
 	}()
 }
 
-func (s *Scanner) logStats() {
+func (s *Scanner) logStats(sum string) {
 	s.statsMu.Lock()
-	defer s.statsMu.Unlock()
+	localKvCount := s.localKvCount
+	var mismatched string
+	if len(s.sharedStats.mismatched) > 0 {
+		mismatched = s.sharedStats.mismatched.String()
+	}
+	errSnapshot := scanErrors{}
+	if s.sharedStats.errs != nil {
+		maps.Copy(errSnapshot, s.sharedStats.errs)
+	}
+	s.statsMu.Unlock()
 
 	logFields := []any{
 		"mode", s.cfg.Mode,
-		"localKvs", s.sharedStats.localKvs,
-		"localKvsCount", s.sharedStats.total,
+		"localKvs", sum,
+		"localKvCount", localKvCount,
 	}
-	if len(s.sharedStats.mismatched) > 0 {
-		logFields = append(logFields, "mismatched", s.sharedStats.mismatched.String())
+	if mismatched != "" {
+		logFields = append(logFields, "mismatched", mismatched)
 	}
 	s.lg.Info("Scanner stats", logFields...)
 
-	for i, e := range s.sharedStats.errs {
+	for i, e := range errSnapshot {
 		s.lg.Info("Scanner error happened earlier", "kvIndex", i, "error", e)
 	}
-}
-
-func (s *Scanner) cloneSharedMismatches() mismatchTracker {
-	s.statsMu.Lock()
-	defer s.statsMu.Unlock()
-	return s.sharedStats.mismatched.clone()
 }
 
 func (s *Scanner) updateSharedStats(sts *stats) {
@@ -209,8 +224,7 @@ func (s *Scanner) updateSharedStats(sts *stats) {
 	}
 	s.statsMu.Lock()
 	defer s.statsMu.Unlock()
-	s.sharedStats.localKvs = sts.localKvs
-	s.sharedStats.total = sts.total
+
 	if sts.mismatched != nil {
 		s.sharedStats.mismatched = sts.mismatched.clone()
 	} else {

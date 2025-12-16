@@ -134,16 +134,12 @@ type scanLoopState struct {
 }
 
 type stats struct {
-	localKvs   string          // kv entries stored in local
-	total      int             // total number of kv entries stored in local
 	mismatched mismatchTracker // tracks all mismatched indices and their status
 	errs       scanErrors      // latest scan errors keyed by kv index
 }
 
 func newStats() *stats {
 	return &stats{
-		localKvs:   "",
-		total:      0,
 		mismatched: mismatchTracker{},
 		errs:       scanErrors{},
 	}
@@ -166,25 +162,6 @@ func shortPrt(nums []uint64) string {
 		}
 	}
 	res = append(res, formatRange(start, end))
-	return strings.Join(res, ",")
-}
-
-func summaryLocalKvs(shards []uint64, kvEntries, lastKvIdx uint64) string {
-	var res []string
-	for _, shard := range shards {
-		if shard*kvEntries > lastKvIdx {
-			// skip empty shards
-			break
-		}
-		var lastEntry uint64
-		if shard == lastKvIdx/kvEntries {
-			lastEntry = lastKvIdx
-		} else {
-			lastEntry = (shard+1)*kvEntries - 1
-		}
-		shardView := fmt.Sprintf("shard%d%s", shard, formatRange(shard*kvEntries, lastEntry))
-		res = append(res, shardView)
-	}
 	return strings.Join(res, ",")
 }
 
