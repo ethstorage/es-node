@@ -136,8 +136,7 @@ func (s *Scanner) doWork(state *scanLoopState) {
 	if !s.acquireScanPermit() {
 		return
 	}
-	tracker := s.cloneSharedMismatches()
-	stats, err := s.worker.ScanBatch(s.ctx, state, tracker)
+	stats, err := s.worker.ScanBatch(s.ctx, state, s.cloneSharedMismatches())
 	s.releaseScanPermit()
 	if err != nil {
 		s.lg.Error("Scanner: initial scan failed", "mode", state.mode, "error", err)

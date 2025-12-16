@@ -196,28 +196,11 @@ func (s *Worker) fixKv(kvIndex uint64, commit common.Hash) error {
 	return nil
 }
 
-func getKvsInBatch(shards []uint64, kvEntries, lastKvIdx, batchSize, batchStartIndex uint64, lg log.Logger) ([]uint64, uint64, uint64) {
-	// Calculate the total number of KV entries stored locally
-	var totalEntries uint64
-	// Shard indices are sorted but may not be continuous: e.g. [0, 1, 3, 4] indicates shard 2 is missing
-	for _, shardIndex := range shards {
-		shardOfLastFinalizedKv := lastKvIdx / kvEntries
-		if shardIndex > shardOfLastFinalizedKv {
-			// Skip empty shards
-			break
-		}
-		// The last shard may contain fewer than the full kvEntries
-		if shardIndex == lastKvIdx/kvEntries {
-			totalEntries += lastKvIdx%kvEntries + 1
-			break
-		}
-		// Complete shards
-		totalEntries += kvEntries
-	}
+func getKvsInBatch(shards []uint64, kvEntries, lastKvIdx, batchSize, startKvIndex uint64, lg log.Logger) ([]uint64, uint64, uint64) {
+	totalEntries := getTotalEntries(shards, kvEntries, lastKvIdx)
 	lg.Debug("Scanner: KV entries stored locally", "totalKvStored", totalEntries)
 
 	// Determine batch start and end KV indices
-	startKvIndex := batchStartIndex
 	if startKvIndex >= totalEntries {
 		startKvIndex = 0
 		lg.Debug("Scanner: restarting scan from the beginning")
@@ -253,4 +236,25 @@ func getKvsInBatch(shards []uint64, kvEntries, lastKvIdx, batchSize, batchStartI
 	}
 	lg.Debug("Scanner: batch index range determined", "batchStart", startKvIndex, "batchEnd(exclusive)", endKvIndexExclusive, "kvsInBatch", shortPrt(kvsInBatch))
 	return kvsInBatch, totalEntries, endKvIndexExclusive
+}
+
+// Calculate the total number of KV entries stored locally
+func getTotalEntries(shards []uint64, kvEntries, lastKvIdx uint64) uint64 {
+	var totalEntries uint64
+	// Shard indices are sorted but may not be continuous: e.g. [0, 1, 3, 4] indicates shard 2 is missing
+	for _, shardIndex := range shards {
+		shardOfLastFinalizedKv := lastKvIdx / kvEntries
+		if shardIndex > shardOfLastFinalizedKv {
+			// Skip empty shards
+			break
+		}
+		// The last shard may contain fewer than the full kvEntries
+		if shardIndex == lastKvIdx/kvEntries {
+			totalEntries += lastKvIdx%kvEntries + 1
+			break
+		}
+		// Complete shards
+		totalEntries += kvEntries
+	}
+	return totalEntries
 }
