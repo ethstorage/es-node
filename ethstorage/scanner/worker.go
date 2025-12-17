@@ -51,7 +51,7 @@ func NewWorker(
 	}
 }
 
-func (s *Worker) ScanBatch(ctx context.Context, state *scanLoopState, localKvCount uint64, mismatched mismatchTracker) (*stats, error) {
+func (s *Worker) ScanBatch(ctx context.Context, state *scanLoopState, mismatched mismatchTracker) (*stats, error) {
 	start := time.Now()
 	var kvsInBatch []uint64
 	defer func(stt time.Time) {
@@ -63,7 +63,7 @@ func (s *Worker) ScanBatch(ctx context.Context, state *scanLoopState, localKvCou
 	// Never return nil stats and nil scanErrors
 	sts := newStats()
 	errs := sts.errs
-
+	localKvCount, _ := s.summaryLocalKvs()
 	if localKvCount == 0 {
 		s.lg.Info("Scanner: no KV entries found in local storage")
 		return sts, nil
