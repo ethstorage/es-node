@@ -16,20 +16,18 @@ import (
 )
 
 type Scanner struct {
-	worker       *Worker
-	feed         *event.Feed
-	interval     time.Duration
-	cfg          Config
-	ctx          context.Context
-	cancel       context.CancelFunc
-	wg           sync.WaitGroup
-	running      bool
-	mu           sync.Mutex // protects running
-	lg           log.Logger
-	scanPermit   chan struct{} // to ensure only one scan at a time
-	statsMu      sync.Mutex    // protects sharedStats
-	sharedStats  stats
-	localKvCount uint64 // total number of kv entries stored in local
+	worker      *Worker
+	feed        *event.Feed
+	cfg         Config
+	ctx         context.Context
+	cancel      context.CancelFunc
+	wg          sync.WaitGroup
+	running     bool
+	mu          sync.Mutex // protects running
+	lg          log.Logger
+	scanPermit  chan struct{} // to ensure only one scan at a time
+	statsMu     sync.Mutex    // protects sharedStats
+	sharedStats stats
 }
 
 func New(
@@ -45,7 +43,6 @@ func New(
 	scanner := &Scanner{
 		worker:      NewWorker(sm, fetchBlob, l1, uint64(cfg.BatchSize), lg),
 		feed:        feed,
-		interval:    time.Minute * time.Duration(cfg.Interval),
 		cfg:         cfg,
 		ctx:         cctx,
 		cancel:      cancel,
@@ -99,16 +96,21 @@ func (s *Scanner) start() {
 
 	s.startReporter()
 
-	if s.cfg.Mode == modeCheckBlob+modeCheckMeta {
-		// Always keep blob interval 24 * 60 times of meta interval for hybrid mode
-		blobInterval := time.Hour * 24 * time.Duration(s.cfg.Interval)
-		s.lg.Info("Scanner running in hybrid mode", "mode", s.cfg.Mode, "metaInterval", s.interval, "blobInterval", blobInterval)
-		s.launchScanLoop(&scanLoopState{mode: modeCheckBlob}, blobInterval)
-		s.launchScanLoop(&scanLoopState{mode: modeCheckMeta}, s.interval)
+	if s.cfg.Mode == modeDisabled {
+		s.lg.Info("Scanner is disabled")
 		return
 	}
-
-	s.launchScanLoop(&scanLoopState{mode: s.cfg.Mode}, s.interval)
+	if s.cfg.Mode == modeCheckBlob+modeCheckMeta {
+		s.lg.Info("Scanner running in hybrid mode", "mode", s.cfg.Mode, "metaInterval", s.cfg.IntervalMeta, "blobInterval", s.cfg.IntervalBlob)
+		s.launchScanLoop(&scanLoopState{mode: modeCheckBlob}, s.cfg.IntervalBlob)
+		s.launchScanLoop(&scanLoopState{mode: modeCheckMeta}, s.cfg.IntervalMeta)
+		return
+	}
+	interval := s.cfg.IntervalMeta
+	if s.cfg.Mode == modeCheckBlob {
+		interval = s.cfg.IntervalBlob
+	}
+	s.launchScanLoop(&scanLoopState{mode: s.cfg.Mode}, interval)
 }
 
 func (s *Scanner) launchScanLoop(state *scanLoopState, interval time.Duration) {
@@ -116,7 +118,7 @@ func (s *Scanner) launchScanLoop(state *scanLoopState, interval time.Duration) {
 	go func() {
 		defer s.wg.Done()
 
-		s.lg.Info("Scanner started", "mode", state.mode, "interval", interval.String(), "batchSize", s.cfg.BatchSize)
+		s.lg.Info("Scanner configured", "mode", state.mode, "interval", interval.String(), "batchSize", s.cfg.BatchSize)
 
 		mainTicker := time.NewTicker(interval)
 		defer mainTicker.Stop()
@@ -139,10 +141,9 @@ func (s *Scanner) doWork(state *scanLoopState) {
 		return
 	}
 	s.statsMu.Lock()
-	localKvCount := s.localKvCount
 	tracker := s.sharedStats.mismatched.clone()
 	s.statsMu.Unlock()
-	stats, err := s.worker.ScanBatch(s.ctx, state, localKvCount, tracker)
+	stats, err := s.worker.ScanBatch(s.ctx, state, tracker)
 	s.releaseScanPermit()
 	if err != nil {
 		s.lg.Error("Scanner: initial scan failed", "mode", state.mode, "error", err)
@@ -171,18 +172,14 @@ func (s *Scanner) startReporter() {
 	s.wg.Add(1)
 	go func() {
 		defer s.wg.Done()
+
+		s.logStats()
 		ticker := time.NewTicker(time.Minute)
 		defer ticker.Stop()
 		for {
 			select {
 			case <-ticker.C:
-				// update local entries info
-				localKvs, sum := s.worker.summaryLocalKvs()
-				s.statsMu.Lock()
-				s.localKvCount = localKvs
-				s.statsMu.Unlock()
-
-				s.logStats(sum)
+				s.logStats()
 			case <-s.ctx.Done():
 				return
 			}
@@ -190,9 +187,8 @@ func (s *Scanner) startReporter() {
 	}()
 }
 
-func (s *Scanner) logStats(sum string) {
+func (s *Scanner) logStats() {
 	s.statsMu.Lock()
-	localKvCount := s.localKvCount
 	var mismatched string
 	if len(s.sharedStats.mismatched) > 0 {
 		mismatched = s.sharedStats.mismatched.String()
@@ -203,6 +199,7 @@ func (s *Scanner) logStats(sum string) {
 	}
 	s.statsMu.Unlock()
 
+	localKvCount, sum := s.worker.summaryLocalKvs()
 	logFields := []any{
 		"mode", s.cfg.Mode,
 		"localKvs", sum,
