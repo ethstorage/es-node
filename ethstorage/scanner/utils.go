@@ -71,27 +71,6 @@ func (m mismatchTracker) String() string {
 	return "[" + strings.Join(items, ",") + "]"
 }
 
-func (m mismatchTracker) markPending(kvIndex uint64) {
-	m[kvIndex] = pending
-}
-
-func (m mismatchTracker) markRecovered(kvIndex uint64) {
-	m[kvIndex] = recovered
-}
-
-func (m mismatchTracker) markFixed(kvIndex uint64) {
-	m[kvIndex] = fixed
-}
-
-func (m mismatchTracker) markFailed(kvIndex uint64) {
-	m[kvIndex] = failed
-}
-
-func (m mismatchTracker) shouldFix(kvIndex uint64) bool {
-	status, exists := m[kvIndex]
-	return exists && (status == pending || status == failed)
-}
-
 // failed() returns all indices that are still mismatched
 // since the first-time do not count as mismatched and the
 // second-time will be fixed immediately if possible
