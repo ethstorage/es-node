@@ -138,6 +138,14 @@ type stats struct {
 	errs       scanErrors      // latest scan errors keyed by kv index
 }
 
+type scanUpdate struct {
+	kvIndex uint64
+	status  *status
+	err     error
+}
+
+type scanUpdateFn func(scanUpdate)
+
 func newStats() *stats {
 	return &stats{
 		mismatched: mismatchTracker{},

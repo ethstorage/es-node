@@ -143,12 +143,39 @@ func (s *Scanner) doWork(state *scanLoopState) {
 	s.statsMu.Lock()
 	tracker := s.sharedStats.mismatched.clone()
 	s.statsMu.Unlock()
-	stats, err := s.worker.ScanBatch(s.ctx, state, tracker)
+	onUpdate := func(u scanUpdate) {
+		s.applyUpdate(u)
+	}
+	err := s.worker.ScanBatch(s.ctx, state, tracker, onUpdate)
 	s.releaseScanPermit()
 	if err != nil {
 		s.lg.Error("Scanner: initial scan failed", "mode", state.mode, "error", err)
-	} else {
-		s.updateSharedStats(stats)
+	}
+}
+
+func (s *Scanner) applyUpdate(u scanUpdate) {
+	s.statsMu.Lock()
+	defer s.statsMu.Unlock()
+
+	if u.status != nil {
+		if s.sharedStats.mismatched == nil {
+			s.sharedStats.mismatched = mismatchTracker{}
+		}
+		s.sharedStats.mismatched[u.kvIndex] = *u.status
+	} else if u.status == nil {
+		delete(s.sharedStats.mismatched, u.kvIndex)
+	}
+
+	if u.err != nil {
+		if s.sharedStats.errs == nil {
+			s.sharedStats.errs = scanErrors{}
+		}
+		s.sharedStats.errs[u.kvIndex] = u.err
+		return
+	}
+	// nil err means clear error state for this kv index
+	if s.sharedStats.errs != nil {
+		delete(s.sharedStats.errs, u.kvIndex)
 	}
 }
 
@@ -212,26 +239,6 @@ func (s *Scanner) logStats() {
 
 	for i, e := range errSnapshot {
 		s.lg.Info("Scanner error happened earlier", "kvIndex", i, "error", e)
-	}
-}
-
-func (s *Scanner) updateSharedStats(sts *stats) {
-	if sts == nil {
-		return
-	}
-	s.statsMu.Lock()
-	defer s.statsMu.Unlock()
-
-	if sts.mismatched != nil {
-		s.sharedStats.mismatched = sts.mismatched.clone()
-	} else {
-		s.sharedStats.mismatched = mismatchTracker{}
-	}
-	if sts.errs != nil {
-		if s.sharedStats.errs == nil {
-			s.sharedStats.errs = scanErrors{}
-		}
-		s.sharedStats.errs.merge(sts.errs)
 	}
 }
 
