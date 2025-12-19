@@ -52,31 +52,32 @@ func NewWorker(
 }
 
 func (s *Worker) ScanBatch(ctx context.Context, state *scanLoopState, onUpdate scanUpdateFn) error {
+	// Noop
 	if onUpdate == nil {
-		onUpdate = func(scanUpdate) {}
+		onUpdate = func(kvi uint64, m *scanned) {}
 	}
 
 	start := time.Now()
 	var kvsInBatch []uint64
 	defer func(stt time.Time) {
 		if len(kvsInBatch) > 0 {
-			s.lg.Info("Scanner: scan batch done", "mode", state.mode, "scanned", shortPrt(kvsInBatch), "count", len(kvsInBatch), "nextIndexOfKvIdx", state.nextIndex, "duration", time.Since(stt).String())
+			s.lg.Info("Scanner: scan batch done",
+				"mode", state.mode,
+				"scanned", shortPrt(kvsInBatch),
+				"count", len(kvsInBatch),
+				"nextIndexOfKvIdx", state.nextIndex,
+				"duration", time.Since(stt).String(),
+			)
 		}
 	}(start)
 
-	localKvCount, _ := s.summaryLocalKvs()
-	if localKvCount == 0 {
-		s.lg.Info("Scanner: no KV entries found in local storage")
+	// Determine the batch of KV indices to scan
+	kvsInBatch, batchEndExclusive := s.getKvsInBatch(state.nextIndex)
+	if len(kvsInBatch) == 0 {
+		s.lg.Info("Scanner: no KV entries to scan in this batch")
 		return nil
 	}
-	// Query local storage info
-	shards := s.sm.Shards()
-	kvEntries := s.sm.KvEntries()
-	lastKvIdx := s.sm.KvEntryCount() - 1
-	startIndexOfKvIdx := state.nextIndex
-	s.lg.Info("Scanner: scan batch started", "mode", state.mode, "startIndexOfKvIdx", startIndexOfKvIdx, "lastKvIdxOnChain", lastKvIdx, "shardsInLocal", shards)
-	// Determine the batch of KV indices to scan
-	kvsInBatch, batchEndExclusive := getKvsInBatch(shards, kvEntries, localKvCount, s.batchSize, startIndexOfKvIdx, s.lg)
+	s.lg.Info("Scanner: scan batch started", "mode", state.mode, "startIndexOfKvIdx", state.nextIndex)
 
 	// Query the metas from the L1 contract
 	metas, err := s.l1.GetKvMetas(kvsInBatch, rpc.FinalizedBlockNumber.Int64())
@@ -104,54 +105,63 @@ func (s *Worker) ScanBatch(ctx context.Context, state *scanLoopState, onUpdate s
 	return nil
 }
 
+func (s *Worker) getKvsInBatch(startIndexOfKvIdx uint64) ([]uint64, uint64) {
+	localKvCount, _ := s.summaryLocalKvs()
+	if localKvCount == 0 {
+		s.lg.Info("Scanner: no KV entries found in local storage")
+		return []uint64{}, 0
+	}
+	shards := s.sm.Shards()
+	kvEntries := s.sm.KvEntries()
+	return getKvsInBatch(shards, kvEntries, localKvCount, s.batchSize, startIndexOfKvIdx, s.lg)
+}
+
 func (s *Worker) scanKv(mode scanMode, kvIndex uint64, commit common.Hash, onUpdate scanUpdateFn) {
 	var err error
-	var found bool
 	switch mode {
 	case modeCheckMeta:
 		// Check meta only
-		var metaLocal []byte
-		metaLocal, found, err = s.sm.TryReadMeta(kvIndex)
-		if err != nil {
-			s.lg.Error("Scanner: failed to read meta", "kvIndex", kvIndex, "error", err)
-			errWrapped := fmt.Errorf("failed to read meta: %w", err)
-			onUpdate(scanUpdate{kvIndex: kvIndex, err: errWrapped})
-			return
+		metaLocal, found, readErr := s.sm.TryReadMeta(kvIndex)
+		if metaLocal != nil {
+			err = es.CompareCommits(commit.Bytes(), metaLocal)
+		} else {
+			if readErr != nil {
+				err = fmt.Errorf("failed to read meta: %w", readErr)
+			} else if !found {
+				err = fmt.Errorf("meta not found locally: %x", commit)
+			} else {
+				err = fmt.Errorf("meta is nil")
+			}
 		}
-		err = es.CompareCommits(commit.Bytes(), metaLocal)
+		s.lg.Error("Scanner: failed to read meta", "kvIndex", kvIndex, "error", err)
+
 	case modeCheckBlob:
 		// Query blob and check meta from storage
-		_, found, err = s.sm.TryRead(kvIndex, int(s.sm.MaxKvSize()), commit)
+		_, found, readErr := s.sm.TryRead(kvIndex, int(s.sm.MaxKvSize()), commit)
+		if readErr != nil {
+			s.lg.Error("Scanner: failed to read blob", "kvIndex", kvIndex, "error", readErr)
+			err = readErr
+		} else if !found {
+			err = fmt.Errorf("blob not found locally: %x", commit)
+		}
 	default:
 		// Other modes are handled outside
 		s.lg.Crit("Scanner: invalid scanner mode", "mode", mode)
 	}
-
-	if !found {
-		// The shard is not stored locally
-		errWrapped := fmt.Errorf("shard not found locally: commit=%x", commit)
-		onUpdate(scanUpdate{kvIndex: kvIndex, err: errWrapped})
-		s.lg.Error("Scanner: blob not found locally", "kvIndex", kvIndex, "commit", commit)
+	if err != nil {
+		marker := newScanMarker(kvIndex, onUpdate)
+		var commitErr *es.CommitMismatchError
+		if errors.As(err, &commitErr) {
+			s.lg.Warn("Scanner: commit mismatch detected", "kvIndex", kvIndex, "error", err)
+			marker.markPending()
+			return
+		}
+		marker.markError(commit, fmt.Errorf("unexpected error: %w", err))
 		return
 	}
 
-	if err == nil {
-		// Happy path
-		s.lg.Debug("Scanner: KV check completed successfully", "kvIndex", kvIndex, "commit", commit)
-		return
-	}
-
-	var commitErr *es.CommitMismatchError
-	if errors.As(err, &commitErr) {
-		s.lg.Warn("Scanner: commit mismatch detected", "kvIndex", kvIndex, "error", err)
-		newStatus := pending
-		onUpdate(scanUpdate{kvIndex: kvIndex, status: &newStatus, err: nil})
-		return
-	}
-
-	s.lg.Error("Scanner: unexpected error occurred", "kvIndex", kvIndex, "error", err)
-	errWrapped := fmt.Errorf("unexpected error: %w", err)
-	onUpdate(scanUpdate{kvIndex: kvIndex, err: errWrapped})
+	// Happy path
+	s.lg.Debug("Scanner: KV check completed successfully", "kvIndex", kvIndex, "commit", commit)
 }
 
 func (s *Worker) summaryLocalKvs() (uint64, string) {

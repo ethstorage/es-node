@@ -5,42 +5,34 @@ package scanner
 
 import (
 	"fmt"
-	"maps"
 	"slices"
 	"strings"
+
+	"github.com/ethereum/go-ethereum/common"
 )
 
-type scanErrors map[uint64]error
-
-func (s scanErrors) add(kvIndex uint64, err error) {
-	s[kvIndex] = err
-}
-
-func (s scanErrors) nil(kvIndex uint64) {
-	s[kvIndex] = nil
-}
-
-func (s scanErrors) merge(errs scanErrors) {
-	for k, v := range errs {
-		if v != nil {
-			s[k] = v
-		} else {
-			delete(s, k)
-		}
-	}
+type scanned struct {
+	status
+	err error
 }
 
 type status int
 
 const (
-	pending   status = iota // first-time detected
-	fixed                   // by scanner
-	recovered               // by downloader
-	failed                  // failed to fix
+	ok        status = iota
+	notFound         // not found
+	pending          // first-time detected
+	fixed            // by scanner
+	recovered        // by downloader
+	failed           // failed to fix
 )
 
 func (s status) String() string {
 	switch s {
+	case ok:
+		return "ok"
+	case notFound:
+		return "not_found"
 	case pending:
 		return "pending"
 	case recovered:
@@ -54,9 +46,9 @@ func (s status) String() string {
 	}
 }
 
-type mismatchTracker map[uint64]status
+type scannedKVs map[uint64]scanned
 
-func (m mismatchTracker) String() string {
+func (m scannedKVs) String() string {
 	var items []string
 	keys := make([]uint64, 0, len(m))
 	for k := range m {
@@ -71,29 +63,32 @@ func (m mismatchTracker) String() string {
 	return "[" + strings.Join(items, ",") + "]"
 }
 
+func (m scannedKVs) hasError() bool {
+	for _, scanned := range m {
+		if scanned.err != nil {
+			return true
+		}
+	}
+	return false
+}
+
+func (m scannedKVs) withErrors() map[uint64]error {
+	res := make(map[uint64]error)
+	for kvIndex, scanned := range m {
+		if scanned.err != nil {
+			res[kvIndex] = scanned.err
+		}
+	}
+	return res
+}
+
 // failed() returns all indices that are still mismatched
 // since the first-time do not count as mismatched and the
 // second-time will be fixed immediately if possible
-func (m mismatchTracker) failed() []uint64 {
-	return m.filterByStatus(failed)
-}
-
-// fixed() returns only indices that have been fixed by the scanner
-// add recovered() to get those fixed by downloader
-func (m mismatchTracker) fixed() []uint64 {
-	return m.filterByStatus(fixed)
-}
-
-// recovered() returns indices fixed by downloader from failed status
-// those recovered from pending status are no longer tracked
-func (m mismatchTracker) recovered() []uint64 {
-	return m.filterByStatus(recovered)
-}
-
-func (m mismatchTracker) filterByStatus(s status) []uint64 {
+func (m scannedKVs) failed() []uint64 {
 	var res []uint64
-	for kvIndex, status := range m {
-		if status == s {
+	for kvIndex, scanned := range m {
+		if scanned.status == failed {
 			res = append(res, kvIndex)
 		}
 	}
@@ -101,35 +96,28 @@ func (m mismatchTracker) filterByStatus(s status) []uint64 {
 	return res
 }
 
-func (m mismatchTracker) clone() mismatchTracker {
-	clone := make(mismatchTracker)
-	maps.Copy(clone, m)
-	return clone
-}
-
 type scanLoopState struct {
 	mode      scanMode
 	nextIndex uint64
 }
 
-type stats struct {
-	mismatched mismatchTracker // tracks all mismatched indices and their status
-	errs       scanErrors      // latest scan errors keyed by kv index
-}
+type scanUpdateFn func(kvi uint64, m *scanned)
 
-type scanUpdate struct {
+type scanMarker struct {
 	kvIndex uint64
-	status  *status
-	err     error
+	mark    scanUpdateFn
 }
 
-type scanUpdateFn func(scanUpdate)
+func newScanMarker(kvIndex uint64, fn scanUpdateFn) *scanMarker {
+	return &scanMarker{kvIndex: kvIndex, mark: fn}
+}
 
-func newStats() *stats {
-	return &stats{
-		mismatched: mismatchTracker{},
-		errs:       scanErrors{},
-	}
+func (m *scanMarker) markError(commit common.Hash, err error) {
+	m.mark(m.kvIndex, &scanned{status: notFound, err: err})
+}
+
+func (m *scanMarker) markPending() {
+	m.mark(m.kvIndex, &scanned{status: pending, err: nil})
 }
 
 func shortPrt(nums []uint64) string {

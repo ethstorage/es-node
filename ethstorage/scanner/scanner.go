@@ -27,7 +27,7 @@ type Scanner struct {
 	lg          log.Logger
 	scanPermit  chan struct{} // to ensure only one scan at a time
 	statsMu     sync.Mutex    // protects sharedStats
-	sharedStats stats
+	sharedStats scannedKVs
 }
 
 func New(
@@ -48,7 +48,7 @@ func New(
 		cancel:      cancel,
 		lg:          lg,
 		scanPermit:  make(chan struct{}, 1),
-		sharedStats: *newStats(),
+		sharedStats: scannedKVs{},
 	}
 	scanner.scanPermit <- struct{}{}
 	scanner.wg.Add(1)
@@ -140,39 +140,23 @@ func (s *Scanner) doWork(state *scanLoopState) {
 	if !s.acquireScanPermit() {
 		return
 	}
-	onUpdate := func(u scanUpdate) {
-		s.applyUpdate(u)
-	}
-	err := s.worker.ScanBatch(s.ctx, state, onUpdate)
+	err := s.worker.ScanBatch(s.ctx, state, func(kvi uint64, m *scanned) {
+		s.applyUpdate(kvi, m)
+	})
 	s.releaseScanPermit()
 	if err != nil {
 		s.lg.Error("Scanner: initial scan failed", "mode", state.mode, "error", err)
 	}
 }
 
-func (s *Scanner) applyUpdate(u scanUpdate) {
+func (s *Scanner) applyUpdate(kvi uint64, m *scanned) {
 	s.statsMu.Lock()
 	defer s.statsMu.Unlock()
 
-	if u.status != nil {
-		if s.sharedStats.mismatched == nil {
-			s.sharedStats.mismatched = mismatchTracker{}
-		}
-		s.sharedStats.mismatched[u.kvIndex] = *u.status
-	} else if u.status == nil {
-		delete(s.sharedStats.mismatched, u.kvIndex)
-	}
-
-	if u.err != nil {
-		if s.sharedStats.errs == nil {
-			s.sharedStats.errs = scanErrors{}
-		}
-		s.sharedStats.errs[u.kvIndex] = u.err
-		return
-	}
-	// nil err means clear error state for this kv index
-	if s.sharedStats.errs != nil {
-		delete(s.sharedStats.errs, u.kvIndex)
+	if m != nil {
+		s.sharedStats[kvi] = *m
+	} else {
+		delete(s.sharedStats, kvi)
 	}
 }
 
@@ -214,12 +198,12 @@ func (s *Scanner) startReporter() {
 func (s *Scanner) logStats() {
 	s.statsMu.Lock()
 	var mismatched string
-	if len(s.sharedStats.mismatched) > 0 {
-		mismatched = s.sharedStats.mismatched.String()
+	if len(s.sharedStats) > 0 {
+		mismatched = s.sharedStats.String()
 	}
-	errSnapshot := scanErrors{}
-	if s.sharedStats.errs != nil {
-		maps.Copy(errSnapshot, s.sharedStats.errs)
+	errSnapshot := make(map[uint64]error)
+	if s.sharedStats.hasError() {
+		maps.Copy(errSnapshot, s.sharedStats.withErrors())
 	}
 	s.statsMu.Unlock()
 
@@ -244,8 +228,8 @@ func (s *Scanner) GetScanState() *ScanStats {
 	defer s.statsMu.Unlock()
 
 	return &ScanStats{
-		MismatchedCount: len(s.sharedStats.mismatched),
-		UnfixedCount:    len(s.sharedStats.mismatched.failed()),
+		MismatchedCount: len(s.sharedStats),
+		UnfixedCount:    len(s.sharedStats.failed()),
 	}
 }
 
