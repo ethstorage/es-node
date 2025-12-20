@@ -129,17 +129,13 @@ func (s *Worker) scanKv(mode scanMode, kvIndex uint64, commit common.Hash, onUpd
 				err = fmt.Errorf("failed to read meta: %w", readErr)
 			} else if !found {
 				err = fmt.Errorf("meta not found locally: %x", commit)
-			} else {
-				err = fmt.Errorf("meta is nil")
 			}
 		}
-		s.lg.Error("Scanner: failed to read meta", "kvIndex", kvIndex, "error", err)
-
 	case modeCheckBlob:
 		// Query blob and check meta from storage
 		_, found, readErr := s.sm.TryRead(kvIndex, int(s.sm.MaxKvSize()), commit)
 		if readErr != nil {
-			s.lg.Error("Scanner: failed to read blob", "kvIndex", kvIndex, "error", readErr)
+			// Could be CommitMismatchError
 			err = readErr
 		} else if !found {
 			err = fmt.Errorf("blob not found locally: %x", commit)
@@ -156,6 +152,7 @@ func (s *Worker) scanKv(mode scanMode, kvIndex uint64, commit common.Hash, onUpd
 			marker.markPending()
 			return
 		}
+		s.lg.Error("Scanner: failed to scan KV", "mode", mode, "kvIndex", kvIndex, "error", err)
 		marker.markError(commit, fmt.Errorf("unexpected error: %w", err))
 		return
 	}
