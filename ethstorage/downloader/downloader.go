@@ -388,26 +388,10 @@ func (s *Downloader) downloadRange(start int64, end int64, toCache bool) ([]blob
 			)
 		}
 
-		var clBlobs map[common.Hash]eth.Blob
-		if s.l1Beacon != nil {
-			clBlobs, err = s.l1Beacon.DownloadBlobs(s.l1Beacon.Timestamp2Slot(elBlock.timestamp))
-			if err != nil {
-				s.lg.Error("L1 beacon download blob error", "err", err)
-				return nil, err
-			}
-		} else if s.daClient != nil {
-			var hashes []common.Hash
-			for _, blob := range elBlock.blobs {
-				hashes = append(hashes, blob.hash)
-			}
-
-			clBlobs, err = s.daClient.DownloadBlobs(hashes)
-			if err != nil {
-				s.lg.Error("DA client download blob error", "err", err)
-				return nil, err
-			}
-		} else {
-			return nil, fmt.Errorf("no beacon client or DA client is available")
+		clBlobs, err := s.downloadBlobsWithRetry(elBlock, 3)
+		if err != nil {
+			s.lg.Error("Failed to download blobs for the block after 3 attempts", "block", elBlock.number, "err", err)
+			// Empty CL blob will be handled later in the EL blob loop
 		}
 
 		for _, elBlob := range elBlock.blobs {
@@ -439,6 +423,49 @@ func (s *Downloader) downloadRange(start int64, end int64, toCache bool) ([]blob
 	}
 
 	return blobs, nil
+}
+
+func (s *Downloader) downloadBlobsWithRetry(elBlock *blockBlobs, maxAttempts int) (map[common.Hash]eth.Blob, error) {
+	var lastErr error
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		clBlobs, err := s.downloadBlobs(elBlock)
+		if err == nil {
+			return clBlobs, nil
+		}
+		lastErr = err
+		if attempt < maxAttempts {
+			time.Sleep(3 * time.Second)
+		}
+	}
+	return nil, lastErr
+}
+
+func (s *Downloader) downloadBlobs(elBlock *blockBlobs) (map[common.Hash]eth.Blob, error) {
+	if s.l1Beacon != nil {
+		slot := s.l1Beacon.Timestamp2Slot(elBlock.timestamp)
+		clBlobs, err := s.l1Beacon.DownloadBlobs(slot)
+		if err != nil {
+			s.lg.Error("L1 beacon download blob error", "block", elBlock.number, "slot", slot, "err", err)
+			return nil, err
+		}
+		return clBlobs, nil
+	}
+
+	if s.daClient != nil {
+		hashes := make([]common.Hash, 0, len(elBlock.blobs))
+		for _, b := range elBlock.blobs {
+			hashes = append(hashes, b.hash)
+		}
+
+		clBlobs, err := s.daClient.DownloadBlobs(hashes)
+		if err != nil {
+			s.lg.Error("DA client download blob error", "err", err)
+			return nil, err
+		}
+		return clBlobs, nil
+	}
+
+	return nil, fmt.Errorf("no beacon client or DA client is available")
 }
 
 func (s *Downloader) dumpBlobsIfNeeded(blobs []blob) {
