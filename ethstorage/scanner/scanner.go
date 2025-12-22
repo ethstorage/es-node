@@ -100,6 +100,8 @@ func (s *Scanner) start() {
 		s.lg.Info("Scanner is disabled")
 		return
 	}
+
+	// Launch scan loops for hybrid mode
 	if s.cfg.Mode == modeCheckBlob+modeCheckMeta {
 		s.lg.Info("Scanner running in hybrid mode", "mode", s.cfg.Mode, "metaInterval", s.cfg.IntervalMeta, "blobInterval", s.cfg.IntervalBlob)
 		s.launchScanLoop(&scanLoopState{mode: modeCheckBlob}, s.cfg.IntervalBlob)
@@ -111,6 +113,9 @@ func (s *Scanner) start() {
 		interval = s.cfg.IntervalBlob
 	}
 	s.launchScanLoop(&scanLoopState{mode: s.cfg.Mode}, interval)
+
+	// Launch the fix loop to fix mismatched KVs every 10 minutes
+	s.launchFixLoop(time.Minute * 10)
 }
 
 func (s *Scanner) launchScanLoop(state *scanLoopState, interval time.Duration) {
@@ -135,6 +140,45 @@ func (s *Scanner) launchScanLoop(state *scanLoopState, interval time.Duration) {
 		}
 	}()
 }
+func (s *Scanner) launchFixLoop(interval time.Duration) {
+	s.wg.Add(1)
+	go func() {
+		defer s.wg.Done()
+
+		s.lg.Info("Scanner fix loop started", "interval", interval.String())
+
+		fixTicker := time.NewTicker(interval)
+		defer fixTicker.Stop()
+
+		for {
+			select {
+			case <-fixTicker.C:
+				s.lg.Info("Scanner fix loop triggered")
+
+				if !s.acquireScanPermit() {
+					return
+				}
+				// hold for 3 minutes before fixing to allow possible ongoing kv downloading to finish
+				time.Sleep(time.Minute * 3)
+
+				s.statsMu.Lock()
+				kvIndices := s.sharedStats.needFix()
+				s.statsMu.Unlock()
+
+				err := s.worker.fixBatch(s.ctx, kvIndices, func(kvi uint64, m *scanned) {
+					s.applyUpdate(kvi, m)
+				})
+				s.releaseScanPermit()
+				if err != nil {
+					s.lg.Error("Fix scan batch failed", "error", err)
+				}
+
+			case <-s.ctx.Done():
+				return
+			}
+		}
+	}()
+}
 
 func (s *Scanner) doWork(state *scanLoopState) {
 	if !s.acquireScanPermit() {
@@ -145,7 +189,7 @@ func (s *Scanner) doWork(state *scanLoopState) {
 	})
 	s.releaseScanPermit()
 	if err != nil {
-		s.lg.Error("Scanner: initial scan failed", "mode", state.mode, "error", err)
+		s.lg.Error("Scan batch failed", "mode", state.mode, "error", err)
 	}
 }
 

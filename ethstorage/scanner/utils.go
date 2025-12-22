@@ -19,22 +19,22 @@ type scanned struct {
 type status int
 
 const (
-	ok        status = iota
-	notFound         // not found
-	pending          // first-time detected
-	fixed            // by scanner
-	recovered        // by downloader
-	failed           // failed to fix
+	ok         status = iota
+	err_read          // read meta or blob error / not found
+	mismatched        // mismatch detected
+	fixed             // by scanner
+	recovered         // by downloader
+	failed            // failed to fix
 )
 
 func (s status) String() string {
 	switch s {
 	case ok:
 		return "ok"
-	case notFound:
-		return "not_found"
-	case pending:
-		return "pending"
+	case err_read:
+		return "err_read"
+	case mismatched:
+		return "mismatched"
 	case recovered:
 		return "recovered"
 	case fixed:
@@ -82,13 +82,23 @@ func (m scannedKVs) withErrors() map[uint64]error {
 	return res
 }
 
-// failed() returns all indices that are still mismatched
-// since the first-time do not count as mismatched and the
-// second-time will be fixed immediately if possible
+// failed() returns all kvIndices that are failed to be fixed
 func (m scannedKVs) failed() []uint64 {
 	var res []uint64
 	for kvIndex, scanned := range m {
 		if scanned.status == failed {
+			res = append(res, kvIndex)
+		}
+	}
+	slices.Sort(res)
+	return res
+}
+
+// needFix() returns all kvIndices that need to be fixed or at least check again
+func (m scannedKVs) needFix() []uint64 {
+	var res []uint64
+	for kvIndex, scanned := range m {
+		if scanned.status == mismatched || scanned.status == failed || scanned.err != nil {
 			res = append(res, kvIndex)
 		}
 	}
@@ -113,11 +123,23 @@ func newScanMarker(kvIndex uint64, fn scanUpdateFn) *scanMarker {
 }
 
 func (m *scanMarker) markError(commit common.Hash, err error) {
-	m.mark(m.kvIndex, &scanned{status: notFound, err: err})
+	m.mark(m.kvIndex, &scanned{status: err_read, err: fmt.Errorf("commit: %x, error reading kv: %w", commit, err)})
 }
 
-func (m *scanMarker) markPending() {
-	m.mark(m.kvIndex, &scanned{status: pending, err: nil})
+func (m *scanMarker) markFailed(commit common.Hash, err error) {
+	m.mark(m.kvIndex, &scanned{status: failed, err: fmt.Errorf("commit: %x, error fixing kv: %w", commit, err)})
+}
+
+func (m *scanMarker) markMismatched() {
+	m.mark(m.kvIndex, &scanned{status: mismatched, err: nil})
+}
+
+func (m *scanMarker) markFixed() {
+	m.mark(m.kvIndex, &scanned{status: fixed, err: nil})
+}
+
+func (m *scanMarker) markRecovered() {
+	m.mark(m.kvIndex, &scanned{status: recovered, err: nil})
 }
 
 func shortPrt(nums []uint64) string {
