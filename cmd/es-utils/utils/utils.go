@@ -164,6 +164,7 @@ func SendBlobTx(
 		Blobs:       blobs,
 		Commitments: commitments,
 		Proofs:      proofs,
+		Version:     types.BlobSidecarVersion1, // Use Version1 for cell proofs (Fusaka compatibility)
 	}
 	blobtx := &types.BlobTx{
 		ChainID:    uint256.MustFromBig(chainId),
@@ -234,11 +235,12 @@ func ComputeBlobs(blobs []kzg4844.Blob) ([]kzg4844.Commitment, []kzg4844.Proof, 
 		}
 		commits = append(commits, commit)
 
-		proof, err := kzg4844.ComputeBlobProof(&blob, commit)
+		// Version1: Use cell proofs for Fusaka compatibility
+		cellProofs, err := kzg4844.ComputeCellProofs(&blob)
 		if err != nil {
-			return nil, nil, nil, err
+			return nil, nil, nil, fmt.Errorf("cannot compute KZG cell proofs for blob in tx candidate: %w", err)
 		}
-		proofs = append(proofs, proof)
+		proofs = append(proofs, cellProofs...)
 
 		versionedHashes = append(versionedHashes, kZGToVersionedHash(commit))
 	}
@@ -356,7 +358,7 @@ func UploadBlobs(
 		needEncoding,
 		-1,
 		value,
-		5000000,
+		500000,
 		"",
 		"",
 		"",
