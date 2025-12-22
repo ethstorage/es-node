@@ -4,7 +4,6 @@
 package eth
 
 import (
-	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -13,7 +12,7 @@ import (
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto/kzg4844"
+	"github.com/ethstorage/go-ethstorage/ethstorage/blobs"
 )
 
 type BeaconClient struct {
@@ -25,21 +24,6 @@ type BeaconClient struct {
 type Blob struct {
 	VersionedHash common.Hash
 	Data          []byte
-}
-
-type beaconBlobs struct {
-	Data []beaconBlobData `json:"data"`
-}
-
-type beaconBlobData struct {
-	BlockRoot       string `json:"block_root"`
-	Index           string `json:"index"`
-	Slot            string `json:"slot"`
-	BlockParentRoot string `json:"block_parent_root"`
-	ProposerIndex   string `json:"proposer_index"`
-	Blob            string `json:"blob"`
-	KZGCommitment   string `json:"kzg_commitment"`
-	KZGProof        string `json:"kzg_proof"`
 }
 
 func NewBeaconClient(url string, slotTime uint64) (*BeaconClient, error) {
@@ -87,10 +71,7 @@ func (c *BeaconClient) Timestamp2Slot(time uint64) uint64 {
 }
 
 func (c *BeaconClient) DownloadBlobs(slot uint64) (map[common.Hash]Blob, error) {
-	// TODO: @Qiang There will be a change to the URL schema and a new indices query parameter
-	// We should do the corresponding change when it takes effect, maybe 4844-devnet-6?
-	// The details here: https://github.com/sigp/lighthouse/issues/4317
-	beaconUrl, err := url.JoinPath(c.beaconURL, fmt.Sprintf("eth/v1/beacon/blob_sidecars/%d", slot))
+	beaconUrl, err := url.JoinPath(c.beaconURL, fmt.Sprintf("eth/v1/beacon/blobs/%d", slot))
 	if err != nil {
 		return nil, err
 	}
@@ -100,20 +81,19 @@ func (c *BeaconClient) DownloadBlobs(slot uint64) (map[common.Hash]Blob, error) 
 	}
 	defer resp.Body.Close()
 
-	var blobs beaconBlobs
-	err = json.NewDecoder(resp.Body).Decode(&blobs)
-	if err != nil {
+	var blobsResp blobs.BeaconBlobs
+	if err := json.NewDecoder(resp.Body).Decode(&blobsResp); err != nil {
 		return nil, err
 	}
 
 	res := map[common.Hash]Blob{}
-	for _, beaconBlob := range blobs.Data {
+	for _, beaconBlob := range blobsResp.Data {
 		// decode hex string to bytes
-		asciiBytes, err := hex.DecodeString(beaconBlob.Blob[2:])
+		asciiBytes, err := hex.DecodeString(beaconBlob[2:])
 		if err != nil {
 			return nil, err
 		}
-		hash, err := kzgToVersionedHash(beaconBlob.KZGCommitment)
+		hash, err := blobs.BlobToVersionedHash(asciiBytes)
 		if err != nil {
 			return nil, err
 		}
@@ -121,18 +101,6 @@ func (c *BeaconClient) DownloadBlobs(slot uint64) (map[common.Hash]Blob, error) 
 	}
 
 	return res, nil
-}
-
-func kzgToVersionedHash(commit string) (common.Hash, error) {
-	b, err := hex.DecodeString(commit[2:])
-	if err != nil {
-		return common.Hash{}, err
-	}
-
-	c := [48]byte{}
-	copy(c[:], b[:])
-	cmt := kzg4844.Commitment(c)
-	return common.Hash(kzg4844.CalcBlobHashV1(sha256.New(), &cmt)), nil
 }
 
 func (c *BeaconClient) QueryUrlForV2BeaconBlock(clBlock string) (string, error) {
