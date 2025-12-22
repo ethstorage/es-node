@@ -5,20 +5,18 @@
 1. [Introduction](#introduction)  
 2. [Environment Setup](#environment-setup)  
    2.1. [Tools Installation](#tools-installation)  
-   2.2. [Running a Proxy for the Ethereum Beacon API](#running-a-proxy-for-the-ethereum-beacon-api)  
-   2.3. [Running an es-node with the Archive Service Enabled](#running-an-es-node-with-the-archive-service-enabled)  
-   2.4. [Set Environment Variables](#set-environment-variables)  
+   2.2. [Running an es-node with the Archive Service Enabled](#running-an-es-node-with-the-archive-service-enabled)  
+   2.3. [Set Environment Variables](#set-environment-variables)  
 3. [Testing EthStorage Archive Service](#testing-ethstorage-archive-service)  
    3.1. [Upload a Blob](#upload-a-blob)  
-   3.2. [Query the Blob Info](#query-the-blob-info)  
-   3.3. [Waiting for the Blob Expires on the Beacon](#waiting-for-the-blob-expires-on-the-beacon)  
-   3.4. [Load the Expired Blob from EthStorage](#load-the-expired-blob-from-ethstorage)  
-   3.5. [Verify the Blob](#verify-the-blob)  
+   3.2. [Query the Slot Number](#query-the-slot-number)  
+   3.3. [Query Versioned Hash of the Blob](#query-versioned-hash-of-the-blob)  
+   3.4. [Load and Verify the Blob](#load-and-verify-the-blob)  
 4. [Conclusion](#conclusion)  
 
 ## Introduction
 
-This document outlines the testing strategy and details for the blob archiver service of EthStorage. Its main objective is to verify that the EIP-4844 blobs can be effectively downloaded, stored, and retrieved from EthStorage, even after they have expired and been pruned from the L1 Beacon client.
+This document outlines the testing strategy and details for the blob archiver service of EthStorage. Its main objective is to verify that the EIP-4844 blobs can be effectively downloaded, stored, and retrieved from EthStorage.
 
 ## Environment Setup
 
@@ -26,22 +24,8 @@ This document outlines the testing strategy and details for the blob archiver se
 
 Required tools and installation links:
 
-- eth-blob-uploader (https://www.npmjs.com/package/eth-blob-uploader)
+- ethfs-cli (https://www.npmjs.com/package/ethfs-cli)
 - foundry cast (https://getfoundry.sh/introduction/installation/)
-
-### Running a Proxy for the Ethereum Beacon API
-
-To download and run a proxy for the Beacon client, execute the following commands:
-
-```bash
-git clone https://github.com/ethstorage/beacon-api-wrapper.git
-cd beacon-api-wrapper
-go run cmd/main.go -r 3 -b http://65.108.230.142:3500
-```
-
-This proxy functions like a standard Beacon API, except that it has a much shorter blob retention period - 3 epochs or 96 slots in this case. Consequently, when a `blob_sidecars` request is made for blobs older than this time frame, it will return an empty list: `{"data":[]}`.
-
-Note: The default RPC port for the mocked Beacon API is 3600.
 
 ### Running an es-node with the Archive Service Enabled
 
@@ -68,57 +52,46 @@ Set the following environment variables for later use:
 export RPC_URL="http://65.108.230.142:8545" 
 # Ethereum L1 (Sepolia) Beacon API URL
 export BEACON_API="http://65.108.230.142:3500"
-export BEACON_API_MOCK="http://localhost:3600"
-export ARCHIVE_SERVICE="http://65.109.50.145:9645"
+export ARCHIVE_API="http://65.109.50.145:9645"
 ```
-
 ## Testing EthStorage Archive Service
 
-The overall testing approach involves uploading a file to L1 via a blob transaction, confirming its successful upload by querying the Beacon API and the proxy. After the mocked retention period has elapsed and the blob has "expired," it will no longer be queryable from the proxy, but it can still be retrieved from the EthStorage archive service. Finally, we will verify that the retrieved blob matches the originally uploaded data.
+The overall testing approach involves uploading a file to EthStorage via a blob transaction, capturing the parameters needed to query both the Beacon API and the EthStorage archive API, and then confirming that the blob data returned by both sources matches.
 
 ### Upload a Blob
 
-The `eth-blob-uploader` is a tool designed for uploading EIP-4844 blobs to Ethereum. If you haven't installed it yet, run the following command:
+To upload a local file (`hello.txt`) to the EthStorage testnet as an EIP-4844 blob, use the following command which calls the function `putBlob(bytes32 key, uint256 blobIdx, uint256 length)` of the storage contract deployed on Sepolia:
 
 ```bash
-npm install -g eth-blob-uploader
-```
+ethfs-cli upload \
+    -f hello.txt \
+    -a 0x2351551Ed568f45130eF17cD7118097F7859E03C \
+    -c 11155111 \
+    -p <private_key> \
+    -t blob
 
-To upload a local file (`hello.txt`) to the EthStorage testnet as an EIP-4844 blob, use `eth-blob-uploader` by executing the following command. This command calls the function `putBlob(bytes32 key, uint256 blobIdx, uint256 length)` from the storage contract deployed on Sepolia:
-
-```bash
-eth-blob-uploader -r $RPC_URL \
--p <private-key> \
--f hello.txt \
--t 0xAb3d380A268d088BA21Eb313c1C23F3BEC5cfe93 \
--v 1500000000000000 \
--d 0x4581a9201c8aff950685c2ed4bc3174f3472287b56d9517b9c948127319a09a7a36deac800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000020000
-
-0xa0a9ad94c0c8facf5b4ba7dd1446ede21e4794aa88b7dcc3366134e5e9ebab9b
+0xb82dca74e0c743f013e20867079fac7243c96cbc303cc23d73d443aa01585dad
 ```
 
 Please record the transaction hash for future reference.
 
 Options explained:
 
-- `-r`: Provider URL
-- `-p`: Private key
 - `-f`: File path
-- `-t`: Contract address
-- `-v`: Amount of ETH for storage fee
-- `-d`: Calldata for contract call
+- `-a`: Address of a FlatDictionary contract pre-deployed
+- `-c`: Chain ID
+- `-t`: Upload type: `calldata` or `blob`
+- `-p`: Private key
 
-### Query the Blob Info
+### Query the Slot Number
 
-To find the slot value to be used in the Beacon API, use the following script. It also help to log the KZG commitments of the blobs for verification purpose.
-
-Be sure to replace `$TX_HASH` with the transaction hash obtained in the previous step:
+To find the slot value to be used in the Beacon API, use the following script. Replace `$TX_HASH` with the transaction hash obtained in the previous step:
 
 ```bash
 #!/bin/bash
 
 # Replace the transaction hash with yours
-TX_HASH="0xa0a9ad94c0c8facf5b4ba7dd1446ede21e4794aa88b7dcc3366134e5e9ebab9b"
+TX_HASH="0xb82dca74e0c743f013e20867079fac7243c96cbc303cc23d73d443aa01585dad"
 GENESIS_TIMESTAMP=1655733600
 
 # Get the block number from the transaction
@@ -140,61 +113,36 @@ fi
 # Calculate the slot number
 export SLOT=$(( (TIMESTAMP - GENESIS_TIMESTAMP) / 12 ))
 echo "Slot: $SLOT"
-
-# Load blob info from the Beacon API
-echo "KZG Commitments of blobs in the slot:"
-curl -s "$BEACON_API/eth/v1/beacon/blob_sidecars/$SLOT" | jq -r '.data[].kzg_commitment'
 ```
 
-The output may look like this:
+### Query Versioned Hash of the Blob
 
-```log
-Slot: 6448199
-KZG Commitments of blobs in the slot:
-0x8893c579b22c64b81700a3d781cb78327e16ae687afa276c9cac4b7d9921c78577c0461e223ad3ca6663f6898fdf8e96
-0x8e43d61888613865f5b54a5345b997c830237e116426c7eb779da4bf33ff0e2240fd56a54291607d5c52212f53842f23
-0x8f7dfdaf4565296c533592c7293af91bd6544e5c2e2d011c402c945d4718950ea15ae1c0fc4f241416e5a9ade9ea748e
-0xad7d15db45e493072105f0297fcf4226b1cc54bc4da2fcb491bce31535f5a04d55fd1ed1e728a732189d3dc7cffc8014
+With block explorer, you can find the versioned hash of the blob you just uploaded through this link:
 ```
-
-Now set `$SLOT` as environment variable for blob queries later:
+"https://sepolia.etherscan.io/tx/$TX_HASH#blobs"
+```
+Export the value for later use:
 ```bash
-export SLOT=6448199 # replace the value with yours
+export VERSIONED_HASH=0x0158420bd7b1f3c04a097694235c52659f31b479018ac56b2545727fab33712d
 ```
 
-Also record the KZG commitments for verification later, for one of the KZG Commitments is associated with the blob we just uploaded.
+### Load and Verify the Blob
 
-### Waiting for the Blob Expires on the Beacon
+With the slot number and versioned hash, you can query the blob from the EthStorage archive service even after it is pruned by L1.
+```bash
+curl -s "$ARCHIVE_API/eth/v1/beacon/blobs/$SLOT?versioned_hash=$VERSIONED_HASH"
+```
 
-To check for blobs' availability on the Beacon Chain, using the command:
+Finally, verify that the blob retrieved matches the one obtained from the Beacon Chain:
 
 ```bash
-curl -s "$BEACON_API_MOCK/eth/v1/beacon/blob_sidecars/$SLOT"
-```
 
-After waiting 30 minutes for the blob to expire, the above query should return `{"data":[]}`.
+[ "$(curl -s "$BEACON_API/eth/v1/beacon/blobs/$SLOT?versioned_hash=$VERSIONED_HASH" | jq -r '.data[0]') " \
+ = "$(curl -s "$ARCHIVE_API/eth/v1/beacon/blobs/$SLOT?versioned_hash=$VERSIONED_HASH" | jq -r '.data[0]') " ] && echo "✅ Match" || echo "❌ Mismatch"
+ ```
 
-
-### Load the Expired Blob from EthStorage
-
-Next, query the blob from the EthStorage archive service:
-
-```bash
-curl -s "$ARCHIVE_SERVICE/eth/v1/beacon/blob_sidecars/$SLOT"
-```
-
-This will return the expired blob, including the index, blob data, KZG commitment, and KZG proofs.
-
-### Verify the Blob
-
-Finally, verify that the retrieved KZG commitment matches one of the KZG commitments previously obtained from the Beacon Chain. This confirms that the blob was correctly stored and retrieved from EthStorage after being pruned by L1.
-
-To specifically query the KZG commitment, execute:
-
-```bash
-curl -s "$ARCHIVE_SERVICE/eth/v1/beacon/blob_sidecars/$SLOT" | jq -r '.data[].kzg_commitment'
-```
+This confirms that the blob was correctly stored and retrieved from EthStorage.
 
 ## Conclusion
 
-This document describes a test procedure for storing a blob, retrieving it after expiration from the Beacon Client, and verifying the accuracy of the blob.
+This document describes a test procedure for storing a blob, retrieving it from the Beacon Client, and verifying the accuracy of the blob.
