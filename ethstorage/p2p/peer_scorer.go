@@ -37,7 +37,7 @@ func NewBandScorer(str string) (*BandScoreThresholds, error) {
 		bands: make([]scorePair, 0),
 	}
 
-	for _, band := range strings.Split(str, ";") {
+	for band := range strings.SplitSeq(str, ";") {
 		// Skip empty band strings.
 		band := strings.TrimSpace(band)
 		if band == "" {

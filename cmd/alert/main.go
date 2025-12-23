@@ -115,9 +115,9 @@ func writeHtmlFile(content string, lg log.Logger) {
 }
 
 func addToEmailList(emailList map[string]struct{}, emailToString string) {
-	emails := strings.Split(emailToString, ",")
+	emails := strings.SplitSeq(emailToString, ",")
 
-	for _, email := range emails {
+	for email := range emails {
 		emailList[email] = struct{}{}
 	}
 }
