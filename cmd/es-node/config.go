@@ -15,14 +15,12 @@ import (
 	"github.com/ethstorage/go-ethstorage/ethstorage/archiver"
 	"github.com/ethstorage/go-ethstorage/ethstorage/db"
 	"github.com/ethstorage/go-ethstorage/ethstorage/downloader"
-	"github.com/ethstorage/go-ethstorage/ethstorage/email"
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
 	"github.com/ethstorage/go-ethstorage/ethstorage/flags"
 	"github.com/ethstorage/go-ethstorage/ethstorage/miner"
 	"github.com/ethstorage/go-ethstorage/ethstorage/node"
 	p2pcli "github.com/ethstorage/go-ethstorage/ethstorage/p2p/cli"
 	"github.com/ethstorage/go-ethstorage/ethstorage/scanner"
-	"github.com/ethstorage/go-ethstorage/ethstorage/signer"
 	"github.com/ethstorage/go-ethstorage/ethstorage/storage"
 	"github.com/urfave/cli"
 )
@@ -32,7 +30,6 @@ func NewConfig(ctx *cli.Context, lg log.Logger) (*node.Config, error) {
 	if err := flags.CheckRequired(ctx); err != nil {
 		return nil, err
 	}
-
 	datadir := ctx.GlobalString(flags.DataDir.Name)
 
 	// TODO: blocktime is set to zero, need to update the value
@@ -49,13 +46,14 @@ func NewConfig(ctx *cli.Context, lg log.Logger) (*node.Config, error) {
 	lg.Info("Read L1 config", flags.L1BeaconAddr.Name, l1Endpoint.L1BeaconURL)
 	defer client.Close()
 
-	storageConfig, err := NewStorageConfig(ctx, client, lg)
+	l1Contract := common.HexToAddress(ctx.GlobalString(flags.StorageL1Contract.Name))
+	pClient := eth.NewClient(context.Background(), client, true, l1Contract, 0, nil, lg)
+	storageConfig, err := NewStorageConfig(ctx, pClient, lg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load storage config: %w", err)
 	}
 
-	dlConfig := NewDownloaderConfig(ctx)
-	minerConfig, err := NewMinerConfig(ctx, client, storageConfig.L1Contract, storageConfig.Miner, lg)
+	minerConfig, err := miner.NewMinerConfig(ctx, pClient, storageConfig.Miner, lg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load miner config: %w", err)
 	}
@@ -65,16 +63,15 @@ func NewConfig(ctx *cli.Context, lg log.Logger) (*node.Config, error) {
 		minerConfig.ChainID = chainId
 	}
 	archiverConfig := archiver.NewConfig(ctx)
-	// l2Endpoint, err := NewL2EndpointConfig(ctx, lg)
-	// if err != nil {
-	// 	return nil, fmt.Errorf("failed to load l2 endpoints info: %w", err)
-	// }
 
-	// l2SyncEndpoint := NewL2SyncEndpointConfig(ctx)
 	cfg := &node.Config{
-		L1:         *l1Endpoint,
-		ChainID:    chainId,
-		Downloader: *dlConfig,
+		L1:      *l1Endpoint,
+		ChainID: chainId,
+		Downloader: downloader.Config{
+			DownloadStart:     ctx.GlobalInt64(flags.DownloadStart.Name),
+			DownloadDump:      ctx.GlobalString(flags.DownloadDump.Name),
+			DownloadThreadNum: ctx.GlobalInt(flags.DownloadThreadNum.Name),
+		},
 
 		DataDir:        datadir,
 		StateUploadURL: ctx.GlobalString(flags.StateUploadURL.Name),
@@ -100,11 +97,7 @@ func NewConfig(ctx *cli.Context, lg log.Logger) (*node.Config, error) {
 		P2P: p2pConfig,
 
 		L1EpochPollInterval: ctx.GlobalDuration(flags.L1EpochPollIntervalFlag.Name),
-		// 	Heartbeat: node.HeartbeatConfig{
-		// 		Enabled: ctx.GlobalBool(flags.HeartbeatEnabledFlag.Name),
-		// 		Moniker: ctx.GlobalString(flags.HeartbeatMonikerFlag.Name),
-		// 		URL:     ctx.GlobalString(flags.HeartbeatURLFlag.Name),
-		// 	},
+
 		Storage:  *storageConfig,
 		Mining:   minerConfig,
 		Archiver: archiverConfig,
@@ -116,113 +109,10 @@ func NewConfig(ctx *cli.Context, lg log.Logger) (*node.Config, error) {
 	return cfg, nil
 }
 
-func NewMinerConfig(ctx *cli.Context, client *ethclient.Client, l1Contract, minerAddr common.Address, lg log.Logger) (*miner.Config, error) {
-	cliConfig := miner.ReadCLIConfig(ctx)
-	if !cliConfig.Enabled {
-		lg.Info("Miner is not enabled.")
-		return nil, nil
-	}
-	if minerAddr == (common.Address{}) {
-		return nil, fmt.Errorf("miner address cannot be empty")
-	}
-	lg.Debug("Read mining config from cli", "config", fmt.Sprintf("%+v", cliConfig))
-	err := cliConfig.Check()
-	if err != nil {
-		return nil, fmt.Errorf("invalid miner flags: %w", err)
-	}
-	minerConfig, err := cliConfig.ToMinerConfig()
-	if err != nil {
-		return nil, err
-	}
-	if minerConfig.EmailEnabled {
-		emailConfig, err := email.GetEmailConfig(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get email config: %w", err)
-		}
-		minerConfig.EmailConfig = *emailConfig
-	}
-
-	cctx := context.Background()
-	cr := newContractReader(cctx, client, l1Contract, lg)
-
-	randomChecks, err := cr.readUint("randomChecks")
-	if err != nil {
-		return nil, err
-	}
-	minerConfig.RandomChecks = randomChecks
-	nonceLimit, err := cr.readUint("nonceLimit")
-	if err != nil {
-		return nil, err
-	}
-	minerConfig.NonceLimit = nonceLimit
-	minimumDiff, err := cr.readBig("minimumDiff")
-	if err != nil {
-		return nil, err
-	}
-	minerConfig.MinimumDiff = minimumDiff
-	cutoff, err := cr.readBig("cutoff")
-	if err != nil {
-		return nil, err
-	}
-	minerConfig.Cutoff = cutoff
-	diffAdjDivisor, err := cr.readBig("diffAdjDivisor")
-	if err != nil {
-		return nil, err
-	}
-	minerConfig.DiffAdjDivisor = diffAdjDivisor
-	dcf, err := cr.readBig("dcfFactor")
-	if err != nil {
-		return nil, err
-	}
-	minerConfig.DcfFactor = dcf
-
-	startTime, err := cr.readUint("startTime")
-	if err != nil {
-		return nil, err
-	}
-	minerConfig.StartTime = startTime
-	shardEntryBits, err := cr.readUint("shardEntryBits")
-	if err != nil {
-		return nil, err
-	}
-	minerConfig.ShardEntry = 1 << shardEntryBits
-	treasuryShare, err := cr.readUint("treasuryShare")
-	if err != nil {
-		return nil, err
-	}
-	minerConfig.TreasuryShare = treasuryShare
-	storageCost, err := cr.readBig("storageCost")
-	if err != nil {
-		return nil, err
-	}
-	minerConfig.StorageCost = storageCost
-	prepaidAmount, err := cr.readBig("prepaidAmount")
-	if err != nil {
-		return nil, err
-	}
-	minerConfig.PrepaidAmount = prepaidAmount
-	signerFnFactory, signerAddr, err := NewSignerConfig(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get signer: %w", err)
-	}
-	minerConfig.SignerFnFactory = signerFnFactory
-	minerConfig.SignerAddr = signerAddr
-	return &minerConfig, nil
-}
-
-func NewSignerConfig(ctx *cli.Context) (signer.SignerFactory, common.Address, error) {
-	signerConfig := signer.ReadCLIConfig(ctx)
-	if err := signerConfig.Check(); err != nil {
-		return nil, common.Address{}, fmt.Errorf("invalid siger flags: %w", err)
-	}
-	return signer.SignerFactoryFromConfig(signerConfig)
-}
-
-func NewStorageConfig(ctx *cli.Context, client *ethclient.Client, lg log.Logger) (*storage.StorageConfig, error) {
-	l1Contract := common.HexToAddress(ctx.GlobalString(flags.StorageL1Contract.Name))
+func NewStorageConfig(ctx *cli.Context, pClient *eth.PollingClient, lg log.Logger) (*storage.StorageConfig, error) {
 	miner := common.HexToAddress(ctx.GlobalString(flags.StorageMiner.Name))
-	lg.Info("Loaded storage config", "l1Contract", l1Contract, "miner", miner)
-	storageCfg, err := initStorageConfig(context.Background(), client, l1Contract, miner, lg)
+	lg.Info("Loaded storage config", "l1Contract", pClient.ContractAddress(), "miner", miner)
+	storageCfg, err := pClient.LoadStorageConfigFromContract(miner)
 	if err != nil {
 		lg.Error("Failed to load storage config from contract", "error", err)
 		return nil, err
@@ -252,12 +142,4 @@ func NewL1EndpointConfig(ctx *cli.Context, lg log.Logger) (*eth.L1EndpointConfig
 		DAURL:                        ctx.GlobalString(flags.DAURL.Name),
 		L1MinDurationForBlobsRequest: ctx.GlobalUint64(flags.L1MinDurationForBlobsRequest.Name),
 	}, client, nil
-}
-
-func NewDownloaderConfig(ctx *cli.Context) *downloader.Config {
-	return &downloader.Config{
-		DownloadStart:     ctx.GlobalInt64(flags.DownloadStart.Name),
-		DownloadDump:      ctx.GlobalString(flags.DownloadDump.Name),
-		DownloadThreadNum: ctx.GlobalInt(flags.DownloadThreadNum.Name),
-	}
 }
