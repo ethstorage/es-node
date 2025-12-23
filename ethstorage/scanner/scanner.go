@@ -26,8 +26,8 @@ type Scanner struct {
 	mu          sync.Mutex // protects running
 	lg          log.Logger
 	scanPermit  chan struct{} // to ensure only one scan at a time
-	statsMu     sync.Mutex    // protects sharedStats
 	sharedStats scannedKVs
+	statsMu     sync.Mutex // protects sharedStats
 }
 
 func New(
@@ -35,7 +35,7 @@ func New(
 	cfg Config,
 	sm *es.StorageManager,
 	fetchBlob es.FetchBlobFunc,
-	l1 es.Il1Source,
+	l1 IL1,
 	feed *event.Feed,
 	lg log.Logger,
 ) *Scanner {
@@ -101,38 +101,71 @@ func (s *Scanner) start() {
 		return
 	}
 
-	// Launch scan loops for hybrid mode
 	if s.cfg.Mode == modeCheckBlob+modeCheckMeta {
 		s.lg.Info("Scanner running in hybrid mode", "mode", s.cfg.Mode, "metaInterval", s.cfg.IntervalMeta, "blobInterval", s.cfg.IntervalBlob)
-		s.launchScanLoop(&scanLoopState{mode: modeCheckBlob}, s.cfg.IntervalBlob)
-		s.launchScanLoop(&scanLoopState{mode: modeCheckMeta}, s.cfg.IntervalMeta)
-		return
+		s.launchScanLoop(s.blobScanLoopRuntime())
+		s.launchScanLoop(s.metaScanLoopRuntime())
+	} else {
+		s.lg.Info("Scanner running in single mode", "mode", s.cfg.Mode, "interval", s.cfg.IntervalMeta)
+		s.launchScanLoop(s.defaultScanLoopRuntime())
 	}
+
+	// Launch the scan loop to fix mismatched KVs every 12 minutes
+	s.launchFixLoop(time.Minute * 12)
+
+	// Launch the scan loop for the updated KVs within the last scan interval using blob mode
+	s.launchScanLoop(&scanLoopRuntime{mode: modeCheckBlob, nextBatch: s.worker.latestUpdated, interval: s.cfg.IntervalBlob, batchSize: 7200})
+}
+
+func (s *Scanner) defaultScanLoopRuntime() *scanLoopRuntime {
 	interval := s.cfg.IntervalMeta
 	if s.cfg.Mode == modeCheckBlob {
 		interval = s.cfg.IntervalBlob
 	}
-	s.launchScanLoop(&scanLoopState{mode: s.cfg.Mode}, interval)
-
-	// Launch the fix loop to fix mismatched KVs every 10 minutes
-	s.launchFixLoop(time.Minute * 10)
+	return &scanLoopRuntime{
+		mode:      s.cfg.Mode,
+		nextBatch: s.worker.getKvsInBatch,
+		interval:  interval,
+		batchSize: uint64(s.cfg.BatchSize),
+		nextIndex: 0,
+	}
 }
 
-func (s *Scanner) launchScanLoop(state *scanLoopState, interval time.Duration) {
+func (s *Scanner) blobScanLoopRuntime() *scanLoopRuntime {
+	return &scanLoopRuntime{
+		mode:      modeCheckBlob,
+		nextBatch: s.worker.getKvsInBatch,
+		interval:  s.cfg.IntervalBlob,
+		batchSize: uint64(s.cfg.BatchSize),
+		nextIndex: 0,
+	}
+}
+
+func (s *Scanner) metaScanLoopRuntime() *scanLoopRuntime {
+	return &scanLoopRuntime{
+		mode:      modeCheckMeta,
+		nextBatch: s.worker.getKvsInBatch,
+		interval:  s.cfg.IntervalMeta,
+		batchSize: uint64(s.cfg.BatchSize),
+		nextIndex: 0,
+	}
+}
+
+func (s *Scanner) launchScanLoop(state *scanLoopRuntime) {
 	s.wg.Add(1)
 	go func() {
 		defer s.wg.Done()
 
-		s.lg.Info("Scanner configured", "mode", state.mode, "interval", interval.String(), "batchSize", s.cfg.BatchSize)
+		s.lg.Info("Scanner configured", "mode", state.mode, "interval", state.interval.String(), "batchSize", state.batchSize)
 
-		mainTicker := time.NewTicker(interval)
+		mainTicker := time.NewTicker(state.interval)
 		defer mainTicker.Stop()
 
-		s.doWork(state)
+		s.doScan(state)
 		for {
 			select {
 			case <-mainTicker.C:
-				s.doWork(state)
+				s.doScan(state)
 
 			case <-s.ctx.Done():
 				return
@@ -140,6 +173,20 @@ func (s *Scanner) launchScanLoop(state *scanLoopState, interval time.Duration) {
 		}
 	}()
 }
+
+func (s *Scanner) doScan(state *scanLoopRuntime) {
+	if !s.acquireScanPermit() {
+		return
+	}
+	err := s.worker.scanBatch(s.ctx, state, func(kvi uint64, m *scanned) {
+		s.applyUpdate(kvi, m)
+	})
+	s.releaseScanPermit()
+	if err != nil {
+		s.lg.Error("Scan batch failed", "mode", state.mode, "error", err)
+	}
+}
+
 func (s *Scanner) launchFixLoop(interval time.Duration) {
 	s.wg.Add(1)
 	go func() {
@@ -178,19 +225,6 @@ func (s *Scanner) launchFixLoop(interval time.Duration) {
 			}
 		}
 	}()
-}
-
-func (s *Scanner) doWork(state *scanLoopState) {
-	if !s.acquireScanPermit() {
-		return
-	}
-	err := s.worker.ScanBatch(s.ctx, state, func(kvi uint64, m *scanned) {
-		s.applyUpdate(kvi, m)
-	})
-	s.releaseScanPermit()
-	if err != nil {
-		s.lg.Error("Scan batch failed", "mode", state.mode, "error", err)
-	}
 }
 
 func (s *Scanner) applyUpdate(kvi uint64, m *scanned) {

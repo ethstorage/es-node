@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/big"
 	"strings"
 	"time"
 
@@ -27,18 +28,23 @@ type IStorageManager interface {
 	Shards() []uint64
 }
 
+type IL1 interface {
+	GetKvMetas(kvIndices []uint64, blockNumber int64) ([][32]byte, error)
+	GetUpdatedKvIndices(startBlock, endBlock *big.Int) ([]uint64, error)
+	BlockNumber(context.Context) (uint64, error)
+}
+
 type Worker struct {
 	sm        IStorageManager
 	fetchBlob es.FetchBlobFunc
-	l1        es.Il1Source
-	batchSize uint64
+	l1        IL1
 	lg        log.Logger
 }
 
 func NewWorker(
 	sm IStorageManager,
 	fetch es.FetchBlobFunc,
-	l1 es.Il1Source,
+	l1 IL1,
 	batchSize uint64,
 	lg log.Logger,
 ) *Worker {
@@ -46,12 +52,11 @@ func NewWorker(
 		sm:        sm,
 		fetchBlob: fetch,
 		l1:        l1,
-		batchSize: batchSize,
 		lg:        lg,
 	}
 }
 
-func (s *Worker) ScanBatch(ctx context.Context, state *scanLoopState, onUpdate scanUpdateFn) error {
+func (s *Worker) scanBatch(ctx context.Context, runtime *scanLoopRuntime, onUpdate scanUpdateFn) error {
 	// Noop
 	if onUpdate == nil {
 		onUpdate = func(kvi uint64, m *scanned) {}
@@ -62,22 +67,22 @@ func (s *Worker) ScanBatch(ctx context.Context, state *scanLoopState, onUpdate s
 	defer func(stt time.Time) {
 		if len(kvsInBatch) > 0 {
 			s.lg.Info("Scan batch done",
-				"mode", state.mode,
+				"mode", runtime.mode,
 				"scanned", shortPrt(kvsInBatch),
 				"count", len(kvsInBatch),
-				"nextIndexOfKvIdx", state.nextIndex,
+				"nextIndexOfKvIdx", runtime.nextIndex,
 				"duration", time.Since(stt).String(),
 			)
 		}
 	}(start)
 
 	// Determine the batch of KV indices to scan
-	kvsInBatch, batchEndExclusive := s.getKvsInBatch(state.nextIndex)
+	kvsInBatch, batchEndExclusive := runtime.nextBatch(runtime.batchSize, runtime.nextIndex)
 	if len(kvsInBatch) == 0 {
 		s.lg.Info("No KV entries to scan in this batch")
 		return nil
 	}
-	s.lg.Info("Scan batch started", "mode", state.mode, "startIndexOfKvIdx", state.nextIndex)
+	s.lg.Info("Scan batch started", "mode", runtime.mode, "startIndexOfKvIdx", runtime.nextIndex)
 
 	// Query the metas from the L1 contract
 	metas, err := s.l1.GetKvMetas(kvsInBatch, rpc.FinalizedBlockNumber.Int64())
@@ -97,21 +102,42 @@ func (s *Worker) ScanBatch(ctx context.Context, state *scanLoopState, onUpdate s
 
 		var commit common.Hash
 		copy(commit[:], meta[32-es.HashSizeInContract:32])
-		s.scanKv(state.mode, kvsInBatch[i], commit, onUpdate)
+		s.scanKv(runtime.mode, kvsInBatch[i], commit, onUpdate)
 	}
 
-	state.nextIndex = batchEndExclusive
+	runtime.nextIndex = batchEndExclusive
 	return nil
 }
 
-func (s *Worker) getKvsInBatch(startIndexOfKvIdx uint64) ([]uint64, uint64) {
+func (s *Worker) getKvsInBatch(batchSize uint64, startIndexOfKvIdx uint64) ([]uint64, uint64) {
 	localKvCount, _ := s.summaryLocalKvs()
 	if localKvCount == 0 {
 		return []uint64{}, 0
 	}
 	shards := s.sm.Shards()
 	kvEntries := s.sm.KvEntries()
-	return getKvsInBatch(shards, kvEntries, localKvCount, s.batchSize, startIndexOfKvIdx, s.lg)
+	return getKvsInBatch(shards, kvEntries, localKvCount, batchSize, startIndexOfKvIdx, s.lg)
+}
+
+func (s *Worker) latestUpdated(blocksToScan uint64, lastScannedBlock uint64) ([]uint64, uint64) {
+	var endBlock uint64
+	startBlock := lastScannedBlock + 1
+	latestBlock, err := s.l1.BlockNumber(context.Background())
+	if err != nil {
+		s.lg.Error("Failed to get latest block number", "error", err)
+		return []uint64{}, 0
+	}
+	if startBlock == 1 {
+		s.lg.Info(fmt.Sprintf("No last scanned block recorded, starting from %d blocks ago", blocksToScan))
+		startBlock = latestBlock - blocksToScan
+	}
+	endBlock = latestBlock
+	kvsIndices, err := s.l1.GetUpdatedKvIndices(big.NewInt(int64(startBlock)), big.NewInt(int64(endBlock)))
+	if err != nil {
+		s.lg.Error("Failed to get updated KV indices", "error", err)
+		return []uint64{}, 0
+	}
+	return kvsIndices, endBlock
 }
 
 func (s *Worker) scanKv(mode scanMode, kvIndex uint64, commit common.Hash, onUpdate scanUpdateFn) {

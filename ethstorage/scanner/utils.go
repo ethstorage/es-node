@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -106,12 +107,16 @@ func (m scannedKVs) needFix() []uint64 {
 	return res
 }
 
-type scanLoopState struct {
+type scanLoopRuntime struct {
 	mode      scanMode
+	nextBatch nextBatchFn
+	interval  time.Duration
+	batchSize uint64
 	nextIndex uint64
 }
 
-type scanUpdateFn func(kvi uint64, m *scanned)
+type scanUpdateFn func(uint64, *scanned)
+type nextBatchFn func(uint64, uint64) ([]uint64, uint64)
 
 type scanMarker struct {
 	kvIndex uint64

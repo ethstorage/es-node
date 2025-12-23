@@ -228,6 +228,20 @@ func (w *PollingClient) FilterLogsByBlockRange(start *big.Int, end *big.Int, eve
 	return w.FilterLogs(context.Background(), query)
 }
 
+func (w *PollingClient) GetUpdatedKvIndices(startBlock, endBlock *big.Int) ([]uint64, error) {
+	events, err := w.FilterLogsByBlockRange(startBlock, endBlock, PutBlobEvent)
+	if err != nil {
+		return nil, err
+	}
+	var kvIndices []uint64
+	for _, event := range events {
+		kvIndices = append(kvIndices, new(big.Int).SetBytes(event.Topics[1][:]).Uint64())
+		var hash common.Hash
+		copy(hash[:], event.Topics[3][:])
+	}
+	return kvIndices, nil
+}
+
 func (w *PollingClient) GetStorageKvEntryCount(blockNumber int64) (uint64, error) {
 	h := crypto.Keccak256Hash([]byte(`kvEntryCount()`))
 
