@@ -73,13 +73,14 @@ func (s *Worker) scanBatch(ctx context.Context, runtime *scanLoopRuntime, onUpda
 				"nextIndexOfKvIdx", runtime.nextIndex,
 				"duration", time.Since(stt).String(),
 			)
+		} else {
+			s.lg.Info("Scan batch done", "mode", runtime.mode, "scanned", "(none)")
 		}
 	}(start)
 
 	// Determine the batch of KV indices to scan
 	kvsInBatch, batchEndExclusive := runtime.nextBatch(runtime.batchSize, runtime.nextIndex)
 	if len(kvsInBatch) == 0 {
-		s.lg.Info("No KV entries to scan in this batch")
 		return nil
 	}
 	s.lg.Info("Scan batch started", "mode", runtime.mode, "startIndexOfKvIdx", runtime.nextIndex)
