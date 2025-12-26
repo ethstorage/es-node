@@ -17,6 +17,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/rpc"
 	"golang.org/x/mod/semver"
 )
 
@@ -167,7 +168,7 @@ func (w *PollingClient) pollHeads() {
 			// after the pollRate elapses.
 			head, err := w.queryHeader()
 			if err != nil {
-				w.lg.Info("Error getting latest header", "err", err)
+				w.lg.Warn("Error getting latest header", "err", err)
 				reqPollAfter()
 				continue
 			}
@@ -177,7 +178,7 @@ func (w *PollingClient) pollHeads() {
 				continue
 			}
 
-			w.lg.Trace("Notifying subscribers of new head", "head", head.Hash())
+			w.lg.Trace("Notifying subscribers of new head", "height", head.Number.String(), "head", head.Hash())
 			w.currHead = head
 			w.mtx.RLock()
 			for _, sub := range w.subs {
@@ -195,14 +196,7 @@ func (w *PollingClient) pollHeads() {
 func (w *PollingClient) getLatestHeader() (*types.Header, error) {
 	ctx, cancel := context.WithTimeout(w.ctx, 5*time.Second)
 	defer cancel()
-	latest, err := w.BlockNumber(ctx)
-	if err != nil {
-		w.lg.Error("Failed to get latest block number", "err", err)
-		return nil, err
-	}
-	// The latest blockhash could be empty
-	number := new(big.Int).SetUint64(latest - 1)
-	return w.HeaderByNumber(ctx, number)
+	return w.HeaderByNumber(ctx, big.NewInt(rpc.LatestBlockNumber.Int64()))
 }
 
 func (w *PollingClient) reqPoll() {
