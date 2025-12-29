@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/big"
 	"net/http"
 	"strings"
 	"time"
@@ -149,7 +150,7 @@ func (n *EsNode) initL2(ctx context.Context, cfg *Config) error {
 }
 
 func (n *EsNode) initL1(ctx context.Context, cfg *Config) error {
-	client, err := eth.Dial(cfg.L1.L1NodeAddr, cfg.Storage.L1Contract, cfg.L1.L1BlockTime, n.lg)
+	client, err := eth.Dial(cfg.L1.L1NodeAddr, cfg.Storage.L1Contract, 1, n.lg)
 	if err != nil {
 		return fmt.Errorf("failed to create L1 source: %w", err)
 	}
@@ -168,7 +169,7 @@ func (n *EsNode) initL1(ctx context.Context, cfg *Config) error {
 		return fmt.Errorf("no L1 beacon or DA URL provided")
 	}
 	if cfg.RandaoSourceURL != "" {
-		rc, err := eth.DialRandaoSource(ctx, cfg.RandaoSourceURL, cfg.L1.L1NodeAddr, cfg.L1.L1BlockTime, n.lg)
+		rc, err := eth.DialRandaoSource(ctx, cfg.RandaoSourceURL, cfg.L1.L1NodeAddr, 1, n.lg)
 		if err != nil {
 			return fmt.Errorf("failed to create randao source: %w", err)
 		}
@@ -193,26 +194,26 @@ func (n *EsNode) startL1(cfg *Config) {
 		}
 		n.lg.Error("L1 heads subscription error", "err", err)
 	}()
-
-	// Keep subscribed to the randao heads, which helps miner to get proper random seeds
-	n.randaoHeadsSub = event.ResubscribeErr(time.Second*10, func(ctx context.Context, err error) (event.Subscription, error) {
-		if err != nil {
-			n.lg.Warn("Resubscribing after failed randao head subscription", "err", err)
-		}
-		if n.randaoSource != nil {
-			return eth.WatchHeadChanges(n.resourcesCtx, n.randaoSource, n.OnNewRandaoSourceHead)
-		} else {
-			return eth.WatchHeadChanges(n.resourcesCtx, n.l1Source, n.OnNewRandaoSourceHead)
-		}
-	})
-	go func() {
-		err, ok := <-n.randaoHeadsSub.Err()
-		if !ok {
-			return
-		}
-		n.lg.Error("Randao heads subscription error", "err", err)
-	}()
-
+	if n.miner != nil {
+		// Keep subscribed to the randao heads, which helps miner to get proper random seeds
+		n.randaoHeadsSub = event.ResubscribeErr(time.Second*10, func(ctx context.Context, err error) (event.Subscription, error) {
+			if err != nil {
+				n.lg.Warn("Resubscribing after failed randao head subscription", "err", err)
+			}
+			if n.randaoSource != nil {
+				return eth.WatchHeadChanges(n.resourcesCtx, n.randaoSource, n.OnNewRandaoSourceHead)
+			} else {
+				return eth.WatchHeadChanges(n.resourcesCtx, n.l1Source, n.OnNewL1HeadDelayed)
+			}
+		})
+		go func() {
+			err, ok := <-n.randaoHeadsSub.Err()
+			if !ok {
+				return
+			}
+			n.lg.Error("Randao heads subscription error", "err", err)
+		}()
+	}
 	// Poll for the safe L1 block and finalized block,
 	// which only change once per epoch at most and may be delayed.
 	n.l1SafeSub = eth.PollBlockChanges(n.resourcesCtx, n.lg, n.l1Source, n.OnNewL1Safe, ethRPC.SafeBlockNumber,
@@ -468,6 +469,29 @@ func (n *EsNode) OnNewL1Head(ctx context.Context, sig eth.L1BlockRef) {
 	n.lg.Debug("OnNewL1Head", "blockNumber", sig.Number)
 	if n.downloader != nil {
 		n.downloader.OnNewL1Head(sig)
+	}
+}
+
+func (n *EsNode) OnNewL1HeadDelayed(ctx context.Context, sig eth.L1BlockRef) {
+	if n.miner != nil {
+		// Use the second latest block to mine because blockhash() for the latest could be empty from the contract
+		header, err := n.l1Source.HeaderByNumber(ctx, new(big.Int).SetUint64(sig.Number-1))
+		if err != nil {
+			n.lg.Warn("Failed to get randao source head for miner", "blockNumber", header.Number.Uint64(), "err", err)
+			return
+		}
+		select {
+		case n.miner.ChainHeadCh <- eth.L1BlockRef{
+			Hash:       header.Hash(),
+			Number:     header.Number.Uint64(),
+			ParentHash: header.ParentHash,
+			Time:       header.Time,
+			MixDigest:  header.MixDigest,
+		}:
+			n.lg.Debug("OnNewRandaoSourceHead sent to miner", "blockNumber", header.Number.Uint64())
+		default:
+			// Channel is full, skipping
+		}
 	}
 }
 
