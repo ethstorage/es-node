@@ -302,6 +302,9 @@ func (s *Scanner) logStats() {
 }
 
 func (s *Scanner) GetScanState() *ScanStats {
+	if s == nil {
+		return &ScanStats{}
+	}
 	s.statsMu.Lock()
 	defer s.statsMu.Unlock()
 
