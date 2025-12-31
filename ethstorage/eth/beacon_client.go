@@ -77,13 +77,13 @@ func (c *BeaconClient) DownloadBlobs(slot uint64) (map[common.Hash]Blob, error) 
 	}
 	resp, err := http.Get(beaconUrl)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to query beacon blobs with url %s: %w", beaconUrl, err)
 	}
 	defer resp.Body.Close()
 
 	var blobsResp blobs.BeaconBlobs
 	if err := json.NewDecoder(resp.Body).Decode(&blobsResp); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to decode beacon blobs response from url %s: %w", beaconUrl, err)
 	}
 
 	res := map[common.Hash]Blob{}
@@ -91,11 +91,11 @@ func (c *BeaconClient) DownloadBlobs(slot uint64) (map[common.Hash]Blob, error) 
 		// decode hex string to bytes
 		asciiBytes, err := hex.DecodeString(beaconBlob[2:])
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to decode beacon blob hex string %s: %w", beaconBlob, err)
 		}
 		hash, err := blobs.BlobToVersionedHash(asciiBytes)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to compute versioned hash for blob: %w", err)
 		}
 		res[hash] = Blob{VersionedHash: hash, Data: asciiBytes}
 	}

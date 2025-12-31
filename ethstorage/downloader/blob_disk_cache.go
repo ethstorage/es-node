@@ -68,6 +68,9 @@ func (c *BlobDiskCache) SetBlockBlobs(block *blockBlobs) error {
 	}
 	var blbs []*blob
 	for _, b := range block.blobs {
+		if b.data == nil {
+			continue
+		}
 		kvi := b.kvIndex.Uint64()
 		id, err := c.store.Put(b.data)
 		if err != nil {
