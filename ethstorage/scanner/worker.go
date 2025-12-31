@@ -138,7 +138,21 @@ func (s *Worker) latestUpdated(blocksToScan uint64, lastScannedBlock uint64) ([]
 		s.lg.Error("Failed to get updated KV indices", "error", err)
 		return []uint64{}, 0
 	}
-	return kvsIndices, endBlock
+	// filter out kv indices that are not stored in local storage
+	shardSet := make(map[uint64]struct{})
+	for _, shard := range s.sm.Shards() {
+		shardSet[shard] = struct{}{}
+	}
+	kvEntries := s.sm.KvEntries()
+	var filteredKvs []uint64
+	for _, kvi := range kvsIndices {
+		shardIdx := kvi / kvEntries
+		if _, ok := shardSet[shardIdx]; ok {
+			filteredKvs = append(filteredKvs, kvi)
+		}
+	}
+	s.lg.Info("Latest updated KV indices fetched", "startBlock", startBlock, "endBlock", endBlock, "totalUpdatedKvs", len(kvsIndices), "filteredKvs", len(filteredKvs))
+	return filteredKvs, endBlock
 }
 
 func (s *Worker) scanKv(mode scanMode, kvIndex uint64, commit common.Hash, onUpdate scanUpdateFn) {

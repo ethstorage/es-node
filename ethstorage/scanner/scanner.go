@@ -113,7 +113,7 @@ func (s *Scanner) start() {
 	// Launch the scan loop to fix mismatched KVs every 12 minutes
 	s.launchFixLoop(time.Minute * 12)
 
-	// Launch the scan loop for the updated KVs within the last scan interval using blob mode
+	// Launch the scan loop for the updated KVs within the last scan interval using blob mode TODO: make interval configurable？
 	s.launchScanLoop(&scanLoopRuntime{mode: modeCheckBlob, nextBatch: s.worker.latestUpdated, interval: s.cfg.IntervalBlob, batchSize: 7200})
 }
 
