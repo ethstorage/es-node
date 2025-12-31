@@ -63,6 +63,7 @@ func NewConfig(ctx *cli.Context, lg log.Logger) (*node.Config, error) {
 	lg.Info("Read chain ID of EthStorage network", "chainID", chainId)
 	if minerConfig != nil {
 		minerConfig.ChainID = chainId
+		minerConfig.Slot = l1Endpoint.L1BeaconSlotTime
 	}
 	archiverConfig := archiver.NewConfig(ctx)
 	// l2Endpoint, err := NewL2EndpointConfig(ctx, lg)
