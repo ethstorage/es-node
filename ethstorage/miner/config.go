@@ -17,6 +17,7 @@ import (
 type Config struct {
 	// es network chain id
 	ChainID *big.Int
+	Slot    uint64
 
 	// contract
 	RandomChecks   uint64
