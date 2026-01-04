@@ -54,7 +54,7 @@ func (c EmailConfig) String() string {
 	)
 }
 
-func SendEmail(emailSubject, msg string, config EmailConfig, lg log.Logger) {
+func SendEmail(emailSubject, msg string, config EmailConfig, lg log.Logger) error {
 	lg.Info("Sending email notification", "subject", emailSubject)
 
 	emailBody := fmt.Sprintf("Subject: %s\r\n", emailSubject)
@@ -80,4 +80,5 @@ func SendEmail(emailSubject, msg string, config EmailConfig, lg log.Logger) {
 	} else {
 		lg.Info("Email notification sent successfully!")
 	}
+	return err
 }
