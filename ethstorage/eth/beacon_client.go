@@ -85,7 +85,9 @@ func (c *BeaconClient) DownloadBlobs(slot uint64) (map[common.Hash]Blob, error) 
 	if err := json.NewDecoder(resp.Body).Decode(&blobsResp); err != nil {
 		return nil, fmt.Errorf("failed to decode beacon blobs response from url %s: %w", beaconUrl, err)
 	}
-
+	if len(blobsResp.Data) == 0 {
+		return nil, fmt.Errorf("no blobs found for slot %d: %d %s", slot, blobsResp.Code, blobsResp.Message)
+	}
 	res := map[common.Hash]Blob{}
 	for _, beaconBlob := range blobsResp.Data {
 		// decode hex string to bytes
