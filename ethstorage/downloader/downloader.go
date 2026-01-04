@@ -529,14 +529,10 @@ func (s *Downloader) notifyBlobMissing(blockNumber uint64, kvIndex uint64, hash 
 	msg += "This may indicate a potential issue with blob availability on the consensus layer. \n"
 
 	if s.emailConfig != nil {
-		email.SendEmail(
-			title,
-			msg,
-			*s.emailConfig,
-			s.lg,
-		)
-	} else {
-		s.lg.Error(title)
-		s.lg.Crit(msg)
+		if err := email.SendEmail(title, msg, *s.emailConfig, s.lg); err == nil {
+			return
+		}
 	}
+	s.lg.Error(title)
+	s.lg.Crit(msg)
 }
