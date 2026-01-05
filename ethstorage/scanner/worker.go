@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rpc"
 
@@ -31,7 +32,7 @@ type IStorageManager interface {
 type IL1 interface {
 	GetKvMetas(kvIndices []uint64, blockNumber int64) ([][32]byte, error)
 	GetUpdatedKvIndices(startBlock, endBlock *big.Int) ([]uint64, error)
-	BlockNumber(context.Context) (uint64, error)
+	HeaderByNumber(context.Context, *big.Int) (*types.Header, error)
 }
 
 type Worker struct {
@@ -57,11 +58,6 @@ func NewWorker(
 }
 
 func (s *Worker) scanBatch(ctx context.Context, runtime *scanLoopRuntime, onUpdate scanUpdateFn) error {
-	// Noop
-	if onUpdate == nil {
-		onUpdate = func(kvi uint64, m *scanned) {}
-	}
-
 	start := time.Now()
 	var kvsInBatch []uint64
 	defer func(stt time.Time) {
@@ -73,17 +69,16 @@ func (s *Worker) scanBatch(ctx context.Context, runtime *scanLoopRuntime, onUpda
 				"nextIndexOfKvIdx", runtime.nextIndex,
 				"duration", time.Since(stt).String(),
 			)
-		} else {
-			s.lg.Info("Scan batch done", "mode", runtime.mode, "scanned", "(none)")
 		}
 	}(start)
 
 	// Determine the batch of KV indices to scan
 	kvsInBatch, batchEndExclusive := runtime.nextBatch(runtime.batchSize, runtime.nextIndex)
 	if len(kvsInBatch) == 0 {
+		s.lg.Info("No KV entries to scan in this batch", "mode", runtime.mode)
 		return nil
 	}
-	s.lg.Info("Scan batch started", "mode", runtime.mode, "startIndexOfKvIdx", runtime.nextIndex)
+	s.lg.Info("Scan batch started", "mode", runtime.mode, "startIndexOfKvIdx", runtime.nextIndex, "kvsInBatch", shortPrt(kvsInBatch))
 
 	// Query the metas from the L1 contract
 	metas, err := s.l1.GetKvMetas(kvsInBatch, rpc.FinalizedBlockNumber.Int64())
@@ -101,9 +96,14 @@ func (s *Worker) scanBatch(ctx context.Context, runtime *scanLoopRuntime, onUpda
 		default:
 		}
 
+		mode := runtime.mode
+		if mode == modeCheckBlock {
+			// since we done parsing blob info from block
+			mode = modeCheckBlob
+		}
 		var commit common.Hash
 		copy(commit[:], meta[32-es.HashSizeInContract:32])
-		s.scanKv(runtime.mode, kvsInBatch[i], commit, onUpdate)
+		s.scanKv(mode, kvsInBatch[i], commit, onUpdate)
 	}
 
 	runtime.nextIndex = batchEndExclusive
@@ -121,22 +121,25 @@ func (s *Worker) getKvsInBatch(batchSize uint64, startIndexOfKvIdx uint64) ([]ui
 }
 
 func (s *Worker) latestUpdated(blocksToScan uint64, lastScannedBlock uint64) ([]uint64, uint64) {
-	var endBlock uint64
-	startBlock := lastScannedBlock + 1
-	latestBlock, err := s.l1.BlockNumber(context.Background())
+	latestFinalized, err := s.l1.HeaderByNumber(context.Background(), big.NewInt(int64(rpc.FinalizedBlockNumber)))
 	if err != nil {
-		s.lg.Error("Failed to get latest block number", "error", err)
-		return []uint64{}, 0
+		s.lg.Error("Failed to get latest finalized block header", "error", err)
+		return []uint64{}, lastScannedBlock
 	}
-	if startBlock == 1 {
+	startBlock := lastScannedBlock + 1
+	endBlock := latestFinalized.Number.Uint64()
+	if lastScannedBlock == 0 {
 		s.lg.Info(fmt.Sprintf("No last scanned block recorded, starting from %d blocks ago", blocksToScan))
-		startBlock = latestBlock - blocksToScan
+		startBlock = endBlock - blocksToScan
 	}
-	endBlock = latestBlock
+	if startBlock > endBlock {
+		s.lg.Info("No new finalized blocks to scan", "lastScannedBlock", lastScannedBlock, "latestFinalized", endBlock)
+		return []uint64{}, lastScannedBlock
+	}
 	kvsIndices, err := s.l1.GetUpdatedKvIndices(big.NewInt(int64(startBlock)), big.NewInt(int64(endBlock)))
 	if err != nil {
-		s.lg.Error("Failed to get updated KV indices", "error", err)
-		return []uint64{}, 0
+		s.lg.Error("Failed to get updated KV indices", "startBlock", startBlock, "endBlock", endBlock, "error", err)
+		return []uint64{}, lastScannedBlock
 	}
 	// filter out kv indices that are not stored in local storage
 	shardSet := make(map[uint64]struct{})
@@ -144,15 +147,15 @@ func (s *Worker) latestUpdated(blocksToScan uint64, lastScannedBlock uint64) ([]
 		shardSet[shard] = struct{}{}
 	}
 	kvEntries := s.sm.KvEntries()
-	var filteredKvs []uint64
+	var locallyStored []uint64
 	for _, kvi := range kvsIndices {
 		shardIdx := kvi / kvEntries
 		if _, ok := shardSet[shardIdx]; ok {
-			filteredKvs = append(filteredKvs, kvi)
+			locallyStored = append(locallyStored, kvi)
 		}
 	}
-	s.lg.Info("Latest updated KV indices fetched", "startBlock", startBlock, "endBlock", endBlock, "totalUpdatedKvs", len(kvsIndices), "filteredKvs", len(filteredKvs))
-	return filteredKvs, endBlock
+	s.lg.Info("Latest updated KV indices fetched", "startBlock", startBlock, "endBlock", endBlock, "totalUpdatedKvs", len(kvsIndices), "locallyStored", len(locallyStored))
+	return locallyStored, endBlock
 }
 
 func (s *Worker) scanKv(mode scanMode, kvIndex uint64, commit common.Hash, onUpdate scanUpdateFn) {

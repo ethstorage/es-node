@@ -20,12 +20,12 @@ type scanned struct {
 type status int
 
 const (
-	ok         status = iota
-	err_read          // read meta or blob error / not found
-	mismatched        // mismatch detected
-	fixed             // by scanner
-	recovered         // by downloader
-	failed            // failed to fix
+	ok        status = iota
+	err_read         // read meta or blob error / not found
+	pending          // mismatch detected
+	fixed            // by scanner
+	recovered        // by downloader
+	failed           // failed to fix
 )
 
 func (s status) String() string {
@@ -34,8 +34,8 @@ func (s status) String() string {
 		return "ok"
 	case err_read:
 		return "err_read"
-	case mismatched:
-		return "mismatched"
+	case pending:
+		return "pending"
 	case recovered:
 		return "recovered"
 	case fixed:
@@ -99,7 +99,7 @@ func (m scannedKVs) failed() []uint64 {
 func (m scannedKVs) needFix() []uint64 {
 	var res []uint64
 	for kvIndex, scanned := range m {
-		if scanned.status == mismatched || scanned.status == failed || scanned.err != nil {
+		if scanned.status == pending || scanned.status == failed || scanned.err != nil {
 			res = append(res, kvIndex)
 		}
 	}
@@ -136,7 +136,7 @@ func (m *scanMarker) markFailed(commit common.Hash, err error) {
 }
 
 func (m *scanMarker) markMismatched() {
-	m.mark(m.kvIndex, &scanned{status: mismatched, err: nil})
+	m.mark(m.kvIndex, &scanned{status: pending, err: nil})
 }
 
 func (m *scanMarker) markFixed() {

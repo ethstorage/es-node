@@ -94,39 +94,41 @@ func (s *Scanner) start() {
 	s.running = true
 	s.mu.Unlock()
 
-	s.startReporter()
-
-	if s.cfg.Mode == modeDisabled {
+	switch s.cfg.Mode {
+	case modeDisabled:
 		s.lg.Info("Scanner is disabled")
+		return
+	case modeCheckMeta:
+		s.launchScanLoop(s.metaScanLoopRuntime())
+		s.lg.Info("Scanner started in meta check mode")
+	case modeCheckBlob:
+		s.launchScanLoop(s.blobScanLoopRuntime())
+		s.lg.Info("Scanner started in blob check mode")
+	case modeCheckBlock:
+		// Launch the scan loop for the updated KVs in the latest blocks every 24 hours
+		s.launchScanLoop(s.latestScanLoopRuntime())
+		s.lg.Info("Scanner started in block check mode")
+	case modeHybrid:
+		// hybrid mode
+		s.launchScanLoop(s.metaScanLoopRuntime())
+		s.launchScanLoop(s.latestScanLoopRuntime())
+		s.lg.Info("Scanner started in hybrid mode")
+	default:
+		s.lg.Error("Invalid scanner mode", "mode", s.cfg.Mode)
 		return
 	}
 
-	if s.cfg.Mode == modeCheckBlob+modeCheckMeta {
-		s.lg.Info("Scanner running in hybrid mode", "mode", s.cfg.Mode, "metaInterval", s.cfg.IntervalMeta, "blobInterval", s.cfg.IntervalBlob)
-		s.launchScanLoop(s.blobScanLoopRuntime())
-		s.launchScanLoop(s.metaScanLoopRuntime())
-	} else {
-		s.lg.Info("Scanner running in single mode", "mode", s.cfg.Mode, "interval", s.cfg.IntervalMeta)
-		s.launchScanLoop(s.defaultScanLoopRuntime())
-	}
-
-	// Launch the scan loop to fix mismatched KVs every 12 minutes
+	s.startReporter()
+	// Launch the scan loop to fix mismatched KVs every 12 minutes FIXME: adjust interval?
 	s.launchFixLoop(time.Minute * 12)
-
-	// Launch the scan loop for the updated KVs within the last scan interval using blob mode TODO: make interval configurable？
-	s.launchScanLoop(&scanLoopRuntime{mode: modeCheckBlob, nextBatch: s.worker.latestUpdated, interval: s.cfg.IntervalBlob, batchSize: 7200})
 }
 
-func (s *Scanner) defaultScanLoopRuntime() *scanLoopRuntime {
-	interval := s.cfg.IntervalMeta
-	if s.cfg.Mode == modeCheckBlob {
-		interval = s.cfg.IntervalBlob
-	}
+func (s *Scanner) latestScanLoopRuntime() *scanLoopRuntime {
 	return &scanLoopRuntime{
-		mode:      s.cfg.Mode,
-		nextBatch: s.worker.getKvsInBatch,
-		interval:  interval,
-		batchSize: uint64(s.cfg.BatchSize),
+		mode:      modeCheckBlock,
+		nextBatch: s.worker.latestUpdated,
+		interval:  s.cfg.IntervalBlock,
+		batchSize: 7200, // start back from 7200 blocks (1 day for Ethereum L1) ago
 		nextIndex: 0,
 	}
 }
@@ -156,7 +158,7 @@ func (s *Scanner) launchScanLoop(state *scanLoopRuntime) {
 	go func() {
 		defer s.wg.Done()
 
-		s.lg.Info("Scanner configured", "mode", state.mode, "interval", state.interval.String(), "batchSize", state.batchSize)
+		s.lg.Info("Launching scanner loop", "mode", state.mode, "interval", state.interval.String(), "batchSize", state.batchSize)
 
 		mainTicker := time.NewTicker(state.interval)
 		defer mainTicker.Stop()
@@ -179,7 +181,7 @@ func (s *Scanner) doScan(state *scanLoopRuntime) {
 		return
 	}
 	err := s.worker.scanBatch(s.ctx, state, func(kvi uint64, m *scanned) {
-		s.applyUpdate(kvi, m)
+		s.updateStats(kvi, m)
 	})
 	s.releaseScanPermit()
 	if err != nil {
@@ -192,7 +194,7 @@ func (s *Scanner) launchFixLoop(interval time.Duration) {
 	go func() {
 		defer s.wg.Done()
 
-		s.lg.Info("Scanner fix loop started", "interval", interval.String())
+		s.lg.Info("Launching scan fix loop", "interval", interval.String())
 
 		fixTicker := time.NewTicker(interval)
 		defer fixTicker.Stop()
@@ -200,20 +202,19 @@ func (s *Scanner) launchFixLoop(interval time.Duration) {
 		for {
 			select {
 			case <-fixTicker.C:
-				s.lg.Info("Scanner fix loop triggered")
-
-				if !s.acquireScanPermit() {
-					return
-				}
+				s.lg.Info("Scanner fix batch triggered")
 				// hold for 3 minutes before fixing to allow possible ongoing kv downloading to finish
 				time.Sleep(time.Minute * 3)
-
+				if !s.acquireScanPermit() {
+					s.lg.Warn("Skipping fix scan batch since another scan is ongoing")
+					continue
+				}
 				s.statsMu.Lock()
 				kvIndices := s.sharedStats.needFix()
 				s.statsMu.Unlock()
 
 				err := s.worker.fixBatch(s.ctx, kvIndices, func(kvi uint64, m *scanned) {
-					s.applyUpdate(kvi, m)
+					s.updateStats(kvi, m)
 				})
 				s.releaseScanPermit()
 				if err != nil {
@@ -227,7 +228,7 @@ func (s *Scanner) launchFixLoop(interval time.Duration) {
 	}()
 }
 
-func (s *Scanner) applyUpdate(kvi uint64, m *scanned) {
+func (s *Scanner) updateStats(kvi uint64, m *scanned) {
 	s.statsMu.Lock()
 	defer s.statsMu.Unlock()
 
@@ -259,7 +260,8 @@ func (s *Scanner) startReporter() {
 	go func() {
 		defer s.wg.Done()
 
-		s.logStats()
+		localKvCount, sum := s.worker.summaryLocalKvs()
+		s.lg.Info("Local storage summary", "localKvs", sum, "localKvCount", localKvCount)
 		ticker := time.NewTicker(time.Minute)
 		defer ticker.Stop()
 		for {
@@ -274,8 +276,11 @@ func (s *Scanner) startReporter() {
 }
 
 func (s *Scanner) logStats() {
+	localKvCount, sum := s.worker.summaryLocalKvs()
+	s.lg.Info("Local storage summary", "localKvs", sum, "localKvCount", localKvCount)
+
 	s.statsMu.Lock()
-	var mismatched string
+	mismatched := "(none)"
 	if len(s.sharedStats) > 0 {
 		mismatched = s.sharedStats.String()
 	}
@@ -285,17 +290,7 @@ func (s *Scanner) logStats() {
 	}
 	s.statsMu.Unlock()
 
-	localKvCount, sum := s.worker.summaryLocalKvs()
-	logFields := []any{
-		"mode", s.cfg.Mode,
-		"localKvs", sum,
-		"localKvCount", localKvCount,
-	}
-	if mismatched != "" {
-		logFields = append(logFields, "mismatched", mismatched)
-	}
-	s.lg.Info("Scanner stats", logFields...)
-
+	s.lg.Info("Scanner stats", "mode", s.cfg.Mode, "mismatched", mismatched)
 	for i, e := range errSnapshot {
 		s.lg.Info("Scanner error happened earlier", "kvIndex", i, "error", e)
 	}
