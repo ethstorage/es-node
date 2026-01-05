@@ -54,10 +54,23 @@ func NewConfig(ctx *cli.Context, lg log.Logger) (*node.Config, error) {
 		return nil, fmt.Errorf("failed to load storage config: %w", err)
 	}
 
+	emailConfig, err := email.GetEmailConfig(ctx)
+	if err != nil {
+		lg.Warn("Failed to load email config, email notifications will be disabled.", "error", err)
+	}
 	dlConfig := NewDownloaderConfig(ctx)
+	if emailConfig != nil {
+		dlConfig.EmailConfig = emailConfig
+	}
 	minerConfig, err := NewMinerConfig(ctx, client, storageConfig.L1Contract, storageConfig.Miner, lg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load miner config: %w", err)
+	}
+	if minerConfig != nil && minerConfig.EmailEnabled {
+		if emailConfig == nil {
+			return nil, fmt.Errorf("email config is required by miner but not loaded")
+		}
+		minerConfig.EmailConfig = *emailConfig
 	}
 	chainId := new(big.Int).SetUint64(ctx.GlobalUint64(flags.ChainId.Name))
 	lg.Info("Read chain ID of EthStorage network", "chainID", chainId)
@@ -133,13 +146,6 @@ func NewMinerConfig(ctx *cli.Context, client *ethclient.Client, l1Contract, mine
 	minerConfig, err := cliConfig.ToMinerConfig()
 	if err != nil {
 		return nil, err
-	}
-	if minerConfig.EmailEnabled {
-		emailConfig, err := email.GetEmailConfig(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get email config: %w", err)
-		}
-		minerConfig.EmailConfig = *emailConfig
 	}
 
 	cctx := context.Background()
