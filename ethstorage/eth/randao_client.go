@@ -80,8 +80,7 @@ func (q *RandaoBlockQuerier) getLatestNumber(ctx context.Context) (*big.Int, err
 	if err != nil {
 		return nil, fmt.Errorf("failed to call number() %v", err)
 	}
-	// The latest blockhash could be empty
-	curBlock := new(big.Int).Sub(new(big.Int).SetBytes(ret), common.Big1)
+	curBlock := new(big.Int).SetBytes(ret)
 	q.lg.Debug("Got latest block number by Randao querier", "number", curBlock)
 	return curBlock, nil
 }
