@@ -77,25 +77,31 @@ func (c *BeaconClient) DownloadBlobs(slot uint64) (map[common.Hash]Blob, error) 
 	}
 	resp, err := http.Get(beaconUrl)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to query beacon blobs with url %s: %w", beaconUrl, err)
 	}
 	defer resp.Body.Close()
 
 	var blobsResp blobs.BeaconBlobs
 	if err := json.NewDecoder(resp.Body).Decode(&blobsResp); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to decode beacon blobs response from url %s: %w", beaconUrl, err)
 	}
-
+	if len(blobsResp.Data) == 0 {
+		err := fmt.Sprintf("no blobs found for slot %d", slot)
+		if blobsResp.Code != 0 || blobsResp.Message != "" {
+			err = fmt.Sprintf("%s: %d %s", err, blobsResp.Code, blobsResp.Message)
+		}
+		return nil, fmt.Errorf("%s", err)
+	}
 	res := map[common.Hash]Blob{}
 	for _, beaconBlob := range blobsResp.Data {
 		// decode hex string to bytes
 		asciiBytes, err := hex.DecodeString(beaconBlob[2:])
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to decode beacon blob hex string %s: %w", beaconBlob, err)
 		}
 		hash, err := blobs.BlobToVersionedHash(asciiBytes)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to compute versioned hash for blob: %w", err)
 		}
 		res[hash] = Blob{VersionedHash: hash, Data: asciiBytes}
 	}
