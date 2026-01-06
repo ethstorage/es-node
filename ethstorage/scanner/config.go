@@ -12,14 +12,6 @@ import (
 )
 
 const (
-	modeDisabled = iota
-	modeCheckMeta
-	modeCheckBlob
-	modeCheckBlock
-	modeHybrid
-)
-
-const (
 	ModeFlagName          = "scanner.mode"
 	BatchSizeFlagName     = "scanner.batch-size"
 	IntervalMetaFlagName  = "scanner.interval.meta"
@@ -36,6 +28,17 @@ func scannerEnv(name string) string {
 	return utils.PrefixEnvVar("SCANNER_" + name)
 }
 
+const (
+	modeDisabled = iota
+	// Compare local meta hashes with those in L1 contract
+	modeCheckMeta
+	// Compute meta hashes from local blobs and compare with those in L1 contract
+	modeCheckBlob
+	// Scan updated KVs from recent blocks and run "check-blob" on them
+	modeCheckBlock
+)
+
+// scanMode is an internal per-loop mode used by scan workers (meta/blob/block).
 type scanMode int
 
 func (m scanMode) String() string {
@@ -48,15 +51,48 @@ func (m scanMode) String() string {
 		return "check-blob"
 	case modeCheckBlock:
 		return "check-block"
-	case modeHybrid:
-		return "hybrid"
 	default:
-		panic(fmt.Sprintf("invalid scanner mode: %d", m))
+		return fmt.Sprintf("unknown(%d)", int(m))
 	}
 }
 
+const (
+	modeSetMeta  scanModeSet = 1 << iota // 1
+	modeSetBlob                          // 2
+	modeSetBlock                         // 4
+)
+
+const scanModeSetMask = modeSetMeta | modeSetBlob | modeSetBlock // 7
+
+// scanModeSet is a combination of scanMode values used for configuration purposes.
+type scanModeSet uint8
+
+func (m scanModeSet) String() string {
+	if m == 0 {
+		return "disabled"
+	}
+
+	out := ""
+	if m&modeSetMeta != 0 {
+		out = "check-meta"
+	}
+	if m&modeSetBlob != 0 {
+		if out != "" {
+			out += "+"
+		}
+		out += "check-blob"
+	}
+	if m&modeSetBlock != 0 {
+		if out != "" {
+			out += "+"
+		}
+		out += "check-block"
+	}
+	return out
+}
+
 type Config struct {
-	Mode          scanMode
+	Mode          scanModeSet
 	BatchSize     int
 	L1SlotTime    time.Duration
 	IntervalMeta  time.Duration
@@ -68,7 +104,7 @@ func CLIFlags() []cli.Flag {
 	flags := []cli.Flag{
 		cli.IntFlag{
 			Name:   ModeFlagName,
-			Usage:  "Data scan mode, 0: disabled, 1: check meta, 2: check blob, 3: check block, 4: hybrid",
+			Usage:  "Data scan mode (bitmask) : 0=disabled, 1=meta, 2=blob, 4=block; combinations via sum/OR: 3=meta+blob, 5=meta+block, 6=blob+block, 7=all",
 			EnvVar: scannerEnv("MODE"),
 			Value:  1,
 		},
@@ -101,12 +137,13 @@ func CLIFlags() []cli.Flag {
 }
 
 func NewConfig(ctx *cli.Context, slot uint64) *Config {
-	mode := ctx.GlobalInt(ModeFlagName)
-	if mode == modeDisabled {
+	mode := scanModeSet(ctx.GlobalInt(ModeFlagName)) & scanModeSetMask
+
+	if mode == 0 {
 		return nil
 	}
 	return &Config{
-		Mode:          scanMode(mode),
+		Mode:          mode,
 		BatchSize:     ctx.GlobalInt(BatchSizeFlagName),
 		L1SlotTime:    time.Second * time.Duration(slot),
 		IntervalMeta:  time.Minute * time.Duration(ctx.GlobalInt(IntervalMetaFlagName)),

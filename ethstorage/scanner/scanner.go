@@ -94,29 +94,22 @@ func (s *Scanner) start() {
 	s.running = true
 	s.mu.Unlock()
 
-	switch s.cfg.Mode {
-	case modeDisabled:
+	if s.cfg.Mode == 0 {
 		s.lg.Info("Scanner is disabled")
 		return
-	case modeCheckMeta:
-		s.launchScanLoop(s.metaScanLoopRuntime())
-		s.lg.Info("Scanner started in meta check mode")
-	case modeCheckBlob:
-		s.launchScanLoop(s.blobScanLoopRuntime())
-		s.lg.Info("Scanner started in blob check mode")
-	case modeCheckBlock:
-		// Launch the scan loop for the updated KVs in the latest blocks every 24 hours
-		s.launchScanLoop(s.latestScanLoopRuntime())
-		s.lg.Info("Scanner started in block check mode")
-	case modeHybrid:
-		// hybrid mode
-		s.launchScanLoop(s.metaScanLoopRuntime())
-		s.launchScanLoop(s.latestScanLoopRuntime())
-		s.lg.Info("Scanner started in hybrid mode")
-	default:
-		s.lg.Error("Invalid scanner mode", "mode", s.cfg.Mode)
-		return
 	}
+
+	if s.cfg.Mode&modeSetMeta != 0 {
+		s.launchScanLoop(s.metaScanLoopRuntime())
+	}
+	if s.cfg.Mode&modeSetBlob != 0 {
+		s.launchScanLoop(s.blobScanLoopRuntime())
+	}
+	if s.cfg.Mode&modeSetBlock != 0 {
+		s.launchScanLoop(s.latestScanLoopRuntime())
+	}
+
+	s.lg.Info("Scanner started", "mode", s.cfg.Mode.String())
 
 	s.startReporter()
 	// Launch the scan loop to fix mismatched KVs every 12 minutes FIXME: adjust interval?

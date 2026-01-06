@@ -129,7 +129,7 @@ func (s *Worker) latestUpdated(blocksToScan uint64, lastScannedBlock uint64) ([]
 	startBlock := lastScannedBlock + 1
 	endBlock := latestFinalized.Number.Uint64()
 	if lastScannedBlock == 0 {
-		s.lg.Info(fmt.Sprintf("No last scanned block recorded, starting from %d blocks ago", blocksToScan))
+		s.lg.Info(fmt.Sprintf("No last scanned block recorded, starting from %d slots ago", blocksToScan))
 		startBlock = endBlock - blocksToScan
 	}
 	if startBlock > endBlock {
