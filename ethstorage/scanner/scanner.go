@@ -128,7 +128,7 @@ func (s *Scanner) latestScanLoopRuntime() *scanLoopRuntime {
 		mode:      modeCheckBlock,
 		nextBatch: s.worker.latestUpdated,
 		interval:  s.cfg.IntervalBlock,
-		batchSize: 7200, // start back from 7200 blocks (1 day for Ethereum L1) ago
+		batchSize: uint64(s.cfg.IntervalBlock / s.cfg.L1SlotTime), // number of slots in the interval
 		nextIndex: 0,
 	}
 }
