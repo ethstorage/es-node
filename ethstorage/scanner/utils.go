@@ -140,11 +140,11 @@ func (m *scanMarker) markMismatched() {
 }
 
 func (m *scanMarker) markFixed() {
-	m.mark(m.kvIndex, &scanned{status: fixed, err: nil})
+	m.mark(m.kvIndex, nil)
 }
 
 func (m *scanMarker) markRecovered() {
-	m.mark(m.kvIndex, &scanned{status: recovered, err: nil})
+	m.mark(m.kvIndex, nil)
 }
 
 func shortPrt(nums []uint64) string {

@@ -233,8 +233,13 @@ func (s *Scanner) updateStats(kvi uint64, m *scanned) {
 	defer s.statsMu.Unlock()
 
 	if m != nil {
+		if m.status == pending && s.sharedStats[kvi].status == failed {
+			// keep failed status until fixed
+			return
+		}
 		s.sharedStats[kvi] = *m
 	} else {
+		// fixed or recovered
 		delete(s.sharedStats, kvi)
 	}
 }
