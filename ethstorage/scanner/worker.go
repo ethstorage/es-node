@@ -236,7 +236,9 @@ func (s *Worker) scanAndFixKv(kvIndex uint64, commit common.Hash, onUpdate scanU
 		if errors.As(err, &commitErr) {
 			s.lg.Info("Fixing mismatched KV", "kvIndex", kvIndex)
 			if err := s.sm.TryWriteWithMetaCheck(kvIndex, commit, s.fetchBlob); err != nil {
-				marker.markFailed(commit, fmt.Errorf("failed to fix KV: kvIndex=%d, commit=%x, %w", kvIndex, commit, err))
+				fixErr := fmt.Errorf("failed to fix KV: kvIndex=%d, commit=%x, %w", kvIndex, commit, err)
+				marker.markFailed(commit, fixErr)
+				s.lg.Error("Failed to fix KV", "error", fixErr)
 				return
 			}
 			marker.markFixed()
