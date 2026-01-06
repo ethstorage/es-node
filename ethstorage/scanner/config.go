@@ -58,6 +58,7 @@ func (m scanMode) String() string {
 type Config struct {
 	Mode          scanMode
 	BatchSize     int
+	L1SlotTime    time.Duration
 	IntervalMeta  time.Duration
 	IntervalBlob  time.Duration
 	IntervalBlock time.Duration
@@ -99,7 +100,7 @@ func CLIFlags() []cli.Flag {
 	return flags
 }
 
-func NewConfig(ctx *cli.Context) *Config {
+func NewConfig(ctx *cli.Context, slot uint64) *Config {
 	mode := ctx.GlobalInt(ModeFlagName)
 	if mode == modeDisabled {
 		return nil
@@ -107,6 +108,7 @@ func NewConfig(ctx *cli.Context) *Config {
 	return &Config{
 		Mode:          scanMode(mode),
 		BatchSize:     ctx.GlobalInt(BatchSizeFlagName),
+		L1SlotTime:    time.Second * time.Duration(slot),
 		IntervalMeta:  time.Minute * time.Duration(ctx.GlobalInt(IntervalMetaFlagName)),
 		IntervalBlob:  time.Minute * time.Duration(ctx.GlobalInt(IntervalBlobFlagName)),
 		IntervalBlock: time.Minute * time.Duration(ctx.GlobalInt(IntervalBlockFlagName)),
