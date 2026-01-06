@@ -205,9 +205,9 @@ func (s *Scanner) launchFixLoop(interval time.Duration) {
 				s.lg.Info("Scanner fix batch triggered")
 				// hold for 3 minutes before fixing to allow possible ongoing kv downloading to finish
 				time.Sleep(time.Minute * 3)
+				// hold until other possible ongoing scans finish
 				if !s.acquireScanPermit() {
-					s.lg.Warn("Skipping fix scan batch since another scan is ongoing")
-					continue
+					return
 				}
 				s.statsMu.Lock()
 				kvIndices := s.sharedStats.needFix()
