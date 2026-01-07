@@ -1,10 +1,17 @@
-name: Beacon blob_sidecars healthcheck
+name: Archive Service Healthcheck
+
+env:
+  ACTIONS_RUNNER_DEBUG: true
+  ACTIONS_STEP_DEBUG: true
 
 on:
+  push:
+    branches:
+      - archive_alert/*
   schedule:
     # Every 8 hours (UTC)
     - cron: '0 */8 * * *'
-  workflow_dispatch: {}
+  workflow_dispatch:
 
 jobs:
   check:
