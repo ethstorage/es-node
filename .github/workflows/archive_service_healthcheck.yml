@@ -1,8 +1,8 @@
 name: Archive Service Healthcheck
-
+permissions:
+  contents: read
+  pull-requests: write
 env:
-  ACTIONS_RUNNER_DEBUG: true
-  ACTIONS_STEP_DEBUG: true
   ARCHIVE_BLOB_SIDECARS_URL: https://archive.mainnet.ethstorage.io:9645/eth/v1/beacon/blob_sidecars/13164810?indices=3
   ARCHIVE_BLOB_PREFIX: "0x31000000f000ac44aa0a1981e2"
 
