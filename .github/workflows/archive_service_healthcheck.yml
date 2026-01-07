@@ -23,27 +23,61 @@ jobs:
 
     steps:
       - name: Check blob_sidecars endpoint
+        id: check_endpoint
         shell: bash
         run: |
           set -euo pipefail
 
           url='https://archive.mainnet.ethstorage.io:9645/eth/v1/beacon/blob_sidecars/13164810?indices=3'
+          expected_blob_prefix='0x31000000f000ac44aa0a1981e2'
+
+          resp_file="${RUNNER_TEMP}/blob_sidecars.json"
+
+          write_failure_detail() {
+            local detail="$1"
+            local delim="__FAILURE_DETAIL__"
+            {
+              echo "failure_detail<<${delim}"
+              echo "$detail"
+              echo "${delim}"
+            } >> "$GITHUB_OUTPUT"
+          }
+
+          # Ensure file exists so it can be attached in the failure email.
+          : > "$resp_file"
 
           # Capture status code; use retries/timeouts to reduce flakiness.
           code="$(
             curl --silent --show-error --location \
               --retry 3 --retry-delay 5 --retry-all-errors \
               --connect-timeout 10 --max-time 30 \
-              --output /dev/null --write-out '%{http_code}' \
+              --output "$resp_file" --write-out '%{http_code}' \
               "$url" \
               || echo '000'
           )"
 
           echo "HTTP status: $code"
           if [[ "$code" != "200" ]]; then
-            echo "Expected HTTP 200 but got $code for: $url" >&2
+            detail="HTTP 200 expected but got ${code}\n\nURL:\n${url}"
+            write_failure_detail "$detail"
             exit 1
           fi
+
+          blob="$(jq -r '.data[0].blob // empty' "$resp_file")"
+          if [[ -z "$blob" ]]; then
+            detail="Missing .data[0].blob in response\n\nURL:\n${url}"
+            write_failure_detail "$detail"
+            exit 1
+          fi
+
+          if [[ "$blob" != "${expected_blob_prefix}"* ]]; then
+            detail="Blob prefix mismatch\n\nURL:\n${url}\n\nExpected prefix:\n${expected_blob_prefix}\n\nActual blob starts with:\n${blob:0:${#expected_blob_prefix}}"
+            write_failure_detail "$detail"
+            exit 1
+          fi
+
+          echo "Blob prefix OK"
+          write_failure_detail ""
 
       - name: Decide whether to send daily success email
         id: daily_success
@@ -64,6 +98,9 @@ jobs:
             fi
           fi
 
+          # DEBUG
+          send=true
+          
           echo "Event: ${GITHUB_EVENT_NAME}"
           echo "send=$send" >> "$GITHUB_OUTPUT"
 
@@ -99,12 +136,16 @@ jobs:
           from: ES Archive Service
           to: ${{ secrets.ARCHIVE_SERVICE_EMAIL_TO }}
           subject: "❌ Archive Service FAILED"
+          attachments: ${{ runner.temp }}/blob_sidecars.json
           body: |
-            The scheduled archive service health check failed.
+            The archive service health check failed.
 
-            URL:
-            https://archive.mainnet.ethstorage.io:9645/eth/v1/beacon/blob_sidecars/13164810?indices=3
+            Event: ${{ github.event_name }}
+            URL: https://archive.mainnet.ethstorage.io:9645/eth/v1/beacon/blob_sidecars/13164810?indices=3
 
-            Repo: ${{ github.repository }}
-            Workflow: ${{ github.workflow }}
+            Summary:
+            ${{ steps.check_endpoint.outputs.failure_detail }}
+
+            Full response is attached: blob_sidecars.json
+
             Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
