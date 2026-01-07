@@ -44,12 +44,18 @@ jobs:
 
       - name: Decide whether to send daily success email
         id: daily_success
-        if: ${{ success() && github.event_name == 'schedule' }}
+        if: ${{ success() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') }}
         shell: bash
         run: |
           set -euo pipefail
 
-          # This workflow runs every 8 hours (00/08/16 UTC). Send success email only once per day.
+          # Manual runs: always email on success.
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            echo "send=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Scheduled runs: every 8 hours (00/08/16 UTC). Send success email only once per day.
           hour_utc="$(date -u +%H)"
           if [[ "$hour_utc" == "00" ]]; then
             echo "send=true" >> "$GITHUB_OUTPUT"
