@@ -106,8 +106,8 @@ jobs:
         with:
           server_address: smtp.gmail.com
           server_port: 465
-          username: ${{ secrets.SMTP_USERNAME }}
-          password: ${{ secrets.SMTP_PASSWORD }}
+          username: ${{ secrets.ARCHIVE_SERVICE_SMTP_USERNAME }}
+          password: ${{ secrets.ARCHIVE_SERVICE_SMTP_PASSWORD }}
           from: ES Archive Service
           to: ${{ secrets.ARCHIVE_SERVICE_EMAIL_TO }}
           subject: "✅ Archive Service OK (daily)"
@@ -127,10 +127,10 @@ jobs:
         with:
           server_address: smtp.gmail.com
           server_port: 465
-          username: ${{ secrets.SMTP_USERNAME }}
-          password: ${{ secrets.SMTP_PASSWORD }}
+          username: ${{ secrets.ARCHIVE_SERVICE_SMTP_USERNAME }}
+          password: ${{ secrets.ARCHIVE_SERVICE_SMTP_PASSWORD }}
           from: ES Archive Service
-          to: lundeng@quarkchain.org
+          to: ${{ secrets.ARCHIVE_SERVICE_EMAIL_TO }}
           subject: "❌ Archive Service FAILED"
           attachments: ${{ runner.temp }}/blob_sidecars.json
           body: |
