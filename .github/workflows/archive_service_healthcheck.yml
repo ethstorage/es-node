@@ -4,7 +4,7 @@ env:
   ACTIONS_RUNNER_DEBUG: true
   ACTIONS_STEP_DEBUG: true
   ARCHIVE_BLOB_SIDECARS_URL: https://archive.mainnet.ethstorage.io:9645/eth/v1/beacon/blob_sidecars/13164810?indices=3
-  ARCHIVE_BLOB_PREFIX: 0x31000000f000ac44aa0a1981e2x
+  ARCHIVE_BLOB_PREFIX: 0x31000000f000ac44aa0a1981e2
 
 on:
   schedule:
@@ -84,6 +84,9 @@ jobs:
             fi
           fi
 
+          # Debug
+          send=true
+
           echo "Event: ${GITHUB_EVENT_NAME}"
           echo "send=$send" >> "$GITHUB_OUTPUT"
 
@@ -97,16 +100,12 @@ jobs:
           password: ${{ secrets.ARCHIVE_SERVICE_SMTP_PASSWORD }}
           from: ES Archive Service
           to: ${{ secrets.ARCHIVE_SERVICE_EMAIL_TO }}
-          subject: "✅ Archive Service OK (daily)"
+          subject: "✅ Archive Service OK"
           body: |
             Daily success report: archive service health check passed.
 
             URL:
             ${{ env.ARCHIVE_BLOB_SIDECARS_URL }}
-
-            Repo: ${{ github.repository }}
-            Workflow: ${{ github.workflow }}
-            Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
       - name: Send email on failure
         if: failure()
