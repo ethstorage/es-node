@@ -47,24 +47,25 @@ jobs:
 
       - name: Decide whether to send daily success email
         id: daily_success
-        if: ${{ success() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') }}
         shell: bash
         run: |
           set -euo pipefail
 
+          send=false
+
           # Manual runs: always email on success.
           if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
-            echo "send=true" >> "$GITHUB_OUTPUT"
-            exit 0
+            send=true
+          elif [[ "${GITHUB_EVENT_NAME}" == "schedule" ]]; then
+            # Scheduled runs: every 8 hours (00/08/16 UTC). Send success email only once per day.
+            hour_utc="$(date -u +%H)"
+            if [[ "$hour_utc" == "00" ]]; then
+              send=true
+            fi
           fi
 
-          # Scheduled runs: every 8 hours (00/08/16 UTC). Send success email only once per day.
-          hour_utc="$(date -u +%H)"
-          if [[ "$hour_utc" == "00" ]]; then
-            echo "send=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "send=false" >> "$GITHUB_OUTPUT"
-          fi
+          echo "Event: ${GITHUB_EVENT_NAME}"
+          echo "send=$send" >> "$GITHUB_OUTPUT"
 
       - name: Send daily success email
         if: ${{ success() && steps.daily_success.outputs.send == 'true' }}
