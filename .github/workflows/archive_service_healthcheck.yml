@@ -1,0 +1,93 @@
+name: Beacon blob_sidecars healthcheck
+
+on:
+  schedule:
+    # Every 8 hours (UTC)
+    - cron: '0 */8 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check blob_sidecars endpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          url='https://archive.mainnet.ethstorage.io:9645/eth/v1/beacon/blob_sidecars/13164810?indices=3'
+
+          # Capture status code; use retries/timeouts to reduce flakiness.
+          code="$(
+            curl --silent --show-error --location \
+              --retry 3 --retry-delay 5 --retry-all-errors \
+              --connect-timeout 10 --max-time 30 \
+              --output /dev/null --write-out '%{http_code}' \
+              "$url" \
+              || echo '000'
+          )"
+
+          echo "HTTP status: $code"
+          if [[ "$code" != "200" ]]; then
+            echo "Expected HTTP 200 but got $code for: $url" >&2
+            exit 1
+          fi
+
+      - name: Decide whether to send daily success email
+        id: daily_success
+        if: ${{ success() && github.event_name == 'schedule' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # This workflow runs every 8 hours (00/08/16 UTC). Send success email only once per day.
+          hour_utc="$(date -u +%H)"
+          if [[ "$hour_utc" == "00" ]]; then
+            echo "send=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "send=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Send daily success email
+        if: ${{ success() && steps.daily_success.outputs.send == 'true' }}
+        uses: dawidd6/action-send-mail@v6
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          from: ES Archive Service
+          to: ${{ secrets.ARCHIVE_SERVICE_EMAIL_TO }}
+          subject: "✅ Archive Service OK (daily)"
+          body: |
+            Daily success report: archive service health check passed.
+
+            URL:
+            https://archive.mainnet.ethstorage.io:9645/eth/v1/beacon/blob_sidecars/13164810?indices=3
+
+            Repo: ${{ github.repository }}
+            Workflow: ${{ github.workflow }}
+            Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+      - name: Send email on failure
+        if: failure()
+        uses: dawidd6/action-send-mail@v6
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          from: ES Archive Service
+          to: ${{ secrets.ARCHIVE_SERVICE_EMAIL_TO }}
+          subject: "❌ Archive Service FAILED"
+          body: |
+            The scheduled archive service health check failed.
+
+            URL:
+            https://archive.mainnet.ethstorage.io:9645/eth/v1/beacon/blob_sidecars/13164810?indices=3
+
+            Repo: ${{ github.repository }}
+            Workflow: ${{ github.workflow }}
+            Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
