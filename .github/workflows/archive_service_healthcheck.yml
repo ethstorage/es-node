@@ -47,18 +47,19 @@ jobs:
 
           echo "HTTP status: $code"
           if [[ "$code" != "200" ]]; then
-            echo "HTTP 200 expected but got ${code}" >> $GITHUB_OUTPUT
+            failure_detail="Unexpected HTTP status code: expected 200, got ${code}"
+            echo "failure_detail=$failure_detail" >> $GITHUB_OUTPUT
             exit 1
           fi
 
           blob="$(jq -r '.data[0].blob // empty' "$resp_file")"
           if [[ -z "$blob" ]]; then
-            echo "Missing .data[0].blob in response" >> $GITHUB_OUTPUT
+            echo "failure_detail=Missing .data[0].blob in response" >> $GITHUB_OUTPUT
             exit 1
           fi
 
           if [[ "$blob" != "${expected_blob_prefix}"* ]]; then
-            echo "Blob data mismatch" >> $GITHUB_OUTPUT
+            echo "failure_detail=Blob data mismatch" >> $GITHUB_OUTPUT
             exit 1
           fi
 
