@@ -23,6 +23,7 @@ jobs:
 
     outputs:
       failure_detail: ${{ steps.check_endpoint.outputs.failure_detail }}
+      archive_blob_sidecars_url: ${{ steps.check_endpoint.outputs.archive_blob_sidecars_url }}
       daily_success_send: ${{ steps.daily_success.outputs.send }}
 
     steps:
@@ -34,6 +35,8 @@ jobs:
 
           url='${{ env.ARCHIVE_BLOB_SIDECARS_URL }}'
           expected_blob_prefix='${{ env.ARCHIVE_BLOB_PREFIX }}'
+
+          echo "archive_blob_sidecars_url=$url" >> "$GITHUB_OUTPUT"
 
           resp_file="${RUNNER_TEMP}/blob_sidecars.json"
 
@@ -99,6 +102,7 @@ jobs:
 
     outputs:
       failure_detail: ${{ steps.putblob.outputs.failure_detail }}
+      archive_url: ${{ steps.putblob.outputs.archive_url }}
 
     steps:
       - name: Checkout
@@ -147,7 +151,8 @@ jobs:
           PUTBLOB_RESULT: ${{ needs.check_latest_uploaded_blob.result }}
           BLOB_FAILURE_DETAIL: ${{ needs.check_blob_sidecars_API_for_critical_blob.outputs.failure_detail }}
           PUTBLOB_FAILURE_DETAIL: ${{ needs.check_latest_uploaded_blob.outputs.failure_detail }}
-          ARCHIVE_BLOB_SIDECARS_URL: ${{ env.ARCHIVE_BLOB_SIDECARS_URL }}
+          PUTBLOB_ARCHIVE_URL: ${{ needs.check_latest_uploaded_blob.outputs.archive_url }}
+          ARCHIVE_BLOB_SIDECARS_URL: ${{ needs.check_blob_sidecars_API_for_critical_blob.outputs.archive_blob_sidecars_url }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           set -euo pipefail
@@ -171,13 +176,10 @@ jobs:
           fi
 
           if [[ "$overall" == "OK" ]]; then
-            subject="✅ Archive Service OK"
+            subject="✅ Archive Service Healthcheck OK"
           else
-            subject="❌ Archive Service FAILED"
+            subject="❌ Archive Service Healthcheck FAILED"
           fi
-
-          # Debug
-          send=true
 
           echo "send=$send" >> "$GITHUB_OUTPUT"
           echo "subject=$subject" >> "$GITHUB_OUTPUT"
@@ -195,6 +197,9 @@ jobs:
           fi
           echo >> "$GITHUB_OUTPUT"
           echo "check_latest_uploaded_blob: $PUTBLOB_RESULT" >> "$GITHUB_OUTPUT"
+          if [[ -n "${PUTBLOB_ARCHIVE_URL:-}" ]]; then
+            echo "  Archive URL: $PUTBLOB_ARCHIVE_URL" >> "$GITHUB_OUTPUT"
+          fi
           if [[ -n "${PUTBLOB_FAILURE_DETAIL:-}" ]]; then
             echo "  Failure detail (tail):" >> "$GITHUB_OUTPUT"
             echo "$PUTBLOB_FAILURE_DETAIL" >> "$GITHUB_OUTPUT"

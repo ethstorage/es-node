@@ -124,6 +124,11 @@ echo "  slot:  $slot"
 beacon_url="$BEACON_API/eth/v1/beacon/blobs/$slot?versioned_hashes=${dataHash}"
 archive_url="$ARCHIVE_RPC_URL/eth/v1/beacon/blobs/$slot?versioned_hashes=${dataHash}"
 
+if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
+	echo "beacon_url=$beacon_url" >> "$GITHUB_OUTPUT"
+	echo "archive_url=$archive_url" >> "$GITHUB_OUTPUT"
+fi
+
 echo "Fetching blobs (filtered by versioned_hashes)"
 echo "  beacon:         $beacon_url"
 echo "  archiveService: $archive_url"
