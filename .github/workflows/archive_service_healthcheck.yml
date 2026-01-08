@@ -16,7 +16,7 @@ jobs:
     timeout-minutes: 5
     env:
       ARCHIVE_BLOB_SIDECARS_URL: https://archive.mainnet.ethstorage.io:9645/eth/v1/beacon/blob_sidecars/13164810?indices=3
-      ARCHIVE_BLOB_PREFIX: "0x31000000f000ac44aa0a1981e2"
+      ARCHIVE_BLOB_HASH: "5475d05275aaae328b99a4f4058ac1e121eaa4e4d4d378d292d6130f32d6ede0"
 
     outputs:
       failure_detail: ${{ steps.check_endpoint.outputs.failure_detail }}
@@ -31,7 +31,7 @@ jobs:
           set -euo pipefail
 
           url='${{ env.ARCHIVE_BLOB_SIDECARS_URL }}'
-          expected_blob_prefix='${{ env.ARCHIVE_BLOB_PREFIX }}'
+          expected_blob_hash='${{ env.ARCHIVE_BLOB_HASH }}'
 
           echo "archive_blob_sidecars_url=$url" >> "$GITHUB_OUTPUT"
 
@@ -63,8 +63,15 @@ jobs:
             exit 1
           fi
 
-          if [[ "$blob" != "${expected_blob_prefix}"* ]]; then
-            echo "failure_detail=Blob data mismatch" >> $GITHUB_OUTPUT
+          # Compare by SHA-256 hash.
+          actual_blob_hash="$(printf '%s' "$blob" | sha256sum | awk '{print $1}')"
+          if [[ -z "$actual_blob_hash" ]]; then
+            echo "failure_detail=Failed to compute blob sha256" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+          if [[ "$actual_blob_hash" != "$expected_blob_hash" ]]; then
+            echo "failure_detail=Blob hash mismatch (expected ${expected_blob_hash}, got ${actual_blob_hash})" >> $GITHUB_OUTPUT
             exit 1
           fi
 

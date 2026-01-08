@@ -171,39 +171,21 @@ fi
 # Basic sanity: both responses have `.data` as array
 if [[ "$(jq -r '.data | type' <<<"$beacon_body")" != "array" ]]; then
 	echo "Unexpected beacon /blobs response shape" >&2
-	jq -c . <<<"$beacon_body" >&2 || true
 	exit 1
 fi
 if [[ "$(jq -r '.data | type' <<<"$archive_body")" != "array" ]]; then
 	echo "Unexpected archive service /blobs response shape" >&2
-	jq -c . <<<"$archive_body" >&2 || true
 	exit 1
 fi
 
-beacon_data_norm="$(jq -cS '.data' <<<"$beacon_body")"
-archive_data_norm="$(jq -cS '.data' <<<"$archive_body")"
+# Minimal comparison: hash the full `.data` array JSON and compare.
+beacon_data_hash="$(jq -c '.data' <<<"$beacon_body" | sha256sum)"
+archive_data_hash="$(jq -c '.data' <<<"$archive_body" | sha256sum)"
 
-if [[ "$beacon_data_norm" == "$archive_data_norm" ]]; then
-	echo "OK: beacon .data matches archive service .data"
-	jq -r '.data | length' <<<"$beacon_body" | awk '{print "  blobCount: " $1}'
+if [[ "$beacon_data_hash" == "$archive_data_hash" ]]; then
+	echo "✅ Match"
 	exit 0
 fi
 
-echo "Mismatch: beacon .data differs from archive service .data" >&2
-echo "Beacon URL:          $beacon_url" >&2
-echo "ArchiveService URL:  $archive_url" >&2
-
-beacon_len="$(jq -r '.data | length' <<<"$beacon_body" 2>/dev/null || echo '?')"
-archive_len="$(jq -r '.data | length' <<<"$archive_body" 2>/dev/null || echo '?')"
-echo "beacon data length:  $beacon_len" >&2
-echo "archive data length: $archive_len" >&2
-
-# Compare `.data` contents
-if command -v diff >/dev/null 2>&1; then
-	diff -u \
-		<(jq -S '.data' <<<"$beacon_body") \
-		<(jq -S '.data' <<<"$archive_body") \
-		>&2 || true
-fi
-
+echo "❌ Mismatch" >&2
 exit 1
