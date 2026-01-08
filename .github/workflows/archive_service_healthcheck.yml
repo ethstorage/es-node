@@ -122,14 +122,17 @@ jobs:
         run: |
           set -euo pipefail
           out_file="$(mktemp)"
-          if bash ./integration_tests/scripts/check_latest_blob.sh >"$out_file" 2>&1; then
+          set +e
+          bash ./integration_tests/scripts/check_latest_blob.sh 2>&1 | tee "$out_file"
+          status=${PIPESTATUS[0]}
+          set -e
+          if [[ "$status" == "0" ]]; then
             exit 0
           fi
 
           echo "failure_detail<<EOF" >> "$GITHUB_OUTPUT"
           tail -n 80 "$out_file" >> "$GITHUB_OUTPUT"
           echo "EOF" >> "$GITHUB_OUTPUT"
-          cat "$out_file" >&2
           exit 1
 
   notify:
@@ -180,6 +183,9 @@ jobs:
           else
             subject="❌ Archive Service Healthcheck FAILED"
           fi
+
+          # Debug
+          send=true
 
           echo "send=$send" >> "$GITHUB_OUTPUT"
           echo "subject=$subject" >> "$GITHUB_OUTPUT"
