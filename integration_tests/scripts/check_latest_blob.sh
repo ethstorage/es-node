@@ -36,7 +36,8 @@ echo "Failed to get latest block" >&2
 exit 1
 fi
 
-from_dec=$(( latest_dec > lookback ? latest_dec - lookback : 0 ))
+latest_dec=$((latest_dec - 64))  # adjust to finalized
+from_dec=$((latest_dec - lookback))
 from_hex="$(cast to-hex "$from_dec")"
 to_hex="$(cast to-hex "$latest_dec")"
 
