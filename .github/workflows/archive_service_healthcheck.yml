@@ -184,9 +184,6 @@ jobs:
             subject="❌ Archive Service Healthcheck FAILED"
           fi
 
-          # Debug
-          send=true
-
           echo "send=$send" >> "$GITHUB_OUTPUT"
           echo "subject=$subject" >> "$GITHUB_OUTPUT"
 
