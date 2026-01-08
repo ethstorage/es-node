@@ -8,9 +8,6 @@ on:
     # Every 8 hours (UTC)
     - cron: '0 */8 * * *'
   workflow_dispatch:
-  pull_request:
-    branches:
-      - main
 
 jobs:
   check_blob_sidecars_API_for_critical_blob:
