@@ -121,7 +121,7 @@ func NewConfig(ctx *cli.Context, lg log.Logger) (*node.Config, error) {
 		Storage:  *storageConfig,
 		Mining:   minerConfig,
 		Archiver: archiverConfig,
-		Scanner:  scanner.NewConfig(ctx),
+		Scanner:  scanner.NewConfig(ctx, l1Endpoint.L1BeaconSlotTime),
 	}
 	if err := cfg.Check(); err != nil {
 		return nil, err
