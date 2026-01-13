@@ -212,21 +212,16 @@ func (s *Worker) fixBatch(ctx context.Context, kvIndices []uint64, onUpdate scan
 	s.lg.Debug("Query KV meta done", "kvsInBatch", shortPrt(kvIndices))
 
 	for i, meta := range metas {
-		select {
-		case <-ctx.Done():
-			s.lg.Warn("Scanner canceled, stopping fix batch", "ctx.Err", ctx.Err())
-			return ctx.Err()
-		default:
-		}
 		var commit common.Hash
 		copy(commit[:], meta[32-es.HashSizeInContract:32])
-		s.scanAndFixKv(kvIndices[i], commit, onUpdate)
+		s.fixKv(kvIndices[i], commit, onUpdate)
 	}
 	return nil
 }
 
-func (s *Worker) scanAndFixKv(kvIndex uint64, commit common.Hash, onUpdate scanUpdateFn) {
+func (s *Worker) fixKv(kvIndex uint64, commit common.Hash, onUpdate scanUpdateFn) {
 	marker := newScanMarker(kvIndex, onUpdate)
+	// check blob again before fix
 	_, found, err := s.sm.TryRead(kvIndex, int(s.sm.MaxKvSize()), commit)
 	if !found && err == nil {
 		err = fmt.Errorf("blob not found locally: %x", commit)

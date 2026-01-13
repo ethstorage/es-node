@@ -196,8 +196,6 @@ func (s *Scanner) launchFixLoop(interval time.Duration) {
 			select {
 			case <-fixTicker.C:
 				s.lg.Info("Scanner fix batch triggered")
-				// hold for 3 minutes before fixing to allow possible ongoing kv downloading to finish
-				time.Sleep(time.Minute * 3)
 				// hold until other possible ongoing scans finish
 				if !s.acquireScanPermit() {
 					return
@@ -205,7 +203,7 @@ func (s *Scanner) launchFixLoop(interval time.Duration) {
 				s.statsMu.Lock()
 				kvIndices := s.sharedStats.needFix()
 				s.statsMu.Unlock()
-
+				s.lg.Info("Scanner fixing batch", "mismatches", kvIndices)
 				err := s.worker.fixBatch(s.ctx, kvIndices, func(kvi uint64, m *scanned) {
 					s.updateStats(kvi, m)
 				})
