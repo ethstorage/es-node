@@ -252,7 +252,7 @@ func (s *Worker) summaryLocalKvs() (uint64, string) {
 	kvEntryCountOnChain := s.sm.KvEntryCount()
 	if kvEntryCountOnChain == 0 {
 		s.lg.Info("No KV entries found in local storage")
-		return 0, "(none)"
+		return 0, "[]"
 	}
 	return summaryLocalKvs(s.sm.Shards(), s.sm.KvEntries(), kvEntryCountOnChain-1)
 }

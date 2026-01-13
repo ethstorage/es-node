@@ -276,7 +276,7 @@ func (s *Scanner) logStats() {
 	s.lg.Info("Local storage summary", "localKvs", sum, "localKvCount", localKvCount)
 
 	s.statsMu.Lock()
-	mismatched := "(none)"
+	mismatched := "[]"
 	if len(s.sharedStats) > 0 {
 		mismatched = s.sharedStats.String()
 	}
