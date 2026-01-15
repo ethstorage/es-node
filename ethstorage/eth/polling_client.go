@@ -238,7 +238,7 @@ func (w *PollingClient) GetStorageKvEntryCount(blockNumber int64) (uint64, error
 
 	bs, err := w.Client.CallContract(context.Background(), callMsg, new(big.Int).SetInt64(blockNumber))
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("failed to call kvEntryCount() on block %d: %w", blockNumber, err)
 	}
 
 	uint40Type, _ := abi.NewType("uint40", "", nil)
@@ -248,7 +248,7 @@ func (w *PollingClient) GetStorageKvEntryCount(blockNumber int64) (uint64, error
 	}.UnpackValues(bs)
 
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("failed to unpack kvEntryCount result: %w", err)
 	}
 
 	return res[0].(*big.Int).Uint64(), nil
