@@ -200,7 +200,7 @@ func (s *StorageManager) Reset(newL1 int64) error {
 
 	kvEntryCount, err := s.l1Source.GetStorageKvEntryCount(newL1)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get storage kv entry count: %w", err)
 	}
 	s.kvEntryCount = kvEntryCount
 	s.localL1 = newL1

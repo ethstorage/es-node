@@ -170,6 +170,7 @@ func (s *Downloader) Start() error {
 
 	err = s.sm.Reset(s.lastDownloadBlock)
 	if err != nil {
+		s.lg.Error("ShardManager reset failed", "lastDownloadBlock", s.lastDownloadBlock, "err", err)
 		return err
 	}
 
