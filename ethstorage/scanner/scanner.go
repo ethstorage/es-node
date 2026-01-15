@@ -195,7 +195,6 @@ func (s *Scanner) launchFixLoop(interval time.Duration) {
 		for {
 			select {
 			case <-fixTicker.C:
-				s.lg.Info("Scanner fix batch triggered")
 				// hold until other possible ongoing scans finish
 				if !s.acquireScanPermit() {
 					return
@@ -203,13 +202,13 @@ func (s *Scanner) launchFixLoop(interval time.Duration) {
 				s.statsMu.Lock()
 				kvIndices := s.sharedStats.needFix()
 				s.statsMu.Unlock()
-				s.lg.Info("Scanner fixing batch", "mismatches", kvIndices)
+				s.lg.Info("Scanner fixing batch triggered", "mismatchesToFix", kvIndices)
 				err := s.worker.fixBatch(s.ctx, kvIndices, func(kvi uint64, m *scanned) {
 					s.updateStats(kvi, m)
 				})
 				s.releaseScanPermit()
 				if err != nil {
-					s.lg.Error("Fix scan batch failed", "error", err)
+					s.lg.Error("Fixing batch failed", "error", err)
 				}
 
 			case <-s.ctx.Done():
