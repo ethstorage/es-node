@@ -70,23 +70,23 @@ func (c *BeaconClient) Timestamp2Slot(time uint64) uint64 {
 	return (time - c.genesisSlotTime) / c.slotTime
 }
 
-func (c *BeaconClient) DownloadBlobs(slot uint64) (map[common.Hash]Blob, error) {
-	beaconUrl, err := url.JoinPath(c.beaconURL, fmt.Sprintf("eth/v1/beacon/blobs/%d", slot))
+func (c *BeaconClient) DownloadBlobs(timestamp uint64, hashes []common.Hash) (map[common.Hash]Blob, error) {
+	blobsUrl, err := c.QueryUrlForV1BeaconBlobs(timestamp, hashes)
 	if err != nil {
 		return nil, err
 	}
-	resp, err := http.Get(beaconUrl)
+	resp, err := http.Get(blobsUrl)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query beacon blobs with url %s: %w", beaconUrl, err)
+		return nil, fmt.Errorf("failed to query beacon blobs with url %s: %w", blobsUrl, err)
 	}
 	defer resp.Body.Close()
 
 	var blobsResp blobs.BeaconBlobs
 	if err := json.NewDecoder(resp.Body).Decode(&blobsResp); err != nil {
-		return nil, fmt.Errorf("failed to decode beacon blobs response from url %s: %w", beaconUrl, err)
+		return nil, fmt.Errorf("failed to decode beacon blobs response from url %s: %w", blobsUrl, err)
 	}
 	if len(blobsResp.Data) == 0 {
-		err := fmt.Sprintf("no blobs found for slot %d", slot)
+		err := fmt.Sprintf("no blobs found for url %s", blobsUrl)
 		if blobsResp.Code != 0 || blobsResp.Message != "" {
 			err = fmt.Sprintf("%s: %d %s", err, blobsResp.Code, blobsResp.Message)
 		}
@@ -111,4 +111,17 @@ func (c *BeaconClient) DownloadBlobs(slot uint64) (map[common.Hash]Blob, error) 
 
 func (c *BeaconClient) QueryUrlForV2BeaconBlock(clBlock string) (string, error) {
 	return url.JoinPath(c.beaconURL, fmt.Sprintf("/eth/v2/beacon/blocks/%s", clBlock))
+}
+
+func (c *BeaconClient) QueryUrlForV1BeaconBlobs(timestamp uint64, hashes []common.Hash) (string, error) {
+	slot := c.Timestamp2Slot(timestamp)
+	blobsURL, err := url.JoinPath(c.beaconURL, fmt.Sprintf("eth/v1/beacon/blobs/%d", slot))
+	if err != nil {
+		return "", fmt.Errorf("failed to join URL path for beacon blobs: %w", err)
+	}
+	q := url.Values{}
+	for _, h := range hashes {
+		q.Add("versioned_hash", h.Hex())
+	}
+	return blobsURL + "?" + q.Encode(), nil
 }
