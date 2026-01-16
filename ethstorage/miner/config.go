@@ -57,6 +57,7 @@ var DefaultConfig = Config{
 	Cutoff:         new(big.Int).SetUint64(60),
 	DiffAdjDivisor: new(big.Int).SetUint64(1024),
 
+	Slot:             12,
 	GasPrice:         nil,
 	PriorityGasPrice: nil,
 	ZKeyFile:         filepath.Join("build", "bin", prover.SnarkLib, "zkey", "blob_poseidon2.zkey"),
