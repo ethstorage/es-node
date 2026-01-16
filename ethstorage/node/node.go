@@ -147,7 +147,7 @@ func (n *EsNode) initL2(ctx context.Context, cfg *Config) error {
 }
 
 func (n *EsNode) initL1(ctx context.Context, cfg *Config) error {
-	client, err := eth.Dial(cfg.L1.L1NodeAddr, cfg.Storage.L1Contract, 1, n.lg)
+	client, err := eth.Dial(cfg.L1.L1NodeAddr, cfg.Storage.L1Contract, cfg.L1.L1BlockTime, n.lg)
 	if err != nil {
 		return fmt.Errorf("failed to create L1 source: %w", err)
 	}
@@ -166,7 +166,7 @@ func (n *EsNode) initL1(ctx context.Context, cfg *Config) error {
 		return fmt.Errorf("no L1 beacon or DA URL provided")
 	}
 	if cfg.RandaoSourceURL != "" {
-		rc, err := eth.DialRandaoSource(ctx, cfg.RandaoSourceURL, cfg.L1.L1NodeAddr, 1, n.lg)
+		rc, err := eth.DialRandaoSource(ctx, cfg.RandaoSourceURL, cfg.L1.L1NodeAddr, cfg.L1.L1BlockTime, n.lg)
 		if err != nil {
 			return fmt.Errorf("failed to create randao source: %w", err)
 		}
