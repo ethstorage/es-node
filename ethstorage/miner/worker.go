@@ -26,8 +26,6 @@ import (
 const (
 	chainHeadChanSize        = 1
 	taskQueueSize            = 1
-	resultQueueSize          = 10
-	slot                     = 12 // seconds
 	miningTransactionTimeout = 50 // seconds
 
 	// tx status codes
@@ -428,6 +426,13 @@ func (w *worker) resultLoop() {
 				continue
 			}
 			w.lg.Info("Mining result loop get result", "shard", result.startShardId, "block", result.blockNumber, "nonce", result.nonce)
+
+			// Mining result comes within the same block time window
+			if tillNextSlot := int64(result.timestamp) + int64(w.config.Slot) - time.Now().Unix(); tillNextSlot > 0 {
+				// Wait until next block comes to avoid empty blockhash on gas estimation
+				w.lg.Info("Hold on submitting mining result till block+1", "block", result.blockNumber, "secondsToWait", tillNextSlot)
+				time.Sleep(time.Duration(tillNextSlot) * time.Second)
+			}
 			txHash, err := w.l1API.SubmitMinedResult(
 				context.Background(),
 				w.storageMgr.ContractAddress(),
@@ -633,7 +638,7 @@ func (w *worker) mineTask(t *taskItem) (bool, error) {
 	w.lg.Debug("Mining task started", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonces", fmt.Sprintf("%d~%d", t.nonceStart, t.nonceEnd))
 	for w.isRunning() {
 		// always use new randao to mine for each slot
-		if time.Since(startTime).Seconds() > slot {
+		if time.Since(startTime).Seconds() > float64(w.config.Slot) {
 			if t.thread == 0 {
 				nonceTriedTotal := (nonce - t.nonceStart) * w.config.ThreadsPerShard
 				w.lg.Warn("Mining tasks timed out", "shard", t.shardIdx, "block", t.blockNumber,
