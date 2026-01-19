@@ -5,8 +5,10 @@ permissions:
 
 on:
   schedule:
-    # Every 8 hours (UTC)
-    - cron: '0 */8 * * *'
+    # Every 8 hours (UTC).
+    - cron: '0 0 * * *'
+    - cron: '0 8 * * *'
+    - cron: '0 16 * * *'
   workflow_dispatch:
   push:
     branches:
@@ -24,7 +26,6 @@ jobs:
     outputs:
       failure_detail: ${{ steps.check_endpoint.outputs.failure_detail }}
       archive_blob_sidecars_url: ${{ steps.check_endpoint.outputs.archive_blob_sidecars_url }}
-      daily_success_send: ${{ steps.daily_success.outputs.send }}
 
     steps:
       - name: Check blob_sidecars endpoint
@@ -79,28 +80,6 @@ jobs:
           fi
 
           echo "Blob data OK"
-
-      - name: Decide whether to send daily success email
-        id: daily_success
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          send=false
-
-          # Manual runs: always email on success.
-          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
-            send=true
-          elif [[ "${GITHUB_EVENT_NAME}" == "schedule" ]]; then
-            # Scheduled runs: every 8 hours (00/08/16 UTC). Send success email only once per day.
-            hour_utc="$(date -u +%H)"
-            if [[ "$hour_utc" == "00" ]]; then
-              send=true
-            fi
-          fi
-
-          echo "Event: ${GITHUB_EVENT_NAME}"
-          echo "send=$send" >> "$GITHUB_OUTPUT"
 
   check_latest_uploaded_blob:
     name: Check latest blob with blobs API from Beacon
@@ -157,6 +136,7 @@ jobs:
         shell: bash
         env:
           EVENT_NAME: ${{ github.event_name }}
+          EVENT_SCHEDULE: ${{ github.event.schedule }}
           BLOB_RESULT: ${{ needs.check_blob_sidecars_API_for_critical_blob.result }}
           PUTBLOB_RESULT: ${{ needs.check_latest_uploaded_blob.result }}
           BLOB_FAILURE_DETAIL: ${{ needs.check_blob_sidecars_API_for_critical_blob.outputs.failure_detail }}
@@ -178,12 +158,15 @@ jobs:
             if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
               send=true
             elif [[ "$EVENT_NAME" == "schedule" ]]; then
-              hour_utc="$(date -u +%H)"
-              if [[ "$hour_utc" == "00" ]]; then
+              if [[ "${EVENT_SCHEDULE:-}" == "0 0 * * *" ]]; then
                 send=true
               fi
             fi
           fi
+
+          echo "Event: $EVENT_NAME"
+          echo "Schedule: ${EVENT_SCHEDULE:-}"
+          echo "send=$send"
 
           if [[ "$overall" == "OK" ]]; then
             subject="✅ Archive Service Healthcheck OK"
