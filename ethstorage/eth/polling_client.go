@@ -198,7 +198,6 @@ func (w *PollingClient) getLatestHeader() (*types.Header, error) {
 }
 
 // scheduleNextPoll decides the next poll time based on queryHeader duration and head.Time:
-// - Goal: align the next request to head.Time + pollRate (close to when the next block appears)
 func (w *PollingClient) scheduleNextPoll(head *types.Header, queryDur time.Duration, changed bool) {
 	if w.pollRate == 0 {
 		return
@@ -229,7 +228,6 @@ func (w *PollingClient) scheduleNextPoll(head *types.Header, queryDur time.Durat
 	if delay > w.pollRate {
 		delay = w.pollRate
 	}
-	w.lg.Trace("Scheduled next poll", "delay", delay)
 	time.AfterFunc(delay, w.reqPoll)
 }
 
