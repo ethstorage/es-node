@@ -161,12 +161,12 @@ func (w *PollingClient) pollHeads() {
 
 			if err != nil {
 				w.lg.Info("Error getting latest header", "err", err)
-				w.scheduleNextPoll(nil, queryDur, false)
+				w.scheduleNextPoll(nil, queryDur)
 				continue
 			}
 			if w.currHead != nil && w.currHead.Hash() == head.Hash() {
 				w.lg.Trace("No change in head, skipping notifications")
-				w.scheduleNextPoll(head, queryDur, false)
+				w.scheduleNextPoll(head, queryDur)
 				continue
 			}
 
@@ -183,7 +183,7 @@ func (w *PollingClient) pollHeads() {
 				sub <- head
 			}
 			w.mtx.RUnlock()
-			w.scheduleNextPoll(head, queryDur, true)
+			w.scheduleNextPoll(head, queryDur)
 		case <-w.ctx.Done():
 			w.Client.Close()
 			return
@@ -198,15 +198,12 @@ func (w *PollingClient) getLatestHeader() (*types.Header, error) {
 }
 
 // scheduleNextPoll decides the next poll time based on queryHeader duration and head.Time:
-func (w *PollingClient) scheduleNextPoll(head *types.Header, queryDur time.Duration, changed bool) {
+func (w *PollingClient) scheduleNextPoll(head *types.Header, queryDur time.Duration) {
 	if w.pollRate == 0 {
 		return
 	}
 
-	const (
-		minDelay         = 200 * time.Millisecond
-		minDelayNoChange = 1 * time.Second
-	)
+	const minDelay = 200 * time.Millisecond
 
 	// Retry on failure
 	if head == nil {
@@ -214,20 +211,13 @@ func (w *PollingClient) scheduleNextPoll(head *types.Header, queryDur time.Durat
 		return
 	}
 
-	// Align next poll to headTime + pollRate with a lead time.
-	target := time.Unix(int64(head.Time), 0).Add(w.pollRate).Add(-queryDur + minDelay)
-	delay := time.Until(target)
+	// Align next poll to headTime + pollRate with queryDur+minDelay as network delay estimation.
+	target := time.Unix(int64(head.Time), 0).Add(w.pollRate).Add(queryDur + minDelay)
+	// bound the delay between minDelay and pollRate
+	delay := min(max(time.Until(target), minDelay), w.pollRate)
 
-	if delay < minDelay {
-		if changed {
-			delay = minDelay
-		} else {
-			delay = minDelayNoChange
-		}
-	}
-	if delay > w.pollRate {
-		delay = w.pollRate
-	}
+	w.lg.Trace("Scheduled next poll", "queryDur", queryDur, "delay", delay)
+
 	time.AfterFunc(delay, w.reqPoll)
 }
 
