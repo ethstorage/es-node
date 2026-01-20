@@ -155,23 +155,21 @@ func (w *PollingClient) pollHeads() {
 	for {
 		select {
 		case <-w.pollReqCh:
-			pollStart := time.Now()
 			head, err := w.queryHeader()
-			queryDur := time.Since(pollStart)
 
 			if err != nil {
 				w.lg.Info("Error getting latest header", "err", err)
-				w.scheduleNextPoll(nil, queryDur)
+				w.scheduleNextPoll(nil)
 				continue
 			}
 			if w.currHead != nil && w.currHead.Hash() == head.Hash() {
 				w.lg.Trace("No change in head, skipping notifications")
-				w.scheduleNextPoll(head, queryDur)
+				w.scheduleNextPoll(head)
 				continue
 			}
 
 			headTime := time.Unix(int64(head.Time), 0)
-			w.lg.Trace(
+			w.lg.Warn(
 				"Notifying subscribers of new head",
 				"height", head.Number,
 				"headTime", headTime.Format("15:04:05"),
@@ -183,7 +181,7 @@ func (w *PollingClient) pollHeads() {
 				sub <- head
 			}
 			w.mtx.RUnlock()
-			w.scheduleNextPoll(head, queryDur)
+			w.scheduleNextPoll(head)
 		case <-w.ctx.Done():
 			w.Client.Close()
 			return
@@ -197,12 +195,11 @@ func (w *PollingClient) getLatestHeader() (*types.Header, error) {
 	return w.HeaderByNumber(ctx, big.NewInt(rpc.LatestBlockNumber.Int64()))
 }
 
-// scheduleNextPoll decides the next poll time based on queryHeader duration and head.Time:
-func (w *PollingClient) scheduleNextPoll(head *types.Header, queryDur time.Duration) {
+// scheduleNextPoll decides the next poll time based on next head.Time:
+func (w *PollingClient) scheduleNextPoll(head *types.Header) {
 	if w.pollRate == 0 {
 		return
 	}
-
 	const minDelay = 200 * time.Millisecond
 
 	// Retry on failure
@@ -210,13 +207,14 @@ func (w *PollingClient) scheduleNextPoll(head *types.Header, queryDur time.Durat
 		time.AfterFunc(minDelay, w.reqPoll)
 		return
 	}
-
-	// Align next poll to headTime + pollRate with queryDur+minDelay as network delay estimation.
-	target := time.Unix(int64(head.Time), 0).Add(w.pollRate).Add(queryDur + minDelay)
+	// A heuristic estimation of p2p network delay to balance timely polling and request frequency
+	const heuristicDelay = 700 * time.Millisecond
+	// Align next poll to headTime + pollRate + heuristic p2p network delay.
+	target := time.Unix(int64(head.Time), 0).Add(w.pollRate).Add(heuristicDelay)
 	// bound the delay between minDelay and pollRate
 	delay := min(max(time.Until(target), minDelay), w.pollRate)
 
-	w.lg.Trace("Scheduled next poll", "queryDur", queryDur, "delay", delay)
+	w.lg.Warn("Scheduled next poll", "delay", delay)
 
 	time.AfterFunc(delay, w.reqPoll)
 }
