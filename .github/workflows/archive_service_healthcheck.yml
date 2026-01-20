@@ -6,9 +6,9 @@ permissions:
 on:
   schedule:
     # Every 8 hours (UTC).
-    - cron: '0 0 * * *'
-    - cron: '0 8 * * *'
-    - cron: '0 16 * * *'
+    - cron: '41 1 * * *'
+    - cron: '41 9 * * *'
+    - cron: '41 17 * * *'
   workflow_dispatch:
   push:
     branches:
@@ -158,7 +158,7 @@ jobs:
             if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
               send=true
             elif [[ "$EVENT_NAME" == "schedule" ]]; then
-              if [[ "${EVENT_SCHEDULE:-}" == "0 0 * * *" ]]; then
+              if [[ "${EVENT_SCHEDULE:-}" == "41 17 * * *" ]]; then
                 send=true
               fi
             fi
