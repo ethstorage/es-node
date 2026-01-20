@@ -200,17 +200,16 @@ func (w *PollingClient) scheduleNextPoll(head *types.Header) {
 	if w.pollRate == 0 {
 		return
 	}
-	const minDelay = 200 * time.Millisecond
+	// A heuristic estimation of p2p network delay to balance timely polling and request frequency
+	const minDelay = 700 * time.Millisecond
 
 	// Retry on failure
 	if head == nil {
 		time.AfterFunc(minDelay, w.reqPoll)
 		return
 	}
-	// A heuristic estimation of p2p network delay to balance timely polling and request frequency
-	const heuristicDelay = 700 * time.Millisecond
-	// Align next poll to headTime + pollRate + heuristic p2p network delay.
-	target := time.Unix(int64(head.Time), 0).Add(w.pollRate).Add(heuristicDelay)
+	// Align next poll to headTime + pollRate + slack.
+	target := time.Unix(int64(head.Time), 0).Add(w.pollRate).Add(minDelay)
 	// bound the delay between minDelay and pollRate
 	delay := min(max(time.Until(target), minDelay), w.pollRate)
 
