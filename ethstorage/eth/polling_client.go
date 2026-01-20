@@ -169,7 +169,7 @@ func (w *PollingClient) pollHeads() {
 			}
 
 			headTime := time.Unix(int64(head.Time), 0)
-			w.lg.Warn(
+			w.lg.Trace(
 				"Notifying subscribers of new head",
 				"height", head.Number,
 				"headTime", headTime.Format("15:04:05"),
@@ -201,7 +201,7 @@ func (w *PollingClient) scheduleNextPoll(head *types.Header) {
 		return
 	}
 	// A heuristic estimation of p2p network delay to balance timely polling and request frequency
-	const minDelay = 700 * time.Millisecond
+	const minDelay = 1000 * time.Millisecond
 
 	// Retry on failure
 	if head == nil {
@@ -213,7 +213,7 @@ func (w *PollingClient) scheduleNextPoll(head *types.Header) {
 	// bound the delay between minDelay and pollRate
 	delay := min(max(time.Until(target), minDelay), w.pollRate)
 
-	w.lg.Warn("Scheduled next poll", "delay", delay)
+	w.lg.Trace("Scheduled next poll", "delay", delay)
 
 	time.AfterFunc(delay, w.reqPoll)
 }
