@@ -147,45 +147,41 @@ func (w *PollingClient) SubscribeNewHead(ctx context.Context, ch chan<- *types.H
 }
 
 func (w *PollingClient) pollHeads() {
-	// To prevent polls from stacking up in case HTTP requests
-	// are slow, use a similar model to the driver in which
-	// polls are requested manually after each header is fetched.
-	reqPollAfter := func() {
-		if w.pollRate == 0 {
-			return
-		}
-		time.AfterFunc(w.pollRate, w.reqPoll)
-	}
 
-	reqPollAfter()
+	w.reqPoll()
 
 	defer close(w.closedCh)
 
 	for {
 		select {
 		case <-w.pollReqCh:
-			// We don't need backoff here because we'll just try again
-			// after the pollRate elapses.
 			head, err := w.queryHeader()
+
 			if err != nil {
 				w.lg.Info("Error getting latest header", "err", err)
-				reqPollAfter()
+				w.scheduleNextPoll(nil)
 				continue
 			}
 			if w.currHead != nil && w.currHead.Hash() == head.Hash() {
 				w.lg.Trace("No change in head, skipping notifications")
-				reqPollAfter()
+				w.scheduleNextPoll(head)
 				continue
 			}
 
-			w.lg.Trace("Notifying subscribers of new head", "head", head.Hash())
+			headTime := time.Unix(int64(head.Time), 0)
+			w.lg.Trace(
+				"Notifying subscribers of new head",
+				"height", head.Number,
+				"headTime", headTime.Format("15:04:05"),
+				"head", head.Hash(),
+			)
 			w.currHead = head
 			w.mtx.RLock()
 			for _, sub := range w.subs {
 				sub <- head
 			}
 			w.mtx.RUnlock()
-			reqPollAfter()
+			w.scheduleNextPoll(head)
 		case <-w.ctx.Done():
 			w.Client.Close()
 			return
@@ -199,8 +195,35 @@ func (w *PollingClient) getLatestHeader() (*types.Header, error) {
 	return w.HeaderByNumber(ctx, big.NewInt(rpc.LatestBlockNumber.Int64()))
 }
 
+// scheduleNextPoll decides the next poll time based on next head.Time:
+func (w *PollingClient) scheduleNextPoll(head *types.Header) {
+	if w.pollRate == 0 {
+		return
+	}
+	// A heuristic estimation of p2p network delay to balance timely polling and request frequency
+	const minDelay = 1000 * time.Millisecond
+
+	// Retry on failure
+	if head == nil {
+		time.AfterFunc(minDelay, w.reqPoll)
+		return
+	}
+	// Align next poll to headTime + pollRate + slack.
+	target := time.Unix(int64(head.Time), 0).Add(w.pollRate).Add(minDelay)
+	// bound the delay between minDelay and pollRate
+	delay := min(max(time.Until(target), minDelay), w.pollRate)
+
+	w.lg.Trace("Scheduled next poll", "delay", delay)
+
+	time.AfterFunc(delay, w.reqPoll)
+}
+
 func (w *PollingClient) reqPoll() {
-	w.pollReqCh <- struct{}{}
+	// non-blocking send
+	select {
+	case w.pollReqCh <- struct{}{}:
+	default:
+	}
 }
 
 func (w *PollingClient) FilterLogsByBlockRange(start *big.Int, end *big.Int, eventSig string) ([]types.Log, error) {
