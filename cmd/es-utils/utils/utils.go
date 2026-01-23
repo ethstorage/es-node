@@ -186,6 +186,7 @@ func SendBlobTx(
 	for i := 0; i <= maxRetries; i++ {
 		errRetry = client.SendTransaction(context.Background(), tx)
 		if errRetry == nil {
+			lg.Info("SendTransaction succeeded", "txHash", tx.Hash())
 			break
 		}
 		lg.Warn("SendTransaction failed", "retriesLeft", maxRetries-i, "error", errRetry)
