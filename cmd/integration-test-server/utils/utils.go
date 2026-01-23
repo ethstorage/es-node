@@ -77,7 +77,7 @@ func checkMinedTsTooSmallError(logFile string) (int, error) {
 }
 
 func checkDiffNotMatchError(logFile string) (int, error) {
-	// Description: "Mining info retrieved" -> "Failed to submit mined result"; shard and block equal which difficulty is not the same
+	// Description: "Mining info retrieved" -> "Failed to submit mined result"; shard and block equal but difficulty is not the same
 	// Sample:
 	// lvl=info msg="Mining info retrieved"                 shard=1 block=6,906,682 difficulty=13,006,115 lastMineTime=1,729,375,716 proofsSubmitted=2
 	// lvl=eror msg="Failed to submit mined result"         shard=1 block=6,906,682 difficulty=1,729,376,532 error="failed to estimate gas: execution reverted: ErrorData: 0x5b38d755: StorageContract_DifficultyNotMet()"
