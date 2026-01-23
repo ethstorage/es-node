@@ -30,7 +30,7 @@ type Peer struct {
 	lg             log.Logger // Contextual lg with the peer id injected
 }
 
-// NewPeer create a wrapper for a network connection and negotiated  protocol version.
+// NewPeer create a wrapper for a network connection and negotiated protocol version.
 func NewPeer(version uint, chainId *big.Int, peerId peer.ID, newStream newStreamFn, direction network.Direction,
 	initRequestSize, minRequestSize uint64, shards map[common.Address][]uint64) *Peer {
 	ctx, cancel := context.WithCancel(context.Background())

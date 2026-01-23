@@ -112,7 +112,7 @@ func (m *l1MiningAPI) GetMiningInfo(ctx context.Context, contract common.Address
 func (m *l1MiningAPI) GetDataHashes(ctx context.Context, contract common.Address, kvIdxes []uint64) ([]common.Hash, error) {
 	metas, err := m.GetKvMetas(kvIdxes, rpc.LatestBlockNumber.Int64())
 	if err != nil {
-		m.lg.Error("Failed to get versioned hashs", "error", err)
+		m.lg.Error("Failed to get versioned hashes", "error", err)
 		return nil, err
 	}
 	var hashes []common.Hash
