@@ -441,22 +441,20 @@ func (s *Downloader) downloadBlobsWithRetry(elBlock *blockBlobs, maxAttempts int
 }
 
 func (s *Downloader) downloadBlobs(elBlock *blockBlobs) (map[common.Hash]eth.Blob, error) {
+	hashes := make([]common.Hash, 0, len(elBlock.blobs))
+	for _, b := range elBlock.blobs {
+		hashes = append(hashes, b.hash)
+	}
 	if s.l1Beacon != nil {
-		slot := s.l1Beacon.Timestamp2Slot(elBlock.timestamp)
-		clBlobs, err := s.l1Beacon.DownloadBlobs(slot)
+		clBlobs, err := s.l1Beacon.DownloadBlobs(elBlock.timestamp, hashes)
 		if err != nil {
-			s.lg.Error("L1 beacon download blob error", "block", elBlock.number, "slot", slot, "err", err)
+			s.lg.Error("L1 beacon download blob error", "block", elBlock.number, "err", err)
 			return nil, err
 		}
 		return clBlobs, nil
 	}
 
 	if s.daClient != nil {
-		hashes := make([]common.Hash, 0, len(elBlock.blobs))
-		for _, b := range elBlock.blobs {
-			hashes = append(hashes, b.hash)
-		}
-
 		clBlobs, err := s.daClient.DownloadBlobs(hashes)
 		if err != nil {
 			s.lg.Error("DA client download blob error", "err", err)
