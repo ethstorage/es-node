@@ -16,7 +16,7 @@ func (s scanErrors) add(kvIndex uint64, err error) {
 	s[kvIndex] = err
 }
 
-func (s scanErrors) nil(kvIndex uint64) {
+func (s scanErrors) clearError(kvIndex uint64) {
 	s[kvIndex] = nil
 }
 

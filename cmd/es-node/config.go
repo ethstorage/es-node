@@ -85,6 +85,11 @@ func NewConfig(ctx *cli.Context, lg log.Logger) (*node.Config, error) {
 	// }
 
 	// l2SyncEndpoint := NewL2SyncEndpointConfig(ctx)
+
+	scannerConfig, err := scanner.NewConfig(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create scanner config: %w", err)
+	}
 	cfg := &node.Config{
 		L1:         *l1Endpoint,
 		ChainID:    chainId,
@@ -122,7 +127,7 @@ func NewConfig(ctx *cli.Context, lg log.Logger) (*node.Config, error) {
 		Storage:  *storageConfig,
 		Mining:   minerConfig,
 		Archiver: archiverConfig,
-		Scanner:  scanner.NewConfig(ctx),
+		Scanner:  scannerConfig,
 	}
 	if err := cfg.Check(); err != nil {
 		return nil, err
