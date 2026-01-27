@@ -162,25 +162,6 @@ func shortPrt(nums []uint64) string {
 	return strings.Join(res, ",")
 }
 
-func summaryLocalKvs(shards []uint64, kvEntries, lastKvIdx uint64) string {
-	var res []string
-	for _, shard := range shards {
-		if shard*kvEntries > lastKvIdx {
-			// skip empty shards
-			break
-		}
-		var lastEntry uint64
-		if shard == lastKvIdx/kvEntries {
-			lastEntry = lastKvIdx
-		} else {
-			lastEntry = (shard+1)*kvEntries - 1
-		}
-		shardView := fmt.Sprintf("shard%d%s", shard, formatRange(shard*kvEntries, lastEntry))
-		res = append(res, shardView)
-	}
-	return strings.Join(res, ",")
-}
-
 func formatRange(start, end uint64) string {
 	if start == end {
 		return fmt.Sprintf("[%d]", start)

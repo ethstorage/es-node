@@ -22,9 +22,10 @@ type Scanner struct {
 	cancel    context.CancelFunc
 	wg        sync.WaitGroup
 	running   bool
-	mu        sync.Mutex
+	mu        sync.Mutex // protects running
 	lg        log.Logger
 	scanStats ScanStats
+	statsMu   sync.Mutex // protects scanStats
 }
 
 func New(
@@ -152,8 +153,8 @@ func (s *Scanner) GetScanState() *ScanStats {
 	if s == nil {
 		return &ScanStats{}
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.statsMu.Lock()
+	defer s.statsMu.Unlock()
 	snapshot := s.scanStats // Make a copy
 	return &snapshot        // Return a pointer to the copy
 }
