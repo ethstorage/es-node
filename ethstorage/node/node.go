@@ -341,6 +341,7 @@ func (n *EsNode) initScanner(ctx context.Context, cfg *Config) {
 		n.feed,
 		n.lg,
 	)
+	n.scanner.Start()
 }
 
 func (n *EsNode) Start(ctx context.Context, cfg *Config) error {

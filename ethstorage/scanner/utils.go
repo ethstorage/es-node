@@ -16,7 +16,7 @@ func (s scanErrors) add(kvIndex uint64, err error) {
 	s[kvIndex] = err
 }
 
-func (s scanErrors) nil(kvIndex uint64) {
+func (s scanErrors) clearError(kvIndex uint64) {
 	s[kvIndex] = nil
 }
 
@@ -159,25 +159,6 @@ func shortPrt(nums []uint64) string {
 		}
 	}
 	res = append(res, formatRange(start, end))
-	return strings.Join(res, ",")
-}
-
-func summaryLocalKvs(shards []uint64, kvEntries, lastKvIdx uint64) string {
-	var res []string
-	for _, shard := range shards {
-		if shard*kvEntries > lastKvIdx {
-			// skip empty shards
-			break
-		}
-		var lastEntry uint64
-		if shard == lastKvIdx/kvEntries {
-			lastEntry = lastKvIdx
-		} else {
-			lastEntry = (shard+1)*kvEntries - 1
-		}
-		shardView := fmt.Sprintf("shard%d%s", shard, formatRange(shard*kvEntries, lastEntry))
-		res = append(res, shardView)
-	}
 	return strings.Join(res, ",")
 }
 
