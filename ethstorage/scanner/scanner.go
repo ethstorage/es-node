@@ -173,10 +173,9 @@ func (s *Scanner) Close() {
 		return
 	}
 	s.running = false
-	cancel := s.cancel
 	s.mu.Unlock()
 
-	cancel()
+	s.cancel()
 	s.wg.Wait()
 	s.lg.Info("Scanner closed")
 }
