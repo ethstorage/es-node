@@ -139,6 +139,7 @@ func (m *scanMarker) markRecovered() {
 	m.mark(m.kvIndex, nil)
 }
 
+// list all possible statuses just for completeness
 const (
 	ok         status = iota
 	unreadable        // read meta or blob error / not found

@@ -56,7 +56,6 @@ func (s *Worker) scanBatch(ctx context.Context, runtime *scanLoopRuntime, update
 			"mode", runtime.mode,
 			"scanned", shortPrt(kvsInBatch),
 			"count", len(kvsInBatch),
-			"nextIndexOfKvIdx", runtime.nextIndex,
 			"duration", time.Since(stt).String(),
 		)
 	}(start)
@@ -126,7 +125,7 @@ func (s *Worker) scanKv(mode scanMode, kvIndex uint64, commit common.Hash, updat
 		marker := newScanMarker(kvIndex, updateStatus)
 		var commitErr *es.CommitMismatchError
 		if errors.As(err, &commitErr) {
-			s.lg.Warn("Commit mismatch detected", "kvIndex", kvIndex, "error", err)
+			s.lg.Error("Commit mismatch detected", "kvIndex", kvIndex, "error", err)
 			marker.markMismatched()
 			return
 		}
