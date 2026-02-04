@@ -5,6 +5,7 @@ package scanner
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/ethstorage/go-ethstorage/ethstorage/flags/utils"
 	"github.com/urfave/cli"
@@ -12,33 +13,65 @@ import (
 
 const (
 	modeDisabled = iota
+	// Compare local meta hashes with those in L1 contract
 	modeCheckMeta
+	// Compute meta hashes from local blobs and compare with those in L1 contract
 	modeCheckBlob
 )
 
 const (
-	ModeFlagName      = "scanner.mode"
-	BatchSizeFlagName = "scanner.batch-size"
-	IntervalFlagName  = "scanner.interval"
+	modeSetMeta scanModeSet = 1 << iota // 1
+	modeSetBlob                         // 2
 )
 
-const defaultInterval = 3 // in minutes
+const (
+	ModeFlagName         = "scanner.mode"
+	BatchSizeFlagName    = "scanner.batch-size"
+	IntervalMetaFlagName = "scanner.interval.meta"
+	IntervalBlobFlagName = "scanner.interval.blob"
+)
+
+// scanModeSet is a combination of scanMode values used for configuration purposes.
+type scanModeSet uint8
+
+func (m scanModeSet) String() string {
+	if m == 0 {
+		return "disabled"
+	}
+
+	out := ""
+	if m&modeSetMeta != 0 {
+		out = "check-meta"
+	}
+	if m&modeSetBlob != 0 {
+		if out != "" {
+			out += "+"
+		}
+		out += "check-blob"
+	}
+	return out
+}
 
 func scannerEnv(name string) string {
 	return utils.PrefixEnvVar("SCANNER_" + name)
 }
 
 type Config struct {
-	Mode      int
-	BatchSize int
-	Interval  int
+	Mode         scanModeSet
+	BatchSize    int
+	IntervalMeta time.Duration
+	IntervalBlob time.Duration
 }
+
+// intervals in minutes
+const defaultIntervalMeta = 3
+const defaultIntervalBlob = 60
 
 func CLIFlags() []cli.Flag {
 	flags := []cli.Flag{
 		cli.IntFlag{
 			Name:   ModeFlagName,
-			Usage:  "Data scan mode, 0: disabled, 1: check meta, 2: check blob",
+			Usage:  "Data scan mode (bitmask) : 0=disabled, 1=meta, 2=blob, 4=block; combinations via sum/OR: 3=meta+blob, 5=meta+block, 6=blob+block, 7=all",
 			EnvVar: scannerEnv("MODE"),
 			Value:  1,
 		},
@@ -49,29 +82,37 @@ func CLIFlags() []cli.Flag {
 			Value:  8192,
 		},
 		cli.IntFlag{
-			Name:   IntervalFlagName,
-			Usage:  fmt.Sprintf("Data scan interval in minutes, minimum %d (default)", defaultInterval),
-			EnvVar: scannerEnv("INTERVAL"),
-			Value:  defaultInterval,
+			Name:   IntervalMetaFlagName,
+			Usage:  fmt.Sprintf("Data scan interval of check-meta mode in minutes (default %d)", defaultIntervalMeta),
+			EnvVar: scannerEnv("INTERVAL_META"),
+			Value:  defaultIntervalMeta,
+		},
+		cli.IntFlag{
+			Name:   IntervalBlobFlagName,
+			Usage:  fmt.Sprintf("Data scan interval of check-blob mode in minutes (default %d)", defaultIntervalBlob),
+			EnvVar: scannerEnv("INTERVAL_BLOB"),
+			Value:  defaultIntervalBlob,
 		},
 	}
 	return flags
 }
 
+const scanModeSetMask = modeSetMeta | modeSetBlob
+
 func NewConfig(ctx *cli.Context) (*Config, error) {
-	mode := ctx.GlobalInt(ModeFlagName)
-	if mode == modeDisabled {
+	rawMode := scanModeSet(ctx.GlobalInt(ModeFlagName))
+	if rawMode == 0 {
 		return nil, nil
 	}
-	if mode != modeCheckMeta && mode != modeCheckBlob {
-		return nil, fmt.Errorf("invalid scanner mode: %d", mode)
+	// Check for invalid bits outside the valid mask
+	if rawMode&^scanModeSetMask != 0 {
+		return nil, fmt.Errorf("invalid scanner mode: %d, valid values are 0 (disabled), 1 (meta), 2 (blob), or 3 (meta+blob)", rawMode)
 	}
-	if interval := ctx.GlobalInt(IntervalFlagName); interval < defaultInterval {
-		return nil, fmt.Errorf("scanner interval must be at least %d minutes", defaultInterval)
-	}
+	mode := rawMode & scanModeSetMask
 	return &Config{
-		Mode:      mode,
-		BatchSize: ctx.GlobalInt(BatchSizeFlagName),
-		Interval:  ctx.GlobalInt(IntervalFlagName),
+		Mode:         mode,
+		BatchSize:    ctx.GlobalInt(BatchSizeFlagName),
+		IntervalMeta: time.Minute * time.Duration(ctx.GlobalInt(IntervalMetaFlagName)),
+		IntervalBlob: time.Minute * time.Duration(ctx.GlobalInt(IntervalBlobFlagName)),
 	}, nil
 }
