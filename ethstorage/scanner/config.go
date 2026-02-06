@@ -18,7 +18,7 @@ const (
 	defaultIntervalMeta = 3
 	defaultIntervalBlob = 60
 	// Minutes between fixing loops
-	fixingInterval = 2
+	fixingInterval = 12
 	// Minutes to wait before trying to fix pending mismatches
 	pendingWaitTime = 3
 )
