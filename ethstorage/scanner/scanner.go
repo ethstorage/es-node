@@ -22,9 +22,10 @@ type Scanner struct {
 	cancel    context.CancelFunc
 	wg        sync.WaitGroup
 	running   bool
-	mu        sync.Mutex
+	mu        sync.Mutex // protects running
 	lg        log.Logger
 	scanStats ScanStats
+	statsMu   sync.Mutex // protects scanStats
 }
 
 func New(
@@ -37,7 +38,7 @@ func New(
 	lg log.Logger,
 ) *Scanner {
 	cctx, cancel := context.WithCancel(ctx)
-	scanner := &Scanner{
+	return &Scanner{
 		worker:    NewWorker(sm, fetchBlob, l1, cfg, lg),
 		feed:      feed,
 		interval:  time.Minute * time.Duration(cfg.Interval),
@@ -46,9 +47,17 @@ func New(
 		lg:        lg,
 		scanStats: ScanStats{0, 0},
 	}
-	scanner.wg.Add(1)
-	go scanner.update()
-	return scanner
+}
+
+// Start begins the scanner's background processing. Must be called after New().
+func (s *Scanner) Start() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.running {
+		return
+	}
+	s.wg.Add(1)
+	go s.update()
 }
 
 func (s *Scanner) update() {
@@ -141,8 +150,11 @@ func (s *Scanner) logStats(sts *stats) {
 }
 
 func (s *Scanner) GetScanState() *ScanStats {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	if s == nil {
+		return &ScanStats{}
+	}
+	s.statsMu.Lock()
+	defer s.statsMu.Unlock()
 	snapshot := s.scanStats // Make a copy
 	return &snapshot        // Return a pointer to the copy
 }
@@ -164,8 +176,8 @@ func (s *Scanner) Close() {
 	s.mu.Unlock()
 
 	s.cancel()
-	s.lg.Info("Scanner closed")
 	s.wg.Wait()
+	s.lg.Info("Scanner closed")
 }
 
 func (s *Scanner) doWork(tracker mismatchTracker) (*stats, scanErrors, error) {

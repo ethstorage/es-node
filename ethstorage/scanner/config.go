@@ -58,20 +58,20 @@ func CLIFlags() []cli.Flag {
 	return flags
 }
 
-func NewConfig(ctx *cli.Context) *Config {
+func NewConfig(ctx *cli.Context) (*Config, error) {
 	mode := ctx.GlobalInt(ModeFlagName)
 	if mode == modeDisabled {
-		return nil
+		return nil, nil
 	}
 	if mode != modeCheckMeta && mode != modeCheckBlob {
-		panic(fmt.Sprintf("invalid scanner mode: %d", mode))
+		return nil, fmt.Errorf("invalid scanner mode: %d", mode)
 	}
 	if interval := ctx.GlobalInt(IntervalFlagName); interval < defaultInterval {
-		panic(fmt.Sprintf("scanner interval must be at least %d minutes", defaultInterval))
+		return nil, fmt.Errorf("scanner interval must be at least %d minutes", defaultInterval)
 	}
 	return &Config{
 		Mode:      mode,
 		BatchSize: ctx.GlobalInt(BatchSizeFlagName),
 		Interval:  ctx.GlobalInt(IntervalFlagName),
-	}
+	}, nil
 }
