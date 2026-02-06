@@ -45,7 +45,8 @@ type ScanStats struct {
 
 type scanned struct {
 	status
-	err error
+	timestamp time.Time
+	err       error
 }
 
 type mismatchTracker map[uint64]scanned
@@ -96,11 +97,14 @@ func (m mismatchTracker) failed() []uint64 {
 	return res
 }
 
-// needFix() returns all kvIndices that need to be fixed or at least check again
+// needFix() returns all kvIndices that need to be fixed
 func (m mismatchTracker) needFix() []uint64 {
 	var res []uint64
 	for kvIndex, scanned := range m {
-		if scanned.status == pending || scanned.status == failed || scanned.err != nil {
+		// Wait 3 minutes to avoid fixing mismatch caused by slow downloading
+		if scanned.status == pending && scanned.timestamp.Add(time.Minute*pendingWaitTime).Before(time.Now()) ||
+			scanned.status == failed ||
+			scanned.err != nil {
 			res = append(res, kvIndex)
 		}
 	}
@@ -128,7 +132,7 @@ func (m *scanMarker) markFailed(commit common.Hash, err error) {
 }
 
 func (m *scanMarker) markMismatched() {
-	m.mark(m.kvIndex, &scanned{status: pending, err: nil})
+	m.mark(m.kvIndex, &scanned{status: pending, timestamp: time.Now()})
 }
 
 func (m *scanMarker) markFixed() {

@@ -112,8 +112,7 @@ func (s *Scanner) start() {
 
 	s.startReporter()
 
-	// Launch the scan loop to fix mismatched KVs every 12 minutes FIXME: adjust interval?
-	s.launchFixLoop(time.Minute * 12)
+	s.launchFixLoop(time.Minute * fixingInterval)
 }
 
 func (s *Scanner) launchScanLoop(rt *scanLoopRuntime) {
@@ -185,6 +184,7 @@ func (s *Scanner) metaScanLoopRuntime() *scanLoopRuntime {
 		nextIndex: 0,
 	}
 }
+
 func (s *Scanner) startReporter() {
 	s.wg.Add(1)
 	go func() {

@@ -139,6 +139,10 @@ func (s *Worker) scanKv(mode scanMode, kvIndex uint64, commit common.Hash, updat
 }
 
 func (s *Worker) fixBatch(ctx context.Context, kvIndices []uint64, updateStatus statusUpdateFn) error {
+	if len(kvIndices) == 0 {
+		s.lg.Info("No KV entries to fix in this batch")
+		return nil
+	}
 	metas, err := s.l1.GetKvMetas(kvIndices, rpc.FinalizedBlockNumber.Int64())
 	if err != nil {
 		s.lg.Error("Failed to query KV metas for scan batch", "error", err)
