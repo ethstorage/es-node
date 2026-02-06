@@ -219,8 +219,8 @@ func (d *dashboard) Report() {
 
 	if *emailEnableFlag && time.Now().After(d.lastNotification.Add(emailReportInterval)) {
 		contracts := make(map[string]struct{})
-		cs := strings.Split(*emailContractsFlag, ",")
-		for _, c := range cs {
+		cs := strings.SplitSeq(*emailContractsFlag, ",")
+		for c := range cs {
 			c = strings.TrimSpace(c)
 			if c == "" { // ignore empty records
 				continue
