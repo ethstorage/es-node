@@ -12,6 +12,18 @@ import (
 )
 
 const (
+	// Default Kvs per scan batch; bigger than this may cause run out of gas
+	defaultBatchSize = 8192
+	// Default intervals in minutes
+	defaultIntervalMeta = 3
+	defaultIntervalBlob = 60
+	// Minutes between fixing loops
+	fixingInterval = 2
+	// Minutes to wait before trying to fix pending mismatches
+	pendingWaitTime = 3
+)
+
+const (
 	modeDisabled = iota
 	// Compare local meta hashes with those in L1 contract
 	modeCheckMeta
@@ -63,15 +75,11 @@ type Config struct {
 	IntervalBlob time.Duration
 }
 
-// intervals in minutes
-const defaultIntervalMeta = 3
-const defaultIntervalBlob = 60
-
 func CLIFlags() []cli.Flag {
 	flags := []cli.Flag{
 		cli.IntFlag{
 			Name:   ModeFlagName,
-			Usage:  "Data scan mode (bitmask) : 0=disabled, 1=meta, 2=blob, 4=block; combinations via sum/OR: 3=meta+blob",
+			Usage:  "Data scan mode (bitmask) : 0=disabled, 1=meta, 2=blob; combinations via sum/OR: 3=meta+blob",
 			EnvVar: scannerEnv("MODE"),
 			Value:  1,
 		},
@@ -79,7 +87,7 @@ func CLIFlags() []cli.Flag {
 			Name:   BatchSizeFlagName,
 			Usage:  "Data scan batch size",
 			EnvVar: scannerEnv("BATCH_SIZE"),
-			Value:  8192,
+			Value:  defaultBatchSize,
 		},
 		cli.IntFlag{
 			Name:   IntervalMetaFlagName,
