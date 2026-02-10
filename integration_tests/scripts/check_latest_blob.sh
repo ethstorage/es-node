@@ -36,7 +36,7 @@ echo "Failed to get latest block" >&2
 exit 1
 fi
 
-latest_dec=$((latest_dec - 64 - 15))  # adjust to finalized, and add some buffer for blob downloading
+latest_dec=$((latest_dec - 64 - 32))  # adjust to finalized, and add some buffer (1 epoch) for blob downloading to disk
 from_dec=$((latest_dec - lookback))
 from_hex="$(cast to-hex "$from_dec")"
 to_hex="$(cast to-hex "$latest_dec")"
