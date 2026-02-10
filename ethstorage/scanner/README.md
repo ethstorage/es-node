@@ -9,7 +9,7 @@ If a mismatch is detected, the scanner can attempt to repair the local data by r
 | Flag | Default | Env var | Description |
 | --- | --- | --- | --- |
 | `--scanner.mode` | `1` | `ES_NODE_SCANNER_MODE` | Data scan mode (bitmask): `0`=disabled, `1`=meta, `2`=blob, `4`=block. Combine via sum/OR (e.g. `3`=`1+2`, `5`=`1+4`, `7`=`1+2+4`). |
-| `--scanner.batch-size` | `8192` | `ES_NODE_SCANNER_BATCH_SIZE` | Data scan batch size. |
+| `--scanner.batch-size` | `8192` | `ES_NODE_SCANNER_BATCH_SIZE` | The number of KVs to scan per batch for check-meta and check-blob modes. No impact on check-block mode. |
 | `--scanner.interval.meta` | `3` (minutes) | `ES_NODE_SCANNER_INTERVAL_META` | Scan interval for `check-meta`. |
 | `--scanner.interval.blob` | `60` (minutes) | `ES_NODE_SCANNER_INTERVAL_BLOB` | Scan interval for `check-blob`. |
 | `--scanner.interval.block` | `1440` (minutes) | `ES_NODE_SCANNER_INTERVAL_BLOCK` | Scan interval for `check-block`. |
@@ -40,7 +40,12 @@ You can combine modes by summing/OR-ing them to get mixed behavior and balance p
 - `6` = `2 + 4` = blob + block
 - `7` = meta + blob + block
 
-`--scanner.batch-size` and `--scanner.interval.*` control the batch size and frequency of each scan mode, so you can tune the performance impact further based on the amount of data and hardware resources.
+
+> [!TIP] `--scanner.batch-size` and `--scanner.interval.*` control the batch size and frequency of each scan mode, so you can tune the performance impact further based on the amount of data and hardware resources.
+
+> [!NOTE] `--scanner.batch-size` only affects `check-meta` and `check-blob` modes, not `check-block`. 
+
+> [!WARNING] If `--scanner.batch-size` is set higher than the default, it may cause `out of gas` error while querying meta data from the L1 contract.
 
 ## Status tracking
 
