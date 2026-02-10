@@ -338,6 +338,20 @@ func (w *PollingClient) GetMiningReward(shard uint64, timestamp uint64) (*big.In
 	return new(big.Int).SetBytes(bs), nil
 }
 
+func (w *PollingClient) GetUpdatedKvIndices(startBlock, endBlock *big.Int) ([]uint64, error) {
+	events, err := w.FilterLogsByBlockRange(startBlock, endBlock, PutBlobEvent)
+	if err != nil {
+		return nil, err
+	}
+	var kvIndices []uint64
+	for _, event := range events {
+		kvIndices = append(kvIndices, new(big.Int).SetBytes(event.Topics[1][:]).Uint64())
+		var hash common.Hash
+		copy(hash[:], event.Topics[3][:])
+	}
+	return kvIndices, nil
+}
+
 func (w *PollingClient) ReadContractField(fieldName string, blockNumber *big.Int) ([]byte, error) {
 	h := crypto.Keccak256Hash([]byte(fieldName + "()"))
 	msg := ethereum.CallMsg{

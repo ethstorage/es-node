@@ -86,7 +86,7 @@ func NewConfig(ctx *cli.Context, lg log.Logger) (*node.Config, error) {
 
 	// l2SyncEndpoint := NewL2SyncEndpointConfig(ctx)
 
-	scannerConfig, err := scanner.NewConfig(ctx)
+	scannerConfig, err := scanner.NewConfig(ctx, l1Endpoint.L1BeaconSlotTime)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create scanner config: %w", err)
 	}

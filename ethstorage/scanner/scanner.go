@@ -35,7 +35,7 @@ func New(
 	cfg Config,
 	sm *es.StorageManager,
 	fetchBlob es.FetchBlobFunc,
-	l1 es.Il1Source,
+	l1 IL1,
 	feed *event.Feed,
 	lg log.Logger,
 ) *Scanner {
@@ -108,6 +108,10 @@ func (s *Scanner) start() {
 	if s.cfg.Mode&modeSetBlob != 0 {
 		s.launchScanLoop(s.blobScanLoopRuntime())
 	}
+	if s.cfg.Mode&modeSetBlock != 0 {
+		s.launchScanLoop(s.blockScanLoopRuntime())
+	}
+
 	s.lg.Info("Scanner started", "mode", s.cfg.Mode.String())
 
 	s.startReporter()
@@ -165,6 +169,16 @@ func (s *Scanner) updateStats(kvi uint64, sc *scanned) {
 	}
 }
 
+func (s *Scanner) metaScanLoopRuntime() *scanLoopRuntime {
+	return &scanLoopRuntime{
+		mode:      modeCheckMeta,
+		nextBatch: s.worker.getKvsInBatch,
+		interval:  s.cfg.IntervalMeta,
+		batchSize: uint64(s.cfg.BatchSize),
+		nextIndex: 0,
+	}
+}
+
 func (s *Scanner) blobScanLoopRuntime() *scanLoopRuntime {
 	return &scanLoopRuntime{
 		mode:      modeCheckBlob,
@@ -175,12 +189,12 @@ func (s *Scanner) blobScanLoopRuntime() *scanLoopRuntime {
 	}
 }
 
-func (s *Scanner) metaScanLoopRuntime() *scanLoopRuntime {
+func (s *Scanner) blockScanLoopRuntime() *scanLoopRuntime {
 	return &scanLoopRuntime{
-		mode:      modeCheckMeta,
-		nextBatch: s.worker.getKvsInBatch,
-		interval:  s.cfg.IntervalMeta,
-		batchSize: uint64(s.cfg.BatchSize),
+		mode:      modeCheckBlock,
+		nextBatch: s.worker.latestUpdated,
+		interval:  s.cfg.IntervalBlock,
+		batchSize: uint64(s.cfg.IntervalBlock / s.cfg.L1SlotTime), // number of slots in the interval
 		nextIndex: 0,
 	}
 }
