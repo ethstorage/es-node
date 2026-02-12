@@ -62,13 +62,13 @@ func TestZKProver_GenerateZKProof(t *testing.T) {
 				t.Errorf("ZKProver.GenerateInputs() error = %v", err)
 				return
 			}
-			var inputs map[string]interface{}
+			var inputs map[string]any
 			err = json.Unmarshal(inputsBytes, &inputs)
 			if err != nil {
 				t.Errorf("ZKProver.GenerateInputs() error = %v", err)
 				return
 			}
-			vxIn, ok := inputs["xIn"].([]interface{})
+			vxIn, ok := inputs["xIn"].([]any)
 			if !ok {
 				t.Errorf("ZKProver.GenerateInputs() type: %v, want []interface{}", reflect.TypeOf(inputs["xIn"]))
 				return

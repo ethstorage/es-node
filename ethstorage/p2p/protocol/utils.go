@@ -86,7 +86,7 @@ func ReadMsg(stream network.Stream) ([]byte, byte, error) {
 	return payload, code, err
 }
 
-func Send(stream network.Stream, req interface{}) (network.Stream, error) {
+func Send(stream network.Stream, req any) (network.Stream, error) {
 	data, err := rlp.EncodeToBytes(req)
 	if err != nil {
 		return nil, err
@@ -105,7 +105,7 @@ func Send(stream network.Stream, req interface{}) (network.Stream, error) {
 	return stream, err
 }
 
-func SendRPC(stream network.Stream, req interface{}, resp interface{}) (byte, error) {
+func SendRPC(stream network.Stream, req any, resp any) (byte, error) {
 	s, err := Send(stream, req)
 	if err != nil {
 		return clientError, err
