@@ -5,6 +5,7 @@ package scanner
 
 import (
 	"context"
+	"maps"
 	"sync"
 	"time"
 
@@ -15,17 +16,18 @@ import (
 )
 
 type Scanner struct {
-	worker    *Worker
-	feed      *event.Feed
-	interval  time.Duration
-	ctx       context.Context
-	cancel    context.CancelFunc
-	wg        sync.WaitGroup
-	running   bool
-	mu        sync.Mutex // protects running
-	lg        log.Logger
-	scanStats ScanStats
-	statsMu   sync.Mutex // protects scanStats
+	worker     *Worker
+	feed       *event.Feed
+	cfg        Config
+	ctx        context.Context
+	cancel     context.CancelFunc
+	wg         sync.WaitGroup
+	running    bool
+	mu         sync.Mutex // protects running
+	lg         log.Logger
+	stats      mismatchTracker
+	statsMu    sync.Mutex    // protects stats
+	scanPermit chan struct{} // to ensure only one scan at a time
 }
 
 func New(
@@ -39,13 +41,14 @@ func New(
 ) *Scanner {
 	cctx, cancel := context.WithCancel(ctx)
 	return &Scanner{
-		worker:    NewWorker(sm, fetchBlob, l1, cfg, lg),
-		feed:      feed,
-		interval:  time.Minute * time.Duration(cfg.Interval),
-		ctx:       cctx,
-		cancel:    cancel,
-		lg:        lg,
-		scanStats: ScanStats{0, 0},
+		worker:     NewWorker(sm, fetchBlob, l1, lg),
+		feed:       feed,
+		cfg:        cfg,
+		ctx:        cctx,
+		cancel:     cancel,
+		lg:         lg,
+		stats:      make(mismatchTracker),
+		scanPermit: make(chan struct{}, 1),
 	}
 }
 
@@ -56,6 +59,7 @@ func (s *Scanner) Start() {
 	if s.running {
 		return
 	}
+	s.scanPermit <- struct{}{}
 	s.wg.Add(1)
 	go s.update()
 }
@@ -98,37 +102,136 @@ func (s *Scanner) start() {
 	s.running = true
 	s.mu.Unlock()
 
-	s.wg.Add(1)
+	if s.cfg.Mode&modeSetMeta != 0 {
+		s.launchScanLoop(s.metaScanLoopRuntime())
+	}
+	if s.cfg.Mode&modeSetBlob != 0 {
+		s.launchScanLoop(s.blobScanLoopRuntime())
+	}
+	s.lg.Info("Scanner started", "mode", s.cfg.Mode.String())
 
+	s.startReporter()
+
+	s.launchFixLoop(time.Minute * fixingInterval)
+}
+
+func (s *Scanner) launchScanLoop(rt *scanLoopRuntime) {
+	s.wg.Add(1)
 	go func() {
 		defer s.wg.Done()
-
-		s.lg.Info("Scanner started", "mode", s.worker.cfg.Mode, "interval", s.interval.String(), "batchSize", s.worker.cfg.BatchSize)
-
-		mainTicker := time.NewTicker(s.interval)
-		reportTicker := time.NewTicker(1 * time.Minute)
+		s.lg.Info("Launching scanner loop", "mode", rt.mode, "interval", rt.interval, "batchSize", rt.batchSize)
+		mainTicker := time.NewTicker(rt.interval)
 		defer mainTicker.Stop()
-		defer reportTicker.Stop()
-		sts, errCache, err := s.doWork(mismatchTracker{})
-		if err != nil {
-			s.lg.Error("Initial scan failed", "error", err)
-		}
 
+		s.doScan(rt)
 		for {
 			select {
 			case <-mainTicker.C:
-				newSts, scanErrs, err := s.doWork(sts.mismatched.clone())
-				if err != nil {
-					s.lg.Error("Scanner: scan batch failed", "error", err)
-					continue
-				}
-				sts = newSts
-				errCache.merge(scanErrs)
+				s.doScan(rt)
 
-			case <-reportTicker.C:
-				s.logStats(sts)
-				for i, e := range errCache {
-					s.lg.Info("Scanner error happened earlier", "kvIndex", i, "error", e)
+			case <-s.ctx.Done():
+				return
+			}
+		}
+	}()
+}
+
+func (s *Scanner) doScan(state *scanLoopRuntime) {
+	if !s.acquireScanPermit() {
+		return
+	}
+	err := s.worker.scanBatch(s.ctx, state, func(kvi uint64, sc *scanned) {
+		s.updateStats(kvi, sc)
+	})
+	s.releaseScanPermit()
+	if err != nil {
+		s.lg.Error("Scan batch failed", "mode", state.mode, "error", err)
+	}
+}
+
+func (s *Scanner) updateStats(kvi uint64, sc *scanned) {
+	s.statsMu.Lock()
+	defer s.statsMu.Unlock()
+
+	if sc != nil {
+		if sc.status == pending && s.stats[kvi].status == failed {
+			// keep failed status until fixed
+			return
+		}
+		s.stats[kvi] = *sc
+	} else {
+		// fixed or recovered
+		delete(s.stats, kvi)
+	}
+}
+
+func (s *Scanner) blobScanLoopRuntime() *scanLoopRuntime {
+	return &scanLoopRuntime{
+		mode:      modeCheckBlob,
+		nextBatch: s.worker.getKvsInBatch,
+		interval:  s.cfg.IntervalBlob,
+		batchSize: uint64(s.cfg.BatchSize),
+		nextIndex: 0,
+	}
+}
+
+func (s *Scanner) metaScanLoopRuntime() *scanLoopRuntime {
+	return &scanLoopRuntime{
+		mode:      modeCheckMeta,
+		nextBatch: s.worker.getKvsInBatch,
+		interval:  s.cfg.IntervalMeta,
+		batchSize: uint64(s.cfg.BatchSize),
+		nextIndex: 0,
+	}
+}
+
+func (s *Scanner) startReporter() {
+	s.wg.Add(1)
+	go func() {
+		defer s.wg.Done()
+
+		localKvCount, sum := s.worker.summaryLocalKvs()
+		s.lg.Info("Local storage summary", "localKvs", sum, "localKvCount", localKvCount)
+		ticker := time.NewTicker(time.Minute)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				s.logStats()
+			case <-s.ctx.Done():
+				return
+			}
+		}
+	}()
+}
+
+func (s *Scanner) launchFixLoop(interval time.Duration) {
+	s.wg.Add(1)
+	go func() {
+		defer s.wg.Done()
+
+		s.lg.Info("Launching scan fix loop", "interval", interval.String())
+
+		fixTicker := time.NewTicker(interval)
+		defer fixTicker.Stop()
+
+		for {
+			select {
+			case <-fixTicker.C:
+				// hold until other possible ongoing scans finish
+				if !s.acquireScanPermit() {
+					return
+				}
+				s.statsMu.Lock()
+				kvIndices := s.stats.needFix()
+				s.statsMu.Unlock()
+				s.lg.Info("Scanner fixing batch triggered", "mismatchesToFix", kvIndices)
+				err := s.worker.fixBatch(s.ctx, kvIndices, func(kvi uint64, m *scanned) {
+					s.updateStats(kvi, m)
+				})
+				s.releaseScanPermit()
+				if err != nil {
+					s.lg.Error("Fixing batch failed", "error", err)
 				}
 
 			case <-s.ctx.Done():
@@ -138,15 +241,25 @@ func (s *Scanner) start() {
 	}()
 }
 
-func (s *Scanner) logStats(sts *stats) {
-	logFields := []any{
-		"localKvs", sts.localKvs,
-		"localKvsCount", sts.total,
+func (s *Scanner) logStats() {
+	localKvCount, sum := s.worker.summaryLocalKvs()
+	s.lg.Info("Local storage summary", "localKvs", sum, "localKvCount", localKvCount)
+
+	s.statsMu.Lock()
+	mismatched := "[]"
+	if len(s.stats) > 0 {
+		mismatched = s.stats.String()
 	}
-	if len(sts.mismatched) > 0 {
-		logFields = append(logFields, "mismatched", sts.mismatched.String())
+	errSnapshot := make(map[uint64]error)
+	if s.stats.hasError() {
+		maps.Copy(errSnapshot, s.stats.withErrors())
 	}
-	s.lg.Info("Scanner stats", logFields...)
+	s.statsMu.Unlock()
+
+	s.lg.Info("Scanner stats", "mode", s.cfg.Mode, "mismatched", mismatched)
+	for i, e := range errSnapshot {
+		s.lg.Info("Scanner error happened earlier", "kvIndex", i, "error", e)
+	}
 }
 
 func (s *Scanner) GetScanState() *ScanStats {
@@ -155,15 +268,27 @@ func (s *Scanner) GetScanState() *ScanStats {
 	}
 	s.statsMu.Lock()
 	defer s.statsMu.Unlock()
-	snapshot := s.scanStats // Make a copy
-	return &snapshot        // Return a pointer to the copy
+
+	return &ScanStats{
+		MismatchedCount: len(s.stats),
+		UnfixedCount:    len(s.stats.failed()),
+	}
 }
 
-func (s *Scanner) setScanState(sts *stats) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.scanStats.MismatchedCount = len(sts.mismatched)
-	s.scanStats.UnfixedCount = len(sts.mismatched.failed())
+func (s *Scanner) acquireScanPermit() bool {
+	select {
+	case <-s.ctx.Done():
+		return false
+	case <-s.scanPermit:
+		return true
+	}
+}
+
+func (s *Scanner) releaseScanPermit() {
+	select {
+	case s.scanPermit <- struct{}{}:
+	default:
+	}
 }
 
 func (s *Scanner) Close() {
@@ -178,18 +303,4 @@ func (s *Scanner) Close() {
 	s.cancel()
 	s.wg.Wait()
 	s.lg.Info("Scanner closed")
-}
-
-func (s *Scanner) doWork(tracker mismatchTracker) (*stats, scanErrors, error) {
-	s.lg.Debug("Scan batch started")
-	start := time.Now()
-	defer func(stt time.Time) {
-		s.lg.Info("Scan batch done", "duration", time.Since(stt).String())
-	}(start)
-
-	sts, scanErrs, err := s.worker.ScanBatch(s.ctx, tracker)
-	if err == nil {
-		s.setScanState(sts)
-	}
-	return sts, scanErrs, err
 }

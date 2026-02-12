@@ -5,56 +5,51 @@ package scanner
 
 import (
 	"fmt"
-	"maps"
 	"slices"
 	"strings"
+	"time"
+
+	"github.com/ethereum/go-ethereum/common"
 )
 
-type scanErrors map[uint64]error
+// scanMode is an internal runtime mode used by scan workers (meta/blob).
+type scanMode int
 
-func (s scanErrors) add(kvIndex uint64, err error) {
-	s[kvIndex] = err
-}
-
-func (s scanErrors) clearError(kvIndex uint64) {
-	s[kvIndex] = nil
-}
-
-func (s scanErrors) merge(errs scanErrors) {
-	for k, v := range errs {
-		if v != nil {
-			s[k] = v
-		} else {
-			delete(s, k)
-		}
-	}
-}
-
-type status int
-
-const (
-	pending   status = iota // first-time detected
-	fixed                   // by scanner
-	recovered               // by downloader
-	failed                  // failed to fix
-)
-
-func (s status) String() string {
-	switch s {
-	case pending:
-		return "pending"
-	case recovered:
-		return "recovered"
-	case fixed:
-		return "fixed"
-	case failed:
-		return "failed"
+func (m scanMode) String() string {
+	switch m {
+	case modeCheckMeta:
+		return "check-meta"
+	case modeCheckBlob:
+		return "check-blob"
 	default:
-		return "unknown"
+		return fmt.Sprintf("unknown(%d)", int(m))
 	}
 }
 
-type mismatchTracker map[uint64]status
+// scanLoopRuntime holds runtime parameters for a scanning loop.
+type scanLoopRuntime struct {
+	mode      scanMode
+	nextBatch nextBatchFn
+	interval  time.Duration
+	batchSize uint64
+	nextIndex uint64
+}
+
+type nextBatchFn func(uint64, uint64) ([]uint64, uint64)
+
+// external scan statistics
+type ScanStats struct {
+	MismatchedCount int `json:"mismatched_blob"`
+	UnfixedCount    int `json:"unfixed_blob"`
+}
+
+type scanned struct {
+	status
+	timestamp time.Time
+	err       error
+}
+
+type mismatchTracker map[uint64]scanned
 
 func (m mismatchTracker) String() string {
 	var items []string
@@ -71,50 +66,30 @@ func (m mismatchTracker) String() string {
 	return "[" + strings.Join(items, ",") + "]"
 }
 
-func (m mismatchTracker) markPending(kvIndex uint64) {
-	m[kvIndex] = pending
+func (m mismatchTracker) hasError() bool {
+	for _, scanned := range m {
+		if scanned.err != nil {
+			return true
+		}
+	}
+	return false
 }
 
-func (m mismatchTracker) markRecovered(kvIndex uint64) {
-	m[kvIndex] = recovered
+func (m mismatchTracker) withErrors() map[uint64]error {
+	res := make(map[uint64]error)
+	for kvIndex, scanned := range m {
+		if scanned.err != nil {
+			res[kvIndex] = scanned.err
+		}
+	}
+	return res
 }
 
-func (m mismatchTracker) markFixed(kvIndex uint64) {
-	m[kvIndex] = fixed
-}
-
-func (m mismatchTracker) markFailed(kvIndex uint64) {
-	m[kvIndex] = failed
-}
-
-func (m mismatchTracker) shouldFix(kvIndex uint64) bool {
-	status, exists := m[kvIndex]
-	return exists && (status == pending || status == failed)
-}
-
-// failed() returns all indices that are still mismatched
-// since the first-time do not count as mismatched and the
-// second-time will be fixed immediately if possible
+// failed() returns all kvIndices that are failed to be fixed
 func (m mismatchTracker) failed() []uint64 {
-	return m.filterByStatus(failed)
-}
-
-// fixed() returns only indices that have been fixed by the scanner
-// add recovered() to get those fixed by downloader
-func (m mismatchTracker) fixed() []uint64 {
-	return m.filterByStatus(fixed)
-}
-
-// recovered() returns indices fixed by downloader from failed status
-// those recovered from pending status are no longer tracked
-func (m mismatchTracker) recovered() []uint64 {
-	return m.filterByStatus(recovered)
-}
-
-func (m mismatchTracker) filterByStatus(s status) []uint64 {
 	var res []uint64
-	for kvIndex, status := range m {
-		if status == s {
+	for kvIndex, scanned := range m {
+		if scanned.status == failed {
 			res = append(res, kvIndex)
 		}
 	}
@@ -122,29 +97,86 @@ func (m mismatchTracker) filterByStatus(s status) []uint64 {
 	return res
 }
 
-func (m mismatchTracker) clone() mismatchTracker {
-	clone := make(mismatchTracker)
-	maps.Copy(clone, m)
-	return clone
+// needFix() returns all kvIndices that need to be fixed
+func (m mismatchTracker) needFix() []uint64 {
+	var res []uint64
+	for kvIndex, scanned := range m {
+		// Wait 3 minutes to avoid fixing mismatch caused by slow downloading
+		if scanned.status == pending && scanned.timestamp.Add(time.Minute*pendingWaitTime).Before(time.Now()) ||
+			scanned.status == failed ||
+			scanned.err != nil {
+			res = append(res, kvIndex)
+		}
+	}
+	slices.Sort(res)
+	return res
 }
 
-type stats struct {
-	localKvs   string          // kv entries stored in local
-	total      int             // total number of kv entries stored in local
-	mismatched mismatchTracker // tracks all mismatched indices and their status
+type statusUpdateFn func(uint64, *scanned)
+
+type scanMarker struct {
+	kvIndex uint64
+	mark    statusUpdateFn
 }
 
-func newStats() *stats {
-	return &stats{
-		localKvs:   "",
-		total:      0,
-		mismatched: mismatchTracker{},
+func newScanMarker(kvIndex uint64, fn statusUpdateFn) *scanMarker {
+	return &scanMarker{kvIndex: kvIndex, mark: fn}
+}
+
+func (m *scanMarker) markError(commit common.Hash, err error) {
+	m.mark(m.kvIndex, &scanned{status: unreadable, err: fmt.Errorf("commit: %x, error reading kv: %w", commit, err)})
+}
+
+func (m *scanMarker) markFailed(commit common.Hash, err error) {
+	m.mark(m.kvIndex, &scanned{status: failed, err: fmt.Errorf("commit: %x, error fixing kv: %w", commit, err)})
+}
+
+func (m *scanMarker) markMismatched() {
+	m.mark(m.kvIndex, &scanned{status: pending, timestamp: time.Now()})
+}
+
+func (m *scanMarker) markFixed() {
+	m.mark(m.kvIndex, nil)
+}
+
+func (m *scanMarker) markRecovered() {
+	m.mark(m.kvIndex, nil)
+}
+
+// list all possible statuses just for completeness
+const (
+	ok         status = iota
+	unreadable        // read meta or blob error / not found
+	pending           // mismatch detected
+	fixed             // by scanner
+	recovered         // by downloader
+	failed            // failed to fix
+)
+
+type status int
+
+func (s status) String() string {
+	switch s {
+	case ok:
+		return "ok"
+	case unreadable:
+		return "unreadable"
+	case pending:
+		return "pending"
+	case fixed:
+		return "fixed"
+	case recovered:
+		return "recovered"
+	case failed:
+		return "failed"
+	default:
+		return "unknown"
 	}
 }
 
 func shortPrt(nums []uint64) string {
 	if len(nums) == 0 {
-		return ""
+		return "[]"
 	}
 	var (
 		res        []string
@@ -170,9 +202,4 @@ func formatRange(start, end uint64) string {
 	} else {
 		return fmt.Sprintf("[%d-%d]", start, end)
 	}
-}
-
-type ScanStats struct {
-	MismatchedCount int `json:"mismatched_blob"`
-	UnfixedCount    int `json:"unfixed_blob"`
 }
