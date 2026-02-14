@@ -346,8 +346,6 @@ func (w *PollingClient) GetUpdatedKvIndices(startBlock, endBlock *big.Int) ([]ui
 	var kvIndices []uint64
 	for _, event := range events {
 		kvIndices = append(kvIndices, new(big.Int).SetBytes(event.Topics[1][:]).Uint64())
-		var hash common.Hash
-		copy(hash[:], event.Topics[3][:])
 	}
 	return kvIndices, nil
 }
