@@ -12,7 +12,9 @@ import (
 )
 
 type BeaconBlobs struct {
-	Data []string `json:"data"`
+	Data    []string `json:"data"`
+	Message string   `json:"message"`
+	Code    int      `json:"code"`
 }
 
 func BlobToVersionedHash(blobBytes []byte) (common.Hash, error) {
