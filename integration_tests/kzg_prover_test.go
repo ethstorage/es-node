@@ -112,7 +112,7 @@ func uploadBlob(t *testing.T, data []byte) common.Hash {
 		{Type: uint256Type},
 		{Type: uint256Type},
 	}
-	values := []interface{}{blbKey, blbIdx, length}
+	values := []any{blbKey, blbIdx, length}
 	dataField, err := args.Pack(values...)
 	if err != nil {
 		t.Fatalf("Error getting calldata: %v", err)
@@ -175,7 +175,7 @@ func verifyInclusive(sampleIdx uint64, peInput []byte) error {
 		{Type: uint256Type},
 		{Type: bytesType},
 	}
-	values := []interface{}{dataHash, index, decodedData, peInput}
+	values := []any{dataHash, index, decodedData, peInput}
 	dataField, err := args.Pack(values...)
 	if err != nil {
 		return err

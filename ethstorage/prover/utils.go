@@ -190,7 +190,7 @@ func readProof(proofRaw []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	values := []interface{}{[]*big.Int{a.X, a.Y}, [][]*big.Int{b.X[:], b.Y[:]}, []*big.Int{c.X, c.Y}}
+	values := []any{[]*big.Int{a.X, a.Y}, [][]*big.Int{b.X[:], b.Y[:]}, []*big.Int{c.X, c.Y}}
 	packed, err := args.Pack(values...)
 	if err != nil {
 		return nil, fmt.Errorf("%v, values: %v", err, values)

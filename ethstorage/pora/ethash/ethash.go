@@ -149,24 +149,24 @@ func memoryMapAndGenerate(path string, size uint64, lock bool, generator func(bu
 // LRU tracks caches or datasets by their last use time, keeping at most N of them.
 type LRU struct {
 	what string
-	new  func(epoch uint64) interface{}
+	new  func(epoch uint64) any
 	mu   sync.Mutex
 	// Items are kept in a LRU cache, but there is a special case:
 	// We always keep an item for (highest seen epoch) + 1 as the 'future item'.
 	cache      *simplelru.LRU
 	future     uint64
-	futureItem interface{}
+	futureItem any
 	lg         log.Logger
 }
 
 // NewLRU create a new least-recently-used cache for either the verification caches
 // or the mining datasets.
-func NewLRU(what string, maxItems int, new func(epoch uint64) interface{}) *LRU {
+func NewLRU(what string, maxItems int, new func(epoch uint64) any) *LRU {
 	if maxItems <= 0 {
 		maxItems = 1
 	}
 	lg := log.New("LRU")
-	cache, _ := simplelru.NewLRU(maxItems, func(key, value interface{}) {
+	cache, _ := simplelru.NewLRU(maxItems, func(key, value any) {
 		lg.Trace("Evicted ethash "+what, "epoch", key)
 	})
 	return &LRU{what: what, new: new, cache: cache, lg: lg}
@@ -175,7 +175,7 @@ func NewLRU(what string, maxItems int, new func(epoch uint64) interface{}) *LRU 
 // Get retrieves or creates an item for the given epoch. The first return value is always
 // non-nil. The second return value is non-nil if lru thinks that an item will be useful in
 // the near future.
-func (lru *LRU) Get(epoch uint64) (item, future interface{}) {
+func (lru *LRU) Get(epoch uint64) (item, future any) {
 	lru.mu.Lock()
 	defer lru.mu.Unlock()
 
@@ -211,7 +211,7 @@ type Cache struct {
 
 // NewCache creates a new ethash verification cache and returns it as a plain Go
 // interface to be usable in an LRU cache.
-func NewCache(epoch uint64) interface{} {
+func NewCache(epoch uint64) any {
 	return &Cache{epoch: epoch}
 }
 
@@ -288,7 +288,7 @@ type dataset struct {
 
 // newDataset creates a new ethash mining dataset and returns it as a plain Go
 // interface to be usable in an LRU cache.
-func newDataset(epoch uint64) interface{} {
+func newDataset(epoch uint64) any {
 	return &dataset{epoch: epoch}
 }
 
