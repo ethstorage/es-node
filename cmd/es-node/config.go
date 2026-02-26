@@ -225,7 +225,7 @@ func NewMinerConfig(ctx *cli.Context, client *ethclient.Client, l1Contract, mine
 func NewSignerConfig(ctx *cli.Context) (signer.SignerFactory, common.Address, error) {
 	signerConfig := signer.ReadCLIConfig(ctx)
 	if err := signerConfig.Check(); err != nil {
-		return nil, common.Address{}, fmt.Errorf("invalid siger flags: %w", err)
+		return nil, common.Address{}, fmt.Errorf("invalid signer flags: %w", err)
 	}
 	return signer.SignerFactoryFromConfig(signerConfig)
 }
