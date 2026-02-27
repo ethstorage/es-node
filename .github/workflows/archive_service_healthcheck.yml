@@ -12,11 +12,12 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - archive_alert
+      - archive_alert_p2
 
 jobs:
   check_blob_sidecars_API_for_critical_blob:
     name: Check blob_sidecars API for critical blob
+    if: ${{ github.repository == 'ethstorage/es-node' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
@@ -83,6 +84,7 @@ jobs:
 
   check_latest_uploaded_blob:
     name: Check latest blob with blobs API from Beacon
+    if: ${{ github.repository == 'ethstorage/es-node' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -128,7 +130,7 @@ jobs:
     needs:
       - check_blob_sidecars_API_for_critical_blob
       - check_latest_uploaded_blob
-    if: ${{ always() }}
+    if: ${{ always() && github.repository == 'ethstorage/es-node' }}
 
     steps:
       - name: Compose email
