@@ -73,7 +73,7 @@ func (a *APIService) blobSidecarHandler(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
-// blobSidecarHandler implements the /eth/v1/beacon/blobs/{id} endpoint
+// blobsHandler implements the /eth/v1/beacon/blobs/{id} endpoint
 func (a *APIService) blobsHandler(w http.ResponseWriter, r *http.Request) {
 
 	a.lg.Info("Blob archiver API request", "from", readUserIP(r), "url", r.RequestURI)
@@ -119,7 +119,7 @@ func (a *APIService) Start(ctx context.Context) error {
 		return err
 	}
 	r := mux.NewRouter()
-	// Deprecated
+	// Deprecated by Fusaka but still used by OP Stack
 	r.HandleFunc("/eth/v1/beacon/blob_sidecars/{id}", a.blobSidecarHandler)
 	// Fusaka
 	r.HandleFunc("/eth/v1/beacon/blobs/{id}", a.blobsHandler)

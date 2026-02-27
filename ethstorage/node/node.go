@@ -139,10 +139,8 @@ func (n *EsNode) initL2(ctx context.Context, cfg *Config) error {
 		n.db,
 		n.storageManager,
 		n.blobCache,
-		cfg.Downloader.DownloadStart,
-		cfg.Downloader.DownloadDump,
 		cfg.L1.L1MinDurationForBlobsRequest,
-		cfg.Downloader.DownloadThreadNum,
+		cfg.Downloader,
 		n.lg,
 	)
 	return nil
@@ -193,26 +191,26 @@ func (n *EsNode) startL1(cfg *Config) {
 		}
 		n.lg.Error("L1 heads subscription error", "err", err)
 	}()
-
-	// Keep subscribed to the randao heads, which helps miner to get proper random seeds
-	n.randaoHeadsSub = event.ResubscribeErr(time.Second*10, func(ctx context.Context, err error) (event.Subscription, error) {
-		if err != nil {
-			n.lg.Warn("Resubscribing after failed randao head subscription", "err", err)
-		}
-		if n.randaoSource != nil {
-			return eth.WatchHeadChanges(n.resourcesCtx, n.randaoSource, n.OnNewRandaoSourceHead)
-		} else {
-			return eth.WatchHeadChanges(n.resourcesCtx, n.l1Source, n.OnNewRandaoSourceHead)
-		}
-	})
-	go func() {
-		err, ok := <-n.randaoHeadsSub.Err()
-		if !ok {
-			return
-		}
-		n.lg.Error("Randao heads subscription error", "err", err)
-	}()
-
+	if n.miner != nil {
+		// Keep subscribed to the randao heads, which helps miner to get proper random seeds
+		n.randaoHeadsSub = event.ResubscribeErr(time.Second*10, func(ctx context.Context, err error) (event.Subscription, error) {
+			if err != nil {
+				n.lg.Warn("Resubscribing after failed randao head subscription", "err", err)
+			}
+			if n.randaoSource != nil {
+				return eth.WatchHeadChanges(n.resourcesCtx, n.randaoSource, n.OnNewRandaoSourceHead)
+			} else {
+				return eth.WatchHeadChanges(n.resourcesCtx, n.l1Source, n.OnNewRandaoSourceHead)
+			}
+		})
+		go func() {
+			err, ok := <-n.randaoHeadsSub.Err()
+			if !ok {
+				return
+			}
+			n.lg.Error("Randao heads subscription error", "err", err)
+		}()
+	}
 	// Poll for the safe L1 block and finalized block,
 	// which only change once per epoch at most and may be delayed.
 	n.l1SafeSub = eth.PollBlockChanges(n.resourcesCtx, n.lg, n.l1Source, n.OnNewL1Safe, ethRPC.SafeBlockNumber,
@@ -343,6 +341,7 @@ func (n *EsNode) initScanner(ctx context.Context, cfg *Config) {
 		n.feed,
 		n.lg,
 	)
+	n.scanner.Start()
 }
 
 func (n *EsNode) Start(ctx context.Context, cfg *Config) error {

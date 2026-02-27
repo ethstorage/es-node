@@ -6,7 +6,6 @@ package main
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
 	"fmt"
 	"math/big"
 	"net/http"
@@ -19,11 +18,11 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/crypto/kzg4844"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rpc"
 	es "github.com/ethstorage/go-ethstorage/ethstorage"
+	"github.com/ethstorage/go-ethstorage/ethstorage/blobs"
 	"github.com/ethstorage/go-ethstorage/ethstorage/flags"
 	"github.com/ethstorage/go-ethstorage/ethstorage/storage"
 	"github.com/urfave/cli"
@@ -261,15 +260,11 @@ func downloadBlobFromRPC(endpoint string, kvIndex uint64, hash common.Hash) ([]b
 		return nil, err
 	}
 
-	var blob kzg4844.Blob
-	copy(blob[:], result)
-	commitment, err := kzg4844.BlobToCommitment(&blob)
+	blobhash, err := blobs.BlobToVersionedHash(result)
 	if err != nil {
 		return nil, fmt.Errorf("blobToCommitment failed: %w", err)
 	}
-	blobhash := common.Hash(kzg4844.CalcBlobHashV1(sha256.New(), &commitment))
-	fmt.Printf("blobhash from blob: %x\n", blobhash)
-	if bytes.Compare(blobhash[:es.HashSizeInContract], hash[:es.HashSizeInContract]) != 0 {
+	if !bytes.Equal(blobhash[:es.HashSizeInContract], hash[:es.HashSizeInContract]) {
 		return nil, fmt.Errorf("invalid blobhash for %d want: %x, got: %x", kvIndex, hash, blobhash)
 	}
 

@@ -152,6 +152,17 @@ func TestGetKvsInBatch(t *testing.T) {
 			expectedBatchEnd: 14,
 		},
 		{
+			name:             "Discontinuous shards missing current",
+			shards:           []uint64{0, 2},
+			kvEntries:        8,
+			lastKvIdx:        12,
+			batchSize:        100,
+			batchStartIndex:  0,
+			expectedKvs:      []uint64{0, 1, 2, 3, 4, 5, 6, 7},
+			expectedTotal:    8,
+			expectedBatchEnd: 8,
+		},
+		{
 			name:             "Boundary conditions 1 kv",
 			shards:           []uint64{0},
 			kvEntries:        8,
@@ -224,7 +235,8 @@ func TestGetKvsInBatch(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			lg := log.New()
 
-			kvs, total, batchEnd := getKvsInBatch(tt.shards, tt.kvEntries, tt.lastKvIdx, tt.batchSize, tt.batchStartIndex, lg)
+			total, _ := summaryLocalKvs(tt.shards, tt.kvEntries, tt.lastKvIdx)
+			kvs, batchEnd := getKvsInBatch(tt.shards, tt.kvEntries, total, tt.batchSize, tt.batchStartIndex, lg)
 
 			assert.Equal(t, tt.expectedKvs, kvs, "KV indices do not match")
 			assert.Equal(t, tt.expectedTotal, total, "Total entries do not match")

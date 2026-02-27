@@ -54,15 +54,29 @@ func NewConfig(ctx *cli.Context, lg log.Logger) (*node.Config, error) {
 		return nil, fmt.Errorf("failed to load storage config: %w", err)
 	}
 
+	emailConfig, err := email.GetEmailConfig(ctx)
+	if err != nil {
+		lg.Warn("Failed to load email config, email notifications will be disabled.", "error", err)
+	}
 	dlConfig := NewDownloaderConfig(ctx)
+	if emailConfig != nil {
+		dlConfig.EmailConfig = emailConfig
+	}
 	minerConfig, err := NewMinerConfig(ctx, client, storageConfig.L1Contract, storageConfig.Miner, lg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load miner config: %w", err)
+	}
+	if minerConfig != nil && minerConfig.EmailEnabled {
+		if emailConfig == nil {
+			return nil, fmt.Errorf("email config is required by miner but not loaded")
+		}
+		minerConfig.EmailConfig = *emailConfig
 	}
 	chainId := new(big.Int).SetUint64(ctx.GlobalUint64(flags.ChainId.Name))
 	lg.Info("Read chain ID of EthStorage network", "chainID", chainId)
 	if minerConfig != nil {
 		minerConfig.ChainID = chainId
+		minerConfig.Slot = l1Endpoint.L1BeaconSlotTime
 	}
 	archiverConfig := archiver.NewConfig(ctx)
 	// l2Endpoint, err := NewL2EndpointConfig(ctx, lg)
@@ -71,6 +85,11 @@ func NewConfig(ctx *cli.Context, lg log.Logger) (*node.Config, error) {
 	// }
 
 	// l2SyncEndpoint := NewL2SyncEndpointConfig(ctx)
+
+	scannerConfig, err := scanner.NewConfig(ctx, l1Endpoint.L1BeaconSlotTime)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create scanner config: %w", err)
+	}
 	cfg := &node.Config{
 		L1:         *l1Endpoint,
 		ChainID:    chainId,
@@ -108,7 +127,7 @@ func NewConfig(ctx *cli.Context, lg log.Logger) (*node.Config, error) {
 		Storage:  *storageConfig,
 		Mining:   minerConfig,
 		Archiver: archiverConfig,
-		Scanner:  scanner.NewConfig(ctx),
+		Scanner:  scannerConfig,
 	}
 	if err := cfg.Check(); err != nil {
 		return nil, err
@@ -133,13 +152,6 @@ func NewMinerConfig(ctx *cli.Context, client *ethclient.Client, l1Contract, mine
 	minerConfig, err := cliConfig.ToMinerConfig()
 	if err != nil {
 		return nil, err
-	}
-	if minerConfig.EmailEnabled {
-		emailConfig, err := email.GetEmailConfig(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get email config: %w", err)
-		}
-		minerConfig.EmailConfig = *emailConfig
 	}
 
 	cctx := context.Background()
@@ -213,7 +225,7 @@ func NewMinerConfig(ctx *cli.Context, client *ethclient.Client, l1Contract, mine
 func NewSignerConfig(ctx *cli.Context) (signer.SignerFactory, common.Address, error) {
 	signerConfig := signer.ReadCLIConfig(ctx)
 	if err := signerConfig.Check(); err != nil {
-		return nil, common.Address{}, fmt.Errorf("invalid siger flags: %w", err)
+		return nil, common.Address{}, fmt.Errorf("invalid signer flags: %w", err)
 	}
 	return signer.SignerFactoryFromConfig(signerConfig)
 }
