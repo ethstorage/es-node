@@ -1,0 +1,213 @@
+name: Archive Service Healthcheck
+permissions:
+  contents: read
+  pull-requests: write
+
+on:
+  schedule:
+    # Every 8 hours (UTC).
+    - cron: '41 1 * * *'
+    - cron: '41 9 * * *'
+    - cron: '41 17 * * *'
+  workflow_dispatch:
+  push:
+    branches:
+      - archive_alert
+
+jobs:
+  check_blob_sidecars_API_for_critical_blob:
+    name: Check blob_sidecars API for critical blob
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      ARCHIVE_BLOB_SIDECARS_URL: https://archive.mainnet.ethstorage.io:9645/eth/v1/beacon/blob_sidecars/13164810?indices=3
+      ARCHIVE_BLOB_HASH: "5475d05275aaae328b99a4f4058ac1e121eaa4e4d4d378d292d6130f32d6ede0"
+
+    outputs:
+      failure_detail: ${{ steps.check_endpoint.outputs.failure_detail }}
+      archive_blob_sidecars_url: ${{ steps.check_endpoint.outputs.archive_blob_sidecars_url }}
+
+    steps:
+      - name: Check blob_sidecars endpoint
+        id: check_endpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          url='${{ env.ARCHIVE_BLOB_SIDECARS_URL }}'
+          expected_blob_hash='${{ env.ARCHIVE_BLOB_HASH }}'
+
+          echo "archive_blob_sidecars_url=$url" >> "$GITHUB_OUTPUT"
+
+          resp_file="${RUNNER_TEMP}/blob_sidecars.json"
+
+          # Ensure file exists so it can be attached in the failure email.
+          : > "$resp_file"
+
+          # Capture status code; use retries/timeouts to reduce flakiness.
+          code="$(
+            curl --silent --show-error --location \
+              --retry 3 --retry-delay 5 --retry-all-errors \
+              --connect-timeout 10 --max-time 30 \
+              --output "$resp_file" --write-out '%{http_code}' \
+              "$url" \
+              || echo '000'
+          )"
+
+          echo "HTTP status: $code"
+          if [[ "$code" != "200" ]]; then
+            failure_detail="Unexpected HTTP status code: expected 200, got ${code}"
+            echo "failure_detail=$failure_detail" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+          blob="$(jq -r '.data[0].blob // empty' "$resp_file")"
+          if [[ -z "$blob" ]]; then
+            echo "failure_detail=Missing .data[0].blob in response" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+          # Compare by SHA-256 hash.
+          actual_blob_hash="$(printf '%s' "$blob" | sha256sum | awk '{print $1}')"
+          if [[ -z "$actual_blob_hash" ]]; then
+            echo "failure_detail=Failed to compute blob sha256" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+          if [[ "$actual_blob_hash" != "$expected_blob_hash" ]]; then
+            echo "failure_detail=Blob hash mismatch (expected ${expected_blob_hash}, got ${actual_blob_hash})" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+          echo "Blob data OK"
+
+  check_latest_uploaded_blob:
+    name: Check latest blob with blobs API from Beacon
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    outputs:
+      failure_detail: ${{ steps.putblob.outputs.failure_detail }}
+      archive_url: ${{ steps.putblob.outputs.archive_url }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install foundry (cast)
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+
+      - name: Find latest PutBlob and fetch beacon blobs
+        id: putblob
+        shell: bash
+        env:
+          EL_RPC_URL: ${{ secrets.ARCHIVE_SERVICE_EL_RPC_URL }}          
+          BEACON_API: ${{ secrets.ARCHIVE_SERVICE_BEACON_API }}
+        run: |
+          set -euo pipefail
+          out_file="$(mktemp)"
+          set +e
+          bash ./integration_tests/scripts/check_latest_blob.sh 2>&1 | tee "$out_file"
+          status=${PIPESTATUS[0]}
+          set -e
+          if [[ "$status" == "0" ]]; then
+            exit 0
+          fi
+
+          echo "failure_detail<<EOF" >> "$GITHUB_OUTPUT"
+          tail -n 80 "$out_file" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+          exit 1
+
+  notify:
+    name: Notify (combined)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs:
+      - check_blob_sidecars_API_for_critical_blob
+      - check_latest_uploaded_blob
+    if: ${{ always() }}
+
+    steps:
+      - name: Compose email
+        id: compose
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_SCHEDULE: ${{ github.event.schedule }}
+          BLOB_RESULT: ${{ needs.check_blob_sidecars_API_for_critical_blob.result }}
+          PUTBLOB_RESULT: ${{ needs.check_latest_uploaded_blob.result }}
+          BLOB_FAILURE_DETAIL: ${{ needs.check_blob_sidecars_API_for_critical_blob.outputs.failure_detail }}
+          PUTBLOB_FAILURE_DETAIL: ${{ needs.check_latest_uploaded_blob.outputs.failure_detail }}
+          PUTBLOB_ARCHIVE_URL: ${{ needs.check_latest_uploaded_blob.outputs.archive_url }}
+          ARCHIVE_BLOB_SIDECARS_URL: ${{ needs.check_blob_sidecars_API_for_critical_blob.outputs.archive_blob_sidecars_url }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+
+          send=false
+          overall="OK"
+
+          if [[ "$BLOB_RESULT" != "success" || "$PUTBLOB_RESULT" != "success" ]]; then
+            overall="FAILED"
+            send=true
+          else
+            # Success: send only on workflow_dispatch, or once per day at 00 UTC for scheduled runs.
+            if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+              send=true
+            elif [[ "$EVENT_NAME" == "schedule" ]]; then
+              if [[ "${EVENT_SCHEDULE:-}" == "41 17 * * *" ]]; then
+                send=true
+              fi
+            fi
+          fi
+
+          echo "Event: $EVENT_NAME"
+          echo "Schedule: ${EVENT_SCHEDULE:-}"
+          echo "send=$send"
+
+          if [[ "$overall" == "OK" ]]; then
+            subject="✅ Archive Service Healthcheck OK"
+          else
+            subject="❌ Archive Service Healthcheck FAILED"
+          fi
+
+          echo "send=$send" >> "$GITHUB_OUTPUT"
+          echo "subject=$subject" >> "$GITHUB_OUTPUT"
+
+          echo "body<<EOF" >> "$GITHUB_OUTPUT"
+          echo "Archive Service Healthcheck: $overall" >> "$GITHUB_OUTPUT"
+          echo >> "$GITHUB_OUTPUT"
+          echo "Event: $EVENT_NAME" >> "$GITHUB_OUTPUT"
+          echo "Run: $RUN_URL" >> "$GITHUB_OUTPUT"
+          echo >> "$GITHUB_OUTPUT"
+          echo "check_blob_sidecars_API_for_critical_blob: $BLOB_RESULT" >> "$GITHUB_OUTPUT"
+          echo "  URL: $ARCHIVE_BLOB_SIDECARS_URL" >> "$GITHUB_OUTPUT"
+          if [[ -n "${BLOB_FAILURE_DETAIL:-}" ]]; then
+            echo "  Failure detail: $BLOB_FAILURE_DETAIL" >> "$GITHUB_OUTPUT"
+          fi
+          echo >> "$GITHUB_OUTPUT"
+          echo "check_latest_uploaded_blob: $PUTBLOB_RESULT" >> "$GITHUB_OUTPUT"
+          if [[ -n "${PUTBLOB_ARCHIVE_URL:-}" ]]; then
+            echo "  Archive URL: $PUTBLOB_ARCHIVE_URL" >> "$GITHUB_OUTPUT"
+          fi
+          if [[ -n "${PUTBLOB_FAILURE_DETAIL:-}" ]]; then
+            echo "  Failure detail (tail):" >> "$GITHUB_OUTPUT"
+            echo "$PUTBLOB_FAILURE_DETAIL" >> "$GITHUB_OUTPUT"
+          fi
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      - name: Send combined email
+        if: ${{ steps.compose.outputs.send == 'true' }}
+        uses: dawidd6/action-send-mail@v6
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.ARCHIVE_SERVICE_SMTP_USERNAME }}
+          password: ${{ secrets.ARCHIVE_SERVICE_SMTP_PASSWORD }}
+          from: ES Archive Service
+          to: ${{ secrets.ARCHIVE_SERVICE_EMAIL_TO }}
+          subject: ${{ steps.compose.outputs.subject }}
+          body: ${{ steps.compose.outputs.body }}
