@@ -110,8 +110,8 @@ func (b *bigValue) Set(s string) error {
 }
 
 func eachName(f cli.Flag, fn func(string)) {
-	parts := strings.Split(f.GetName(), ",")
-	for _, name := range parts {
+	parts := strings.SplitSeq(f.GetName(), ",")
+	for name := range parts {
 		name = strings.Trim(name, " ")
 		fn(name)
 	}
