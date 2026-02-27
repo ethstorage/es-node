@@ -15,8 +15,9 @@ const (
 	// Default Kvs per scan batch; bigger than this may cause run out of gas
 	defaultBatchSize = 8192
 	// Default intervals in minutes
-	defaultIntervalMeta = 3
-	defaultIntervalBlob = 60
+	defaultIntervalMeta  = 3
+	defaultIntervalBlob  = 60
+	defaultIntervalBlock = 1440 // 1 day
 	// Minutes between fixing loops
 	fixingInterval = 12
 	// Minutes to wait before trying to fix pending mismatches
@@ -29,18 +30,22 @@ const (
 	modeCheckMeta
 	// Compute meta hashes from local blobs and compare with those in L1 contract
 	modeCheckBlob
+	// Scan updated KVs from recent blocks and run "check-blob" on them
+	modeCheckBlock
 )
 
 const (
-	modeSetMeta scanModeSet = 1 << iota // 1
-	modeSetBlob                         // 2
+	modeSetMeta  scanModeSet = 1 << iota // 1
+	modeSetBlob                          // 2
+	modeSetBlock                         // 4
 )
 
 const (
-	ModeFlagName         = "scanner.mode"
-	BatchSizeFlagName    = "scanner.batch-size"
-	IntervalMetaFlagName = "scanner.interval.meta"
-	IntervalBlobFlagName = "scanner.interval.blob"
+	ModeFlagName          = "scanner.mode"
+	BatchSizeFlagName     = "scanner.batch-size"
+	IntervalMetaFlagName  = "scanner.interval.meta"
+	IntervalBlobFlagName  = "scanner.interval.blob"
+	IntervalBlockFlagName = "scanner.interval.block"
 )
 
 // scanModeSet is a combination of scanMode values used for configuration purposes.
@@ -61,6 +66,12 @@ func (m scanModeSet) String() string {
 		}
 		out += "check-blob"
 	}
+	if m&modeSetBlock != 0 {
+		if out != "" {
+			out += "+"
+		}
+		out += "check-block"
+	}
 	return out
 }
 
@@ -69,23 +80,25 @@ func scannerEnv(name string) string {
 }
 
 type Config struct {
-	Mode         scanModeSet
-	BatchSize    int
-	IntervalMeta time.Duration
-	IntervalBlob time.Duration
+	Mode          scanModeSet
+	BatchSize     int
+	L1SlotTime    time.Duration
+	IntervalMeta  time.Duration
+	IntervalBlob  time.Duration
+	IntervalBlock time.Duration
 }
 
 func CLIFlags() []cli.Flag {
 	flags := []cli.Flag{
 		cli.IntFlag{
 			Name:   ModeFlagName,
-			Usage:  "Data scan mode (bitmask) : 0=disabled, 1=meta, 2=blob; combinations via sum/OR: 3=meta+blob",
+			Usage:  "Data scan mode (bitmask) : 0=disabled, 1=meta, 2=blob, 4=block; combinations via sum/OR: 3=meta+blob, 5=meta+block, 6=blob+block, 7=all",
 			EnvVar: scannerEnv("MODE"),
 			Value:  1,
 		},
 		cli.IntFlag{
 			Name:   BatchSizeFlagName,
-			Usage:  "Data scan batch size",
+			Usage:  "The number of KVs to scan per batch for check-meta and check-blob modes. No impact on check-block mode.",
 			EnvVar: scannerEnv("BATCH_SIZE"),
 			Value:  defaultBatchSize,
 		},
@@ -101,26 +114,34 @@ func CLIFlags() []cli.Flag {
 			EnvVar: scannerEnv("INTERVAL_BLOB"),
 			Value:  defaultIntervalBlob,
 		},
+		cli.IntFlag{
+			Name:   IntervalBlockFlagName,
+			Usage:  fmt.Sprintf("Data scan interval of check-block mode in minutes (default %d)", defaultIntervalBlock),
+			EnvVar: scannerEnv("INTERVAL_BLOCK"),
+			Value:  defaultIntervalBlock,
+		},
 	}
 	return flags
 }
 
-const scanModeSetMask = modeSetMeta | modeSetBlob
+const scanModeSetMask = modeSetMeta | modeSetBlob | modeSetBlock // 7
 
-func NewConfig(ctx *cli.Context) (*Config, error) {
+func NewConfig(ctx *cli.Context, slot uint64) (*Config, error) {
 	rawMode := scanModeSet(ctx.GlobalInt(ModeFlagName))
 	if rawMode == 0 {
 		return nil, nil
 	}
 	// Check for invalid bits outside the valid mask
 	if rawMode&^scanModeSetMask != 0 {
-		return nil, fmt.Errorf("invalid scanner mode: %d, valid values are 0 (disabled), 1 (meta), 2 (blob), or 3 (meta+blob)", rawMode)
+		return nil, fmt.Errorf("invalid scanner mode: %d, valid values are 0 (disabled), 1 (meta), 2 (blob), 3 (meta+blob), 4 (block), 5 (meta+block), 6 (blob+block), 7 (all)", rawMode)
 	}
 	mode := rawMode & scanModeSetMask
 	return &Config{
-		Mode:         mode,
-		BatchSize:    ctx.GlobalInt(BatchSizeFlagName),
-		IntervalMeta: time.Minute * time.Duration(ctx.GlobalInt(IntervalMetaFlagName)),
-		IntervalBlob: time.Minute * time.Duration(ctx.GlobalInt(IntervalBlobFlagName)),
+		Mode:          mode,
+		BatchSize:     ctx.GlobalInt(BatchSizeFlagName),
+		L1SlotTime:    time.Second * time.Duration(slot),
+		IntervalMeta:  time.Minute * time.Duration(ctx.GlobalInt(IntervalMetaFlagName)),
+		IntervalBlob:  time.Minute * time.Duration(ctx.GlobalInt(IntervalBlobFlagName)),
+		IntervalBlock: time.Minute * time.Duration(ctx.GlobalInt(IntervalBlockFlagName)),
 	}, nil
 }
