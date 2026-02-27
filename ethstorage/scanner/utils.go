@@ -21,6 +21,8 @@ func (m scanMode) String() string {
 		return "check-meta"
 	case modeCheckBlob:
 		return "check-blob"
+	case modeCheckBlock:
+		return "check-block"
 	default:
 		return fmt.Sprintf("unknown(%d)", int(m))
 	}
