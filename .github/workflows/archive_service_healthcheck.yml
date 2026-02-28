@@ -10,9 +10,6 @@ on:
     - cron: '41 9 * * *'
     - cron: '41 17 * * *'
   workflow_dispatch:
-  push:
-    branches:
-      - archive_alert_p2
 
 jobs:
   check_blob_sidecars_API_for_critical_blob:
