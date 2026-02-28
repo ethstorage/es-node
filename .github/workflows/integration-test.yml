@@ -5,6 +5,7 @@ on:
 jobs:
   integration-test:
     runs-on: [self-hosted, ethstorage, l2]
+    if: ${{ github.repository == 'ethstorage/es-node' }}
     outputs:
       test_status: ${{ job.status }}
     timeout-minutes: 2880
@@ -87,7 +88,7 @@ jobs:
             es-node-it.log
 
   notification:
-    if: ${{ always() }}
+    if: ${{ always() && github.repository == 'ethstorage/es-node' }}
     needs: integration-test
     runs-on: ubuntu-latest
     steps:
