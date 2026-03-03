@@ -86,7 +86,7 @@ func NewConfig(ctx *cli.Context, lg log.Logger) (*node.Config, error) {
 
 	// l2SyncEndpoint := NewL2SyncEndpointConfig(ctx)
 
-	scannerConfig, err := scanner.NewConfig(ctx)
+	scannerConfig, err := scanner.NewConfig(ctx, l1Endpoint.L1BeaconSlotTime)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create scanner config: %w", err)
 	}
@@ -225,7 +225,7 @@ func NewMinerConfig(ctx *cli.Context, client *ethclient.Client, l1Contract, mine
 func NewSignerConfig(ctx *cli.Context) (signer.SignerFactory, common.Address, error) {
 	signerConfig := signer.ReadCLIConfig(ctx)
 	if err := signerConfig.Check(); err != nil {
-		return nil, common.Address{}, fmt.Errorf("invalid siger flags: %w", err)
+		return nil, common.Address{}, fmt.Errorf("invalid signer flags: %w", err)
 	}
 	return signer.SignerFactoryFromConfig(signerConfig)
 }

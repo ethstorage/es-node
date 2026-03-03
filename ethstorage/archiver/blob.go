@@ -61,7 +61,7 @@ func (b byte48) MarshalJSON() ([]byte, error) {
 }
 
 func (b *byte48) UnmarshalJSON(data []byte) error {
-	return hexutil.UnmarshalFixedJSON(reflect.TypeOf(b), data, b[:])
+	return hexutil.UnmarshalFixedJSON(reflect.TypeFor[*byte48](), data, b[:])
 }
 
 type blobContent [blobs.BlobLength]byte
@@ -71,5 +71,5 @@ func (b blobContent) MarshalJSON() ([]byte, error) {
 }
 
 func (b *blobContent) UnmarshalJSON(data []byte) error {
-	return hexutil.UnmarshalFixedJSON(reflect.TypeOf(b), data, b[:])
+	return hexutil.UnmarshalFixedJSON(reflect.TypeFor[*blobContent](), data, b[:])
 }
