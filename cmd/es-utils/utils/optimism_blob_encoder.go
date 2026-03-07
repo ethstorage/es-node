@@ -31,7 +31,7 @@ var (
 // placing each of the 4x31 byte chunks into bytes [1:32] of its respective field element. The
 // three single byte chunks (24 bits) are split into 4x6-bit chunks, each of which is written into
 // the top most byte of its respective field element, leaving the top 2 bits of each field element
-// empty to avoid modulus overflow.  This process is repeated for up to 1024 rounds until all data
+// empty to avoid modulus overflow. This process is repeated for up to 1024 rounds until all data
 // is encoded.
 //
 // For only the very first output field, bytes [1:5] are used to encode the version and the length
