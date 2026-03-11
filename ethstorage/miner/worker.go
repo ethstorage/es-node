@@ -115,6 +115,8 @@ type worker struct {
 	db         ethdb.Database
 	storageMgr *es.StorageManager
 
+	headUpdateCh chan uint64
+
 	chainHeadCh chan eth.L1BlockRef
 	startCh     chan uint64
 	exitCh      chan struct{}
@@ -155,6 +157,7 @@ func newWorker(
 		dataReader:       dr,
 		prover:           prover,
 		chainHeadCh:      chainHeadCh,
+		headUpdateCh:     make(chan uint64, 1),
 		shardTaskMap:     make(map[uint64]task),
 		exitCh:           make(chan struct{}),
 		startCh:          make(chan uint64, 1),
@@ -275,6 +278,7 @@ func (w *worker) newWorkLoop() {
 			w.shardTaskMap[shardIdx] = task
 
 		case block := <-w.chainHeadCh:
+			w.updateLatestL1Head(block.Number)
 			if !w.isRunning() {
 				break
 			}
@@ -292,6 +296,20 @@ func (w *worker) newWorkLoop() {
 		case <-w.exitCh:
 			w.lg.Warn("Worker is exiting from work loop...")
 			return
+		}
+	}
+}
+
+func (w *worker) updateLatestL1Head(new uint64) {
+	for {
+		select {
+		case w.headUpdateCh <- new:
+			return
+		case old := <-w.headUpdateCh:
+			// Keep monotonic block height while replacing buffered value.
+			if old > new {
+				new = old
+			}
 		}
 	}
 }
@@ -426,12 +444,9 @@ func (w *worker) resultLoop() {
 				continue
 			}
 			w.lg.Info("Mining result loop get result", "shard", result.startShardId, "block", result.blockNumber, "nonce", result.nonce)
-
-			// Mining result comes within the same block time window
-			if tillNextSlot := int64(result.timestamp) + int64(w.config.Slot) - time.Now().Unix(); tillNextSlot > 0 {
-				// Wait until next block comes to avoid empty blockhash on gas estimation
-				w.lg.Info("Hold on submitting mining result till block+1", "block", result.blockNumber, "secondsToWait", tillNextSlot)
-				time.Sleep(time.Duration(tillNextSlot) * time.Second)
+			// Wait until next block comes to avoid empty blockhash on gas estimation
+			if !w.waitUntilBlockAdvanced(result.blockNumber.Uint64()) {
+				return
 			}
 			txHash, err := w.l1API.SubmitMinedResult(
 				context.Background(),
@@ -501,6 +516,22 @@ func (w *worker) resultLoop() {
 				w.lg.Error("Mining error since es-node launched", "err", e)
 			}
 			return
+		}
+	}
+}
+
+// waitUntilBlockAdvanced waits until L1 head is strictly newer than the mined block.
+func (w *worker) waitUntilBlockAdvanced(mined uint64) bool {
+	for {
+		select {
+		case latest := <-w.headUpdateCh:
+			if latest > mined {
+				w.lg.Info("L1 head advanced since mined block", "mined", mined, "latest", latest)
+				return true
+			}
+			w.lg.Info("L1 head not advanced since mined block, keep waiting", "mined", mined, "latest", latest)
+		case <-w.exitCh:
+			return false
 		}
 	}
 }
