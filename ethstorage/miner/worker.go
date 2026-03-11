@@ -115,6 +115,9 @@ type worker struct {
 	db         ethdb.Database
 	storageMgr *es.StorageManager
 
+	latestL1Head uint64
+	headUpdateCh chan struct{}
+
 	chainHeadCh chan eth.L1BlockRef
 	startCh     chan uint64
 	exitCh      chan struct{}
@@ -155,6 +158,7 @@ func newWorker(
 		dataReader:       dr,
 		prover:           prover,
 		chainHeadCh:      chainHeadCh,
+		headUpdateCh:     make(chan struct{}, 1),
 		shardTaskMap:     make(map[uint64]task),
 		exitCh:           make(chan struct{}),
 		startCh:          make(chan uint64, 1),
@@ -181,6 +185,27 @@ func newWorker(
 	go worker.newWorkLoop()
 	go worker.resultLoop()
 	return worker
+}
+
+func (w *worker) updateLatestL1Head(incoming uint64) {
+	for {
+		current := atomic.LoadUint64(&w.latestL1Head)
+		if incoming <= current {
+			w.lg.Info("L1 head is already updated", "current", current, "incoming", incoming)
+			return
+		}
+		if atomic.CompareAndSwapUint64(&w.latestL1Head, current, incoming) {
+			w.lg.Info("Latest L1 head updated", "current", current, "incoming", incoming)
+			select {
+			case w.headUpdateCh <- struct{}{}:
+				w.lg.Info("headUpdateCh notified", "current", current, "incoming", incoming)
+			default:
+				w.lg.Info("headUpdateCh notification skipped to avoid blocking", "current", current, "incoming", incoming)
+			}
+			return
+		}
+		w.lg.Info("Concurrent L1 head update detected, retrying", "current", current, "incoming", incoming)
+	}
 }
 
 func (w *worker) start() {
@@ -275,6 +300,7 @@ func (w *worker) newWorkLoop() {
 			w.shardTaskMap[shardIdx] = task
 
 		case block := <-w.chainHeadCh:
+			w.updateLatestL1Head(block.Number)
 			if !w.isRunning() {
 				break
 			}
@@ -410,6 +436,28 @@ func (w *worker) notifyResultLoop() {
 	}
 }
 
+// waitUntilBlockAdvanced waits until L1 head is strictly newer than the mined block.
+func (w *worker) waitUntilBlockAdvanced(mined uint64) bool {
+	loggedWaiting := false
+	for {
+		latest := atomic.LoadUint64(&w.latestL1Head)
+		if latest > mined {
+			w.lg.Info("L1 head advanced since mined block", "mined", mined, "latest", latest)
+			return true
+		}
+		if !loggedWaiting {
+			w.lg.Info("Hold on submitting mining result until L1 head advances", "mined", mined, "latest", latest)
+			loggedWaiting = true
+		}
+		select {
+		case <-w.headUpdateCh:
+			w.lg.Info("L1 head update received", "mined", mined, "latest", atomic.LoadUint64(&w.latestL1Head))
+		case <-w.exitCh:
+			return false
+		}
+	}
+}
+
 // resultLoop is a standalone goroutine to submit mining result to L1 contract.
 func (w *worker) resultLoop() {
 	defer w.wg.Done()
@@ -426,12 +474,9 @@ func (w *worker) resultLoop() {
 				continue
 			}
 			w.lg.Info("Mining result loop get result", "shard", result.startShardId, "block", result.blockNumber, "nonce", result.nonce)
-
-			// Mining result comes within the same block time window
-			if tillNextSlot := int64(result.timestamp) + int64(w.config.Slot) - time.Now().Unix(); tillNextSlot > 0 {
-				// Wait until next block comes to avoid empty blockhash on gas estimation
-				w.lg.Info("Hold on submitting mining result till block+1", "block", result.blockNumber, "secondsToWait", tillNextSlot)
-				time.Sleep(time.Duration(tillNextSlot) * time.Second)
+			// Wait until next block comes to avoid empty blockhash on gas estimation
+			if !w.waitUntilBlockAdvanced(result.blockNumber.Uint64()) {
+				return
 			}
 			txHash, err := w.l1API.SubmitMinedResult(
 				context.Background(),
