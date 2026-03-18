@@ -147,20 +147,30 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 		return common.Hash{}, errDropped{reason: errMessage}
 	}
 
-	estimatedGas, err := m.EstimateGas(ctx, ethereum.CallMsg{
+	estimatedGas, err := m.EstimateGasAtBlock(ctx, ethereum.CallMsg{
 		From:      cfg.SignerAddr,
 		To:        &contract,
 		GasTipCap: tip,
 		GasFeeCap: gasFeeCap,
 		Value:     common.Big0,
 		Data:      calldata,
-	})
+	}, big.NewInt(rpc.PendingBlockNumber.Int64()))
 	if err != nil {
 		errMessage := parseErr(err)
 		m.lg.Error("Estimate gas failed", "error", errMessage)
 		return common.Hash{}, fmt.Errorf("failed to estimate gas: %v", errMessage)
 	}
 	m.lg.Info("Estimated gas done", "gas", estimatedGas)
+	// query current block number for debug
+	currentBlock, err := m.BlockNumber(ctx)
+	if err != nil {
+		m.lg.Warn("Failed to query current block number", "error", err)
+	} else {
+		m.lg.Info("Current block number", "blockNumber", currentBlock)
+	}
+	if currentBlock == rst.blockNumber.Uint64() {
+		m.lg.Warn("Current block number is the same as the mined block number, the tx might fail due to empty blockhash, consider to wait for next block", "blockNumber", currentBlock)
+	}
 
 	nonce, err := m.PendingNonceAt(ctx, cfg.SignerAddr)
 	if err != nil {
