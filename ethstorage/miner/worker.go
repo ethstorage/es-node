@@ -426,13 +426,6 @@ func (w *worker) resultLoop() {
 				continue
 			}
 			w.lg.Info("Mining result loop get result", "shard", result.startShardId, "block", result.blockNumber, "nonce", result.nonce)
-
-			// Mining result comes within the same block time window
-			if tillNextSlot := int64(result.timestamp) + int64(w.config.Slot) - time.Now().Unix(); tillNextSlot > 0 {
-				// Wait until next block comes to avoid empty blockhash on gas estimation
-				w.lg.Info("Hold on submitting mining result till block+1", "block", result.blockNumber, "secondsToWait", tillNextSlot)
-				time.Sleep(time.Duration(tillNextSlot) * time.Second)
-			}
 			txHash, err := w.l1API.SubmitMinedResult(
 				context.Background(),
 				w.storageMgr.ContractAddress(),
