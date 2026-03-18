@@ -147,14 +147,14 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 		return common.Hash{}, errDropped{reason: errMessage}
 	}
 
-	estimatedGas, err := m.EstimateGas(ctx, ethereum.CallMsg{
+	estimatedGas, err := m.EstimateGasAtBlock(ctx, ethereum.CallMsg{
 		From:      cfg.SignerAddr,
 		To:        &contract,
 		GasTipCap: tip,
 		GasFeeCap: gasFeeCap,
 		Value:     common.Big0,
 		Data:      calldata,
-	})
+	}, big.NewInt(rpc.PendingBlockNumber.Int64()))
 	if err != nil {
 		errMessage := parseErr(err)
 		m.lg.Error("Estimate gas failed", "error", errMessage)
