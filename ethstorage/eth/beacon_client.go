@@ -75,7 +75,6 @@ func (c *BeaconClient) DownloadBlobs(timestamp uint64, hashes []common.Hash) (ma
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf(">>>>>>>>>Querying beacon blobs with url %s\n", blobsUrl)
 	resp, err := http.Get(blobsUrl)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query beacon blobs with url %s: %w", blobsUrl, err)
