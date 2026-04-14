@@ -121,7 +121,7 @@ func (c *BeaconClient) QueryUrlForV1BeaconBlobs(timestamp uint64, hashes []commo
 	}
 	q := url.Values{}
 	for _, h := range hashes {
-		q.Add("versioned_hash", h.Hex())
+		q.Add("versioned_hashes", h.Hex())
 	}
 	return blobsURL + "?" + q.Encode(), nil
 }
