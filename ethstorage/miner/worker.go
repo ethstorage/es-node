@@ -128,7 +128,7 @@ type worker struct {
 	miningStates     map[uint64]*MiningState
 	submissionStates map[uint64]*SubmissionState
 
-	running int32
+	running atomic.Int32
 	wg      sync.WaitGroup
 	lg      log.Logger
 }
@@ -185,16 +185,16 @@ func newWorker(
 
 func (w *worker) start() {
 	w.lg.Info("Worker is being started...")
-	atomic.StoreInt32(&w.running, 1)
+	w.running.Store(1)
 }
 
 func (w *worker) stop() {
 	w.lg.Warn("Worker is being stopped...")
-	atomic.StoreInt32(&w.running, 0)
+	w.running.Store(0)
 }
 
 func (w *worker) isRunning() bool {
-	return atomic.LoadInt32(&w.running) == 1
+	return w.running.Load() == 1
 }
 
 func (w *worker) close() {
