@@ -130,15 +130,15 @@ export VERSIONED_HASH=0x0158420bd7b1f3c04a097694235c52659f31b479018ac56b2545727f
 
 With the slot number and versioned hash, you can query the blob from the EthStorage archive service even after it is pruned by L1.
 ```bash
-curl -s "$ARCHIVE_API/eth/v1/beacon/blobs/$SLOT?versioned_hash=$VERSIONED_HASH"
+curl -s "$ARCHIVE_API/eth/v1/beacon/blobs/$SLOT?versioned_hashes=$VERSIONED_HASH"
 ```
 
 Finally, verify that the blob retrieved matches the one obtained from the Beacon Chain:
 
 ```bash
 
-[ "$(curl -s "$BEACON_API/eth/v1/beacon/blobs/$SLOT?versioned_hash=$VERSIONED_HASH" | jq -r '.data[0]') " \
- = "$(curl -s "$ARCHIVE_API/eth/v1/beacon/blobs/$SLOT?versioned_hash=$VERSIONED_HASH" | jq -r '.data[0]') " ] && echo "✅ Match" || echo "❌ Mismatch"
+[ "$(curl -s "$BEACON_API/eth/v1/beacon/blobs/$SLOT?versioned_hashes=$VERSIONED_HASH" | jq -r '.data[0]') " \
+ = "$(curl -s "$ARCHIVE_API/eth/v1/beacon/blobs/$SLOT?versioned_hashes=$VERSIONED_HASH" | jq -r '.data[0]') " ] && echo "✅ Match" || echo "❌ Mismatch"
  ```
 
 This confirms that the blob was correctly stored and retrieved from EthStorage.

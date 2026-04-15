@@ -3,9 +3,9 @@ Es-node Archiver Specification
 
 # Highlights from the Fusaka Hardfork
 
-With the Fusaka hardfork on mainnet, the EthStorage archiver now mirrors the Beacon chain’s new [getBlobs beacon API](https://ethereum.github.io/beacon-APIs/#/Beacon/getBlobs). Specifically, the archive service exposes the `/eth/v1/beacon/blobs/{block_id}` endpoint just like the Beacon node. You can narrow the response by supplying `versioned_hash` values. Example:
+With the Fusaka hardfork on mainnet, the EthStorage archiver now mirrors the Beacon chain’s new [getBlobs beacon API](https://ethereum.github.io/beacon-APIs/#/Beacon/getBlobs). Specifically, the archive service exposes the `/eth/v1/beacon/blobs/{block_id}` endpoint just like the Beacon node. You can narrow the response by supplying `versioned_hashes` values. Example:
 ```
-https://archive.mainnet.ethstorage.io:9645/eth/v1/beacon/blobs/13093337?versioned_hash=0x01b3b1cad783d50819c67828170748b202611b6cb84ca717f21a0559d4342687
+https://archive.mainnet.ethstorage.io:9645/eth/v1/beacon/blobs/13093337?versioned_hashes=0x01b3b1cad783d50819c67828170748b202611b6cb84ca717f21a0559d4342687
 ```
 Note there a light difference between es-node archiver response:
 ```json
@@ -20,7 +20,7 @@ And Beacon API response:
     "data":["0x31000001610086d08e089e8c9644182c1ab1db2d061e00000000014978daec90264afc..."]
 }
 ```
-In the case of multiple blobs response, es-node still relies on the `/eth/v2/beacon/blocks/{block_id}` endpoint to preserve the exact ordering: blobs must be returned in the same sequence as their KZG commitments appear in the block (per the Beacon API spec), not the order in which `versioned_hash` values were requested.
+In the case of multiple blobs response, es-node still relies on the `/eth/v2/beacon/blocks/{block_id}` endpoint to preserve the exact ordering: blobs must be returned in the same sequence as their KZG commitments appear in the block (per the Beacon API spec), not the order in which `versioned_hashes` values were requested.
 
 > [!NOTE]
 > The 'blob_sidecars' API in the following old specification is deprecated.
