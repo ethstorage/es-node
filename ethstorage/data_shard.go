@@ -302,7 +302,7 @@ func DecodeChunk(chunkSize uint64, bs []byte, encodeType uint64, encodeKey commo
 
 func decodeChunk(chunkSize uint64, bs []byte, encodeType uint64, encodeKey common.Hash) []byte {
 	if len(bs) > int(chunkSize) {
-		panic("cannot encode chunk with size > CHUNK_SIZE")
+		panic("cannot decode chunk with size > CHUNK_SIZE")
 	}
 	if encodeType == ENCODE_KECCAK_256 {
 		output := make([]byte, len(bs))
@@ -380,7 +380,7 @@ func (ds *DataShard) WriteWith(kvIdx uint64, b []byte, commit common.Hash, encod
 	return ds.WriteMeta(kvIdx, commit[:])
 }
 
-// Write a value of the KV to the store.  The value will be encoded with kvIdx and SP address.
+// Write a value of the KV to the store. The value will be encoded with kvIdx and SP address.
 func (ds *DataShard) Write(kvIdx uint64, b []byte, commit common.Hash) error {
 	return ds.WriteWith(kvIdx, b, commit, func(cdata []byte, chunkIdx uint64) []byte {
 		encodeKey := calcEncodeKey(commit, chunkIdx, ds.Miner())

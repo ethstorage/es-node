@@ -61,7 +61,7 @@ type FetchBlobFunc func(kvIndex uint64, hash common.Hash) ([]byte, error)
 type Il1Source interface {
 	GetKvMetas(kvIndices []uint64, blockNumber int64) ([][32]byte, error)
 
-	GetStorageLastBlobIdx(blockNumber int64) (uint64, error)
+	GetStorageKvEntryCount(blockNumber int64) (uint64, error)
 }
 
 // StorageManager is a higher-level abstract of ShardManager which provides multi-thread safety to storage file read/write
@@ -70,17 +70,19 @@ type StorageManager struct {
 	DownloadThreadNum int
 	shardManager      *ShardManager
 	localL1           int64      // local view of most-recent-finalized L1 block
-	mu                sync.Mutex // protect lastKvIdx, shardManager and blobMeta read/write state
-	lastKvIdx         uint64     // lastKvIndex in the most-recent-finalized L1 block
+	mu                sync.Mutex // protect kvEntryCount, shardManager and blobMeta read/write state
+	kvEntryCount      uint64     // kvEntryCount in the most-recent-finalized L1 block
 	l1Source          Il1Source
 	blobMetas         map[uint64][32]byte
+	lg                log.Logger
 }
 
-func NewStorageManager(sm *ShardManager, l1Source Il1Source) *StorageManager {
+func NewStorageManager(sm *ShardManager, l1Source Il1Source, lg log.Logger) *StorageManager {
 	return &StorageManager{
 		shardManager: sm,
 		l1Source:     l1Source,
 		blobMetas:    map[uint64][32]byte{},
+		lg:           lg,
 	}
 }
 
@@ -143,10 +145,13 @@ func (s *StorageManager) DownloadFinished(newL1 int64, kvIndices []uint64, blobs
 			var err error = nil
 			for _, idx := range insertIdx {
 				c := PrepareCommit(commits[idx])
-				// if return false, just ignore because we are not interested in it
-				_, err = s.shardManager.TryWriteEncoded(kvIndices[idx], blobs[idx], c)
+				done, err := s.shardManager.TryWriteEncoded(kvIndices[idx], blobs[idx], c)
 				if err != nil {
 					break
+				}
+				if !done {
+					shardIdx := kvIndices[idx] / s.KvEntries()
+					s.lg.Warn("Shard not managed locally to store the blob", "kvIndex", kvIndices[idx], "shardIdx", shardIdx)
 				}
 			}
 
@@ -165,11 +170,11 @@ func (s *StorageManager) DownloadFinished(newL1 int64, kvIndices []uint64, blobs
 		}
 	}
 
-	lastKvIdx, err := s.l1Source.GetStorageLastBlobIdx(newL1)
+	kvEntryCount, err := s.l1Source.GetStorageKvEntryCount(newL1)
 	if err != nil {
 		return err
 	}
-	s.lastKvIdx = lastKvIdx
+	s.kvEntryCount = kvEntryCount
 	s.localL1 = newL1
 
 	s.updateLocalMetas(kvIndices, commits)
@@ -193,11 +198,11 @@ func (s *StorageManager) Reset(newL1 int64) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	lastKvIdx, err := s.l1Source.GetStorageLastBlobIdx(newL1)
+	kvEntryCount, err := s.l1Source.GetStorageKvEntryCount(newL1)
 	if err != nil {
 		return err
 	}
-	s.lastKvIdx = lastKvIdx
+	s.kvEntryCount = kvEntryCount
 	s.localL1 = newL1
 
 	return nil
@@ -218,7 +223,7 @@ func (s *StorageManager) CommitBlobs(kvIndices []uint64, blobs [][]byte, commits
 	for i := 0; i < len(kvIndices); i++ {
 		encodedBlob, success, err := s.shardManager.TryEncodeKV(kvIndices[i], blobs[i], commits[i])
 		if !success || err != nil {
-			log.Warn("Blob encode failed", "index", kvIndices[i], "err", err)
+			s.lg.Warn("Blob encode failed", "index", kvIndices[i], "err", err)
 			continue
 		}
 		encodedBlobs[i] = encodedBlob
@@ -240,7 +245,7 @@ func (s *StorageManager) CommitBlobs(kvIndices []uint64, blobs [][]byte, commits
 		}
 		err := s.commitEncodedBlob(kvIndices[i], encodedBlobs[i], commits[i], contractMeta)
 		if err != nil {
-			log.Warn("Commit blobs fail", "kvIndex", kvIndices[i], "err", err.Error())
+			s.lg.Warn("Commit blobs fail", "kvIndex", kvIndices[i], "err", err.Error())
 			continue
 		}
 		inserted = append(inserted, kvIndices[i])
@@ -262,7 +267,7 @@ func (s *StorageManager) CommitEmptyBlobs(start, limit uint64) (uint64, uint64, 
 	for i := start; i <= limit; i++ {
 		encodedBlob, success, err := s.shardManager.TryEncodeKV(i, emptyBs, hash)
 		if !success || err != nil {
-			log.Warn("Blob encode failed", "index", i, "err", err)
+			s.lg.Warn("Blob encode failed", "index", i, "err", err)
 			break
 		}
 		encodedBlobs = append(encodedBlobs, encodedBlob)
@@ -284,7 +289,7 @@ func (s *StorageManager) CommitEmptyBlobs(start, limit uint64) (uint64, uint64, 
 		} else {
 			var commitErr *CommitMismatchError
 			if !errors.As(err, &commitErr) {
-				log.Info("Commit blobs fail", "kvIndex", kvIndices[i], "err", err.Error())
+				s.lg.Info("Commit blobs fail", "kvIndex", kvIndices[i], "err", err.Error())
 				break
 			}
 		}
@@ -377,22 +382,22 @@ func (s *StorageManager) syncCheck(kvIdx uint64) error {
 // DownloadAllMetas This function download the blob hashes of all the local storage shards from the smart contract
 func (s *StorageManager) DownloadAllMetas(ctx context.Context, batchSize uint64) error {
 	s.mu.Lock()
-	lastKvIdx := s.lastKvIdx
+	kvEntryCount := s.kvEntryCount
 	s.mu.Unlock()
 
 	for _, sid := range s.Shards() {
 		first, limit := s.KvEntries()*sid, s.KvEntries()*(sid+1)
 
-		// batch request metas until the lastKvIdx
-		end := min(limit, lastKvIdx)
+		// batch request metas until the kvEntryCount
+		end := min(limit, kvEntryCount)
 
 		// Additional check to ensure end is not less than first
-		// E.g. There are more than one shard, and lastKvIdx is even less than the first of the current shard
+		// E.g. There are more than one shard, and kvEntryCount is even less than the first of the current shard
 		if end < first {
 			continue
 		}
 
-		log.Info("Begin to download metas", "shard", sid, "first", first, "end", end, "limit", limit, "lastKvIdx", lastKvIdx)
+		s.lg.Info("Begin to download metas", "shard", sid, "first", first, "end", end, "limit", limit, "kvEntryCount", kvEntryCount)
 		ts := time.Now()
 
 		err := s.downloadMetaInParallel(ctx, first, end, batchSize)
@@ -400,7 +405,7 @@ func (s *StorageManager) DownloadAllMetas(ctx context.Context, batchSize uint64)
 			return err
 		}
 
-		log.Info("All the metas has been downloaded", "first", first, "end", end, "time", time.Since(ts).Seconds())
+		s.lg.Info("All the metas has been downloaded", "first", first, "end", end, "time", time.Since(ts).Seconds())
 	}
 
 	return nil
@@ -452,14 +457,11 @@ func (s *StorageManager) downloadMetaInRange(ctx context.Context, from, to, batc
 	for from < to {
 		s.mu.Lock()
 		localL1 := s.localL1
-		lastKvIdx := s.lastKvIdx
+		kvEntryCount := s.kvEntryCount
 		s.mu.Unlock()
 
-		batchLimit := min(from+batchSize, to)
-		// In case remove is supported and lastKvIndex is decreased
-		if batchLimit > lastKvIdx {
-			batchLimit = lastKvIdx
-		}
+		// In case remove is supported and kvEntryCount is decreased
+		batchLimit := min(min(from+batchSize, to), kvEntryCount)
 
 		kvIndices := []uint64{}
 		for i := from; i < batchLimit; i++ {
@@ -487,7 +489,7 @@ func (s *StorageManager) downloadMetaInRange(ctx context.Context, from, to, batc
 		}
 		s.mu.Unlock()
 
-		log.Info(
+		s.lg.Info(
 			"One batch metas has been downloaded", "first", from,
 			"batchLimit", batchLimit,
 			"to", to,
@@ -496,7 +498,7 @@ func (s *StorageManager) downloadMetaInRange(ctx context.Context, from, to, batc
 
 		select {
 		case <-ctx.Done():
-			log.Info("StorageManager res done, return")
+			s.lg.Info("StorageManager res done, return")
 			return nil
 		default:
 		}
@@ -516,9 +518,9 @@ func (s *StorageManager) updateLocalMetas(kvIndices []uint64, commits []common.H
 		s.blobMetas[idx] = meta
 	}
 
-	// In case the lastKvIdx is smaller than oldLastKvIdx because of removal, we need to remove those metas
+	// In case the kvEntryCount is smaller than old kvEntryCount because of removal, we need to remove those metas
 	LocalMetaLen := len(s.blobMetas)
-	for i := int(s.lastKvIdx); i < LocalMetaLen; i++ {
+	for i := int(s.kvEntryCount); i < LocalMetaLen; i++ {
 		delete(s.blobMetas, uint64(i))
 	}
 }
@@ -530,7 +532,7 @@ func (s *StorageManager) getKvMetas(kvIndices []uint64) ([][32]byte, error) {
 		meta, ok := s.blobMetas[i]
 		if ok {
 			metas = append(metas, meta)
-		} else if i >= s.lastKvIdx {
+		} else if i >= s.kvEntryCount {
 			meta := [32]byte{}
 			new(big.Int).SetInt64(int64(i)).FillBytes(meta[0:5])
 			metas = append(metas, meta)
@@ -627,10 +629,10 @@ func (s *StorageManager) TryReadMeta(kvIdx uint64) ([]byte, bool, error) {
 	return s.shardManager.TryReadMeta(kvIdx)
 }
 
-func (s *StorageManager) LastKvIndex() uint64 {
+func (s *StorageManager) KvEntryCount() uint64 {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.lastKvIdx
+	return s.kvEntryCount
 }
 
 func (s *StorageManager) DecodeKV(kvIdx uint64, b []byte, hash common.Hash, providerAddr common.Address, encodeType uint64) ([]byte, bool, error) {

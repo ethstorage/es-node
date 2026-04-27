@@ -20,7 +20,7 @@ echo "8714eb2672bb7ab01089a1060150b30bc374a3b00e18926460f169256d126339" > "${dat
 
 
 exec ./build/bin/es-node \
-  --network integration \
+  --chain_id 3339 \
   --datadir $data_dir \
   --storage.files $storage_file_0 \
   --storage.files $storage_file_1 \

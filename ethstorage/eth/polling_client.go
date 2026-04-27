@@ -17,6 +17,8 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/rpc"
+	"golang.org/x/mod/semver"
 )
 
 const (
@@ -30,7 +32,7 @@ var ErrSubscriberClosed = errors.New("subscriber closed")
 type PollingClient struct {
 	*ethclient.Client
 	isHTTP      bool
-	lgr         log.Logger
+	lg          log.Logger
 	pollRate    time.Duration
 	ctx         context.Context
 	cancel      context.CancelFunc
@@ -52,16 +54,16 @@ type PollingClient struct {
 }
 
 // Dial connects a client to the given URL.
-func Dial(rawurl string, esContract common.Address, pollRate uint64, lgr log.Logger) (*PollingClient, error) {
-	return DialContext(context.Background(), rawurl, esContract, pollRate, lgr)
+func Dial(rawurl string, esContract common.Address, pollRate uint64, lg log.Logger) (*PollingClient, error) {
+	return DialContext(context.Background(), rawurl, esContract, pollRate, lg)
 }
 
-func DialContext(ctx context.Context, rawurl string, esContract common.Address, pollRate uint64, lgr log.Logger) (*PollingClient, error) {
+func DialContext(ctx context.Context, rawurl string, esContract common.Address, pollRate uint64, lg log.Logger) (*PollingClient, error) {
 	c, err := ethclient.DialContext(ctx, rawurl)
 	if err != nil {
 		return nil, err
 	}
-	return NewClient(ctx, c, httpRegex.MatchString(rawurl), esContract, pollRate, nil, lgr), nil
+	return NewClient(ctx, c, httpRegex.MatchString(rawurl), esContract, pollRate, nil, lg), nil
 }
 
 // NewClient creates a client that uses the given RPC client.
@@ -72,17 +74,17 @@ func NewClient(
 	esContract common.Address,
 	pollRate uint64,
 	qh func() (*types.Header, error),
-	lgr log.Logger,
+	lg log.Logger,
 ) *PollingClient {
 	ctx, cancel := context.WithCancel(ctx)
 	networkID, err := c.NetworkID(ctx)
 	if err != nil {
-		lgr.Crit("Failed to get network id", "err", err)
+		lg.Crit("Failed to get network id", "err", err)
 	}
 	res := &PollingClient{
 		Client:     c,
 		isHTTP:     isHTTP,
-		lgr:        lgr,
+		lg:         lg,
 		pollRate:   time.Duration(pollRate) * time.Second,
 		ctx:        ctx,
 		cancel:     cancel,
@@ -145,45 +147,41 @@ func (w *PollingClient) SubscribeNewHead(ctx context.Context, ch chan<- *types.H
 }
 
 func (w *PollingClient) pollHeads() {
-	// To prevent polls from stacking up in case HTTP requests
-	// are slow, use a similar model to the driver in which
-	// polls are requested manually after each header is fetched.
-	reqPollAfter := func() {
-		if w.pollRate == 0 {
-			return
-		}
-		time.AfterFunc(w.pollRate, w.reqPoll)
-	}
 
-	reqPollAfter()
+	w.reqPoll()
 
 	defer close(w.closedCh)
 
 	for {
 		select {
 		case <-w.pollReqCh:
-			// We don't need backoff here because we'll just try again
-			// after the pollRate elapses.
 			head, err := w.queryHeader()
+
 			if err != nil {
-				w.lgr.Info("Error getting latest header", "err", err)
-				reqPollAfter()
+				w.lg.Info("Error getting latest header", "err", err)
+				w.scheduleNextPoll(nil)
 				continue
 			}
 			if w.currHead != nil && w.currHead.Hash() == head.Hash() {
-				w.lgr.Trace("No change in head, skipping notifications")
-				reqPollAfter()
+				w.lg.Trace("No change in head, skipping notifications")
+				w.scheduleNextPoll(head)
 				continue
 			}
 
-			w.lgr.Trace("Notifying subscribers of new head", "head", head.Hash())
+			headTime := time.Unix(int64(head.Time), 0)
+			w.lg.Trace(
+				"Notifying subscribers of new head",
+				"height", head.Number,
+				"headTime", headTime.Format("15:04:05"),
+				"head", head.Hash(),
+			)
 			w.currHead = head
 			w.mtx.RLock()
 			for _, sub := range w.subs {
 				sub <- head
 			}
 			w.mtx.RUnlock()
-			reqPollAfter()
+			w.scheduleNextPoll(head)
 		case <-w.ctx.Done():
 			w.Client.Close()
 			return
@@ -194,18 +192,38 @@ func (w *PollingClient) pollHeads() {
 func (w *PollingClient) getLatestHeader() (*types.Header, error) {
 	ctx, cancel := context.WithTimeout(w.ctx, 5*time.Second)
 	defer cancel()
-	latest, err := w.BlockNumber(ctx)
-	if err != nil {
-		w.lgr.Error("Failed to get latest block number", "err", err)
-		return nil, err
+	return w.HeaderByNumber(ctx, big.NewInt(rpc.LatestBlockNumber.Int64()))
+}
+
+// scheduleNextPoll decides the next poll time based on next head.Time:
+func (w *PollingClient) scheduleNextPoll(head *types.Header) {
+	if w.pollRate == 0 {
+		return
 	}
-	// The latest blockhash could be empty
-	number := new(big.Int).SetUint64(latest - 1)
-	return w.HeaderByNumber(ctx, number)
+	// A heuristic estimation of p2p network delay to balance timely polling and request frequency
+	const minDelay = 1000 * time.Millisecond
+
+	// Retry on failure
+	if head == nil {
+		time.AfterFunc(minDelay, w.reqPoll)
+		return
+	}
+	// Align next poll to headTime + pollRate + slack.
+	target := time.Unix(int64(head.Time), 0).Add(w.pollRate).Add(minDelay)
+	// bound the delay between minDelay and pollRate
+	delay := min(max(time.Until(target), minDelay), w.pollRate)
+
+	w.lg.Trace("Scheduled next poll", "delay", delay)
+
+	time.AfterFunc(delay, w.reqPoll)
 }
 
 func (w *PollingClient) reqPoll() {
-	w.pollReqCh <- struct{}{}
+	// non-blocking send
+	select {
+	case w.pollReqCh <- struct{}{}:
+	default:
+	}
 }
 
 func (w *PollingClient) FilterLogsByBlockRange(start *big.Int, end *big.Int, eventSig string) ([]types.Log, error) {
@@ -227,8 +245,8 @@ func (w *PollingClient) FilterLogsByBlockRange(start *big.Int, end *big.Int, eve
 	return w.FilterLogs(context.Background(), query)
 }
 
-func (w *PollingClient) GetStorageLastBlobIdx(blockNumber int64) (uint64, error) {
-	h := crypto.Keccak256Hash([]byte(`lastKvIdx()`))
+func (w *PollingClient) GetStorageKvEntryCount(blockNumber int64) (uint64, error) {
+	h := crypto.Keccak256Hash([]byte(`kvEntryCount()`))
 
 	callMsg := ethereum.CallMsg{
 		To:   &w.esContract,
@@ -298,13 +316,13 @@ func (w *PollingClient) GetKvMetas(kvIndices []uint64, blockNumber int64) ([][32
 	return res[0].([][32]byte), nil
 }
 
-func (w *PollingClient) GetMiningReward(shard uint64, blockNumber int64) (*big.Int, error) {
+func (w *PollingClient) GetMiningReward(shard uint64, timestamp uint64) (*big.Int, error) {
 	h := crypto.Keccak256Hash([]byte(`miningReward(uint256,uint256)`))
 	uint256Type, _ := abi.NewType("uint256", "", nil)
 	dataField, err := abi.Arguments{
 		{Type: uint256Type},
 		{Type: uint256Type},
-	}.Pack(new(big.Int).SetUint64(shard), new(big.Int).SetInt64(blockNumber))
+	}.Pack(new(big.Int).SetUint64(shard), new(big.Int).SetUint64(timestamp))
 	if err != nil {
 		return nil, err
 	}
@@ -320,6 +338,18 @@ func (w *PollingClient) GetMiningReward(shard uint64, blockNumber int64) (*big.I
 	return new(big.Int).SetBytes(bs), nil
 }
 
+func (w *PollingClient) GetUpdatedKvIndices(startBlock, endBlock *big.Int) ([]uint64, error) {
+	events, err := w.FilterLogsByBlockRange(startBlock, endBlock, PutBlobEvent)
+	if err != nil {
+		return nil, err
+	}
+	var kvIndices []uint64
+	for _, event := range events {
+		kvIndices = append(kvIndices, new(big.Int).SetBytes(event.Topics[1][:]).Uint64())
+	}
+	return kvIndices, nil
+}
+
 func (w *PollingClient) ReadContractField(fieldName string, blockNumber *big.Int) ([]byte, error) {
 	h := crypto.Keccak256Hash([]byte(fieldName + "()"))
 	msg := ethereum.CallMsg{
@@ -331,4 +361,32 @@ func (w *PollingClient) ReadContractField(fieldName string, blockNumber *big.Int
 		return nil, fmt.Errorf("failed to get %s from contract: %v", fieldName, err)
 	}
 	return bs, nil
+}
+
+func (w *PollingClient) GetContractVersion() (string, error) {
+	bs, err := w.ReadContractField("version", nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to get version from contract: %v", err)
+	}
+	versionStr, err := decodeString(bs)
+	if err != nil {
+		return "", fmt.Errorf("failed to decode version string: %v", err)
+	}
+	version := "v" + versionStr
+	if !semver.IsValid(version) {
+		return "", fmt.Errorf("invalid version string: %s", versionStr)
+	}
+	return version, nil
+}
+
+func decodeString(data []byte) (string, error) {
+	if len(data) < 64 {
+		return "", fmt.Errorf("data too short")
+	}
+	strLen := new(big.Int).SetBytes(data[32:64]).Int64()
+	if int64(len(data)) < 64+strLen {
+		return "", fmt.Errorf("data length mismatch")
+	}
+	strBytes := data[64 : 64+strLen]
+	return string(strBytes), nil
 }

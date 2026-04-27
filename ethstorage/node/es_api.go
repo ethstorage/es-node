@@ -17,7 +17,7 @@ import (
 
 type esAPI struct {
 	rpcCfg *RPCConfig
-	log    log.Logger
+	lg     log.Logger
 	sm     *ethstorage.StorageManager
 	dl     *downloader.Downloader
 }
@@ -30,12 +30,12 @@ const (
 	OptimismCompact
 )
 
-func NewESAPI(config *RPCConfig, sm *ethstorage.StorageManager, dl *downloader.Downloader, log log.Logger) *esAPI {
+func NewESAPI(config *RPCConfig, sm *ethstorage.StorageManager, dl *downloader.Downloader, lg log.Logger) *esAPI {
 	return &esAPI{
 		rpcCfg: config,
 		sm:     sm,
 		dl:     dl,
-		log:    log,
+		lg:     lg,
 	}
 }
 

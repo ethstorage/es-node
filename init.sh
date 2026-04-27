@@ -5,7 +5,7 @@
 
 executable="./build/bin/es-node"
 if [ ! -f "$executable" ]; then
-  make build
+  make
 fi
 echo "========== build info =================="
 $executable --version
@@ -46,23 +46,30 @@ while [ $# -gt 0 ]; do
     fi
 done
 
+# Require ES_NODE_STORAGE_MINER if not an RPC
+if [[ "$use_miner" -eq 1 && -z "${ES_NODE_STORAGE_MINER:-}" ]]; then
+  echo "Missing ES_NODE_STORAGE_MINER."
+  exit 1
+fi
+
 if [ -n "$zkp_mode" ] && [ "$zkp_mode" != 1 ] && [ "$zkp_mode" != 2 ]; then
   echo "Error: zk prover mode can only be 1 or 2."
   exit 1
 fi
 
 if [ $use_miner = 1 ]; then
-  mkdir -p ./build/bin/snark_lib/zkey
+  zkey_path="./build/bin/snark_lib/zkey"
+  mkdir -p $zkey_path
   # download zkey if not yet
   zkey_name="blob_poseidon2.zkey"
-  zkey_size=560301223
-  zkey_url="https://es-zkey.s3.us-west-2.amazonaws.com/blob_poseidon2.zkey"
+  zkey_size=560412712
+  zkey_url="https://es-zkey.s3.us-west-2.amazonaws.com/blob_poseidon2_v1.zkey"
   if [ "$zkp_mode" = 1 ]; then
     zkey_name="blob_poseidon.zkey"
-    zkey_size=280151245
-    zkey_url="https://es-zkey.s3.us-west-2.amazonaws.com/blob_poseidon1.zkey"
+    zkey_size=280269776
+    zkey_url="https://es-zkey.s3.us-west-2.amazonaws.com/blob_poseidon1_v1.zkey"
   fi
-  zkey_file="./build/bin/snark_lib/zkey/$zkey_name"
+  zkey_file="$zkey_path/$zkey_name"
   if [ ! -e  ${zkey_file} ] || [ $(wc -c <  ${zkey_file}) -ne ${zkey_size} ]; then
     echo "Start downloading ${zkey_file}..." 
     curl $zkey_url -o ${zkey_file}
@@ -123,7 +130,7 @@ fi
 es_node_init="$executable init $shards \
   --datadir $data_dir \
   --l1.rpc http://65.108.230.142:8545 \
-  --storage.l1contract 0x804C520d3c084C805E37A35E90057Ac32831F96f \
+  --storage.l1contract 0xAb3d380A268d088BA21Eb313c1C23F3BEC5cfe93 \
 $remaining_args"
 
 # es-node will skip init if data files already exist

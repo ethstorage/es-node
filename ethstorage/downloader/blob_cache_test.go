@@ -31,6 +31,9 @@ var (
 	kvSize    uint64 = 1 << 17
 	kvEntries uint64 = 16
 	shardID          = uint64(0)
+	lg               = log.NewLogger(log.CLIConfig{
+		Level: "warn",
+	})
 )
 
 func TestDiskBlobCache(t *testing.T) {
@@ -109,7 +112,7 @@ func TestEncoding(t *testing.T) {
 	shardMgr := ethstorage.NewShardManager(common.Address{}, kvSize, kvEntries, kvSize)
 	shardMgr.AddDataShard(shardID)
 	shardMgr.AddDataFile(df)
-	sm := ethstorage.NewStorageManager(shardMgr, nil)
+	sm := ethstorage.NewStorageManager(shardMgr, nil, lg)
 	defer func() {
 		sm.Close()
 		os.Remove(fileName)
@@ -135,7 +138,7 @@ func TestEncoding(t *testing.T) {
 		t.Run(fmt.Sprintf("test kv: %d", i), func(t *testing.T) {
 			blobEncoded := cache.GetKeyValueByIndex(kvIndex, kvHash)
 			blobDecoded := sm.DecodeBlob(blobEncoded, kvHash, kvIndex, kvSize)
-			bytesWant := []byte(fmt.Sprintf(blobData, kvIndex))
+			bytesWant := fmt.Appendf(nil, blobData, kvIndex)
 			if !bytes.Equal(blobDecoded[:len(bytesWant)], bytesWant) {
 				t.Errorf("GetKeyValueByIndex and decoded = %s, want %s", blobDecoded[:len(bytesWant)], bytesWant)
 			}
@@ -227,7 +230,7 @@ func newBlockBlobs(blockNumber, blobLen uint64) (*blockBlobs, error) {
 		kvIdx := big.NewInt(int64(kvIndex))
 		blob := &blob{
 			kvIndex: kvIdx,
-			data:    []byte(fmt.Sprintf(blobData, kvIndex)),
+			data:    fmt.Appendf(nil, blobData, kvIndex),
 		}
 		kzgBlob := kzg4844.Blob{}
 		copy(kzgBlob[:], blob.data)
@@ -252,10 +255,7 @@ func setup(t *testing.T) {
 		t.Fatalf("Failed to create datadir: %v", err)
 	}
 	t.Logf("datadir %s", datadir)
-	cache = NewBlobDiskCache(datadir, log.NewLogger(log.CLIConfig{
-		Level:  "warn",
-		Format: "text",
-	}))
+	cache = NewBlobDiskCache(datadir, lg)
 }
 
 func teardown(t *testing.T) {

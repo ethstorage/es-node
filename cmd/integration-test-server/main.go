@@ -26,7 +26,6 @@ import (
 	itutils "github.com/ethstorage/go-ethstorage/cmd/integration-test-server/utils"
 	es "github.com/ethstorage/go-ethstorage/ethstorage"
 	"github.com/ethstorage/go-ethstorage/ethstorage/node"
-	prv "github.com/ethstorage/go-ethstorage/ethstorage/prover"
 )
 
 const (
@@ -55,8 +54,6 @@ var (
 	lastQueryTime    = time.Now()
 	lastRecord       *node.NodeState
 	hasConnectedPeer = false
-	testLog          = log.New("IntegrationTest")
-	prover           = prv.NewKZGProver(testLog)
 	contractAddress  = common.Address{}
 )
 
@@ -95,7 +92,7 @@ func ReportStateHandler(w http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal(body, state)
 	if err != nil {
 		addErrorMessage(fmt.Sprintf("Parse node state failed with error %s", err.Error()))
-		w.Write([]byte(fmt.Sprintf(`{"status":"error", "err message":"%s"}`, err.Error())))
+		w.Write(fmt.Appendf(nil, `{"status":"error", "err message":"%s"}`, err.Error()))
 		return
 	}
 
@@ -173,7 +170,7 @@ func checkFinalState(state *node.NodeState) {
 		if shardState.MiningState.SamplingTime == 0 || shardState.MiningState.MiningPower == 0 {
 			addErrorMessage("Mining should be start after sync done.")
 		}
-		if shardState.SubmissionState.LastSucceededTime == 0 || shardState.SubmissionState.Succeeded == 0 {
+		if shardState.SubmissionState.LastSubmittedTime == 0 || shardState.SubmissionState.Submitted == 0 {
 			addErrorMessage("At lease one block should be mined successfully during the test.")
 		}
 		if shardState.SubmissionState.Failed > 0 {
@@ -192,8 +189,8 @@ func checkFinalState(state *node.NodeState) {
 		log.Info("Final state", "id", state.Id, "shard", shardState.ShardId, "miner", shardState.Miner, "sync progress",
 			shardState.SyncState.SyncProgress, "fill progress", shardState.SyncState.FillEmptyProgress, "mining power",
 			shardState.MiningState.MiningPower, "sampling time", shardState.MiningState.SamplingTime, "succeeded submission",
-			shardState.SubmissionState.Succeeded, "failed submission", shardState.SubmissionState.Failed, "dropped submission",
-			shardState.SubmissionState.Dropped, "last succeeded time", shardState.SubmissionState.LastSucceededTime)
+			shardState.SubmissionState.Submitted, "failed submission", shardState.SubmissionState.Failed, "dropped submission",
+			shardState.SubmissionState.Dropped, "last succeeded time", shardState.SubmissionState.LastSubmittedTime)
 	}
 }
 

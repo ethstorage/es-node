@@ -3,6 +3,7 @@ package p2p
 import (
 	"errors"
 	"fmt"
+	"math/big"
 	"net"
 	"time"
 
@@ -10,7 +11,6 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethstorage/go-ethstorage/ethstorage/p2p/protocol"
-	"github.com/ethstorage/go-ethstorage/ethstorage/rollup"
 	ds "github.com/ipfs/go-datastore"
 	"github.com/libp2p/go-libp2p"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -36,7 +36,7 @@ type GossipSetupConfigurables interface {
 	TopicScoringParams() *pubsub.TopicScoreParams
 	BanPeers() bool
 	// ConfigureGossip creates configuration options to apply to the GossipSub setup
-	ConfigureGossip(rollupCfg *rollup.EsConfig) []pubsub.Option
+	ConfigureGossip(chainID *big.Int) []pubsub.Option
 	PeerBandScorer() *BandScoreThresholds
 }
 
@@ -45,9 +45,9 @@ type SetupP2P interface {
 	Check() error
 	Disabled() bool
 	// Host creates a libp2p host service. Returns nil, nil if p2p is disabled.
-	Host(log log.Logger, reporter metrics.Reporter) (host.Host, error)
+	Host(lg log.Logger, reporter metrics.Reporter) (host.Host, error)
 	// Discovery creates a disc-v5 service. Returns nil, nil, false, nil if discovery is disabled.
-	Discovery(log log.Logger, l1ChainID uint64, tcpPort uint16, fallbackIP net.IP) (*enode.LocalNode, *discover.UDPv5, bool, error)
+	Discovery(lg log.Logger, l1ChainID uint64, tcpPort uint16, fallbackIP net.IP) (*enode.LocalNode, *discover.UDPv5, bool, error)
 	TargetPeers() uint
 	SyncerParams() *protocol.SyncerParams
 	GossipSetupConfigurables

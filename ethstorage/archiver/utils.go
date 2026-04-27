@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
@@ -39,6 +40,13 @@ func indexIncluded(index uint64, indices []uint64) bool {
 		return true
 	}
 	return slices.Contains(indices, index)
+}
+
+func hashIncluded(hash common.Hash, hashes []common.Hash) bool {
+	if len(hashes) == 0 {
+		return true
+	}
+	return slices.Contains(hashes, hash)
 }
 
 type httpError struct {
@@ -77,6 +85,18 @@ func newBadRequestError(input string) *httpError {
 	}
 }
 
+func parseVersionedHashes(r *http.Request) ([]common.Hash, *httpError) {
+	query := r.URL.Query()
+	normalizeQueryValues(query)
+	r.URL.RawQuery = query.Encode()
+	rawHashes := r.URL.Query()["versioned_hashes"]
+	hashes := make([]common.Hash, 0, len(rawHashes))
+	for _, raw := range rawHashes {
+		hashes = append(hashes, common.HexToHash(raw))
+	}
+	return hashes, nil
+}
+
 // parseIndices filters out invalid and duplicate blob indices
 func parseIndices(r *http.Request, max int) ([]uint64, *httpError) {
 	query := r.URL.Query()
@@ -92,7 +112,7 @@ loop:
 			invalidIndices = append(invalidIndices, raw)
 			continue
 		}
-		if ix >= uint64(max) {
+		if max > 0 && ix >= uint64(max) {
 			invalidIndices = append(invalidIndices, raw)
 			continue
 		}
@@ -119,4 +139,15 @@ func normalizeQueryValues(queryParams url.Values) {
 		}
 		queryParams[key] = splitVals
 	}
+}
+
+func readUserIP(r *http.Request) string {
+	IPAddress := r.Header.Get("X-Real-Ip")
+	if IPAddress == "" {
+		IPAddress = r.Header.Get("X-Forwarded-For")
+	}
+	if IPAddress == "" {
+		IPAddress = r.RemoteAddr
+	}
+	return IPAddress
 }

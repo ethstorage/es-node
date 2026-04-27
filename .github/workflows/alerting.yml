@@ -7,9 +7,10 @@ on:
 jobs:
   alert:
     runs-on: ubuntu-latest
+    if: ${{ github.repository == 'ethstorage/es-node' }}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
 
       - name: Set up Go
         uses: actions/setup-go@v4
@@ -19,6 +20,8 @@ jobs:
       - name: check
         run: |
           cd ./cmd/alert
+          sed -i "s|<ETH_RPC>|${{ secrets.ETH_RPC }}|g" rules.json
+          
           go build
           ./alert --htmlbody ./body.html
 
@@ -31,6 +34,6 @@ jobs:
           username: ${{ secrets.SMTP_USERNAME }}
           password: ${{ secrets.SMTP_PASSWORD }}
           subject: EthStorage Alert!
-          to: molaokp@gmail.com,lundeng@quarkchain.org,qzhu@quarkchain.org,pingke@quarkchain.org,limingpeng@quarkchain.org
+          to: ${{ env.EMAIL_LIST }}
           from: ${{ secrets.SMTP_USERNAME }}
           html_body: file://./cmd/alert/body.html

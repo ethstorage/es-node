@@ -19,10 +19,12 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethstorage/go-ethstorage/ethstorage"
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
+	"golang.org/x/mod/semver"
 )
 
 const (
-	gasBufferRatio = 1.2
+	gasBufferRatio         = 1.2
+	versionMineRoleEnabled = "v0.1.2"
 )
 
 var (
@@ -40,6 +42,42 @@ type l1MiningAPI struct {
 	*eth.PollingClient
 	rc *eth.RandaoClient
 	lg log.Logger
+}
+
+// Pre-check if the miner has been whitelisted before actually mining
+func (m *l1MiningAPI) CheckMinerRole(ctx context.Context, contract, miner common.Address) error {
+	version, err := m.GetContractVersion()
+	if err != nil {
+		return fmt.Errorf("failed to get contract version: %w", err)
+	}
+	m.lg.Info("Storage Contract version", "version", version)
+	if semver.Compare(version, versionMineRoleEnabled) == -1 {
+		return nil
+	}
+	enforced, err := m.PollingClient.ReadContractField("enforceMinerRole", nil)
+	if err != nil {
+		return fmt.Errorf("failed to query enforceMinerRole(): %w", err)
+	}
+	if new(big.Int).SetBytes(enforced).Uint64() == 1 {
+		m.lg.Info("Miner role enforced")
+
+		addrType, _ := abi.NewType("address", "", nil)
+		data, _ := abi.Arguments{{Type: addrType}}.Pack(miner)
+		sig := crypto.Keccak256Hash([]byte(`hasMinerRole(address)`))
+		calldata := append(sig[:4], data...)
+		result, err := m.CallContract(ctx, ethereum.CallMsg{To: &contract, Data: calldata}, nil)
+		if err != nil {
+			return fmt.Errorf("failed to query hasMinerRole(): %w", err)
+		}
+		hasMinerRole := new(big.Int).SetBytes(result).Uint64()
+		if hasMinerRole == 1 {
+			m.lg.Info("Miner role granted", "miner", miner)
+			return nil
+		}
+		return fmt.Errorf("miner role not granted to: %s", miner)
+	}
+	m.lg.Info("Miner role not enforced")
+	return nil
 }
 
 func (m *l1MiningAPI) GetMiningInfo(ctx context.Context, contract common.Address, shardIdx uint64) (*miningInfo, error) {
@@ -74,7 +112,7 @@ func (m *l1MiningAPI) GetMiningInfo(ctx context.Context, contract common.Address
 func (m *l1MiningAPI) GetDataHashes(ctx context.Context, contract common.Address, kvIdxes []uint64) ([]common.Hash, error) {
 	metas, err := m.GetKvMetas(kvIdxes, rpc.LatestBlockNumber.Int64())
 	if err != nil {
-		m.lg.Error("Failed to get verioned hashs", "error", err)
+		m.lg.Error("Failed to get versioned hashes", "error", err)
 		return nil, err
 	}
 	var hashes []common.Hash
@@ -96,26 +134,35 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 	}
 	m.lg.Info("Composed calldata", "calldata", hexutil.Encode(calldata))
 
-	tip, gasFeeCap, useConfig, err := m.suggestGasPrices(ctx, cfg)
+	tip, baseFee, gasFeeCap, useConfig, err := m.suggestGasPrices(ctx, cfg)
 	if err != nil {
 		m.lg.Error("Failed to suggest gas prices", "error", err)
 		return common.Hash{}, err
 	}
-	estimatedGas, err := m.EstimateGas(ctx, ethereum.CallMsg{
+
+	// if gasFeeCap is higher than the configured max, drop the mined result
+	if cfg.MaxGasPrice != nil && cfg.MaxGasPrice.Cmp(common.Big0) > 0 && gasFeeCap.Cmp(cfg.MaxGasPrice) == 1 {
+		errMessage := fmt.Sprintf("gas price %s Gwei exceeds the configured max %s Gwei", fmtGwei(gasFeeCap), fmtGwei(cfg.MaxGasPrice))
+		m.lg.Warn("Mining tx dropped", "error", errMessage)
+		return common.Hash{}, errDropped{reason: errMessage}
+	}
+
+	estimatedGas, err := m.EstimateGasAtBlock(ctx, ethereum.CallMsg{
 		From:      cfg.SignerAddr,
 		To:        &contract,
 		GasTipCap: tip,
 		GasFeeCap: gasFeeCap,
 		Value:     common.Big0,
 		Data:      calldata,
-	})
+	}, big.NewInt(rpc.PendingBlockNumber.Int64()))
 	if err != nil {
-		m.lg.Error("Estimate gas failed", "error", err.Error())
-		return common.Hash{}, fmt.Errorf("failed to estimate gas: %w", err)
+		errMessage := parseErr(err)
+		m.lg.Error("Estimate gas failed", "error", errMessage)
+		return common.Hash{}, fmt.Errorf("failed to estimate gas: %v", errMessage)
 	}
 	m.lg.Info("Estimated gas done", "gas", estimatedGas)
 
-	nonce, err := m.NonceAt(ctx, cfg.SignerAddr, big.NewInt(rpc.LatestBlockNumber.Int64()))
+	nonce, err := m.PendingNonceAt(ctx, cfg.SignerAddr)
 	if err != nil {
 		m.lg.Error("Query nonce failed", "error", err.Error())
 		return common.Hash{}, err
@@ -133,11 +180,20 @@ func (m *l1MiningAPI) SubmitMinedResult(ctx context.Context, contract common.Add
 		Value:     common.Big0,
 		Data:      calldata,
 	})
-	gasFeeCapChecked, err := checkGasPrice(ctx, m, unsignedTx, rst, cfg.MinimumProfit, gasFeeCap, tip, estimatedGas, safeGas, m.rc != nil, useConfig, m.lg)
+	gasFeeCapChecked, err := checkGasPrice(ctx, m, unsignedTx, rst, cfg.MinimumProfit, gasFeeCap, baseFee, estimatedGas, safeGas, m.rc != nil, useConfig, m.lg)
 	if err != nil {
 		return common.Hash{}, err
 	}
-
+	unsignedTx = types.NewTx(&types.DynamicFeeTx{
+		ChainID:   m.NetworkID,
+		Nonce:     nonce,
+		GasTipCap: tip,
+		GasFeeCap: gasFeeCapChecked,
+		Gas:       safeGas,
+		To:        &contract,
+		Value:     common.Big0,
+		Data:      calldata,
+	})
 	sign := cfg.SignerFnFactory(m.NetworkID)
 	signedTx, err := sign(ctx, cfg.SignerAddr, unsignedTx)
 	if err != nil {
@@ -236,18 +292,20 @@ func (m *l1MiningAPI) composeCalldata(ctx context.Context, rst result) ([]byte, 
 	return calldata, nil
 }
 
-func (m *l1MiningAPI) suggestGasPrices(ctx context.Context, cfg Config) (*big.Int, *big.Int, bool, error) {
+func (m *l1MiningAPI) suggestGasPrices(ctx context.Context, cfg Config) (*big.Int, *big.Int, *big.Int, bool, error) {
 	gasFeeCap := cfg.GasPrice
 	tip := cfg.PriorityGasPrice
+	var baseFee *big.Int
 	useConfig := true
 	if gasFeeCap == nil || gasFeeCap.Cmp(common.Big0) == 0 {
 		useConfig = false
 		blockHeader, err := m.HeaderByNumber(ctx, nil)
 		if err != nil {
 			m.lg.Error("Failed to get block header", "error", err)
-			return nil, nil, false, err
+			return nil, nil, nil, false, err
 		}
-		m.lg.Info("Query baseFee done", "baseFee", blockHeader.BaseFee)
+		baseFee = blockHeader.BaseFee
+		m.lg.Info("Query baseFee done", "baseFee", baseFee, "fromBlock", blockHeader.Number)
 		if tip == nil || tip.Cmp(common.Big0) == 0 {
 			suggested, err := m.SuggestGasTipCap(ctx)
 			if err != nil {
@@ -257,17 +315,19 @@ func (m *l1MiningAPI) suggestGasPrices(ctx context.Context, cfg Config) (*big.In
 			tip = suggested
 			m.lg.Info("Query gas tip cap done", "gasTipGap", tip)
 		}
-		gasFeeCap = new(big.Int).Add(blockHeader.BaseFee, tip)
-		m.lg.Info("Suggested gas fee cap", "gasFeeCap", gasFeeCap)
+		// Use (tip + 2*baseFee) to avoid `max fee per gas less than block base fee` when estimate gas
+		// It ensures the tx to be marketable for six consecutive 100% full blocks.
+		gasFeeCap = new(big.Int).Add(new(big.Int).Mul(baseFee, big.NewInt(2)), tip)
+		m.lg.Info("Suggested gas fee cap (tip + 2*baseFee)", "gasFeeCap", gasFeeCap)
 	} else {
 		m.lg.Info("Using configured gas price", "gasFeeCap", gasFeeCap, "tip", tip)
 	}
-	return tip, gasFeeCap, useConfig, nil
+	return tip, baseFee, gasFeeCap, useConfig, nil
 }
 
 type GasPriceChecker interface {
 	GetL1Fee(ctx context.Context, tx *types.Transaction) (*big.Int, error)
-	GetMiningReward(shardID uint64, blockNumber int64) (*big.Int, error)
+	GetMiningReward(shardID uint64, timestamp uint64) (*big.Int, error)
 }
 
 // Adjust the gas price based on the estimated rewards, costs, and default tx fee cap.
@@ -276,13 +336,13 @@ func checkGasPrice(
 	checker GasPriceChecker,
 	unsignedTx *types.Transaction,
 	rst result,
-	minProfit, gasFeeCap, tip *big.Int,
+	minProfit, gasFeeCap, baseFee *big.Int,
 	estimatedGas, safeGas uint64,
 	useL2, useConfig bool,
 	lg log.Logger,
 ) (*big.Int, error) {
 	extraCost := new(big.Int)
-	// Add L1 data fee as tx cost when es-node is deployed as an L3
+	// Add L1 data fee as tx cost when es-node is deployed on an L2
 	if useL2 {
 		l1fee, err := checker.GetL1Fee(ctx, unsignedTx)
 		if err != nil {
@@ -292,7 +352,7 @@ func checkGasPrice(
 			extraCost = l1fee
 		}
 	}
-	reward, err := checker.GetMiningReward(rst.startShardId, rst.blockNumber.Int64())
+	reward, err := checker.GetMiningReward(rst.startShardId, rst.timestamp)
 	if err != nil {
 		lg.Warn("Query mining reward failed", "error", err.Error())
 	}
@@ -303,22 +363,22 @@ func checkGasPrice(
 		txCostCap := new(big.Int).Sub(costCap, extraCost)
 		lg.Debug("Tx cost cap", "txCostCap", txCostCap)
 		profitableGasFeeCap := new(big.Int).Div(txCostCap, new(big.Int).SetUint64(estimatedGas))
-		lg.Info("Minimum profitable gas fee cap", "gasFeeCap", profitableGasFeeCap)
-		if gasFeeCap.Cmp(profitableGasFeeCap) == 1 {
-			profit := new(big.Int).Sub(reward, new(big.Int).Mul(new(big.Int).SetUint64(estimatedGas), gasFeeCap))
+
+		// gasPrice = baseFee + tip would be the cheapest gas price and most likely used for tx inclusion
+		gasPrice := new(big.Int).Sub(gasFeeCap, baseFee)
+		lg.Info("Comparing gas price and profitable gas fee cap", "gasPrice(baseFee+tip)", gasPrice, "profitableGasFeeCap", profitableGasFeeCap)
+		// Drop the tx if baseFee + tip is already higher than the profitable gas fee cap
+		if gasPrice.Cmp(profitableGasFeeCap) == 1 {
+			profit := new(big.Int).Sub(reward, new(big.Int).Mul(new(big.Int).SetUint64(estimatedGas), gasPrice))
 			profit = new(big.Int).Sub(profit, extraCost)
-			lg.Warn("Mining tx dropped: the profit will not meet expectation", "estimatedProfit", fmtEth(profit), "minimumProfit", fmtEth(minProfit))
-			return nil, errDropped
+			droppedMsg := fmt.Sprintf("not enough profit (in ether):\r\n reward %s - gas cost %s - extra cost %s = profit %s < min profit %s",
+				fmtEth(reward), fmtEth(new(big.Int).Mul(new(big.Int).SetUint64(estimatedGas), gasPrice)), fmtEth(extraCost), fmtEth(profit), fmtEth(minProfit))
+			return nil, errDropped{reason: droppedMsg}
 		}
+		// Cap the gas fee to be profitable
 		if !useConfig {
 			gasFeeCapChecked = profitableGasFeeCap
 			lg.Info("Using profitable gas fee cap", "gasFeeCap", gasFeeCapChecked)
-		}
-	} else {
-		if !useConfig {
-			// (tip + 2*baseFee) to ensure the tx to be marketable for six consecutive 100% full blocks.
-			gasFeeCapChecked = new(big.Int).Add(new(big.Int).Mul(new(big.Int).Sub(gasFeeCap, tip), big.NewInt(2)), tip)
-			lg.Info("Using marketable gas fee cap", "gasFeeCap", gasFeeCapChecked)
 		}
 	}
 

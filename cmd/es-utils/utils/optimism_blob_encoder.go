@@ -3,6 +3,7 @@ package utils
 import (
 	"errors"
 	"fmt"
+
 	"github.com/ethereum/go-ethereum/crypto/kzg4844"
 )
 

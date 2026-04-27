@@ -105,6 +105,16 @@ func (m *NetworkMetrics) SetPeerInfo(id, contract, version, address string, shar
 	m.PeerState.WithLabelValues(contract, fmt.Sprintf(format, id, contract, version, address, shardId, miner.Hex()), "UpdateTime").Set(float64(time.Now().UnixMilli()))
 }
 
+func (m *NetworkMetrics) SetScanState(id, contract, version, address string, shardId uint64, miner common.Address, mismatchedCount, unfixedCount int) {
+	m.PeerState.WithLabelValues(contract, fmt.Sprintf(format, id, contract, version, address, shardId, miner.Hex()), "MismatchedKVCount").Set(float64(mismatchedCount))
+	m.PeerState.WithLabelValues(contract, fmt.Sprintf(format, id, contract, version, address, shardId, miner.Hex()), "UnfixedKVCount").Set(float64(unfixedCount))
+}
+
+func (m *NetworkMetrics) SetDownloadState(id, contract, version, address string, shardId uint64, miner common.Address, savedBlobs, downloadedBlobs uint64) {
+	m.PeerState.WithLabelValues(contract, fmt.Sprintf(format, id, contract, version, address, shardId, miner.Hex()), "SavedBlobs").Set(float64(savedBlobs))
+	m.PeerState.WithLabelValues(contract, fmt.Sprintf(format, id, contract, version, address, shardId, miner.Hex()), "DownloadedBlobs").Set(float64(downloadedBlobs))
+}
+
 func (m *NetworkMetrics) SetSyncState(id, contract, version, address string, shardId uint64, miner common.Address, peerCount int, syncProgress, syncedSeconds,
 	fillEmptyProgress, fillEmptySeconds, providedBlobs uint64) {
 	m.PeerState.WithLabelValues(contract, fmt.Sprintf(format, id, contract, version, address, shardId, miner.Hex()), "PeerCount").Set(float64(peerCount))

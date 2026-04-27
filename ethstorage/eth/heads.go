@@ -54,11 +54,11 @@ func WatchHeadChanges(ctx context.Context, src NewHeadSource, fn HeadSignalFn) (
 // PollBlockChanges opens a polling loop to fetch the L1 block reference with the given label,
 // on provided interval and with request timeout. Results are returned with provided callback fn,
 // which may block to pause/back-pressure polling.
-func PollBlockChanges(ctx context.Context, log log.Logger, src *PollingClient, fn HeadSignalFn,
+func PollBlockChanges(ctx context.Context, lg log.Logger, src *PollingClient, fn HeadSignalFn,
 	label rpc.BlockNumber, interval time.Duration, timeout time.Duration) ethereum.Subscription {
 	return event.NewSubscription(func(quit <-chan struct{}) error {
 		if interval <= 0 {
-			log.Warn("Polling of block is disabled", "interval", interval, "label", label)
+			lg.Warn("Polling of block is disabled", "interval", interval, "label", label)
 			<-quit
 			return nil
 		}
@@ -67,7 +67,7 @@ func PollBlockChanges(ctx context.Context, log log.Logger, src *PollingClient, f
 			ref, err := L1BlockRefByLabel(src, reqCtx, label)
 			reqCancel()
 			if err != nil {
-				log.Warn("Failed to poll L1 block", "label", label, "err", err)
+				lg.Warn("Failed to poll L1 block", "label", label, "err", err)
 			} else {
 				fn(ctx, ref)
 			}

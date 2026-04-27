@@ -12,25 +12,37 @@ import (
 	"io"
 	"math"
 	"net/http"
+	"net/smtp"
 	"os"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethstorage/go-ethstorage/ethstorage/email"
 	"github.com/ethstorage/go-ethstorage/ethstorage/metrics"
 	"github.com/ethstorage/go-ethstorage/ethstorage/node"
 )
 
 const (
-	timeoutTime = time.Minute * 10
+	timeoutTime         = time.Minute * 10
+	emailReportInterval = time.Hour * 24
 )
 
 var (
 	listenAddrFlag  = flag.String("address", "0.0.0.0", "Listener address")
 	portFlag        = flag.Int("port", 8080, "Listener port for the es-node to report node status")
 	grafanaPortFlag = flag.Int("grafana", 9500, "Listener port for the metrics report")
-	logFlag         = flag.Int("loglevel", 3, "Log level to use for Ethereum and the faucet")
-	contractFlag    = flag.String("contract", "0x804C520d3c084C805E37A35E90057Ac32831F96f", "Default contract address used to compatible with older versions of es-node")
+
+	emailContractsFlag = flag.String("email.contracts", "0xf0193d6E8fc186e77b6E63af4151db07524f6a7A", "Contracts need to notify through email")
+	emailEnableFlag    = flag.Bool("email.enabled", false, "Email addresses to send notifications to")
+	emailUsernameFlag  = flag.String("email.username", "", "Email username for notifications")
+	emailPasswordFlag  = flag.String("email.password", "", "Email password for notifications")
+	emailHostFlag      = flag.String("email.host", "smtp.gmail.com", "Email host for notifications")
+	emailPortFlag      = flag.Int("email.port", 587, "Email port for notifications")
+	emailToFlag        = flag.String("email.to", "", "Email addresses to send notifications to")
+	emailFromFlag      = flag.String("email.from", "", "Email address that will appear as the sender of the notifications")
 )
 
 type record struct {
@@ -39,11 +51,14 @@ type record struct {
 }
 
 type dashboard struct {
-	ctx    context.Context
-	lock   sync.Mutex
-	nodes  map[string]*record
-	m      *metrics.NetworkMetrics
-	logger log.Logger
+	ctx              context.Context
+	lock             sync.Mutex
+	nodes            map[string]*record
+	m                *metrics.NetworkMetrics
+	lg               log.Logger
+	emailCfg         *email.EmailConfig
+	lastNotification time.Time
+	lastStateCache   map[string]map[string]*record
 }
 
 type statistics struct {
@@ -53,28 +68,30 @@ type statistics struct {
 	phasesOfShard map[uint64]map[string]int
 }
 
-func newDashboard() (*dashboard, error) {
+func newDashboard(lg log.Logger, emailCfg *email.EmailConfig) (*dashboard, error) {
 	var (
-		m      = metrics.NewNetworkMetrics()
-		logger = log.New("app", "Dashboard")
-		ctx    = context.Background()
+		m   = metrics.NewNetworkMetrics()
+		ctx = context.Background()
 	)
 
 	return &dashboard{
-		ctx:    ctx,
-		nodes:  make(map[string]*record),
-		m:      m,
-		logger: logger,
+		ctx:              ctx,
+		nodes:            make(map[string]*record),
+		m:                m,
+		lg:               lg,
+		emailCfg:         emailCfg,
+		lastNotification: time.Now().Add(-emailReportInterval + 20*time.Minute), // First email sent 20 minutes after service startup
+		lastStateCache:   make(map[string]map[string]*record),
 	}, nil
 }
 
 func (d *dashboard) HelloHandler(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		d.logger.Warn("Read Hello body failed", "err", err.Error())
+		d.lg.Warn("Read Hello body failed", "err", err.Error())
 		return
 	}
-	d.logger.Info("Get hello from node", "id", string(body))
+	d.lg.Info("Get hello from node", "id", string(body))
 	answer := `{"status":"ok"}`
 	w.Write([]byte(answer))
 }
@@ -84,40 +101,40 @@ func (d *dashboard) ReportStateHandler(w http.ResponseWriter, r *http.Request) {
 
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		d.logger.Warn("Read ReportState body failed", "err", err.Error())
+		d.lg.Warn("Read ReportState body failed", "err", err.Error())
 		return
 	}
 	err = json.Unmarshal(body, &state)
 	if err != nil {
-		log.Warn("Parse node state failed", "state", string(body), "error", err.Error())
-		w.Write([]byte(fmt.Sprintf(`{"status":"error", "err message":"%s"}`, err.Error())))
+		d.lg.Warn("Parse node state failed", "state", string(body), "error", err.Error())
+		w.Write(fmt.Appendf(nil, `{"status":"error", "err message":"%s"}`, err.Error()))
 		return
 	}
 	if err = d.checkState(&state); err != nil {
-		log.Warn("check node state failed", "state", string(body), "error", err.Error())
-		w.Write([]byte(fmt.Sprintf(`{"status":"error", "err message":"%s"}`, err.Error())))
+		d.lg.Warn("check node state failed", "state", string(body), "error", err.Error())
+		w.Write(fmt.Appendf(nil, `{"status":"error", "err message":"%s"}`, err.Error()))
 		return
 	}
 
-	if state.Contract == "" {
-		state.Contract = *contractFlag
-	}
-
-	log.Info("Get state from peer", "peer id", state.Id, "state", string(body))
+	d.lg.Info("Get state from peer", "peer id", state.Id, "state", string(body))
 	d.lock.Lock()
 	d.nodes[state.Id] = &record{receivedTime: time.Now(), state: &state}
 	d.lock.Unlock()
 	for _, shard := range state.Shards {
 		d.m.SetPeerInfo(state.Id, state.Contract, state.Version, state.Address, shard.ShardId, shard.Miner)
-		sync, mining, submission := shard.SyncState, shard.MiningState, shard.SubmissionState
+		sync, mining, submission, scanStats := shard.SyncState, shard.MiningState, shard.SubmissionState, state.ScanStats
+		d.m.SetDownloadState(state.Id, state.Contract, state.Version, state.Address, shard.ShardId, shard.Miner, state.SavedBlobs, state.DownloadedBlobs)
+		if scanStats != nil {
+			d.m.SetScanState(state.Id, state.Contract, state.Version, state.Address, shard.ShardId, shard.Miner, scanStats.MismatchedCount, scanStats.UnfixedCount)
+		}
 		d.m.SetSyncState(state.Id, state.Contract, state.Version, state.Address, shard.ShardId, shard.Miner, sync.PeerCount, sync.SyncProgress,
 			sync.SyncedSeconds, sync.FillEmptyProgress, sync.FillEmptySeconds, shard.ProvidedBlob)
 		if mining != nil {
 			d.m.SetMiningState(state.Id, state.Contract, state.Version, state.Address, shard.ShardId, shard.Miner, mining.MiningPower, mining.SamplingTime)
 		}
 		if submission != nil {
-			d.m.SetSubmissionState(state.Id, state.Contract, state.Version, state.Address, shard.ShardId, shard.Miner, submission.Succeeded,
-				submission.Failed, submission.Dropped, submission.LastSucceededTime)
+			d.m.SetSubmissionState(state.Id, state.Contract, state.Version, state.Address, shard.ShardId, shard.Miner, submission.Submitted,
+				submission.Failed, submission.Dropped, submission.LastSubmittedTime)
 		}
 	}
 
@@ -142,9 +159,9 @@ func (d *dashboard) checkState(state *node.NodeState) error {
 
 func (d *dashboard) Report() {
 	summary := make(map[string]*statistics)
-
+	nodesInNetwork := make(map[string]map[string]*record)
 	d.lock.Lock()
-	defer d.lock.Unlock()
+
 	for id, r := range d.nodes {
 		if time.Since(r.receivedTime) > timeoutTime {
 			delete(d.nodes, id)
@@ -186,18 +203,125 @@ func (d *dashboard) Report() {
 			}
 			if s.SyncState.SyncProgress < 10000 || s.SyncState.FillEmptyProgress < 10000 {
 				sd.phasesOfShard[shard]["syncing"] = sd.phasesOfShard[shard]["syncing"] + 1
-			} else if s.SubmissionState != nil && s.SubmissionState.Succeeded > 0 {
+			} else if s.SubmissionState != nil && s.SubmissionState.Submitted > 0 {
 				sd.phasesOfShard[shard]["mined"] = sd.phasesOfShard[shard]["mined"] + 1
 			} else if s.SubmissionState != nil {
 				sd.phasesOfShard[shard]["mining"] = sd.phasesOfShard[shard]["mining"] + 1
 			}
 		}
+		_, ok := nodesInNetwork[r.state.Contract]
+		if !ok {
+			nodesInNetwork[r.state.Contract] = make(map[string]*record)
+		}
+		nodesInNetwork[r.state.Contract][r.state.Id] = r
+	}
+	d.lock.Unlock()
+
+	if *emailEnableFlag && time.Now().After(d.lastNotification.Add(emailReportInterval)) {
+		contracts := make(map[string]struct{})
+		cs := strings.SplitSeq(*emailContractsFlag, ",")
+		for c := range cs {
+			c = strings.TrimSpace(c)
+			if c == "" { // ignore empty records
+				continue
+			}
+			contracts[c] = struct{}{}
+		}
+
+		for contract, nodeStates := range nodesInNetwork {
+			cache, ok := d.lastStateCache[contract]
+			if !ok {
+				cache = make(map[string]*record)
+			}
+			if _, ok = contracts[contract]; ok {
+				d.outputSummaryHtml(contract, nodeStates, cache)
+			}
+		}
+		d.lastNotification = time.Now()
+		d.lastStateCache = nodesInNetwork
 	}
 
 	d.m.ResetStaticMetrics()
 	for contract, data := range summary {
 		d.m.SetStaticMetrics(contract, data.count, data.versions, data.shards, data.phasesOfShard)
 	}
+}
+
+func (d *dashboard) outputSummaryHtml(contract string, nodes map[string]*record, cache map[string]*record) {
+	var (
+		dstr          = time.Now().Format("2006-01-02")
+		dataRang      = "(24h)"
+		content       strings.Builder
+		contentFormat = "<tr>\n\t<td>%s</td>\n\t<td>%s</td>\n\t<td>%d</td>\n\t<td>%d</td>\n\t<td>%d</td>\n\t<td>%d</td>\n\t" +
+			"<td>%d</td>\n\t<td>%s</td>\n\t<td>%d</td>\n\t<td>%d</td>\n\t<td>%s</td>\n\t<td>%s</td>\n\t</tr>\n"
+		subject = fmt.Sprintf("Subject: Daily Network Statistics Report | %s | %s\r\n"+
+			"MIME-Version: 1.0\r\n"+
+			"Content-Type: text/html; charset=\"UTF-8\"\r\nTo: %s\r\n", contract, dstr, d.emailCfg.To)
+	)
+
+	if len(cache) == 0 {
+		dataRang = "(total)"
+	}
+
+	for _, n := range nodes {
+		downloadedBlobs := n.state.DownloadedBlobs
+		if r, ok := cache[n.state.Id]; ok {
+			if downloadedBlobs >= r.state.DownloadedBlobs {
+				downloadedBlobs -= r.state.DownloadedBlobs
+			}
+		}
+
+		for _, shard := range n.state.Shards {
+			submitted, dropped, failed, submittedTime := 0, 0, 0, "N/A"
+			if shard.MiningState != nil {
+				submitted, dropped, failed = shard.SubmissionState.Submitted, shard.SubmissionState.Dropped, shard.SubmissionState.Failed
+				if shard.SubmissionState.LastSubmittedTime > 0 && shard.SubmissionState.Submitted > 0 {
+					submittedTime = time.UnixMilli(shard.SubmissionState.LastSubmittedTime).Format("2006-01-02T15:04:05")
+				}
+			}
+			mismatchedCount, unfixedCount := "N/A", "N/A"
+			if n.state.ScanStats != nil {
+				mismatchedCount = strconv.Itoa(n.state.ScanStats.MismatchedCount)
+				unfixedCount = strconv.Itoa(n.state.ScanStats.UnfixedCount)
+			}
+			content.WriteString(fmt.Sprintf(contentFormat, n.state.Address, shard.Miner, n.state.SavedBlobs, downloadedBlobs,
+				shard.ShardId, shard.SyncState.PeerCount, submitted, submittedTime, dropped, failed, mismatchedCount, unfixedCount))
+		}
+	}
+
+	body := fmt.Sprintf(`
+	<html>
+	<body>
+		<h3>Daily Network Statistics Report | %s | %s</h3>
+		<table border="1" cellspacing="0" cellpadding="5">
+			<tr>
+				<th>Address</th>
+				<th>Miner</th>
+                <th>SavedBlobs</th>
+                <th>DownloadedBlobs %s</th>
+                <th>Shard</th>
+                <th>PeerCount</th>
+                <th>Submitted</th>
+                <th>LastSubmittedTime</th>
+                <th>Dropped</th>
+                <th>Failed</th>
+                <th>MismatchedKVCount</th>
+                <th>UnfixedKVCount</th>
+			</tr>
+			%s
+		</table>
+	</body>
+	</html>`, contract, dstr, dataRang, content.String())
+
+	msg := []byte(subject + body)
+	auth := smtp.PlainAuth("", d.emailCfg.Username, d.emailCfg.Password, d.emailCfg.Host)
+	err := smtp.SendMail(fmt.Sprintf("%s:%d", d.emailCfg.Host, d.emailCfg.Port), auth, d.emailCfg.Username, strings.Split(d.emailCfg.To, ","), msg)
+	if err != nil {
+		d.lg.Warn("Send email fail ❌:", err)
+		return
+	}
+
+	d.lg.Info("Send email success ✅")
 }
 
 func (d *dashboard) loop() {
@@ -221,26 +345,53 @@ func (d *dashboard) listenAndServe(port int) error {
 	return http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
 }
 
+func getEmailConfig() (*email.EmailConfig, error) {
+	cfg := &email.EmailConfig{
+		Username: *emailUsernameFlag,
+		Password: *emailPasswordFlag,
+		Host:     *emailHostFlag,
+		Port:     uint64(*emailPortFlag),
+		To:       *emailToFlag,
+		From:     *emailFromFlag,
+	}
+	if err := cfg.Check(); err != nil {
+		return nil, fmt.Errorf("email config check error: %w", err)
+	}
+	return cfg, nil
+}
+
 func main() {
-	// Parse the flags and set up the logger to print everything requested
+	// Parse the flags and set up the lg to print everything requested
 	flag.Parse()
 	log.SetDefault(log.NewLogger(log.NewTerminalHandlerWithLevel(os.Stderr, log.LevelInfo, true)))
+	lg := log.New("app", "Dashboard")
 
 	if *portFlag < 0 || *portFlag > math.MaxUint16 {
-		log.Crit("Invalid port")
+		lg.Crit("Invalid port")
 	}
 
 	if *grafanaPortFlag < 0 || *grafanaPortFlag > math.MaxUint16 {
-		log.Crit("Invalid grafana port")
+		lg.Crit("Invalid grafana port")
 	}
-	d, err := newDashboard()
+
+	var emailCfg *email.EmailConfig
+	var err error
+
+	if *emailEnableFlag {
+		emailCfg, err = getEmailConfig()
+		if err != nil {
+			lg.Crit("Invalid email config", "err", err)
+		}
+	}
+
+	d, err := newDashboard(lg, emailCfg)
 	if err != nil {
-		log.Crit("New dashboard fail", "err", err)
+		lg.Crit("New dashboard fail", "err", err)
 	}
 
 	go d.listenAndServe(*portFlag)
 
 	if err := d.m.Serve(d.ctx, *listenAddrFlag, *grafanaPortFlag); err != nil {
-		log.Crit("Error starting metrics server", "err", err)
+		lg.Crit("Error starting metrics server", "err", err)
 	}
 }

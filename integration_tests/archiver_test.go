@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -30,20 +29,9 @@ type test struct {
 	msg             string
 }
 
-func (t *test) toUrl() string {
-	if len(t.archivedIndices) == 0 {
-		return fmt.Sprintf(urlPattern, archiverAddr, t.query)
-	}
-	var strArr []string
-	for _, val := range t.archivedIndices {
-		strArr = append(strArr, strconv.FormatUint(uint64(val), 10))
-	}
-	query := fmt.Sprintf("%s?indices=%s", t.query, strings.Join(strArr, ","))
-	return fmt.Sprintf(urlPattern, archiverAddr, query)
-}
-
 func TestArchiveAPI(t *testing.T) {
-
+	// skip as the archiver is not running anymore
+	t.SkipNow()
 	tests := []test{
 		{
 			query:           "4756895",

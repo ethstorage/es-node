@@ -9,11 +9,16 @@ import (
 	"runtime"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethstorage/go-ethstorage/ethstorage/email"
 	"github.com/ethstorage/go-ethstorage/ethstorage/prover"
 	"github.com/ethstorage/go-ethstorage/ethstorage/signer"
 )
 
 type Config struct {
+	// es network chain id
+	ChainID *big.Int
+	Slot    uint64
+
 	// contract
 	RandomChecks   uint64
 	NonceLimit     uint64
@@ -38,6 +43,11 @@ type Config struct {
 	SignerFnFactory  signer.SignerFactory
 	SignerAddr       common.Address
 	MinimumProfit    *big.Int
+	MaxGasPrice      *big.Int
+
+	// for proof submission notifications
+	EmailEnabled bool
+	EmailConfig  email.EmailConfig
 }
 
 var DefaultConfig = Config{
@@ -47,6 +57,7 @@ var DefaultConfig = Config{
 	Cutoff:         new(big.Int).SetUint64(60),
 	DiffAdjDivisor: new(big.Int).SetUint64(1024),
 
+	Slot:             12,
 	GasPrice:         nil,
 	PriorityGasPrice: nil,
 	ZKeyFile:         filepath.Join("build", "bin", prover.SnarkLib, "zkey", "blob_poseidon2.zkey"),
@@ -55,4 +66,5 @@ var DefaultConfig = Config{
 	ZKProverImpl:     1,
 	ThreadsPerShard:  uint64(2 * runtime.NumCPU()),
 	MinimumProfit:    common.Big0,
+	MaxGasPrice:      common.Big0,
 }

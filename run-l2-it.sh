@@ -18,7 +18,7 @@ mkdir ${data_dir}
 
 
 exec ./build/bin/es-node \
-  --network integration \
+  --chain_id 3339 \
   --datadir $data_dir \
   --storage.files $storage_file_0 \
   --storage.files $storage_file_1 \

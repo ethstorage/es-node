@@ -15,48 +15,50 @@ const (
 )
 
 type LastBlockChecker struct {
-	Name string `json:"name"`
-	RPC  string `json:"rpc"`
+	Name    string `json:"name"`
+	EmailTo string `json:"email-to"`
+	RPC     string `json:"rpc"`
 }
 
-func newLastBlockChecker(params map[string]string) (*LastBlockChecker, error) {
+func newLastBlockChecker(params map[string]string, emailTo string) (*LastBlockChecker, error) {
 	name, rpc := params["name"], params["rpc"]
 	if name == "" || rpc == "" {
 		return nil, errors.New("invalid params to load LastBlockChecker")
 	}
 
 	return &LastBlockChecker{
-		Name: name,
-		RPC:  rpc,
+		Name:    name,
+		EmailTo: emailTo,
+		RPC:     rpc,
 	}, nil
 }
 
-func (c *LastBlockChecker) Check(logger log.Logger) (bool, string) {
+func (c *LastBlockChecker) Check(lg log.Logger) (bool, string, string) {
 	ctx := context.Background()
 	client, err := ethclient.Dial(c.RPC)
 	if err != nil {
-		logger.Error("Failed to create L1 source", "alert", c.Name, "err", err)
-		return true, fmt.Sprintf(errorContent, c.Name, err.Error())
+		lg.Error("Failed to create L1 source", "alert", c.Name, "err", err)
+		return true, fmt.Sprintf(errorContent, c.Name, err.Error()), c.EmailTo
 	}
 
 	for i := 0; i < 3; i++ {
 		header, e := client.HeaderByNumber(ctx, nil)
 		if e != nil {
 			time.Sleep(time.Minute)
-			logger.Error("Get block fail", "alert", c.Name, "rpc", c.RPC, "error", e)
+			lg.Error("Get block fail", "alert", c.Name, "rpc", c.RPC, "error", e)
 			err = e
 			continue
 		}
 
 		lastMinedTime := time.Unix(int64(header.Time), 0)
-		logger.Info("Check last block", "alert", c.Name, "time", lastMinedTime, "block", header.Number, "rpc", c.RPC)
+		lg.Info("Check last block", "alert", c.Name, "time", lastMinedTime, "block", header.Number, "rpc", c.RPC)
 		targetTime := time.Now().Add(-10 * time.Minute)
 		if targetTime.After(lastMinedTime) {
 			content := fmt.Sprintf(noBlockIn10MinutesAlertContent, c.Name, header.Number, lastMinedTime, c.RPC)
-			return true, content
+			return true, content, c.EmailTo
 		}
-		return false, ""
+		return false, "", c.EmailTo
 	}
 
-	return true, fmt.Sprintf(errorContent, c.Name, err.Error())
+	return true, fmt.Sprintf(errorContent, c.Name, err.Error()), c.EmailTo
 }

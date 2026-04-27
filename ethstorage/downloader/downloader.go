@@ -12,6 +12,7 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
+	"slices"
 	"sync"
 	"time"
 
@@ -22,6 +23,7 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 
 	"github.com/ethstorage/go-ethstorage/ethstorage"
+	"github.com/ethstorage/go-ethstorage/ethstorage/email"
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
 )
 
@@ -34,8 +36,9 @@ const (
 )
 
 var (
-	downloaderPrefix = []byte("dl-")
-	lastDownloadKey  = []byte("last-download-block")
+	downloaderPrefix   = []byte("dl-")
+	downloadedBlobsKey = []byte("downloaded-blobs")
+	lastDownloadKey    = []byte("last-download-block")
 )
 
 type BlobCache interface {
@@ -63,15 +66,17 @@ type Downloader struct {
 	latestHead                 int64
 	dumpDir                    string
 	minDurationForBlobsRequest uint64
+	downloadedBlobs            uint64
 
 	// Request to download new blobs
 	dlLatestReq    chan struct{}
 	dlFinalizedReq chan struct{}
 
-	log  log.Logger
-	done chan struct{}
-	wg   sync.WaitGroup
-	mu   sync.Mutex
+	emailConfig *email.EmailConfig
+	lg          log.Logger
+	done        chan struct{}
+	wg          sync.WaitGroup
+	mu          sync.Mutex
 }
 
 type blob struct {
@@ -103,13 +108,11 @@ func NewDownloader(
 	db ethdb.Database,
 	sm *ethstorage.StorageManager,
 	cache BlobCache,
-	downloadStart int64,
-	downloadDump string,
 	minDurationForBlobsRequest uint64,
-	downloadThreadNum int,
-	log log.Logger,
+	downloadConfig Config,
+	lg log.Logger,
 ) *Downloader {
-	sm.DownloadThreadNum = downloadThreadNum
+	sm.DownloadThreadNum = downloadConfig.DownloadThreadNum
 	return &Downloader{
 		Cache:                      cache,
 		l1Source:                   l1Source,
@@ -117,13 +120,15 @@ func NewDownloader(
 		daClient:                   daClient,
 		db:                         db,
 		sm:                         sm,
-		dumpDir:                    downloadDump,
+		dumpDir:                    downloadConfig.DownloadDump,
 		minDurationForBlobsRequest: minDurationForBlobsRequest,
 		dlLatestReq:                make(chan struct{}, 1),
 		dlFinalizedReq:             make(chan struct{}, 1),
-		log:                        log,
+		lg:                         lg,
 		done:                       make(chan struct{}),
-		lastDownloadBlock:          downloadStart,
+		lastDownloadBlock:          downloadConfig.DownloadStart,
+		downloadedBlobs:            0,
+		emailConfig:                downloadConfig.EmailConfig,
 	}
 }
 
@@ -139,11 +144,11 @@ func (s *Downloader) Start() error {
 				return err
 			} else {
 				s.lastDownloadBlock = header.Number.Int64()
-				s.log.Info("Downloader will use the latest finalized block to start for the first time", "block", s.lastDownloadBlock)
+				s.lg.Info("Downloader will use the latest finalized block to start for the first time", "block", s.lastDownloadBlock)
 			}
 		} else {
 			s.lastDownloadBlock = int64(binary.LittleEndian.Uint64(bs))
-			s.log.Info("Downloader will use the last download block to start", "block", s.lastDownloadBlock)
+			s.lg.Info("Downloader will use the last download block to start", "block", s.lastDownloadBlock)
 		}
 	} else if s.lastDownloadBlock < 0 {
 		if s.lastDownloadBlock == rpc.FinalizedBlockNumber.Int64() {
@@ -158,7 +163,12 @@ func (s *Downloader) Start() error {
 		}
 	}
 
-	err := s.sm.Reset(s.lastDownloadBlock)
+	bs, err := s.db.Get(append(downloaderPrefix, downloadedBlobsKey...))
+	if err == nil && len(bs) == 8 {
+		s.downloadedBlobs = binary.LittleEndian.Uint64(bs)
+	}
+
+	err = s.sm.Reset(s.lastDownloadBlock)
 	if err != nil {
 		return err
 	}
@@ -177,7 +187,7 @@ func (s *Downloader) Close() error {
 func (s *Downloader) OnL1Finalized(finalized uint64) {
 	s.mu.Lock()
 	if s.finalizedHead > int64(finalized) {
-		s.log.Warn("The tracking head is greater than new finalized", "tracking", s.finalizedHead, "new", finalized)
+		s.lg.Warn("The tracking head is greater than new finalized", "tracking", s.finalizedHead, "new", finalized)
 	}
 	s.finalizedHead = int64(finalized)
 	s.mu.Unlock()
@@ -194,7 +204,7 @@ func (s *Downloader) OnL1Finalized(finalized uint64) {
 func (s *Downloader) OnNewL1Head(head eth.L1BlockRef) {
 	s.mu.Lock()
 	if s.latestHead > int64(head.Number) {
-		s.log.Info("The tracking head is greater than new one, a reorg may happen", "tracking", s.latestHead, "new", head)
+		s.lg.Info("The tracking head is greater than new one, a reorg may happen", "tracking", s.latestHead, "new", head)
 	}
 	s.latestHead = int64(head.Number)
 	s.mu.Unlock()
@@ -208,9 +218,13 @@ func (s *Downloader) OnNewL1Head(head eth.L1BlockRef) {
 	}
 }
 
+func (s *Downloader) GetState() uint64 {
+	return s.downloadedBlobs
+}
+
 func (s *Downloader) eventLoop() {
 	defer s.wg.Done()
-	s.log.Info("Download loop started")
+	s.lg.Info("Download loop started")
 
 	for {
 		select {
@@ -243,7 +257,7 @@ func (s *Downloader) downloadToCache() {
 		_, err := s.downloadRange(start+1, rangeEnd, true)
 
 		if err != nil {
-			s.log.Error("DownloadRange failed", "err", err)
+			s.lg.Error("DownloadRange failed", "err", err)
 			return
 		}
 
@@ -261,7 +275,7 @@ func (s *Downloader) download() {
 		// TODO: @Qiang we can also enter into an recovery mode (e.g., scan local blobs to obtain a heal list, more complicated, will do later)
 		prompt := "Ethereum only keep blobs for one month, but it has been over one month since last blob download." +
 			"You may need to restart this node with full re-sync"
-		s.log.Error(prompt)
+		s.lg.Error(prompt)
 		return
 	}
 
@@ -282,9 +296,9 @@ func (s *Downloader) download() {
 			kvIdxToArrayIdx := make(map[uint64]int)
 
 			for _, blob := range blobs {
-				s.log.Info("Blob will be saved into disk", "kvIndex", blob.kvIndex.Uint64(), "hash", hex.EncodeToString(blob.hash[:]))
+				s.lg.Info("Blob will be saved into disk", "kvIndex", blob.kvIndex.Uint64(), "hash", hex.EncodeToString(blob.hash[:]))
 				if arrIdx, exists := kvIdxToArrayIdx[blob.kvIndex.Uint64()]; exists {
-					s.log.Info("Duplicate kvIndex found, will replace the previous one", "previous", kvIndices[arrIdx], "new", blob.kvIndex.Uint64())
+					s.lg.Info("Duplicate kvIndex found, will replace the previous one", "previous", kvIndices[arrIdx], "new", blob.kvIndex.Uint64())
 					dataBlobs[arrIdx] = blob.data
 					copy(metas[arrIdx][0:ethstorage.HashSizeInContract], blob.hash[0:ethstorage.HashSizeInContract])
 				} else {
@@ -301,11 +315,12 @@ func (s *Downloader) download() {
 			ts := time.Now()
 			err := s.sm.DownloadFinished(end, kvIndices, dataBlobs, metas)
 			if err != nil {
-				s.log.Error("Save blobs error", "err", err)
+				s.lg.Error("Save blobs error", "err", err)
 				return
 			}
 			if len(blobs) > 0 {
-				log.Info("DownloadFinished", "duration(ms)", time.Since(ts).Milliseconds(), "blobs", len(blobs))
+				s.downloadedBlobs += uint64(len(blobs))
+				s.lg.Info("DownloadFinished", "duration(ms)", time.Since(ts).Milliseconds(), "blobs", len(blobs))
 			}
 
 			// save lastDownloadedBlock into database
@@ -314,10 +329,17 @@ func (s *Downloader) download() {
 
 			err = s.db.Put(append(downloaderPrefix, lastDownloadKey...), bs)
 			if err != nil {
-				s.log.Error("Save lastDownloadedBlock into db error", "err", err)
+				s.lg.Error("Save lastDownloadedBlock into db error", "err", err)
 				return
 			}
-			s.log.Debug("LastDownloadedBlock saved into db", "lastDownloadedBlock", end)
+			s.lg.Debug("LastDownloadedBlock saved into db", "lastDownloadedBlock", end)
+
+			binary.LittleEndian.PutUint64(bs, s.downloadedBlobs)
+			err = s.db.Put(append(downloaderPrefix, downloadedBlobsKey...), bs)
+			if err != nil {
+				s.lg.Error("Save downloadedBlobs into db error", "err", err)
+				return
+			}
 
 			s.dumpBlobsIfNeeded(blobs)
 
@@ -354,10 +376,10 @@ func (s *Downloader) downloadRange(start int64, end int64, toCache bool) ([]blob
 		res := s.Cache.Blobs(elBlock.number)
 		if res != nil {
 			blobs = append(blobs, res...)
-			s.log.Info("Blob found in the cache, continue to the next block", "blockNumber", elBlock.number)
+			s.lg.Info("Blob found in the cache, continue to the next block", "blockNumber", elBlock.number)
 			continue
 		} else {
-			s.log.Info(
+			s.lg.Info(
 				"Don't find blob in the cache, will try to download directly",
 				"blockNumber", elBlock.number,
 				"start", start,
@@ -366,52 +388,82 @@ func (s *Downloader) downloadRange(start int64, end int64, toCache bool) ([]blob
 			)
 		}
 
-		var clBlobs map[common.Hash]eth.Blob
-		if s.l1Beacon != nil {
-			clBlobs, err = s.l1Beacon.DownloadBlobs(s.l1Beacon.Timestamp2Slot(elBlock.timestamp))
-			if err != nil {
-				s.log.Error("L1 beacon download blob error", "err", err)
-				return nil, err
-			}
-		} else if s.daClient != nil {
-			var hashes []common.Hash
-			for _, blob := range elBlock.blobs {
-				hashes = append(hashes, blob.hash)
-			}
-
-			clBlobs, err = s.daClient.DownloadBlobs(hashes)
-			if err != nil {
-				s.log.Error("DA client download blob error", "err", err)
-				return nil, err
-			}
-		} else {
-			return nil, fmt.Errorf("no beacon client or DA client is available")
+		clBlobs, err := s.downloadBlobsWithRetry(elBlock, 3)
+		if err != nil {
+			s.lg.Error("Failed to download blobs for the block after 3 attempts", "block", elBlock.number, "err", err)
+			// Empty CL blob will be handled later in the EL blob loop
 		}
 
 		for _, elBlob := range elBlock.blobs {
+			shard := elBlob.kvIndex.Uint64() >> s.sm.KvEntriesBits()
+			if !slices.Contains(s.sm.Shards(), shard) {
+				s.lg.Warn("Shard not initialized locally for the kvIndex, skip this blob", "kvIndex", elBlob.kvIndex.Uint64(), "shard", shard)
+				continue
+			}
 			clBlob, exists := clBlobs[elBlob.hash]
 			if !exists {
-				s.log.Error("Did not find the event specified blob in the CL")
-
+				s.notifyBlobMissing(elBlock.number, elBlob.kvIndex.Uint64(), elBlob.hash)
+				continue
 			}
 			// encode blobs so that miner can do sampling directly from cache
 			elBlob.data = s.sm.EncodeBlob(clBlob.Data, elBlob.hash, elBlob.kvIndex.Uint64(), s.sm.MaxKvSize())
 			blobs = append(blobs, *elBlob)
-			s.log.Info("Downloaded and encoded", "blockNumber", elBlock.number, "kvIdx", elBlob.kvIndex)
+			s.lg.Info("Downloaded and encoded", "blockNumber", elBlock.number, "kvIdx", elBlob.kvIndex)
 		}
 		if toCache {
 			if err := s.Cache.SetBlockBlobs(elBlock); err != nil {
-				s.log.Error("Failed to cache blobs", "block", elBlock.number, "err", err)
+				s.lg.Error("Failed to cache blobs", "block", elBlock.number, "err", err)
 				return nil, err
 			}
 		}
 	}
 
 	if len(blobs) > 0 {
-		s.log.Info("Download range", "cache", toCache, "start", start, "end", end, "blobNumber", len(blobs), "duration(ms)", time.Since(ts).Milliseconds())
+		s.lg.Info("Download range", "cache", toCache, "start", start, "end", end, "blobNumber", len(blobs), "duration(ms)", time.Since(ts).Milliseconds())
 	}
 
 	return blobs, nil
+}
+
+func (s *Downloader) downloadBlobsWithRetry(elBlock *blockBlobs, maxAttempts int) (map[common.Hash]eth.Blob, error) {
+	var lastErr error
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		clBlobs, err := s.downloadBlobs(elBlock)
+		if err == nil {
+			return clBlobs, nil
+		}
+		lastErr = err
+		if attempt < maxAttempts {
+			time.Sleep(3 * time.Second)
+		}
+	}
+	return nil, lastErr
+}
+
+func (s *Downloader) downloadBlobs(elBlock *blockBlobs) (map[common.Hash]eth.Blob, error) {
+	hashes := make([]common.Hash, 0, len(elBlock.blobs))
+	for _, b := range elBlock.blobs {
+		hashes = append(hashes, b.hash)
+	}
+	if s.l1Beacon != nil {
+		clBlobs, err := s.l1Beacon.DownloadBlobs(elBlock.timestamp, hashes)
+		if err != nil {
+			s.lg.Error("L1 beacon download blob error", "block", elBlock.number, "err", err)
+			return nil, err
+		}
+		return clBlobs, nil
+	}
+
+	if s.daClient != nil {
+		clBlobs, err := s.daClient.DownloadBlobs(hashes)
+		if err != nil {
+			s.lg.Error("DA client download blob error", "err", err)
+			return nil, err
+		}
+		return clBlobs, nil
+	}
+
+	return nil, fmt.Errorf("no beacon client or DA client is available")
 }
 
 func (s *Downloader) dumpBlobsIfNeeded(blobs []blob) {
@@ -420,7 +472,7 @@ func (s *Downloader) dumpBlobsIfNeeded(blobs []blob) {
 			fileName := filepath.Join(s.dumpDir, fmt.Sprintf("%s.dat", hex.EncodeToString(blob.data[:5])))
 			f, err := os.Create(fileName)
 			if err != nil {
-				s.log.Warn("Error creating file", "filename", fileName, "err", err)
+				s.lg.Warn("Error creating file", "filename", fileName, "err", err)
 				return
 			}
 			defer f.Close()
@@ -463,4 +515,22 @@ func (s *Downloader) eventsToBlocks(events []types.Log) ([]*blockBlobs, error) {
 	}
 
 	return blocks, nil
+}
+
+func (s *Downloader) notifyBlobMissing(blockNumber uint64, kvIndex uint64, hash common.Hash) {
+	title := "🛑 Fatal Error from es-node: Downloader Failed to Locate Blob in CL"
+	msg := "The downloader couldn't locate the specified blob in the consensus layer. The node is stopped pending resolution. "
+	msg += "Details from the EL event: \n"
+	msg += fmt.Sprintf(" - blockNumber: %d\n", blockNumber)
+	msg += fmt.Sprintf(" - kvIndex: %d\n", kvIndex)
+	msg += fmt.Sprintf(" - hash: %s\n", hash.Hex())
+	msg += "This may indicate a potential issue with blob availability on the consensus layer. \n"
+
+	if s.emailConfig != nil {
+		if err := email.SendEmail(title, msg, *s.emailConfig, s.lg); err == nil {
+			return
+		}
+	}
+	s.lg.Error(title)
+	s.lg.Crit(msg)
 }

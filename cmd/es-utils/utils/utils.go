@@ -24,12 +24,12 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethstorage/go-ethstorage/ethstorage"
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
-	esLog "github.com/ethstorage/go-ethstorage/ethstorage/log"
+	"github.com/ethstorage/go-ethstorage/ethstorage/log"
 	"github.com/holiman/uint256"
 )
 
 var (
-	log = esLog.NewLogger(esLog.DefaultCLIConfig())
+	lg = log.DefaultLogger()
 )
 
 func SendBlobTx(
@@ -52,7 +52,7 @@ func SendBlobTx(
 	ctx := context.Background()
 	client, err := ethclient.DialContext(ctx, addr)
 	if err != nil {
-		log.Crit("Failed to connect to the Ethereum client", "error", err)
+		lg.Crit("Failed to connect to the Ethereum client", "error", err)
 	}
 
 	h := crypto.Keccak256Hash([]byte(`upfrontPayment()`))
@@ -62,18 +62,18 @@ func SendBlobTx(
 	}
 	bs, err := client.CallContract(context.Background(), callMsg, new(big.Int).SetInt64(-2))
 	if err != nil {
-		log.Crit("Failed to get upfront fee", "error", err)
+		lg.Crit("Failed to get upfront fee", "error", err)
 	}
 
 	uint256Type, _ := abi.NewType("uint256", "", nil)
 	res, err := abi.Arguments{{Type: uint256Type}}.UnpackValues(bs)
 	if err != nil {
-		log.Crit("Failed to unpack values", "error", err)
+		lg.Crit("Failed to unpack values", "error", err)
 	}
 
 	val, success := new(big.Int).SetString(value, 0)
 	if !success {
-		log.Crit("Invalid value param")
+		lg.Crit("Invalid value param")
 	}
 
 	if res[0].(*big.Int).Cmp(val) == 1 {
@@ -82,39 +82,39 @@ func SendBlobTx(
 
 	value256, overflow := uint256.FromBig(val)
 	if overflow {
-		log.Crit("Invalid value param", "error", err)
+		lg.Crit("Invalid value param", "error", err)
 	}
 
 	key, err := crypto.HexToECDSA(prv)
 	if err != nil {
-		log.Crit("Invalid private key", "error", err)
+		lg.Crit("Invalid private key", "error", err)
 	}
 
 	if nonce == -1 {
 		pendingNonce, err := client.PendingNonceAt(ctx, crypto.PubkeyToAddress(key.PublicKey))
 		if err != nil {
-			log.Crit("Error getting nonce", "error", err)
+			lg.Crit("Error getting nonce", "error", err)
 		}
 		nonce = int64(pendingNonce)
 	}
-	log.Info("SendBlobTx", "nonce", nonce)
+	lg.Info("SendBlobTx", "nonce", nonce)
 
 	var gasPrice256 *uint256.Int
 	if gasPrice == "" {
 		val, err := client.SuggestGasPrice(ctx)
 		if err != nil {
-			log.Crit("Error getting suggested gas price", "error", err)
+			lg.Crit("Error getting suggested gas price", "error", err)
 		}
 		var nok bool
 		gasPrice256, nok = uint256.FromBig(val)
 		if nok {
-			log.Crit("Gas price is too high!", "value", val.String())
+			lg.Crit("Gas price is too high!", "value", val.String())
 		}
-		log.Info("SendBlobTx", "gasPriceSuggested", gasPrice256)
+		lg.Info("SendBlobTx", "gasPriceSuggested", gasPrice256)
 	} else {
 		gasPrice256, err = DecodeUint256String(gasPrice)
 		if err != nil {
-			log.Crit("Invalid gas price", "error", err)
+			lg.Crit("Invalid gas price", "error", err)
 		}
 	}
 
@@ -122,7 +122,7 @@ func SendBlobTx(
 	if priorityGasPrice != "" {
 		priorityGasPrice256, err = DecodeUint256String(priorityGasPrice)
 		if err != nil {
-			log.Crit("Invalid priority gas price", "error", err)
+			lg.Crit("Invalid priority gas price", "error", err)
 		}
 	}
 
@@ -130,18 +130,18 @@ func SendBlobTx(
 	if maxFeePerDataGas != "" {
 		maxFeePerDataGas256, err := DecodeUint256String(maxFeePerDataGas)
 		if err != nil {
-			log.Crit("Invalid max_fee_per_data_gas", "error", err)
+			lg.Crit("Invalid max_fee_per_data_gas", "error", err)
 		}
 		blobPrice = maxFeePerDataGas256
 	} else {
 		blobBaseFee, err := queryBlobBaseFee(client)
 		if err != nil {
-			log.Crit("Error getting blob base fee", "error", err)
+			lg.Crit("Error getting blob base fee", "error", err)
 		}
-		log.Info("Query blob base fee done", "blobBaseFee", blobBaseFee)
+		lg.Info("Query blob base fee done", "blobBaseFee", blobBaseFee)
 		blobBaseFee256, nok := uint256.FromBig(blobBaseFee)
 		if nok {
-			log.Crit("Error converting blob base fee to uint256", "blobBaseFee", blobBaseFee)
+			lg.Crit("Error converting blob base fee to uint256", "blobBaseFee", blobBaseFee)
 		}
 		blobPrice = blobBaseFee256
 	}
@@ -153,17 +153,18 @@ func SendBlobTx(
 	}
 	commitments, proofs, versionedHashes, err := ComputeBlobs(blobs)
 	if err != nil {
-		log.Crit("Failed to compute commitments", "error", err)
+		lg.Crit("Failed to compute commitments", "error", err)
 	}
 
 	calldataBytes, err := common.ParseHexOrString(calldata)
 	if err != nil {
-		log.Crit("Failed to parse calldata", "error", err)
+		lg.Crit("Failed to parse calldata", "error", err)
 	}
 	sideCar := &types.BlobTxSidecar{
 		Blobs:       blobs,
 		Commitments: commitments,
 		Proofs:      proofs,
+		Version:     types.BlobSidecarVersion1, // Use Version1 for cell proofs (Fusaka compatibility)
 	}
 	blobtx := &types.BlobTx{
 		ChainID:    uint256.MustFromBig(chainId),
@@ -179,9 +180,19 @@ func SendBlobTx(
 		Sidecar:    sideCar,
 	}
 	tx := types.MustSignNewTx(key, types.NewCancunSigner(chainId), blobtx)
-	err = client.SendTransaction(context.Background(), tx)
-	if err != nil {
-		log.Crit("Unable to send transaction", "error", err)
+
+	var errRetry error
+	const maxRetries = 5
+	for i := 0; i <= maxRetries; i++ {
+		errRetry = client.SendTransaction(context.Background(), tx)
+		if errRetry == nil {
+			break
+		}
+		lg.Warn("SendTransaction failed", "retriesLeft", maxRetries-i, "error", errRetry)
+		time.Sleep(2 * time.Second)
+	}
+	if errRetry != nil {
+		lg.Crit("Unable to send transaction", "error", errRetry)
 	}
 
 	for {
@@ -195,7 +206,7 @@ func SendBlobTx(
 		}
 	}
 
-	log.Info("Transaction submitted.", "nonce", nonce, "hash", tx.Hash(), "blobs", len(blobs))
+	lg.Info("Transaction submitted.", "nonce", nonce, "hash", tx.Hash(), "blobs", len(blobs))
 	return tx
 }
 
@@ -224,11 +235,12 @@ func ComputeBlobs(blobs []kzg4844.Blob) ([]kzg4844.Commitment, []kzg4844.Proof, 
 		}
 		commits = append(commits, commit)
 
-		proof, err := kzg4844.ComputeBlobProof(&blob, commit)
+		// Version1: Use cell proofs for Fusaka compatibility
+		cellProofs, err := kzg4844.ComputeCellProofs(&blob)
 		if err != nil {
-			return nil, nil, nil, err
+			return nil, nil, nil, fmt.Errorf("cannot compute KZG cell proofs for blob in tx candidate: %w", err)
 		}
-		proofs = append(proofs, proof)
+		proofs = append(proofs, cellProofs...)
 
 		versionedHashes = append(versionedHashes, kZGToVersionedHash(commit))
 	}
@@ -304,7 +316,7 @@ func UploadBlobs(
 	value string) ([]uint64, []common.Hash, error) {
 	key, err := crypto.HexToECDSA(private)
 	if err != nil {
-		log.Error("Invalid private key", "err", err)
+		lg.Error("Invalid private key", "err", err)
 		return nil, nil, err
 	}
 	signer := crypto.PubkeyToAddress(key.PublicKey)
@@ -323,7 +335,7 @@ func UploadBlobs(
 		blobIndex = append(blobIndex, new(big.Int).SetUint64(uint64(i)))
 		lengths = append(lengths, new(big.Int).SetUint64(BlobSize))
 	}
-	log.Info("blobs", "keys", keys, "blobIndexes", blobIndex, "sizes", lengths)
+	lg.Info("blobs", "keys", keys, "blobIndexes", blobIndex, "sizes", lengths)
 	bytes32Array, _ := abi.NewType("bytes32[]", "", nil)
 	uint256Array, _ := abi.NewType("uint256[]", "", nil)
 	args := abi.Arguments{
@@ -333,7 +345,7 @@ func UploadBlobs(
 	}
 	dataField, err := args.Pack(keys, blobIndex, lengths)
 	if err != nil {
-		log.Error("Failed to pack data", "err", err)
+		lg.Error("Failed to pack data", "err", err)
 		return nil, nil, err
 	}
 	h := crypto.Keccak256Hash([]byte("putBlobs(bytes32[],uint256[],uint256[])"))
@@ -346,36 +358,36 @@ func UploadBlobs(
 		needEncoding,
 		-1,
 		value,
-		5000000,
+		500000,
 		"",
 		"",
 		"",
 		chainID,
 		calldata,
 	)
-	log.Info("SendBlobTx done.", "txHash", tx.Hash())
+	lg.Info("SendBlobTx done.", "txHash", tx.Hash())
 	resultCh := make(chan *types.Receipt, 1)
 	errorCh := make(chan error, 1)
 	revert := fmt.Errorf("revert")
 	go func() {
 		receipt, err := bind.WaitMined(context.Background(), pc.Client, tx)
 		if err != nil {
-			log.Error("Get transaction receipt err", "error", err)
+			lg.Error("Get transaction receipt err", "error", err)
 			errorCh <- err
 		}
 		if receipt.Status == 0 {
-			log.Error("Blob transaction reverted")
+			lg.Error("Blob transaction reverted")
 			errorCh <- revert
 			return
 		}
-		log.Info("Blob transaction confirmed successfully", "txHash", tx.Hash())
+		lg.Info("Blob transaction confirmed successfully", "txHash", tx.Hash())
 		resultCh <- receipt
 	}()
 
 	select {
 	// try to get data hash from events first
 	case receipt := <-resultCh:
-		log.Info("receipt returned", "gasUsed", receipt.GasUsed)
+		lg.Info("receipt returned", "gasUsed", receipt.GasUsed)
 		var dataHashs []common.Hash
 		var kvIndexes []uint64
 		for i := range receipt.Logs {
@@ -387,12 +399,12 @@ func UploadBlobs(
 		}
 		return kvIndexes, dataHashs, nil
 	case err := <-errorCh:
-		log.Error("Get transaction receipt err", "error", err)
+		lg.Error("Get transaction receipt err", "error", err)
 		if err == revert {
 			return nil, nil, err
 		}
 	case <-time.After(5 * time.Second):
-		log.Info("Timed out for receipt, query contract for data hash...")
+		lg.Info("Timed out for receipt, query contract for data hash...")
 	}
 	// if wait receipt timed out or failed, query contract for data hash
 	return getKvInfo(pc, len(blobs))
@@ -412,7 +424,7 @@ func queryBlobBaseFee(l1 *ethclient.Client) (*big.Int, error) {
 }
 
 func getKvInfo(pc *eth.PollingClient, blobLen int) ([]uint64, []common.Hash, error) {
-	lastIdx, err := pc.GetStorageLastBlobIdx(rpc.LatestBlockNumber.Int64())
+	lastIdx, err := pc.GetStorageKvEntryCount(rpc.LatestBlockNumber.Int64())
 	if err != nil {
 		return nil, nil, err
 	}
@@ -422,7 +434,7 @@ func getKvInfo(pc *eth.PollingClient, blobLen int) ([]uint64, []common.Hash, err
 	}
 	metas, err := pc.GetKvMetas(kvIndices, rpc.LatestBlockNumber.Int64())
 	if err != nil {
-		log.Error("Failed to get verioned hashs", "error", err)
+		lg.Error("Failed to get versioned hashs", "error", err)
 		return nil, nil, err
 	}
 	if len(metas) != len(kvIndices) {
@@ -432,7 +444,7 @@ func getKvInfo(pc *eth.PollingClient, blobLen int) ([]uint64, []common.Hash, err
 	for i := 0; i < len(metas); i++ {
 		var dhash common.Hash
 		copy(dhash[:], metas[i][32-ethstorage.HashSizeInContract:32])
-		log.Info("Get data hash", "kvIndex", kvIndices[i], "hash", dhash.Hex())
+		lg.Info("Get data hash", "kvIndex", kvIndices[i], "hash", dhash.Hex())
 		hashes = append(hashes, dhash)
 	}
 	return kvIndices, hashes, nil

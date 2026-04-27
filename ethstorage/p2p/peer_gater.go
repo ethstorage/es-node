@@ -15,7 +15,7 @@ const PeerScoreThreshold = -100
 type gater struct {
 	connGater  ConnectionGater
 	blockedMap map[peer.ID]bool
-	log        log.Logger
+	lg         log.Logger
 	banEnabled bool
 }
 
@@ -30,11 +30,11 @@ type PeerGater interface {
 }
 
 // NewPeerGater returns a new peer gater.
-func NewPeerGater(connGater ConnectionGater, log log.Logger, banEnabled bool) PeerGater {
+func NewPeerGater(connGater ConnectionGater, lg log.Logger, banEnabled bool) PeerGater {
 	return &gater{
 		connGater:  connGater,
 		blockedMap: make(map[peer.ID]bool),
-		log:        log,
+		lg:         lg,
 		banEnabled: banEnabled,
 	}
 }
@@ -55,10 +55,10 @@ func (s *gater) Update(id peer.ID, score float64) {
 	// If so, we need to block the peer
 	isAlreadyBlocked := s.IsBlocked(id)
 	if score < PeerScoreThreshold && s.banEnabled && !isAlreadyBlocked {
-		s.log.Warn("Peer blocking enabled, blocking peer", "id", id.String(), "score", score)
+		s.lg.Warn("Peer blocking enabled, blocking peer", "id", id.String(), "score", score)
 		err := s.connGater.BlockPeer(id)
 		if err != nil {
-			s.log.Warn("Connection gater failed to block peer", "id", id.String(), "err", err)
+			s.lg.Warn("Connection gater failed to block peer", "id", id.String(), "err", err)
 		}
 		// Set the peer as blocked in the blocked map
 		s.setBlocked(id, true)
@@ -67,7 +67,7 @@ func (s *gater) Update(id peer.ID, score float64) {
 	if (score > PeerScoreThreshold) && isAlreadyBlocked {
 		err := s.connGater.UnblockPeer(id)
 		if err != nil {
-			s.log.Warn("Connection gater failed to unblock peer", "id", id.String(), "err", err)
+			s.lg.Warn("Connection gater failed to unblock peer", "id", id.String(), "err", err)
 		}
 		// Set the peer as unblocked in the blocked map
 		s.setBlocked(id, false)

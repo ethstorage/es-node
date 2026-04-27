@@ -1,15 +1,16 @@
+// Copyright 2022-2023, EthStorage.
+// For license information, see https://github.com/ethstorage/es-node/blob/main/LICENSE
+
 package log
 
 import (
 	"fmt"
 	"log/slog"
-	"os"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethstorage/go-ethstorage/ethstorage/rollup"
+	"github.com/ethstorage/go-ethstorage/ethstorage/flags/utils"
 	"github.com/urfave/cli"
-	"golang.org/x/term"
 )
 
 const (
@@ -18,24 +19,37 @@ const (
 	ColorFlagName  = "log.color"
 )
 
-func CLIFlags(envPrefix string) []cli.Flag {
+func logEnv(name string) string {
+	return utils.PrefixEnvVar("LOG_" + name)
+}
+
+var (
+	defaultCLIConfig = CLIConfig{
+		Level:  "info",
+		Format: "terminal",
+		Color:  true,
+	}
+)
+
+func CLIFlags() []cli.Flag {
 	return []cli.Flag{
 		cli.StringFlag{
 			Name:   LevelFlagName,
 			Usage:  "The lowest log level that will be output",
-			Value:  "info",
-			EnvVar: rollup.PrefixEnvVar(envPrefix, "LOG_LEVEL"),
+			Value:  defaultCLIConfig.Level,
+			EnvVar: logEnv("LEVEL"),
 		},
 		cli.StringFlag{
 			Name:   FormatFlagName,
 			Usage:  "Format the log output. Supported formats: 'text', 'terminal', 'logfmt', 'json', 'json-pretty',",
-			Value:  "text",
-			EnvVar: rollup.PrefixEnvVar(envPrefix, "LOG_FORMAT"),
+			Value:  defaultCLIConfig.Format,
+			EnvVar: logEnv("FORMAT"),
 		},
-		cli.BoolFlag{
-			Name:   ColorFlagName,
-			Usage:  "Color the log output if in terminal mode",
-			EnvVar: rollup.PrefixEnvVar(envPrefix, "LOG_COLOR"),
+		cli.BoolTFlag{
+			Name:  ColorFlagName,
+			Usage: "Color the log output if in terminal mode (defaults to true if terminal is detected)",
+			// BoolTFlag is true by default
+			EnvVar: logEnv("COLOR"),
 		},
 	}
 }
@@ -46,22 +60,19 @@ type CLIConfig struct {
 	Format string // Format the log output. Supported formats: 'text', 'terminal', 'logfmt', 'json', 'json-pretty'
 }
 
-func (cfg CLIConfig) Check() error {
-	switch cfg.Format {
-	case "json", "json-pretty", "terminal", "text", "logfmt":
-	default:
-		return fmt.Errorf("unrecognized log format: %s", cfg.Format)
+func ReadCLIConfig(ctx *cli.Context) CLIConfig {
+	cfg := CLIConfig{
+		Level:  ctx.GlobalString(LevelFlagName),
+		Format: ctx.GlobalString(FormatFlagName),
+		Color:  ctx.GlobalBool(ColorFlagName),
 	}
-
-	level := strings.ToLower(cfg.Level)
-	_, err := LevelFromString(level)
-	if err != nil {
-		return fmt.Errorf("unrecognized log level: %w", err)
+	if err := cfg.check(); err != nil {
+		panic(err)
 	}
-	return nil
+	return cfg
 }
 
-func LevelFromString(lvlString string) (slog.Level, error) {
+func levelFromString(lvlString string) (slog.Level, error) {
 	lvlString = strings.ToLower(lvlString) // ignore case
 	switch lvlString {
 	case "trace", "trce":
@@ -81,44 +92,17 @@ func LevelFromString(lvlString string) (slog.Level, error) {
 	}
 }
 
-func NewLogger(cfg CLIConfig) log.Logger {
-	l, err := LevelFromString(cfg.Level)
+func (cfg CLIConfig) check() error {
+	switch cfg.Format {
+	case "json", "json-pretty", "terminal", "text", "logfmt":
+	default:
+		return fmt.Errorf("unrecognized log format: %s", cfg.Format)
+	}
+
+	level := strings.ToLower(cfg.Level)
+	_, err := levelFromString(level)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("unrecognized log level: %w", err)
 	}
-	h := log.NewTerminalHandlerWithLevel(os.Stdout, l, cfg.Color)
-	logger := log.NewLogger(h)
-	return logger
-}
-
-func DefaultCLIConfig() CLIConfig {
-	return CLIConfig{
-		Level:  "info",
-		Format: "text",
-		Color:  term.IsTerminal(int(os.Stdout.Fd())),
-	}
-}
-
-func ReadLocalCLIConfig(ctx *cli.Context) CLIConfig {
-	cfg := DefaultCLIConfig()
-	cfg.Level = ctx.String(LevelFlagName)
-	cfg.Format = ctx.String(FormatFlagName)
-	if ctx.IsSet(ColorFlagName) {
-		cfg.Color = ctx.Bool(ColorFlagName)
-	}
-	return cfg
-}
-
-func ReadCLIConfig(ctx *cli.Context) CLIConfig {
-	cfg := DefaultCLIConfig()
-	cfg.Level = ctx.GlobalString(LevelFlagName)
-	cfg.Format = ctx.GlobalString(FormatFlagName)
-	if ctx.IsSet(ColorFlagName) {
-		cfg.Color = ctx.GlobalBool(ColorFlagName)
-	}
-	return cfg
-}
-
-func SetupDefaults() {
-	log.SetDefault(log.NewLogger(log.NewTerminalHandlerWithLevel(os.Stdout, log.LevelInfo, true)))
+	return nil
 }

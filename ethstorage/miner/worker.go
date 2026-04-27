@@ -18,23 +18,34 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/params"
 	es "github.com/ethstorage/go-ethstorage/ethstorage"
+	"github.com/ethstorage/go-ethstorage/ethstorage/email"
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
 )
 
 const (
 	chainHeadChanSize        = 1
 	taskQueueSize            = 1
-	resultQueueSize          = 10
-	slot                     = 12 // seconds
 	miningTransactionTimeout = 50 // seconds
+
+	// tx status codes
+	txStatusFailure = 0
+	txStatusSuccess = 1
+	txStatusTimeout = 2
+	txStatusDropped = 3
 )
+
+type errDropped struct {
+	reason string
+}
+
+func (e errDropped) Error() string {
+	return e.reason
+}
 
 var (
 	minedEventSig       = crypto.Keccak256Hash([]byte("MinedBlock(uint256,uint256,uint256,uint256,address,uint256)"))
 	errCh               = make(chan miningError, 10)
-	errDropped          = errors.New("dropped: not enough profit")
 	SubmissionStatusKey = []byte("SubmissionStatusKey")
 	MiningStatusKey     = []byte("MiningStatusKey")
 )
@@ -45,10 +56,10 @@ type MiningState struct {
 }
 
 type SubmissionState struct {
-	Succeeded         int   `json:"succeeded_submission"`
+	Submitted         int   `json:"succeeded_submission"`
 	Failed            int   `json:"failed_submission"`
 	Dropped           int   `json:"dropped_submission"`
-	LastSucceededTime int64 `json:"last_succeeded_time"`
+	LastSubmittedTime int64 `json:"last_succeeded_time"`
 }
 
 type task struct {
@@ -91,6 +102,7 @@ type result struct {
 	masks           []*big.Int
 	inclusiveProofs [][]byte
 	decodeProof     [][]byte
+	timestamp       uint64
 }
 
 // worker is the main object which takes care of storage mining
@@ -134,7 +146,7 @@ func newWorker(
 	var submissionStates map[uint64]SubmissionState
 	if status, _ := db.Get(SubmissionStatusKey); status != nil {
 		if err := json.Unmarshal(status, &submissionStates); err != nil {
-			log.Error("Failed to decode submission states", "err", err)
+			lg.Error("Failed to decode submission states", "err", err)
 		}
 	}
 	worker := &worker{
@@ -163,7 +175,7 @@ func newWorker(
 				continue
 			}
 		}
-		worker.submissionStates[shardId] = &SubmissionState{Succeeded: 0, Failed: 0, Dropped: 0, LastSucceededTime: 0}
+		worker.submissionStates[shardId] = &SubmissionState{Submitted: 0, Failed: 0, Dropped: 0, LastSubmittedTime: 0}
 	}
 	worker.wg.Add(2)
 	go worker.newWorkLoop()
@@ -201,23 +213,23 @@ func (w *worker) close() {
 func (w *worker) saveStates() {
 	states, err := json.Marshal(w.submissionStates)
 	if err != nil {
-		log.Error("Failed to marshal submission states", "err", err)
+		w.lg.Error("Failed to marshal submission states", "err", err)
 		return
 	}
 	err = w.db.Put(SubmissionStatusKey, states)
 	if err != nil {
-		log.Error("Failed to store submission states", "err", err)
+		w.lg.Error("Failed to store submission states", "err", err)
 		return
 	}
 
 	states, err = json.Marshal(w.miningStates)
 	if err != nil {
-		log.Error("Failed to marshal mining states", "err", err)
+		w.lg.Error("Failed to marshal mining states", "err", err)
 		return
 	}
 	err = w.db.Put(MiningStatusKey, states)
 	if err != nil {
-		log.Error("Failed to store mining states", "err", err)
+		w.lg.Error("Failed to store mining states", "err", err)
 		return
 	}
 }
@@ -241,12 +253,27 @@ func (w *worker) newWorkLoop() {
 				go w.taskLoop(taskCh)
 			}
 			w.lg.Info("Worker is starting task loops", "shard", shardIdx, "threads", w.config.ThreadsPerShard)
+
+			if w.config.EmailEnabled {
+				emailSubject := fmt.Sprintf("EthStorage Mining Task Started: Shard %d", shardIdx)
+				msg := fmt.Sprintf("A new mining task has been initiated for shard %d on es-node.\r\n\r\n", shardIdx)
+				msg += fmt.Sprintf("Chain ID: %d\r\n", w.config.ChainID)
+				msg += fmt.Sprintf("Contract: %s\r\n", w.storageMgr.ContractAddress().Hex())
+				msg += fmt.Sprintf("Miner: %s\r\n", miner.Hex())
+				msg += fmt.Sprintf("Threads per shard: %d\r\n", w.config.ThreadsPerShard)
+				msg += fmt.Sprintf("Minimum profit: %s wei\r\n", w.config.MinimumProfit)
+				msg += fmt.Sprintf("Maximum gas price: %s gwei\r\n", fmtGwei(w.config.MaxGasPrice))
+				go func() {
+					email.SendEmail(emailSubject, msg, w.config.EmailConfig, w.lg)
+				}()
+			}
 			task := task{
 				miner:    miner,
 				shardIdx: shardIdx,
 				taskChs:  taskChs,
 			}
 			w.shardTaskMap[shardIdx] = task
+
 		case block := <-w.chainHeadCh:
 			if !w.isRunning() {
 				break
@@ -407,13 +434,18 @@ func (w *worker) resultLoop() {
 			)
 			if s, ok := w.submissionStates[result.startShardId]; ok {
 				if err != nil {
-					if err == errDropped {
+					var dropErr errDropped
+					if errors.As(err, &dropErr) {
 						s.Dropped++
+						w.lg.Warn("Mining transaction dropped",
+							"shard", result.startShardId,
+							"block", result.blockNumber,
+							"reason", dropErr.reason)
 					} else {
 						s.Failed++
 						errorCache = append(errorCache, miningError{result.startShardId, result.blockNumber, err})
 						var diff *big.Int
-						if strings.Contains(err.Error(), "diff not match") {
+						if strings.Contains(err.Error(), "StorageContract_DifficultyNotMet") {
 							info, err := w.l1API.GetMiningInfo(
 								context.Background(),
 								w.storageMgr.ContractAddress(),
@@ -432,41 +464,22 @@ func (w *worker) resultLoop() {
 						}
 					}
 				} else {
-					s.Succeeded++
-					s.LastSucceededTime = time.Now().UnixMilli()
+					s.Submitted++
+					s.LastSubmittedTime = time.Now().UnixMilli()
 				}
 			}
-			if txHash != (common.Hash{}) {
-				// waiting for tx confirmation or timeout
-				ticker := time.NewTicker(1 * time.Second)
-				checked := 0
-				for range ticker.C {
-					if checked > miningTransactionTimeout {
-						log.Warn("Waiting for mining transaction confirm timed out", "txHash", txHash)
-						break
-					}
-
-					checked++
-					_, isPending, err := w.l1API.TransactionByHash(context.Background(), txHash)
-					if err != nil {
-						log.Error("Querying transaction by hash failed", "error", err, "txHash", txHash)
-						continue
-					} else if !isPending {
-						log.Info("Mining transaction confirmed", "txHash", txHash)
-						w.checkTxStatus(txHash, result.miner)
-						break
-					}
-				}
-				ticker.Stop()
-			}
+			w.reportMiningResult(result, txHash, err)
 			// optimistically check next result if exists
 			w.notifyResultLoop()
 		case <-ticker.C:
-			for shardId, s := range w.submissionStates {
-				log.Info("Mining stats", "shard", shardId, "succeeded", s.Succeeded, "failed", s.Failed, "dropped", s.Dropped)
-			}
-			if len(errorCache) > 0 {
-				log.Error("Mining stats", "lastError", errorCache[len(errorCache)-1])
+			if w.isRunning() {
+				for shardId, s := range w.submissionStates {
+					// statistics of the status of mining transaction submission, not the transaction result status on chain
+					w.lg.Info("Mining tx submission stats", "shard", shardId, "submitted", s.Submitted, "failed", s.Failed, "dropped", s.Dropped)
+				}
+				if len(errorCache) > 0 {
+					w.lg.Error("Mining tx submission stats", "lastError", errorCache[len(errorCache)-1])
+				}
 			}
 		case <-saveStatesTicker.C:
 			w.saveStates()
@@ -485,15 +498,103 @@ func (w *worker) resultLoop() {
 	}
 }
 
-func (w *worker) checkTxStatus(txHash common.Hash, miner common.Address) {
+func (w *worker) reportMiningResult(rs *result, txHash common.Hash, err error) {
+	msg := fmt.Sprintf(
+		"A storage proof was generated by es-node for shard %d at block %v.\r\n\r\n",
+		rs.startShardId,
+		rs.blockNumber,
+	)
+
+	var status int
+	var dropErr errDropped
+	if errors.As(err, &dropErr) {
+		msg += fmt.Sprintf("However, it was dropped due to %s", dropErr.Error())
+		w.lg.Warn("Mining transaction dropped", "reason", dropErr.Error())
+		status = txStatusDropped
+	} else if err != nil {
+		msg += fmt.Sprintf("However, the mining transaction could not be submitted due to %s", err.Error())
+		w.lg.Error("Mining transaction failed", "error", err)
+	} else if txHash == (common.Hash{}) {
+		msg += "However, the mining transaction failed to submit for unclear reasons."
+		w.lg.Error("Failed to submit mining transaction.")
+	} else {
+		msg += fmt.Sprintf("Transaction hash: %s\r\n\r\n", txHash.Hex())
+		w.lg.Info("Mining transaction submitted", "txHash", txHash)
+		status = w.checkTxStatusRepeatedly(txHash, &msg)
+	}
+	msg += "\r\n\r\n"
+	msg += fmt.Sprintf("Chain: %d\r\n", w.config.ChainID)
+	msg += fmt.Sprintf("Contract: %s\r\n", w.storageMgr.ContractAddress().Hex())
+	msg += fmt.Sprintf("Miner: %s\r\n", rs.miner.Hex())
+
+	if w.config.EmailEnabled {
+		emailSubject := "EthStorage Proof Submission: "
+		switch status {
+		case txStatusSuccess:
+			emailSubject += "✅ Success"
+		case txStatusFailure:
+			emailSubject += "❌ Failure"
+		case txStatusDropped:
+			emailSubject += "⚠️ Dropped"
+		default:
+			emailSubject += "⚠️ Timeout"
+		}
+		email.SendEmail(emailSubject, msg, w.config.EmailConfig, w.lg)
+	}
+}
+
+func (w *worker) checkTxStatusRepeatedly(txHash common.Hash, msg *string) int {
+	// waiting for tx confirmation or timeout
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
+	checked := 0
+	for range ticker.C {
+		_, isPending, err := w.l1API.TransactionByHash(context.Background(), txHash)
+		if err == nil && !isPending {
+			w.lg.Info("Mining transaction confirmed", "txHash", txHash)
+			success, ret := w.checkTxStatus(txHash)
+			*msg += ret
+			if success {
+				return txStatusSuccess
+			} else {
+				return txStatusFailure
+			}
+		}
+		checked++
+		if checked > miningTransactionTimeout {
+			*msg += "However, waiting for the transaction confirmation timed out. You can check the transaction status on the block explorer."
+			w.lg.Warn("Waiting for mining transaction confirm timed out", "txHash", txHash)
+			return txStatusTimeout
+		}
+	}
+	return txStatusTimeout
+}
+
+func (w *worker) checkTxStatus(txHash common.Hash) (bool, string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
+
+	var (
+		success bool
+		msg     string
+	)
 	receipt, err := w.l1API.TransactionReceipt(ctx, txHash)
-	if err != nil || receipt == nil {
-		log.Warn("Mining transaction not found!", "err", err, "txHash", txHash)
+	if receipt == nil {
+		msg = "Unfortunately, "
+		if err != nil {
+			msg += fmt.Sprintf("the mining transaction receipt was not found due to %s", err.Error())
+		} else {
+			msg += "the mining transaction receipt was not found."
+		}
+		w.lg.Warn("Mining transaction receipt was not found!", "err", err, "txHash", txHash)
 	} else if receipt.Status == 1 {
-		log.Info("Mining transaction success!      √", "miner", miner)
-		log.Info("Mining transaction details", "txHash", txHash, "gasUsed", receipt.GasUsed, "effectiveGasPrice", receipt.EffectiveGasPrice)
+		success = true
+		msg = "Transaction status: success! \r\n"
+		msg += fmt.Sprintf("Gas used: %d \r\n", receipt.GasUsed)
+		msg += fmt.Sprintf("Effective gas price: %s \r\n", receipt.EffectiveGasPrice)
+		w.lg.Info("Mining transaction success!      √", "txHash", txHash)
+		w.lg.Info("Mining transaction details", "txHash", txHash, "gasUsed", receipt.GasUsed, "effectiveGasPrice", receipt.EffectiveGasPrice)
 		cost := new(big.Int).Mul(new(big.Int).SetUint64(receipt.GasUsed), receipt.EffectiveGasPrice)
 		var reward *big.Int
 		for _, rLog := range receipt.Logs {
@@ -504,35 +605,23 @@ func (w *worker) checkTxStatus(txHash common.Hash, miner common.Address) {
 			}
 		}
 		if reward != nil {
+			r, c, p := fmtEth(reward), fmtEth(cost), fmtEth(new(big.Int).Sub(reward, cost))
+			msg += fmt.Sprintf("Reward: %s\r\n", r)
+			msg += fmt.Sprintf("Cost: %s\r\n", c)
+			msg += fmt.Sprintf("Profit: %s\r\n", p)
 			// TODO: the cost should include receipt.L1Fee for op-geth
-			log.Info("Mining transaction accounting (in ether)",
-				"reward", fmtEth(reward),
-				"cost", fmtEth(cost),
-				"profit", fmtEth(new(big.Int).Sub(reward, cost)),
+			w.lg.Info("Mining transaction accounting (in ether)",
+				"reward", r,
+				"cost", c,
+				"profit", p,
 			)
 		}
-	} else if receipt.Status == 0 {
-		log.Warn("Mining transaction failed!      ×", "txHash", txHash)
+	} else {
+		msg = "Transaction status: failed! \r\n"
+		msg += "You can check the detailed error message on the block explorer. \r\n"
+		w.lg.Warn("Mining transaction failed!      ×", "txHash", txHash)
 	}
-}
-
-// https://github.com/ethereum/go-ethereum/issues/21221#issuecomment-805852059
-func weiToEther(wei *big.Int) *big.Float {
-	f := new(big.Float)
-	f.SetPrec(236) //  IEEE 754 octuple-precision binary floating-point format: binary256
-	f.SetMode(big.ToNearestEven)
-	if wei == nil {
-		return f.SetInt64(0)
-	}
-	fWei := new(big.Float)
-	fWei.SetPrec(236) //  IEEE 754 octuple-precision binary floating-point format: binary256
-	fWei.SetMode(big.ToNearestEven)
-	return f.Quo(fWei.SetInt(wei), big.NewFloat(params.Ether))
-}
-
-func fmtEth(wei *big.Int) string {
-	f := weiToEther(wei)
-	return fmt.Sprintf("%.9f", f)
+	return success, msg
 }
 
 // mineTask actually executes a mining task
@@ -542,7 +631,7 @@ func (w *worker) mineTask(t *taskItem) (bool, error) {
 	w.lg.Debug("Mining task started", "shard", t.shardIdx, "thread", t.thread, "block", t.blockNumber, "nonces", fmt.Sprintf("%d~%d", t.nonceStart, t.nonceEnd))
 	for w.isRunning() {
 		// always use new randao to mine for each slot
-		if time.Since(startTime).Seconds() > slot {
+		if time.Since(startTime).Seconds() > float64(w.config.Slot) {
 			if t.thread == 0 {
 				nonceTriedTotal := (nonce - t.nonceStart) * w.config.ThreadsPerShard
 				w.lg.Warn("Mining tasks timed out", "shard", t.shardIdx, "block", t.blockNumber,
@@ -597,6 +686,7 @@ func (w *worker) mineTask(t *taskItem) (bool, error) {
 				masks:           masks,
 				decodeProof:     decodeProof,
 				inclusiveProofs: inclusiveProofs,
+				timestamp:       t.mineTime,
 			}
 			// push result to the result map
 			w.resultLock.Lock()

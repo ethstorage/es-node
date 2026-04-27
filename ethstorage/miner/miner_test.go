@@ -19,7 +19,7 @@ import (
 	"github.com/ethstorage/go-ethstorage/ethstorage/blobs"
 	"github.com/ethstorage/go-ethstorage/ethstorage/downloader"
 	"github.com/ethstorage/go-ethstorage/ethstorage/eth"
-	esLog "github.com/ethstorage/go-ethstorage/ethstorage/log"
+	"github.com/ethstorage/go-ethstorage/ethstorage/log"
 	"github.com/ethstorage/go-ethstorage/ethstorage/p2p/protocol"
 	"github.com/ethstorage/go-ethstorage/ethstorage/prover"
 )
@@ -36,7 +36,7 @@ var (
 	kvSize       uint64 = 1 << kvSizeBits
 	kvEntries    uint64 = 1 << kvEntriesBits
 	shardID             = uint64(0)
-	lg                  = esLog.NewLogger(esLog.DefaultCLIConfig())
+	lg                  = log.DefaultLogger()
 )
 
 func initStorageManager(t *testing.T, client *eth.PollingClient) *es.StorageManager {
@@ -47,7 +47,7 @@ func initStorageManager(t *testing.T, client *eth.PollingClient) *es.StorageMana
 	shardMgr := es.NewShardManager(contractAddr, kvSize, kvEntries, kvSize)
 	shardMgr.AddDataShard(shardID)
 	shardMgr.AddDataFile(df)
-	return es.NewStorageManager(shardMgr, client)
+	return es.NewStorageManager(shardMgr, client, lg)
 }
 
 func newMiner(t *testing.T, storageMgr *es.StorageManager, client *eth.PollingClient) *Miner {

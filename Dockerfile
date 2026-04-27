@@ -1,5 +1,5 @@
 # Build ES node in a stock Go builder container
-FROM golang:1.23 as builder
+FROM golang:1.24 as builder
 ADD . /es-node
 WORKDIR /es-node
 RUN make
