@@ -47,6 +47,7 @@ jobs:
           git submodule init && git submodule update
           ./script/deploy.sh 21 > deploy.log
           source $(ls -t deployments/EthStorageContractM2*.txt | head -n 1)
+          export RPC_URL="http://127.0.0.1:32003"
           echo ES_NODE_CONTRACT_ADDRESS=$PROXY >> "$GITHUB_ENV"
           echo RPC_URL="http://127.0.0.1:32003" >> "$GITHUB_ENV" 
           ./script/wait_finalized.sh
