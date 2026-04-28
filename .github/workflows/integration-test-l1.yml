@@ -41,11 +41,8 @@ jobs:
           git checkout main
           git pull
           npm install 
-          echo "npm install done!"
           git submodule init && git submodule update
-          echo "git submodule init && git submodule update done!"
           ./script/deploy.sh 21 > deploy.log
-          echo "./script/deploy.sh 21 done!"
           source $(ls -t deployments/EthStorageContractM2*.txt | head -n 1)
           export RPC_URL="http://127.0.0.1:32003"
           echo ES_NODE_CONTRACT_ADDRESS=$PROXY >> "$GITHUB_ENV"
