@@ -41,9 +41,7 @@ const (
 var MessageDomainInvalidSnappy = [4]byte{0, 0, 0, 0}
 var MessageDomainValidSnappy = [4]byte{1, 0, 0, 0}
 
-type GossipIn interface {
-	// OnUnsafeL2Payload(ctx context.Context, from peer.ID, msg *eth.ExecutionPayload) error
-}
+type GossipIn any
 
 // TODO:
 func blocksTopicV1(chainID *big.Int) string {
