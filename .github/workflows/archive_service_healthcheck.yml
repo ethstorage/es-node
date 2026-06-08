@@ -111,13 +111,24 @@ jobs:
             if curl --fail --show-error --location https://foundry.paradigm.xyz --output "$installer" && bash "$installer"; then
               foundryup_bin="$HOME/.foundry/bin/foundryup"
               cast_bin="$HOME/.foundry/bin/cast"
-              if [[ -x "$foundryup_bin" ]] && "$foundryup_bin" -i stable && [[ -x "$cast_bin" ]]; then
-                "$cast_bin" --version
-                echo "$HOME/.foundry/bin" >> "$GITHUB_PATH"
-                echo "Foundry install succeeded on attempt ${attempt}"
-                rm -f "$installer"
-                echo "::endgroup::"
-                exit 0
+              if [[ ! -x "$foundryup_bin" ]]; then
+                echo "foundryup not found or not executable at ${foundryup_bin}"
+                ls -la "$HOME/.foundry/bin" || true
+              elif "$foundryup_bin"; then
+                if [[ -x "$cast_bin" ]]; then
+                  "$cast_bin" --version
+                  echo "$HOME/.foundry/bin" >> "$GITHUB_PATH"
+                  echo "Foundry install succeeded on attempt ${attempt}"
+                  rm -f "$installer"
+                  echo "::endgroup::"
+                  exit 0
+                fi
+
+                echo "foundryup completed but cast was not found or not executable at ${cast_bin}"
+                ls -la "$HOME/.foundry/bin" || true
+              else
+                echo "foundryup failed"
+                ls -la "$HOME/.foundry/bin" || true
               fi
             fi
 
