@@ -74,7 +74,3 @@ profile.cov
 **/yarn-error.log
 logs/
 *.test
-
-# ethstorage node runtime data
-ethstorage/node/ethstoragedata/
-ethstorage/p2p/protocol/metafile.dat.meta
