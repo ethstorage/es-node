@@ -100,39 +100,36 @@ jobs:
 
           max_attempts=3
           retry_delay=15
+          export FOUNDRY_DIR="$HOME/.foundry"
+          foundryup_url="https://raw.githubusercontent.com/foundry-rs/foundry/HEAD/foundryup/foundryup"
+          foundryup_bin="$FOUNDRY_DIR/bin/foundryup"
+          cast_bin="$FOUNDRY_DIR/bin/cast"
 
           for attempt in $(seq 1 "$max_attempts"); do
             echo "::group::Foundry install attempt ${attempt}/${max_attempts}"
             echo "Cleaning Foundry caches before attempt"
-            rm -rf "$HOME/.foundry" "$HOME/.cargo/registry/cache"
+            rm -rf "$FOUNDRY_DIR" "$HOME/.cargo/registry/cache"
+            mkdir -p "$FOUNDRY_DIR/bin"
 
-            installer="$(mktemp)"
+            if curl --fail --show-error --location "$foundryup_url" --output "$foundryup_bin"; then
+              chmod +x "$foundryup_bin"
 
-            if curl --fail --show-error --location https://foundry.paradigm.xyz --output "$installer" && bash "$installer"; then
-              foundryup_bin="$HOME/.foundry/bin/foundryup"
-              cast_bin="$HOME/.foundry/bin/cast"
-              if [[ ! -x "$foundryup_bin" ]]; then
-                echo "foundryup not found or not executable at ${foundryup_bin}"
-                ls -la "$HOME/.foundry/bin" || true
-              elif "$foundryup_bin"; then
+              if "$foundryup_bin"; then
                 if [[ -x "$cast_bin" ]]; then
                   "$cast_bin" --version
-                  echo "$HOME/.foundry/bin" >> "$GITHUB_PATH"
+                  echo "$FOUNDRY_DIR/bin" >> "$GITHUB_PATH"
                   echo "Foundry install succeeded on attempt ${attempt}"
-                  rm -f "$installer"
                   echo "::endgroup::"
                   exit 0
                 fi
 
                 echo "foundryup completed but cast was not found or not executable at ${cast_bin}"
-                ls -la "$HOME/.foundry/bin" || true
+                ls -la "$FOUNDRY_DIR/bin" || true
               else
                 echo "foundryup failed"
-                ls -la "$HOME/.foundry/bin" || true
+                ls -la "$FOUNDRY_DIR/bin" || true
               fi
             fi
-
-            rm -f "$installer"
 
             echo "Foundry install failed on attempt ${attempt}"
             echo "::endgroup::"
