@@ -110,8 +110,10 @@ jobs:
             installer="$(mktemp)"
 
             if curl --fail --show-error --location https://foundry.paradigm.xyz --output "$installer" && bash "$installer"; then
-              if foundryup -i stable && command -v cast >/dev/null 2>&1; then
-                cast --version
+              foundryup_bin="$HOME/.foundry/bin/foundryup"
+              cast_bin="$HOME/.foundry/bin/cast"
+              if [[ -x "$foundryup_bin" ]] && "$foundryup_bin" -i stable && [[ -x "$cast_bin" ]]; then
+                "$cast_bin" --version
                 echo "$HOME/.foundry/bin" >> "$GITHUB_PATH"
                 echo "Foundry install succeeded on attempt ${attempt}"
                 rm -f "$installer"
