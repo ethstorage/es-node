@@ -106,7 +106,6 @@ jobs:
             echo "Cleaning Foundry caches before attempt"
             rm -rf "$HOME/.foundry" "$HOME/.cargo/registry/cache"
 
-            export PATH="$HOME/.foundry/bin:$PATH"
             installer="$(mktemp)"
 
             if curl --fail --show-error --location https://foundry.paradigm.xyz --output "$installer" && bash "$installer"; then
