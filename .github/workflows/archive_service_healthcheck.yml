@@ -103,20 +103,24 @@ jobs:
 
           for attempt in $(seq 1 "$max_attempts"); do
             echo "::group::Foundry install attempt ${attempt}/${max_attempts}"
-            echo "Cleaning Foundry caches before retry"
+            echo "Cleaning Foundry caches before attempt"
             rm -rf "$HOME/.foundry" "$HOME/.cargo/registry/cache"
 
             export PATH="$HOME/.foundry/bin:$PATH"
+            installer="$(mktemp)"
 
-            if curl -L https://foundry.paradigm.xyz | bash; then
+            if curl --fail --show-error --location https://foundry.paradigm.xyz --output "$installer" && bash "$installer"; then
               if foundryup -i stable && command -v cast >/dev/null 2>&1; then
                 cast --version
                 echo "$HOME/.foundry/bin" >> "$GITHUB_PATH"
                 echo "Foundry install succeeded on attempt ${attempt}"
+                rm -f "$installer"
                 echo "::endgroup::"
                 exit 0
               fi
             fi
+
+            rm -f "$installer"
 
             echo "Foundry install failed on attempt ${attempt}"
             echo "::endgroup::"
