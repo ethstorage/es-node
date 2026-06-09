@@ -91,12 +91,57 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
-      - name: Install foundry (cast)
-        uses: foundry-rs/foundry-toolchain@v1
-        with:
-          version: stable
+      - name: Install foundry (cast) with retry
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          max_attempts=3
+          retry_delay=15
+          export FOUNDRY_DIR="$HOME/.foundry"
+          foundryup_url="https://raw.githubusercontent.com/foundry-rs/foundry/HEAD/foundryup/foundryup"
+          foundryup_bin="$FOUNDRY_DIR/bin/foundryup"
+          cast_bin="$FOUNDRY_DIR/bin/cast"
+
+          for attempt in $(seq 1 "$max_attempts"); do
+            echo "::group::Foundry install attempt ${attempt}/${max_attempts}"
+            echo "Cleaning Foundry caches before attempt"
+            rm -rf "$FOUNDRY_DIR" "$HOME/.cargo/registry/cache"
+            mkdir -p "$FOUNDRY_DIR/bin"
+
+            if curl --fail --show-error --location "$foundryup_url" --output "$foundryup_bin"; then
+              chmod +x "$foundryup_bin"
+
+              if "$foundryup_bin"; then
+                if [[ -x "$cast_bin" ]]; then
+                  "$cast_bin" --version
+                  echo "$FOUNDRY_DIR/bin" >> "$GITHUB_PATH"
+                  echo "Foundry install succeeded on attempt ${attempt}"
+                  echo "::endgroup::"
+                  exit 0
+                fi
+
+                echo "foundryup completed but cast was not found or not executable at ${cast_bin}"
+                ls -la "$FOUNDRY_DIR/bin" || true
+              else
+                echo "foundryup failed"
+                ls -la "$FOUNDRY_DIR/bin" || true
+              fi
+            fi
+
+            echo "Foundry install failed on attempt ${attempt}"
+            echo "::endgroup::"
+
+            if [[ "$attempt" -lt "$max_attempts" ]]; then
+              echo "Waiting ${retry_delay} seconds before retrying..."
+              sleep "$retry_delay"
+            fi
+          done
+
+          echo "Foundry install failed after ${max_attempts} attempts"
+          exit 1
 
       - name: Find latest PutBlob and fetch beacon blobs
         id: putblob
@@ -200,13 +245,14 @@ jobs:
 
       - name: Send combined email
         if: ${{ steps.compose.outputs.send == 'true' }}
-        uses: dawidd6/action-send-mail@v6
+        uses: dawidd6/action-send-mail@v17
         with:
           server_address: smtp.gmail.com
           server_port: 465
           username: ${{ secrets.ARCHIVE_SERVICE_SMTP_USERNAME }}
           password: ${{ secrets.ARCHIVE_SERVICE_SMTP_PASSWORD }}
-          from: ES Archive Service
+          from: 'ES Archive Service <${{ secrets.ARCHIVE_SERVICE_SMTP_USERNAME }}>'
+          envelope_from: ${{ secrets.ARCHIVE_SERVICE_SMTP_USERNAME }}
           to: ${{ secrets.ARCHIVE_SERVICE_EMAIL_TO }}
           subject: ${{ steps.compose.outputs.subject }}
           body: ${{ steps.compose.outputs.body }}
