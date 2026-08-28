@@ -39,12 +39,15 @@ jobs:
           sleep 1536
 
       - name: Deploy Contracts
+        env:
+          FOUNDRY_ALLOW_PROJECT_ENV: "1"
         run: |
           cd ../storage-contracts-v1 
           git checkout main
           git pull
           npm install 
           git submodule init && git submodule update
+          export FOUNDRY_ALLOW_PROJECT_ENV=1
           ./script/deploy.sh 21 > deploy.log
           source $(ls -t deployments/EthStorageContractM2*.txt | head -n 1)
           export RPC_URL="http://127.0.0.1:32003"
