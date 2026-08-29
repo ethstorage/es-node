@@ -32,7 +32,7 @@ func InitializeConfig() {
 	}
 }
 
-func findShardManaager(kvSize uint64) *ShardManager {
+func findShardManager(kvSize uint64) *ShardManager {
 	for _, v := range ContractToShardManager {
 		if v.kvSize == kvSize {
 			return v
@@ -70,7 +70,7 @@ func AddDataShardFromConfig(cfg string) error {
 	}
 	var shardIdx uint64
 
-	sm := findShardManaager(kvSize)
+	sm := findShardManager(kvSize)
 	if sm == nil {
 		return fmt.Errorf("shard with kv size %d not found", kvSize)
 	}
@@ -89,7 +89,7 @@ func AddDataFileFromConfig(cfg string) error {
 		return err
 	}
 
-	sm := findShardManaager(df.maxKvSize)
+	sm := findShardManager(df.maxKvSize)
 	if sm == nil {
 		return fmt.Errorf("shard with kv size %d not found", df.maxKvSize)
 	}
