@@ -240,6 +240,11 @@ func EsNodeInit(ctx *cli.Context) error {
 	}
 	shardIndexes := ctx.Int64Slice(shardIndexFlagName)
 	lg.Info("Read flag", "name", shardIndexFlagName, "value", shardIndexes)
+	for _, shardIndex := range shardIndexes {
+		if shardIndex < 0 {
+			return fmt.Errorf("%s must be non-negative: %d", shardIndexFlagName, shardIndex)
+		}
+	}
 	shardLen := 0
 	if len(shardIndexes) == 0 {
 		shards := ctx.Int(shardLenFlagName)
