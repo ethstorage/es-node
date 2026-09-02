@@ -11,7 +11,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -232,8 +232,8 @@ func sortBigIntSlice(slice []*big.Int) []int {
 	for i := range indices {
 		indices[i] = i
 	}
-	sort.Slice(indices, func(i, j int) bool {
-		return slice[indices[i]].Cmp(slice[indices[j]]) < 0
+	slices.SortFunc(indices, func(a, b int) int {
+		return slice[a].Cmp(slice[b])
 	})
 	return indices
 }
