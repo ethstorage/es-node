@@ -164,7 +164,7 @@ func getDifficulty(ctx context.Context, client *ethclient.Client, contract commo
 	return res[1].(*big.Int), nil
 }
 
-func getMiningInfo(ctx context.Context, client *ethclient.Client, contract common.Address, shardIdx uint64) ([]interface{}, error) {
+func getMiningInfo(ctx context.Context, client *ethclient.Client, contract common.Address, shardIdx uint64) ([]any, error) {
 	uint256Type, _ := abi.NewType("uint256", "", nil)
 	dataField, _ := abi.Arguments{{Type: uint256Type}}.Pack(new(big.Int).SetUint64(shardIdx))
 	h := crypto.Keccak256Hash([]byte(`infos(uint256)`))

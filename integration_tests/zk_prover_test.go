@@ -79,7 +79,7 @@ func TestZKProver_GenerateZKProofPerSample(t *testing.T) {
 					t.Errorf("ZKProver.GenerateInput() error = %v", err)
 					return
 				}
-				var inputs map[string]interface{}
+				var inputs map[string]any
 				err = json.Unmarshal(inputBytes, &inputs)
 				if err != nil {
 					t.Errorf("ZKProver.GenerateInput() error = %v", err)

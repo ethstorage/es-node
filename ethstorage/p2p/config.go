@@ -28,8 +28,7 @@ var DefaultBootnodes = []*enode.Node{
 	enode.MustParse("enr:-J24QKTMozsV7vECSF7pqLAefTlVuMzWemnxIcdvsyIpfxWdFJxQs2Z7GnflniDpjeM_xjUpPO7gmsx6hOOIhHvnqimGAYfi6xtbimV0aHN0b3JhZ2XAgmlkgnY0gmlwhMCoAQKJc2VjcDI1NmsxoQN-8fpPc95ilMsRoMs1cRCi-s8kQrsT_cciktg_cUsuNYN0Y3CCJAaDdWRwgnZh"),
 }
 
-type P2pSetupConfig interface {
-}
+type P2pSetupConfig any
 
 type GossipSetupConfigurables interface {
 	PeerScoringParams() *pubsub.PeerScoreParams
