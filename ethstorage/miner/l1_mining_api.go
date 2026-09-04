@@ -315,7 +315,7 @@ func (m *l1MiningAPI) suggestGasPrices(ctx context.Context, cfg Config) (*big.In
 			tip = suggested
 			m.lg.Info("Query gas tip cap done", "gasTipGap", tip)
 		}
-		// Use (tip + 2*baseFee) to avoid `max fee per gas less than block base fee` when estimate gas
+		// Use (tip + 2*baseFee) to avoid `max fee per gas less than block base fee` when estimating gas
 		// It ensures the tx to be marketable for six consecutive 100% full blocks.
 		gasFeeCap = new(big.Int).Add(new(big.Int).Mul(baseFee, big.NewInt(2)), tip)
 		m.lg.Info("Suggested gas fee cap (tip + 2*baseFee)", "gasFeeCap", gasFeeCap)

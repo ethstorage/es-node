@@ -62,7 +62,7 @@ type subTask struct {
 	done      bool // Flag whether the subTask can be removed
 }
 
-// healTask represents the sync task for healing blobs fail to fetch from remote  .
+// healTask represents the sync task for healing blobs fail to fetch from remote.
 type healTask struct {
 	task    *task
 	Indexes map[uint64]int64 // Set of blobs currently queued for retrieval
