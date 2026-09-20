@@ -48,12 +48,18 @@ func (c *DAClient) DownloadBlob(hash common.Hash) (Blob, error) {
 		return Blob{}, err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return Blob{}, fmt.Errorf("DA server returned unexpected status %s", resp.Status)
+	}
 
-	data, err := io.ReadAll(resp.Body)
+	var blob kzg4844.Blob
+	data, err := io.ReadAll(io.LimitReader(resp.Body, int64(len(blob)+1)))
 	if err != nil {
 		return Blob{}, err
 	}
-	var blob kzg4844.Blob
+	if len(data) != len(blob) {
+		return Blob{}, fmt.Errorf("unexpected blob size %d, want %d", len(data), len(blob))
+	}
 	copy(blob[:], data)
 	commit, err := kzg4844.BlobToCommitment(&blob)
 	if err != nil {
