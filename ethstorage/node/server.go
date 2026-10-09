@@ -71,7 +71,7 @@ func (s *rpcServer) Start() error {
 	// other services to connect to the node. VHosts in particular
 	// defaults to localhost, which will prevent containers from
 	// calling into the node without an "invalid host" error.
-	nodeHandler := node.NewHTTPHandlerStack(srv, []string{"*"}, []string{"*"}, nil)
+	nodeHandler := node.NewHTTPHandlerStack(srv, []string{"*"}, []string{"*"}, nil, false)
 
 	mux := http.NewServeMux()
 	mux.Handle("/", nodeHandler)
