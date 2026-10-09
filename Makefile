@@ -23,7 +23,8 @@ test:
 	go test -v ./...
 
 lint:
-	golangci-lint run -E goimports,sqlclosecheck,bodyclose,asciicheck,misspell,errorlint -e "errors.As" -e "errors.Is"
+	golangci-lint fmt --config=golangci.yml --diff
+	golangci-lint run --config=golangci.yml -E sqlclosecheck,bodyclose,asciicheck,misspell,errorlint
 
 
 .PHONY: \

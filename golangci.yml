@@ -19,12 +19,17 @@ linters:
   default: none
   exclusions:
     generated: lax
+    rules:
+      - linters:
+          - errorlint
+        text: errors\.(As|Is)
     paths:
       - (^|/)(bin|vendor|third_party|testdata|examples|Godeps|builtin)/
 
 formatters:
   enable:
     - gofmt
+    - goimports
   exclusions:
     paths:
       - (^|/)(bin|vendor|third_party|testdata|examples|Godeps|builtin)/
