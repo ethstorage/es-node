@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
-	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethstorage/go-ethstorage/ethstorage/blobs"
@@ -20,7 +19,6 @@ type BeaconClient struct {
 	beaconURL       string
 	genesisSlotTime uint64
 	slotTime        uint64
-	httpClient      *http.Client
 }
 
 type Blob struct {
@@ -37,7 +35,6 @@ func NewBeaconClient(url string, slotTime uint64) (*BeaconClient, error) {
 		beaconURL:       url,
 		genesisSlotTime: genesisSlotTime,
 		slotTime:        slotTime,
-		httpClient:      &http.Client{Timeout: 30 * time.Second},
 	}
 	return res, nil
 }
@@ -78,7 +75,7 @@ func (c *BeaconClient) DownloadBlobs(timestamp uint64, hashes []common.Hash) (ma
 	if err != nil {
 		return nil, err
 	}
-	resp, err := c.httpClient.Get(blobsUrl)
+	resp, err := http.Get(blobsUrl)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query beacon blobs with url %s: %w", blobsUrl, err)
 	}
@@ -127,14 +124,4 @@ func (c *BeaconClient) QueryUrlForV1BeaconBlobs(timestamp uint64, hashes []commo
 		q.Add("versioned_hashes", h.Hex())
 	}
 	return blobsURL + "?" + q.Encode(), nil
-}
-
-// HTTPClient returns the HTTP client used to query the beacon node, so that
-// callers can issue requests with their own context (cancellation and
-// timeouts) instead of fire-and-forget http.Get.
-func (c *BeaconClient) HTTPClient() *http.Client {
-	if c.httpClient != nil {
-		return c.httpClient
-	}
-	return http.DefaultClient
 }

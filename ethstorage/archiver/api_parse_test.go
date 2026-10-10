@@ -32,11 +32,18 @@ var (
 	testCommit2 = commitmentHex(0x90)
 )
 
+// omitCommitments is passed to beaconBlockJSON to leave blob_kzg_commitments
+// out of the response body entirely, as opposed to serving it as null.
+var omitCommitments = []string{"\x00omit"}
+
 // beaconBlockJSON builds a /eth/v2/beacon/blocks response body the way a beacon
-// node would serve it for the given consensus version.
+// node would serve it for the given consensus version. A nil commitments slice
+// emits JSON null, omitCommitments leaves the field out, and []string{} emits
+// an explicit empty array.
 func beaconBlockJSON(version, slot, elBlockHash string, commitments []string, useBid bool) string {
+	omit := commitments != nil && len(commitments) == 1 && commitments[0] == omitCommitments[0]
 	commitsJSON := "null"
-	if commitments != nil {
+	if commitments != nil && !omit {
 		quoted := make([]string, len(commitments))
 		for i, c := range commitments {
 			quoted[i] = fmt.Sprintf("%q", c)
@@ -44,13 +51,17 @@ func beaconBlockJSON(version, slot, elBlockHash string, commitments []string, us
 		commitsJSON = "[" + strings.Join(quoted, ",") + "]"
 	}
 
+	commitmentsField := fmt.Sprintf(`,"blob_kzg_commitments":%s`, commitsJSON)
+	if omit {
+		commitmentsField = ""
+	}
+
 	var body string
 	if useBid {
-		body = fmt.Sprintf(`{"signed_execution_payload_bid":{"message":{`+
-			`"block_hash":%q,"blob_kzg_commitments":%s}}}`, elBlockHash, commitsJSON)
+		body = fmt.Sprintf(`{"signed_execution_payload_bid":{"message":{"block_hash":%q%s}}}`,
+			elBlockHash, commitmentsField)
 	} else {
-		body = fmt.Sprintf(`{"execution_payload":{"block_hash":%q},"blob_kzg_commitments":%s}`,
-			elBlockHash, commitsJSON)
+		body = fmt.Sprintf(`{"execution_payload":{"block_hash":%q}%s}`, elBlockHash, commitmentsField)
 	}
 	return fmt.Sprintf(`{"version":%q,"data":{"message":{"slot":%q,"body":%s}}}`, version, slot, body)
 }
@@ -69,7 +80,7 @@ func TestParseBeaconBlockVersions(t *testing.T) {
 		// the signed bid.
 		{"gloas", beaconBlockVersionGloas, true, []string{testCommit0, testCommit1}},
 		{"gloas without blobs", beaconBlockVersionGloas, true, []string{}},
-		{"deneb without blobs", beaconBlockVersionDeneb, false, nil},
+		{"deneb without blobs", beaconBlockVersionDeneb, false, []string{}},
 		{"version case insensitive", "Gloas", true, []string{testCommit0}},
 	}
 	for _, tc := range cases {
@@ -133,6 +144,30 @@ func TestParseBeaconBlockErrors(t *testing.T) {
 			name: "gloas bid without block hash",
 			body: `{"version":"gloas","data":{"message":{"slot":"1","body":{"signed_execution_payload_bid":{"message":` +
 				`{"blob_kzg_commitments":[` + fmt.Sprintf("%q", testCommit0) + `]}}}}}}`,
+			want: errUpstreamError,
+		},
+		// blob_kzg_commitments is required by the beacon API schema: a block
+		// with no blobs serves an explicit empty array. A missing or null
+		// field is a malformed upstream response, never "no blobs" (which
+		// would surface as a misleading 404).
+		{
+			name: "deneb with null blob_kzg_commitments",
+			body: beaconBlockJSON("deneb", "1", testBlockHash, nil, false),
+			want: errUpstreamError,
+		},
+		{
+			name: "deneb without blob_kzg_commitments",
+			body: beaconBlockJSON("deneb", "1", testBlockHash, omitCommitments, false),
+			want: errUpstreamError,
+		},
+		{
+			name: "gloas with null blob_kzg_commitments",
+			body: beaconBlockJSON("gloas", "1", testBlockHash, nil, true),
+			want: errUpstreamError,
+		},
+		{
+			name: "gloas without blob_kzg_commitments",
+			body: beaconBlockJSON("gloas", "1", testBlockHash, omitCommitments, true),
 			want: errUpstreamError,
 		},
 		{

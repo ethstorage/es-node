@@ -209,7 +209,9 @@ func (a *API) queryBeaconBlock(ctx context.Context, id string) (*beaconBlock, *h
 		a.lg.Error("Invalid beaconID", "beaconID", id, "err", err)
 		return nil, errUnknownBlock
 	}
-	block, hErr := fetchBeaconBlock(ctx, a.beaconClient.HTTPClient(), queryUrl)
+	// fetchBeaconBlock bounds the request with its own context timeout, so the
+	// shared client needs no timeout of its own.
+	block, hErr := fetchBeaconBlock(ctx, http.DefaultClient, queryUrl)
 	if hErr != nil {
 		a.lg.Error("Failed to get beacon block", "beaconID", id, "err", hErr)
 		return nil, hErr
@@ -324,15 +326,18 @@ func parseBeaconBlock(body []byte) (*beaconBlock, *httpError) {
 	if err != nil {
 		return nil, errUpstreamError
 	}
-	// An empty (or absent) commitments list is valid: the block simply has no blobs.
-	kzgCommitsAll := []string{}
-	if commits != nil {
-		for _, c := range *commits {
-			if _, err := decodeKZGCommitment(c); err != nil {
-				return nil, errUpstreamError
-			}
+	// blob_kzg_commitments is required by the beacon API schema for every
+	// supported version: a block without blobs serves an explicit empty array,
+	// so a missing or null field means the upstream response is malformed.
+	// Treating it as "no blobs" would report a valid stored blob as not found.
+	if commits == nil {
+		return nil, errUpstreamError
+	}
+	kzgCommitsAll := *commits
+	for _, c := range kzgCommitsAll {
+		if _, err := decodeKZGCommitment(c); err != nil {
+			return nil, errUpstreamError
 		}
-		kzgCommitsAll = *commits
 	}
 	return &beaconBlock{
 		version:       version,
