@@ -30,8 +30,10 @@ import (
 const (
 	// beaconBlockFetchTimeout bounds a single upstream beacon node request.
 	beaconBlockFetchTimeout = 30 * time.Second
-	// maxBeaconBlockResponseSize caps how much of a beacon block response we
-	// read into memory (a full mainnet block is well under this).
+	// maxBeaconBlockResponseSize caps memory use while decoding a beacon block.
+	// The consensus P2P payload limit is 10 MiB; JSON hex-encodes execution
+	// transactions, so 64 MiB leaves headroom for encoding and envelope overhead.
+	// This is a defensive limit, not a Beacon API response-size guarantee.
 	maxBeaconBlockResponseSize = 64 << 20
 	// beaconBlockVersionDeneb .. beaconBlockVersionGloas are the consensus
 	// versions whose blocks the archiver knows how to decode.
