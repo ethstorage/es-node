@@ -245,6 +245,28 @@ func (w *PollingClient) FilterLogsByBlockRange(start *big.Int, end *big.Int, eve
 	return w.FilterLogs(context.Background(), query)
 }
 
+// FilterLogsByBlockHash retrieves events emitted in the block with the given
+// hash (EIP-234). blockHash is mutually exclusive with fromBlock/toBlock, so
+// they must not be set together. This keeps log queries aligned with a
+// specific block even during reorgs.
+func (w *PollingClient) FilterLogsByBlockHash(ctx context.Context, blockHash common.Hash, eventSig string) ([]types.Log, error) {
+	topic := crypto.Keccak256Hash([]byte(eventSig))
+
+	// create a new filter query
+	query := ethereum.FilterQuery{
+		Addresses: []common.Address{w.esContract},
+		Topics: [][]common.Hash{
+			{
+				topic,
+			},
+		},
+		BlockHash: &blockHash,
+	}
+
+	// retrieve events that match the filter query
+	return w.FilterLogs(ctx, query)
+}
+
 func (w *PollingClient) GetStorageKvEntryCount(blockNumber int64) (uint64, error) {
 	h := crypto.Keccak256Hash([]byte(`kvEntryCount()`))
 
