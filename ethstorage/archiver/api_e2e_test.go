@@ -307,6 +307,113 @@ func TestQueryBlobSidecarsGloas(t *testing.T) {
 	assertGetLogsByHash(t, h.getLogsReq)
 }
 
+func TestQueryBlobsDuplicateCommitments(t *testing.T) {
+	kvIndexes := []uint64{2, 7}
+	raw := make([][]byte, 2)
+	commits := make([]kzg4844.Commitment, 2)
+	hashes := make([]common.Hash, 2)
+	for i, kv := range kvIndexes {
+		raw[i], commits[i], hashes[i] = makeBlob(t, kv)
+	}
+	storageMgr := newStorageManager(t, kvIndexes, raw, hashes)
+	// Repeated PutBlob events must not change the number of returned blobs.
+	elLogs := []types.Log{
+		putBlobLog(kvIndexes[1], hashes[1], 0),
+		putBlobLog(kvIndexes[0], hashes[0], 1),
+		putBlobLog(kvIndexes[0], hashes[0], 2),
+	}
+
+	for _, tc := range []struct {
+		name   string
+		order  []int
+		hashes []common.Hash
+		want   []int
+	}{
+		{"ABA_all", []int{0, 1, 0}, nil, []int{0, 1, 0}},
+		{"AAB_all", []int{0, 0, 1}, nil, []int{0, 0, 1}},
+		{"ABA_filter_repeated", []int{0, 1, 0}, []common.Hash{hashes[0]}, []int{0, 0}},
+		{"AAB_filter_unique", []int{0, 0, 1}, []common.Hash{hashes[1]}, []int{1}},
+		{"AAB_filter_reversed", []int{0, 0, 1}, []common.Hash{hashes[1], hashes[0]}, []int{0, 0, 1}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			commitHex := make([]string, len(tc.order))
+			for i, blob := range tc.order {
+				commitHex[i] = "0x" + common.Bytes2Hex(commits[blob][:])
+			}
+			h := newE2EAPI(t, storageMgr, beaconBlockVersionGloas, commitHex, elLogs, nil)
+			res, hErr := h.api.queryBlobs(context.Background(), e2eSlot, tc.hashes)
+			if hErr != nil {
+				t.Fatalf("queryBlobs failed: %d %s", hErr.Code, hErr.Message)
+			}
+			if len(res.Data) != len(tc.want) {
+				t.Fatalf("got %d blobs, want %d", len(res.Data), len(tc.want))
+			}
+			for i, blob := range tc.want {
+				if res.Data[i] != "0x"+common.Bytes2Hex(raw[blob]) {
+					t.Errorf("blob %d does not match blob %d in commitment order", i, blob)
+				}
+			}
+		})
+	}
+}
+
+func TestQueryBlobSidecarsDuplicateCommitments(t *testing.T) {
+	kvIndexes := []uint64{2, 7}
+	raw := make([][]byte, 2)
+	commits := make([]kzg4844.Commitment, 2)
+	hashes := make([]common.Hash, 2)
+	for i, kv := range kvIndexes {
+		raw[i], commits[i], hashes[i] = makeBlob(t, kv)
+	}
+	storageMgr := newStorageManager(t, kvIndexes, raw, hashes)
+	elLogs := []types.Log{
+		putBlobLog(kvIndexes[1], hashes[1], 0),
+		putBlobLog(kvIndexes[0], hashes[0], 1),
+		putBlobLog(kvIndexes[0], hashes[0], 2),
+	}
+
+	for _, tc := range []struct {
+		name    string
+		order   []int
+		indices []uint64
+		want    []Index
+	}{
+		{"ABA_all", []int{0, 1, 0}, nil, []Index{0, 1, 2}},
+		{"AAB_all", []int{0, 0, 1}, nil, []Index{0, 1, 2}},
+		{"ABA_filter_both_repeated", []int{0, 1, 0}, []uint64{2, 0}, []Index{0, 2}},
+		{"AAB_filter_one_repeated", []int{0, 0, 1}, []uint64{1}, []Index{1}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			commitHex := make([]string, len(tc.order))
+			for i, blob := range tc.order {
+				commitHex[i] = "0x" + common.Bytes2Hex(commits[blob][:])
+			}
+			h := newE2EAPI(t, storageMgr, beaconBlockVersionGloas, commitHex, elLogs, nil)
+			res, hErr := h.api.queryBlobSidecars(context.Background(), e2eSlot, tc.indices)
+			if hErr != nil {
+				t.Fatalf("queryBlobSidecars failed: %d %s", hErr.Code, hErr.Message)
+			}
+			if len(res.Data) != len(tc.want) {
+				t.Fatalf("got %d sidecars, want %d", len(res.Data), len(tc.want))
+			}
+			for i, index := range tc.want {
+				sidecar := res.Data[i]
+				if sidecar.Index != index {
+					t.Errorf("sidecar %d index = %d, want %d", i, sidecar.Index, index)
+				}
+				blob := tc.order[index]
+				if !equalBytes(sidecar.Blob[:], raw[blob]) || !equalBytes(sidecar.KZGCommitment[:], commits[blob][:]) {
+					t.Errorf("sidecar %d does not match the blob and commitment at index %d", i, index)
+				}
+				sidecarBlob := kzg4844.Blob(sidecar.Blob)
+				if err := kzg4844.VerifyBlobProof(&sidecarBlob, kzg4844.Commitment(sidecar.KZGCommitment), kzg4844.Proof(sidecar.KZGProof)); err != nil {
+					t.Errorf("sidecar %d has an invalid proof: %v", i, err)
+				}
+			}
+		})
+	}
+}
+
 // TestQueryBlobsStorageMissing covers a block that exists on both the beacon
 // chain and L1, but whose blob is not stored locally.
 func TestQueryBlobsStorageMissing(t *testing.T) {

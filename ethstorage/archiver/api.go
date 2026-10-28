@@ -107,14 +107,14 @@ func (a *API) queryBlobs(ctx context.Context, id string, hashes []common.Hash) (
 		return nil, hErr
 	}
 
-	// hashToIndex is used to determine correct blob index
-	hashToIndex := make(map[common.Hash]int)
-	for _, c := range block.kzgCommitsAll {
+	// A blob hash can occur at multiple positions in the block.
+	hashToIndices := make(map[common.Hash][]int)
+	for i, c := range block.kzgCommitsAll {
 		var commit kzg4844.Commitment
 		copy(commit[:], common.FromHex(c))
 		vh := common.Hash(kzg4844.CalcBlobHashV1(sha256.New(), &commit))
 		if hashIncluded(vh, hashes) {
-			hashToIndex[vh] = len(hashToIndex)
+			hashToIndices[vh] = append(hashToIndices[vh], i)
 		}
 	}
 
@@ -124,19 +124,23 @@ func (a *API) queryBlobs(ctx context.Context, id string, hashes []common.Hash) (
 		return nil, hErr
 	}
 
-	blobsData := make([]string, len(hashToIndex))
+	blobsData := make([]string, len(block.kzgCommitsAll))
 	for i, event := range events {
 		blobHash := event.Topics[3]
 		a.lg.Info("Parsing event", "blobHash", blobHash, "event", fmt.Sprintf("%d of %d", i, len(events)))
 		// parse event to get kv_index with queried index
-		if index, ok := hashToIndex[blobHash]; ok {
+		if indices, ok := hashToIndices[blobHash]; ok {
 			kvIndex := big.NewInt(0).SetBytes(event.Topics[1][:]).Uint64()
-			a.lg.Info("Blobhash matched", "blobhash", blobHash, "index", index, "kvIndex", kvIndex)
+			a.lg.Info("Blobhash matched", "blobhash", blobHash, "indices", indices, "kvIndex", kvIndex)
 			blobData, hErr := a.readBlob(kvIndex, blobHash)
 			if hErr != nil {
 				return nil, hErr
 			}
-			blobsData[index] = "0x" + common.Bytes2Hex(blobData)
+			encodedBlob := "0x" + common.Bytes2Hex(blobData)
+			for _, index := range indices {
+				blobsData[index] = encodedBlob
+			}
+			delete(hashToIndices, blobHash)
 		}
 	}
 	// remove empty entries (not found)
@@ -166,12 +170,12 @@ func (a *API) queryBlobSidecars(ctx context.Context, id string, indices []uint64
 		}
 	}
 
-	// hashToIndex is used to determine correct blob index
-	hashToIndex := make(map[common.Hash]Index)
+	// Preserve every requested position, including repeated commitments.
+	hashToIndices := make(map[common.Hash][]Index)
 	for i, c := range kzgCommitsAll {
 		if indexIncluded(uint64(i), indices) {
 			bh := gkzg.KZGToVersionedHash(gkzg.KZGCommitment(common.FromHex(c)))
-			hashToIndex[common.Hash(bh)] = Index(i)
+			hashToIndices[common.Hash(bh)] = append(hashToIndices[common.Hash(bh)], Index(i))
 		}
 	}
 
@@ -180,21 +184,31 @@ func (a *API) queryBlobSidecars(ctx context.Context, id string, indices []uint64
 	if hErr != nil {
 		return nil, hErr
 	}
-	var res BlobSidecars
+	sidecars := make([]*BlobSidecar, len(kzgCommitsAll))
 	for i, event := range events {
 		blobHash := event.Topics[3]
 		a.lg.Info("Parsing event", "blobHash", blobHash, "event", fmt.Sprintf("%d of %d", i, len(events)))
 		// parse event to get kv_index with queried index
-		if index, ok := hashToIndex[blobHash]; ok {
+		if blobIndices, ok := hashToIndices[blobHash]; ok {
 			kvIndex := big.NewInt(0).SetBytes(event.Topics[1][:]).Uint64()
-			a.lg.Info("Blobhash matched", "blobhash", blobHash, "index", index, "kvIndex", kvIndex)
-			sidecar, hErr := a.buildSidecar(kvIndex, common.FromHex(kzgCommitsAll[index]), blobHash)
+			a.lg.Info("Blobhash matched", "blobhash", blobHash, "indices", blobIndices, "kvIndex", kvIndex)
+			sidecar, hErr := a.buildSidecar(kvIndex, common.FromHex(kzgCommitsAll[blobIndices[0]]), blobHash)
 			if hErr != nil {
 				a.lg.Error("Failed to build sidecar", "err", hErr)
 				return nil, hErr
 			}
-			sidecar.Index = index
-			a.lg.Info("Sidecar built", "index", index, "sidecar", sidecar)
+			for _, index := range blobIndices {
+				indexedSidecar := *sidecar
+				indexedSidecar.Index = index
+				a.lg.Info("Sidecar built", "index", index, "sidecar", &indexedSidecar)
+				sidecars[index] = &indexedSidecar
+			}
+			delete(hashToIndices, blobHash)
+		}
+	}
+	var res BlobSidecars
+	for _, sidecar := range sidecars {
+		if sidecar != nil {
 			res.Data = append(res.Data, sidecar)
 		}
 	}
