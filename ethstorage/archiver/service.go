@@ -52,7 +52,7 @@ func (a *APIService) blobSidecarHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	result, hErr := a.api.queryBlobSidecars(id, indices)
+	result, hErr := a.api.queryBlobSidecars(r.Context(), id, indices)
 	if hErr != nil {
 		hErr.write(w)
 		return
@@ -90,7 +90,7 @@ func (a *APIService) blobsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, hErr := a.api.queryBlobs(id, hashes)
+	result, hErr := a.api.queryBlobs(r.Context(), id, hashes)
 	if hErr != nil {
 		hErr.write(w)
 		return
