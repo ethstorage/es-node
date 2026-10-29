@@ -242,7 +242,10 @@ func verifyData() error {
 	i := uint64(0)
 	for fileScanner.Scan() {
 		expectedData := common.Hex2Bytes(fileScanner.Text())
-		blob := utils.EncodeBlobs(expectedData)[0]
+		blob, err := utils.FromData(expectedData)
+		if err != nil {
+			return fmt.Errorf("encode uploaded data %d: %w", i, err)
+		}
 		commit, _, _ := sm.TryReadMeta(i)
 		data, _, err := sm.TryRead(i, kvSize, common.BytesToHash(commit))
 		if err != nil {
