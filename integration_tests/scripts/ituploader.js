@@ -46,7 +46,7 @@ async function UploadBlobsForIntegrationTest() {
         // write blobs
         try {
             let status = await es.writeBlobs(keys, blobs);
-            if (status == false) {
+            if (!status.success) {
                 continue
             }
             console.log(status);
@@ -58,6 +58,8 @@ async function UploadBlobsForIntegrationTest() {
             fs.writeFileSync(".data", blobs[i].toString('hex')+'\n', { flag: 'a+' });
         }
     }
+
+    await es.close();
 
     if (!NEED_WAIT) {
         return
