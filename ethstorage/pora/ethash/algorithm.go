@@ -352,7 +352,9 @@ func hashimoto(hash []byte, nonce uint64, size uint64, lookup func(index uint32)
 	copy(seed, hash)
 	binary.LittleEndian.PutUint64(seed[32:], nonce)
 
-	seed = crypto.Keccak512(seed)
+	seedHash := make([]byte, hashBytes)
+	makeHasher(sha3.NewLegacyKeccak512())(seedHash, seed)
+	seed = seedHash
 	seedHead := binary.LittleEndian.Uint32(seed)
 
 	// Start the mix with replicated seed
@@ -387,7 +389,9 @@ func HashimotoForMask(seed []byte, size uint64, lookup func(index uint32) []uint
 	// Calculate the number of theoretical rows (we use one buffer nonetheless)
 	rows := uint32(size / mixBytes)
 
-	seed = crypto.Keccak512(seed)
+	seedHash := make([]byte, hashBytes)
+	makeHasher(sha3.NewLegacyKeccak512())(seedHash, seed)
+	seed = seedHash
 	seedHead := binary.LittleEndian.Uint32(seed)
 
 	// Start the mix with replicated seed

@@ -76,7 +76,39 @@ var (
 		Code:    http.StatusInternalServerError,
 		Message: "Internal server error",
 	}
+	// errUpstreamError covers beacon node transport errors, timeouts, 5xx
+	// responses, invalid JSON, and blocks missing required fields. It is a 5xx
+	// so that callers (e.g. op-node) retry instead of treating it as "block
+	// not found".
+	errUpstreamError = &httpError{
+		Code:    http.StatusBadGateway,
+		Message: "Upstream beacon node error",
+	}
+	// errUnsupportedBeaconVersion is returned when the beacon node reports a
+	// version this archiver cannot decode.
+	errUnsupportedBeaconVersion = &httpError{
+		Code:    http.StatusBadGateway,
+		Message: "Unsupported beacon block version",
+	}
+	// errExecutionBlockNotAvailable is returned when the beacon block resolved
+	// fine but the execution block it points to is not known to the L1 client
+	// yet (e.g. a Gloas bid whose payload has not arrived). Retryable 5xx.
+	errExecutionBlockNotAvailable = &httpError{
+		Code:    http.StatusServiceUnavailable,
+		Message: "Execution block not available on L1 yet",
+	}
 )
+
+// isUnknownBlockErr reports whether an eth_getLogs error means the queried
+// block hash is unknown to the execution client (geth answers with
+// "unknown block"), as opposed to a transport failure.
+func isUnknownBlockErr(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "not found") || strings.Contains(msg, "unknown block")
+}
 
 func newBadRequestError(input string) *httpError {
 	return &httpError{
